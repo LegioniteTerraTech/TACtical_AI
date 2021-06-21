@@ -1,0 +1,3 @@
+https://github.com/LegioniteTerraTech/TACtical_AI/tree/master/TAC_AI/bin/Release
+/Exund/Nuterra.NativeOptions
+/Aceba1/TTQMM-ModConfigHelper
