@@ -1,0 +1,14 @@
+C:\Users\Legionite\Desktop\TAC_AI\TAC_AI\obj\Debug\TAC_AI.csprojAssemblyReference.cache
+C:\Users\Legionite\Desktop\TAC_AI\TAC_AI\obj\Debug\TAC_AI.csproj.CoreCompileInputs.cache
+C:\Users\Legionite\Desktop\TAC_AI\TAC_AI\bin\Debug\TAC_AI.dll
+C:\Users\Legionite\Desktop\TAC_AI\TAC_AI\bin\Debug\TAC_AI.pdb
+C:\Users\Legionite\Desktop\TAC_AI\TAC_AI\obj\Debug\TAC_AI.dll
+C:\Users\Legionite\Desktop\TAC_AI\TAC_AI\obj\Debug\TAC_AI.pdb
+C:\Users\Legionite\Desktop\TAC_AI\TAC_AI\bin\Debug\mod.json
+C:\Users\Legionite\Documents\GitHub\TACtical_AI\TAC_AI\bin\Debug\mod.json
+C:\Users\Legionite\Documents\GitHub\TACtical_AI\TAC_AI\bin\Debug\TAC_AI.dll
+C:\Users\Legionite\Documents\GitHub\TACtical_AI\TAC_AI\bin\Debug\TAC_AI.pdb
+C:\Users\Legionite\Documents\GitHub\TACtical_AI\TAC_AI\obj\Debug\TAC_AI.csprojAssemblyReference.cache
+C:\Users\Legionite\Documents\GitHub\TACtical_AI\TAC_AI\obj\Debug\TAC_AI.csproj.CoreCompileInputs.cache
+C:\Users\Legionite\Documents\GitHub\TACtical_AI\TAC_AI\obj\Debug\TAC_AI.dll
+C:\Users\Legionite\Documents\GitHub\TACtical_AI\TAC_AI\obj\Debug\TAC_AI.pdb
