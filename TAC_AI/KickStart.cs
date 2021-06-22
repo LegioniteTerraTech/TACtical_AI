@@ -6,7 +6,7 @@ using ModHelper.Config;
 using Nuterra.NativeOptions;
 
 
-namespace RandomAdditions
+namespace TAC_AI
 {
     // Previously an extension to RandomAdditions, TACtical AI is the AI branch of the mod.
     //
@@ -54,7 +54,7 @@ namespace RandomAdditions
 
 
             var TACAI = ModName;
-            betterAI = new OptionToggle("Rebuilt AI", TACAI, EnableBetterAI);
+            betterAI = new OptionToggle("Rebuilt AI \n(Disable this and save your techs BEFORE UNINSTALLING THE MOD!)", TACAI, EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodging (Higher = better performance but less AI accuraccy)", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });

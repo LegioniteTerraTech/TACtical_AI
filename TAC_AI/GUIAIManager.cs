@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace RandomAdditions
+namespace TAC_AI
 {
     public class GUIAIManager : MonoBehaviour
     {

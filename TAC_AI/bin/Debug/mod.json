@@ -5,5 +5,5 @@
   "Version": "0.1.0",
   "Enable": true,
   "AssemblyName": "TAC_AI.dll",
-  "EntryMethod": "RandomAdditions.KickStart.Main"
+  "EntryMethod": "TAC_AI.KickStart.Main"
 }

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace RandomAdditions.AI
+namespace TAC_AI.AI
 {
     public static class BProspector
     {

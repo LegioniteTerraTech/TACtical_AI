@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace RandomAdditions//TAC_AI
+namespace TAC_AI
 {
     public class ModuleHarvestReciever : Module
     {

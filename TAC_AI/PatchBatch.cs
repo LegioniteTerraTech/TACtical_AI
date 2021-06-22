@@ -5,7 +5,7 @@ using Harmony;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace RandomAdditions
+namespace TAC_AI
 {
     class PatchBatch
     {

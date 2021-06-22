@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using System.Reflection;
 
-namespace RandomAdditions.AI
+namespace TAC_AI.AI
 {
     public static class BMultiTech
     {

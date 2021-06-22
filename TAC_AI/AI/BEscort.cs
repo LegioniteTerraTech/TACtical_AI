@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace RandomAdditions.AI
+namespace TAC_AI.AI
 {
     public static class BEscort
     {

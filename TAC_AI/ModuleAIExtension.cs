@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace RandomAdditions//TAC_AI
+namespace TAC_AI
 {
     public class ModuleAIExtension : Module
     {
@@ -129,12 +129,15 @@ namespace RandomAdditions//TAC_AI
         {
             if (saving)
             {   //Save to snap
-                SerialData serialData = new SerialData()
-                {
-                    savedMode = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().DediAI
-                };
-                serialData.Store(blockSpec.saveState);
-                Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
+                if (KickStart.EnableBetterAI)
+                {   //Allow resaving of Techs without mod affilation
+                    SerialData serialData = new SerialData()
+                    {
+                        savedMode = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().DediAI
+                    };
+                    serialData.Store(blockSpec.saveState);
+                    //Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
+                }
             }
             else
             {   //Load from snap
@@ -145,7 +148,7 @@ namespace RandomAdditions//TAC_AI
                     {
                         TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().DediAI = serialData2.savedMode;
                         SavedAI = serialData2.savedMode;
-                        Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
+                        //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                     }
                 }
                 catch { }
