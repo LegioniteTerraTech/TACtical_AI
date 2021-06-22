@@ -5,7 +5,7 @@ using Harmony;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace TAC_AI
+namespace RandomAdditions
 {
     class PatchBatch
     {
@@ -336,36 +336,33 @@ namespace TAC_AI
             }
         }
 
-        [HarmonyPatch(typeof(RadialMenu))]
-        [HarmonyPatch("InitMenu")]//On Creation
+        [HarmonyPatch(typeof(UIRadialTechControlMenu))]
+        [HarmonyPatch("Show")]//On Creation
         private static class DetectAIRadialAction
         {
-            private static void Prefix(RadialMenu __instance)
+            private static void Prefix(UIRadialTechControlMenu __instance, ref object context)
             {
-                GUIAIManager.GetTank();
+                Debug.Log("TACtical_AI: grabbed tank data.");
+                OpenMenuEventData nabData = (OpenMenuEventData)context;
+                if (nabData.m_TargetTankBlock.tank.IsNotNull())
+                {
+                    GUIAIManager.GetTank(nabData.m_TargetTankBlock.tank);
+                }
             }
         }
 
 
-        [HarmonyPatch(typeof(UIRadialMenuOption))]//UIRadialMenuOptionWithWarning
-        [HarmonyPatch("IsInside")]//On AI option
+        [HarmonyPatch(typeof(UIRadialTechControlMenu))]//UIRadialMenuOptionWithWarning
+        [HarmonyPatch("OnAIOptionSelected")]//On AI option
         private static class DetectAIRadialMenuAction
         {
-            private static void Prefix(UIRadialMenuOption __instance)
+            private static void Prefix(UIRadialTechControlMenu __instance, ref UIRadialTechControlMenu.PlayerCommands command)
             {
-                //Debug.Log("TACtical_AI: click menu FIRED!!!");
-                if (__instance.gameObject.name == "Bottom_Left_Button")
-                {
-                    if (__instance.transform.Find("Icon").IsNotNull())
-                    {
-                        if (__instance.transform.Find("Icon").GetComponent<Image>().sprite.name == "Icon_AI_Guard")
-                        {
-                            GUIAIManager.LaunchSubMenuClickable();
-                            //Debug.Log("TACtical_AI:click menu " + __instance.gameObject.name);
-                            //Debug.Log("TACtical_AI: click menu host gameobject " + Nuterra.NativeOptions.UIUtilities.GetComponentTree(__instance.gameObject, __instance.gameObject.name));
-                        }
-                    }
-                }
+                Debug.Log("TACtical_AI: click menu FIRED!!!  input = " + command.ToString());
+                if (command == UIRadialTechControlMenu.PlayerCommands.AIGuard)
+                    GUIAIManager.LaunchSubMenuClickable();
+                //Debug.Log("TACtical_AI:click menu " + __instance.gameObject.name);
+                //Debug.Log("TACtical_AI: click menu host gameobject " + Nuterra.NativeOptions.UIUtilities.GetComponentTree(__instance.gameObject, __instance.gameObject.name));
             }
         }
 

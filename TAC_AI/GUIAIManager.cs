@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace TAC_AI
+namespace RandomAdditions
 {
     public class GUIAIManager : MonoBehaviour
     {
@@ -45,8 +45,10 @@ namespace TAC_AI
         {
             CloseSubMenuClickable();
         }
-        public static void GetTank()
+        public static void GetTank(Tank tank)
         {
+            lastTank = tank.trans.GetComponent<AI.AIECore.TankAIHelper>();
+            /*
             if (Singleton.Manager<ManPointer>.inst.targetTank.IsNotNull() && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
             {
                 var tonk = Singleton.Manager<ManPointer>.inst.targetTank;
@@ -68,6 +70,7 @@ namespace TAC_AI
             {
                 Debug.Log("TACtical_AI: SELECTED TANK IS NULL!");
             }
+            */
         }
 
         internal class GUIDisplay : MonoBehaviour

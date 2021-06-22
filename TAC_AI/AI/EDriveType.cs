@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TAC_AI.AI
+namespace RandomAdditions.AI
 {
     public enum EDriveType
     {   //Control the AI drive firection

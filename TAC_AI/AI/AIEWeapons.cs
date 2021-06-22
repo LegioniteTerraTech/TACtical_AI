@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace TAC_AI.AI
+namespace RandomAdditions.AI
 {
     public static class AIEWeapons
     {

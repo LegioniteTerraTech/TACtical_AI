@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
-namespace TAC_AI.AI
+namespace RandomAdditions.AI
 {
 
     public static class AIEPathing

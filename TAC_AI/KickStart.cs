@@ -6,10 +6,9 @@ using ModHelper.Config;
 using Nuterra.NativeOptions;
 
 
-namespace TAC_AI
+namespace RandomAdditions
 {
-    // A mod that does exactly as it says on the tin
-    //   A bunch of random additions that make make little to no sense, but they be.
+    // Previously an extension to RandomAdditions, TACtical AI is the AI branch of the mod.
     //
     public class KickStart
     {

@@ -135,7 +135,7 @@
     <PostBuildEvent>del *.pdb
 @setlocal enableextensions enabledelayedexpansion
 
-set modpath="C:\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\TAC_AI"
+set modpath="C:\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\TACtical AI"
 
 if exist !modpath! (
 echo Copying to game
