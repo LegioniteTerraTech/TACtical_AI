@@ -359,7 +359,7 @@ namespace TAC_AI
             private static void Prefix(UIRadialTechControlMenu __instance, ref UIRadialTechControlMenu.PlayerCommands command)
             {
                 Debug.Log("TACtical_AI: click menu FIRED!!!  input = " + command.ToString());
-                if (command == UIRadialTechControlMenu.PlayerCommands.AIGuard)
+                if ((int)command == 3)
                     GUIAIManager.LaunchSubMenuClickable();
                 //Debug.Log("TACtical_AI:click menu " + __instance.gameObject.name);
                 //Debug.Log("TACtical_AI: click menu host gameobject " + Nuterra.NativeOptions.UIUtilities.GetComponentTree(__instance.gameObject, __instance.gameObject.name));

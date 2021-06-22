@@ -1,0 +1,34 @@
+        //--------------------------------------------------------------------------------------------------
+        //                                           BLOCK MODULES
+        //--------------------------------------------------------------------------------------------------
+        /* Throw this within your JSONBLOCK to initate them
+
+        "TAC_AI.ModuleAIExtension":{ // Add a special AI type to your AI Module
+            // Set the ones you want your AI to support to true
+            // -----COMBAT-----
+            // - Escort is enabled by default since you have to corral your minions somehow
+            "Assault": false,
+            "Aegis": false,
+
+            // -----RESOURCES-----
+            "Prospector": false,
+            "Scrapper": false,
+            "Energizer": false,
+
+            // ----TOUGHER ENEMIES----
+            "Aviator": false,
+            "Buccaneer": false,
+            "Astrotech": false,
+
+            // ----EXTRAS----
+            "MeleePreferred": false,// Should the AI ram the enemy?
+            "SidePreferred": false, // Should the AI orbit the enemy? (overrides melee) (N/A atm)
+            "AdvAvoidence": false,  // Should the AI avoid two allied techs at once?
+            "AdvancedAI": false,    // Should the AI take combat calculations and retreat if nesseary? (N/A atm)
+            "MTForAll": false,      // Should the AI listen to other Tech MT commands?
+            "AidAI": false,         // Should the AI be willing to sacrifice themselves for their owner's safety?
+            "AnimeAI": false,       // Work with the AnimeAI mod and display a character for this AI? (And also allow interaction with other characters?)
+
+            "MinCombatRange": 50,   // Min range the AI will keep from an enemy
+            "MaxCombatRange": 100,  // Max range the AI will travel from it's priority defence target (or x2 assassin provoke radius from home)
+        }

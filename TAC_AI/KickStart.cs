@@ -54,9 +54,9 @@ namespace TAC_AI
 
 
             var TACAI = ModName;
-            betterAI = new OptionToggle("Rebuilt AI \n(Disable this and save your techs BEFORE UNINSTALLING THE MOD!)", TACAI, EnableBetterAI);
+            betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            dodgePeriod = new OptionRange("AI Dodging (Higher = better performance but less AI accuraccy)", TACAI, AIDodgeCheapness, 1, 61, 5);
+            dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
         }
 
