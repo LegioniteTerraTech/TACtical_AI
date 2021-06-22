@@ -133,7 +133,7 @@ namespace TAC_AI
                             ModuleAdd.Assault = true;
                             ModuleAdd.Prospector = true;//Temp until main intended function arrives
                             ModuleAdd.AdvancedAI = true;
-                            ModuleAdd.MinCombatRange = 75;
+                            ModuleAdd.MinCombatRange = 50;
                             ModuleAdd.MaxCombatRange = 200;
                         }
                         else if (name == "HE_AI_Turret_111")
@@ -141,7 +141,7 @@ namespace TAC_AI
                             ModuleAdd.Assault = true;
                             ModuleAdd.Prospector = true;//Temp until main intended function arrives
                             ModuleAdd.AdvancedAI = true;
-                            ModuleAdd.MinCombatRange = 75;
+                            ModuleAdd.MinCombatRange = 50;
                             ModuleAdd.MaxCombatRange = 150;
                         }
                         else if (name == "BF_AI_Module_Guard_212")
@@ -149,7 +149,7 @@ namespace TAC_AI
                             ModuleAdd.Astrotech = true;
                             //ModuleAdd.Prospector = true;//Temp until main intended function arrives
                             ModuleAdd.AdvAvoidence = true;
-                            ModuleAdd.MinCombatRange = 120;
+                            ModuleAdd.MinCombatRange = 60;
                             ModuleAdd.MaxCombatRange = 180;
                         }
                         /*
@@ -337,16 +337,21 @@ namespace TAC_AI
         }
 
         [HarmonyPatch(typeof(UIRadialTechControlMenu))]
-        [HarmonyPatch("Show")]//On Creation
+        [HarmonyPatch("Show")]//On popup
         private static class DetectAIRadialAction
         {
             private static void Prefix(UIRadialTechControlMenu __instance, ref object context)
             {
-                Debug.Log("TACtical_AI: grabbed tank data.");
                 OpenMenuEventData nabData = (OpenMenuEventData)context;
-                if (nabData.m_TargetTankBlock.tank.IsNotNull())
+                TankBlock thisBlock = nabData.m_TargetTankBlock;
+                if (thisBlock.tank.IsNotNull())
                 {
-                    GUIAIManager.GetTank(nabData.m_TargetTankBlock.tank);
+                    Debug.Log("TACtical_AI: grabbed tank data = " + thisBlock.tank.name.ToString());
+                    GUIAIManager.GetTank(thisBlock.tank);
+                }
+                else
+                {
+                    Debug.Log("TACtical_AI: TANK IS NULL!");
                 }
             }
         }
@@ -358,10 +363,23 @@ namespace TAC_AI
         {
             private static void Prefix(UIRadialTechControlMenu __instance, ref UIRadialTechControlMenu.PlayerCommands command)
             {
-                Debug.Log("TACtical_AI: click menu FIRED!!!  input = " + command.ToString());
+                //Debug.Log("TACtical_AI: click menu FIRED!!!  input = " + command.ToString() + " | num = " + (int)command);
                 if ((int)command == 3)
+                {
+                    if (GUIAIManager.IsTankNull())
+                    {
+                        FieldInfo currentTreeActual = typeof(UIRadialTechControlMenu).GetField("m_TargetTank", BindingFlags.NonPublic | BindingFlags.Instance);
+                        Tank tonk = (Tank)currentTreeActual.GetValue(__instance);
+                        GUIAIManager.GetTank(tonk);
+                        if (GUIAIManager.IsTankNull())
+                        {
+                            Debug.Log("TACtical_AI: TANK IS NULL AFTER SEVERAL ATTEMPTS!!!");
+                        }
+                    }
                     GUIAIManager.LaunchSubMenuClickable();
-                //Debug.Log("TACtical_AI:click menu " + __instance.gameObject.name);
+                }
+
+                //Debug.Log("TACtical_AI: click menu " + __instance.gameObject.name);
                 //Debug.Log("TACtical_AI: click menu host gameobject " + Nuterra.NativeOptions.UIUtilities.GetComponentTree(__instance.gameObject, __instance.gameObject.name));
             }
         }

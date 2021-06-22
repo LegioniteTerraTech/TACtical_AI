@@ -37,8 +37,8 @@ namespace TAC_AI
             GUIWindow.AddComponent<GUIDisplay>();
             GUIWindow.SetActive(false);
             Vector3 Mous = Input.mousePosition;
-            xMenu = Display.main.renderingWidth / 2 - 100;
-            yMenu = Display.main.renderingHeight;
+            xMenu = 0;
+            yMenu = 0;
         }
 
         public static void OnPlayerSwap(Tank tonk)
@@ -48,6 +48,9 @@ namespace TAC_AI
         public static void GetTank(Tank tank)
         {
             lastTank = tank.trans.GetComponent<AI.AIECore.TankAIHelper>();
+            Vector3 Mous = Input.mousePosition;
+            xMenu = Mous.x - 225;
+            yMenu = Display.main.renderingHeight - Mous.y + 25;
             /*
             if (Singleton.Manager<ManPointer>.inst.targetTank.IsNotNull() && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
             {
@@ -71,6 +74,10 @@ namespace TAC_AI
                 Debug.Log("TACtical_AI: SELECTED TANK IS NULL!");
             }
             */
+        }
+        public static bool IsTankNull()
+        {
+            return lastTank.IsNull();
         }
 
         internal class GUIDisplay : MonoBehaviour
@@ -208,16 +215,17 @@ namespace TAC_AI
 
         public static void LaunchSubMenuClickable()
         {
-            if (lastTank.IsNull())
+            if (lastTank.IsNull() || !KickStart.EnableBetterAI)
             {
-                //Debug.Log("TACtical_AI: DEDI AI IS NULL!");
+                Debug.Log("TACtical_AI: TANK IS NULL!");
                 return;
             }
+            Debug.Log("TACtical_AI: Launched AI menu!");
             fetchAI = lastTank.DediAI;
             isCurrentlyOpen = true;
             HotWindow = new Rect(xMenu, yMenu, 200, 230);
-            GUIWindow.SetActive(true);
             windowTimer = 120;
+            GUIWindow.SetActive(true);
         }
         public static void CloseSubMenuClickable()
         {
@@ -226,6 +234,7 @@ namespace TAC_AI
                 lastTank = null;
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
+                Debug.Log("TACtical_AI: Closed AI menu!");
             }
         }
 

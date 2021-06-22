@@ -17,35 +17,7 @@ namespace TAC_AI.AI
             }
         }
 
-        //Handles the ground steering
-        /// <summary> Only handles the steering (land) - translational drive must be controled somewhere else </summary>
-        /// <param name="tank"></param>
-        /// <param name="target"></param>
-        /// <param name="thisControl"></param>
-        public static void DriveTarget(Tank tank, Vector3 target, TankControl thisControl)
-        {
-            Vector3 heading = (target - tank.boundsCentreWorld).SetY(0f);
-            DriveHeading(tank, heading, thisControl);
-        }
-        public static void DriveHeading(Tank tank, Vector3 heading, TankControl thisControl)
-        {
-            Vector3 tankForw = tank.rootBlockTrans.forward;
-            float num = Mathf.Acos(Vector3.Dot(heading.normalized, tankForw)) * 25;//57.29578f
-            Vector3 turnAim = heading.normalized;
-            turnAim.y = 0;
-            if (Vector3.Dot(heading.normalized, tankForw) > 0.95f)// we are almost looking directly at target
-            {
-                thisControl.TurnControl = 0;
-            }
-            else if (Vector3.Dot(turnAim, tankForw) > 0f)
-            {
-                thisControl.TurnControl = num;
-            }
-            else
-            {
-                thisControl.TurnControl = -num;
-            }
-        }
+        //The default steering handles the ground steering
 
         //3-axis steering is handled in AIEDrive
 
@@ -72,9 +44,9 @@ namespace TAC_AI.AI
                 closestTank = Allies.ElementAt(bestStep);
                 //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
-            catch (Exception e)
+            catch //(Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+                //Debug.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
             }
             return closestTank;
         }
@@ -102,9 +74,9 @@ namespace TAC_AI.AI
                 closestTank = Allies.ElementAt(bestStep);
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
             }
-            catch (Exception e)
+            catch //(Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on ClosestAllyPrecisionProcess " + e);
+                //Debug.Log("TACtical_AI: Crash on ClosestAllyPrecisionProcess " + e);
             }
             return closestTank;
         }
@@ -143,9 +115,9 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
-            catch (Exception e)
+            catch //(Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
+                //Debug.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
             }
             Debug.Log("TACtical_AI: SecondClosestAlly - COULD NOT FETCH TANK");
             secondTank = null;
@@ -205,9 +177,9 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
-            catch (Exception e)
+            catch //(Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on SecondClosestAllyPrecisionProcess " + e);
+                //Debug.Log("TACtical_AI: Crash on SecondClosestAllyPrecisionProcess " + e);
             }
             Debug.Log("TACtical_AI: SecondClosestAllyPrecision - COULD NOT FETCH TANK");
             secondTank = null;
@@ -276,14 +248,36 @@ namespace TAC_AI.AI
                 final_y = height + thisInst.GroundOffsetHeight;
             else
                 final_y = 50 + thisInst.GroundOffsetHeight;
-            if (KickStart.isWaterModPresent)
+            if (thisInst.AdviseAway)// && thisInst.lastEnemy.IsNull()
             {
-                if (WaterMod.QPatch.WaterHeight > height)
-                    final_y = WaterMod.QPatch.WaterHeight + thisInst.GroundOffsetHeight;
+                //Still keep dist from ground
+                if (KickStart.isWaterModPresent)
+                {
+                    if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
+                        final_y = WaterMod.QPatch.WaterHeight + thisInst.GroundOffsetHeight;
+                }
+                if (input.y < final_y)
+                {
+                    final.x = thisInst.tank.boundsCentreWorld.x;
+                    final.z = thisInst.tank.boundsCentreWorld.z;
+                    final.y = height;
+                }
+                else
+                {
+                    final.y = thisInst.tank.boundsCentreWorld.y;
+                }
             }
-            if (input.y < final_y)
+            else
             {
-                final.y = final_y;
+                if (KickStart.isWaterModPresent)
+                {
+                    if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
+                        final_y = WaterMod.QPatch.WaterHeight + thisInst.GroundOffsetHeight;
+                }
+                if (input.y < final_y)
+                {
+                    final.y = final_y;
+                }
             }
             return final;
         }

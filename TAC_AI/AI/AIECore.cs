@@ -149,10 +149,7 @@ namespace TAC_AI.AI
                 var allTechs = Singleton.Manager<ManTechs>.inst;
                 int techCount = allTechs.CurrentTechs.Count();
                 List<Tank> techs = allTechs.CurrentTechs.ToList();
-                if (techCount > 2)
-                    moreThan2Allies = true;
-                else
-                    moreThan2Allies = false;
+                moreThan2Allies = false;
                 try
                 {
                     for (int stepper = 0; techCount > stepper; stepper++)
@@ -165,6 +162,8 @@ namespace TAC_AI.AI
                         }
                     }
                     Debug.Log("TACtical_AI: Fetched allied tech list for AIs...");
+                    if (AllyCount > 2)
+                        moreThan2Allies = true;
                 }
                 catch  (Exception e)
                 {
@@ -213,7 +212,7 @@ namespace TAC_AI.AI
 
             public float RangeToChase = 100;    // How far should we pursue the enemy?
             public float RangeToStopRush = 50;  // The range the AI will linger from the player
-            public float IdealRangeCombat = 50; // The range the AI will linger from the enemy if PursueThreat is true
+            public float IdealRangeCombat = 25; // The range the AI will linger from the enemy if PursueThreat is true
             public int AnchorAimDampening = 45; // How much do we dampen anchor movements by?
 
 
@@ -797,6 +796,7 @@ namespace TAC_AI.AI
 
                         case DediAIType.MTTurret:
                             // Load, Aim,    FIIIIIRRRRRRRRRRRRRRRRRRRRRRRRRRRE!!!
+                            thisInst.lastPlayer = GetPlayerTech();
                             thisInst.IsMultiTech = true;
                             BGeneral.ResetValues(thisInst);
                             //EMultiTech.FollowTurretBelow(thisInst, tank);
@@ -806,6 +806,7 @@ namespace TAC_AI.AI
 
                         case DediAIType.MTSlave:
                             // Defend and sit like good guard dog
+                            thisInst.lastPlayer = GetPlayerTech();
                             thisInst.IsMultiTech = true;
                             BGeneral.ResetValues(thisInst);
                             BMultiTech.BeamLockWithinBounds(thisInst, tank); //lock rigidbody with closest non-MT Tech on build beam
