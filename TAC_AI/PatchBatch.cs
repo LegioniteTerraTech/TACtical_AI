@@ -26,17 +26,25 @@ namespace TAC_AI
                     {
                         var aI = __instance.transform.root.GetComponent<Tank>().AI;
                         var tank = __instance.transform.root.GetComponent<Tank>();
-                        if (!tank.PlayerFocused && aI.HasAIModules && tank.IsFriendly() && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                        if (!tank.PlayerFocused && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                         {
-                            //Debug.Log("TACtical_AI: AI Valid!");
-                            //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
-                            var tankAIHelp = tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
-                            //tankAIHelp.AIState && 
-                            if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
+                            if (aI.HasAIModules && tank.IsFriendly())
                             {
-                                //Debug.Log("TACtical_AI: Running BetterAI");
-                                //Debug.Log("TACtical_AI: Patched Tank ExecuteControl(TankAIHelper)");
-                                tankAIHelp.BetterAI(__instance.block.tank.control);
+                                //Debug.Log("TACtical_AI: AI Valid!");
+                                //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
+                                var tankAIHelp = tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
+                                //tankAIHelp.AIState && 
+                                if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
+                                {
+                                    //Debug.Log("TACtical_AI: Running BetterAI");
+                                    //Debug.Log("TACtical_AI: Patched Tank ExecuteControl(TankAIHelper)");
+                                    tankAIHelp.BetterAI(__instance.block.tank.control);
+                                    return false;
+                                }
+                            }
+                            else if (((KickStart.enablePainMode && KickStart.isTougherEnemiesPresent) || KickStart.testEnemyAI) && tank.IsEnemy())
+                            {
+                                tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>().BetterAI(__instance.block.tank.control);
                                 return false;
                             }
                         }
@@ -214,6 +222,38 @@ namespace TAC_AI
                 }
             }
         }
+
+        [HarmonyPatch(typeof(TargetAimer))]
+        [HarmonyPatch("UpdateTarget")]//On targeting
+        private static class PatchAimingToHelpAI
+        {
+            private static void Prefix(TargetAimer __instance)
+            {
+                try
+                {
+                    var AICommand = __instance.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+                    if (AICommand.IsNotNull())
+                    {
+                        if (AICommand.OverrideAim)
+                        {
+                            var tank = __instance.transform.root.GetComponent<Tank>();
+                            if (tank.IsNotNull() && !tank.IsPlayer)
+                            {
+                                FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
+                                targ.SetValue(__instance, AICommand.lastEnemy);
+
+                                FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+                                targPos.SetValue(__instance, tank.control.TargetPositionWorld);
+
+                                return;
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
 
 
         [HarmonyPatch(typeof(ResourceDispenser))]

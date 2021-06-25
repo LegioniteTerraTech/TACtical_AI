@@ -239,32 +239,33 @@ namespace TAC_AI.AI
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
             return end;
         }
-        public static Vector3 OffsetFromGround(Vector3 input, AIECore.TankAIHelper thisInst)
+        public static Vector3 OffsetFromGround(Vector3 input, AIECore.TankAIHelper thisInst, float groundOffset = 0)
         {
             float final_y;
             Vector3 final = input;
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            if (groundOffset == 0) groundOffset = thisInst.GroundOffsetHeight;
             if (terrain)
-                final_y = height + thisInst.GroundOffsetHeight;
+                final_y = height + groundOffset;
             else
-                final_y = 50 + thisInst.GroundOffsetHeight;
+                final_y = 50 + groundOffset;
             if (thisInst.AdviseAway)// && thisInst.lastEnemy.IsNull()
             {
                 //Still keep dist from ground
                 if (KickStart.isWaterModPresent)
                 {
                     if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                        final_y = WaterMod.QPatch.WaterHeight + thisInst.GroundOffsetHeight;
+                        final_y = WaterMod.QPatch.WaterHeight + groundOffset;
                 }
                 if (input.y < final_y)
                 {
-                    final.x = thisInst.tank.boundsCentreWorld.x;
-                    final.z = thisInst.tank.boundsCentreWorld.z;
+                    final.x = thisInst.tank.boundsCentreWorldNoCheck.x;
+                    final.z = thisInst.tank.boundsCentreWorldNoCheck.z;
                     final.y = height;
                 }
                 else
                 {
-                    final.y = thisInst.tank.boundsCentreWorld.y;
+                    final.y = thisInst.tank.boundsCentreWorldNoCheck.y;
                 }
             }
             else
@@ -272,7 +273,7 @@ namespace TAC_AI.AI
                 if (KickStart.isWaterModPresent)
                 {
                     if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                        final_y = WaterMod.QPatch.WaterHeight + thisInst.GroundOffsetHeight;
+                        final_y = WaterMod.QPatch.WaterHeight + groundOffset;
                 }
                 if (input.y < final_y)
                 {

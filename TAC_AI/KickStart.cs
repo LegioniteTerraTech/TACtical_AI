@@ -14,13 +14,19 @@ namespace TAC_AI
     {
         const string ModName = "TACtical AIs";
 
+        internal static bool testEnemyAI = true;
+
         public static bool EnableBetterAI = true;
-        public static bool isWaterModPresent = false;
         public static int AIDodgeCheapness = 30;
+        public static bool enablePainMode = false;
+
+        internal static bool isWaterModPresent = false;
+        internal static bool isTougherEnemiesPresent = false;
 
         // NativeOptions Parameters
         public static OptionToggle betterAI;
         public static OptionRange dodgePeriod;
+        public static OptionToggle painfulEnemies;
 
 
         public static void Main()
@@ -47,17 +53,27 @@ namespace TAC_AI
                 isWaterModPresent = true;
             }
 
+            if (LookForMod("TougherEnemies"))
+            {
+                Debug.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
+                isTougherEnemiesPresent = true;
+            }
 
             ModConfig thisModConfig = new ModConfig();
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
-
+            thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
 
             var TACAI = ModName;
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            if (isTougherEnemiesPresent)
+            {
+                painfulEnemies = new OptionToggle("Painful Enemies", TACAI, enablePainMode);
+                painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            }
         }
 
         public static bool LookForMod(string name)
