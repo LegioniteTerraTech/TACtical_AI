@@ -10,11 +10,18 @@ namespace TAC_AI.AI.Enemy
     {
         public static void TryAttack(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
         {
-            //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);
             thisInst.Attempt3DNavi = false;
-
-            if (thisInst.lastEnemy == null)
+            if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy.IsNotNull())
+            {
+                if ((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude > mind.Range)
+                {
+                    bool isMending = RGeneral.LollyGag(thisInst, tank, mind);
+                    if (isMending)
+                        return;
+                }
+            }
+            else if (thisInst.lastEnemy == null)
             {
                 RGeneral.LollyGag(thisInst, tank, mind);
                 return;
@@ -152,7 +159,6 @@ namespace TAC_AI.AI.Enemy
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
             }
-            thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst, tank.blockBounds.size.y);
         }
     }
 }

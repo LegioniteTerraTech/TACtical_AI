@@ -98,7 +98,7 @@ namespace TAC_AI.AI.Enemy
                 Tank.DetachEvent.Subscribe(OnBlockLoss);
                 try
                 {
-                    MainFaction = Tank.MainCorps.First();   //Will help determine their Attitude
+                    MainFaction = Tank.GetMainCorp();   //Will help determine their Attitude
                 }
                 catch 
                 {   // can't always get this 
@@ -266,7 +266,11 @@ namespace TAC_AI.AI.Enemy
                 BGeneral.AidDefend(thisInst, tank);
             }
             if (Mind.AllowRepairsOnFly)
-                RRepair.RepairStepper(thisInst, tank, Mind, 50);// longer while fighting
+            {
+                bool venPower = false;
+                if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
+                RRepair.RepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
+            }
             switch (Mind.EvilCommander)
             {
                 case EnemyHandling.Wheeled:
@@ -455,7 +459,7 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderSmarts = EnemySmarts.Smrt;
             else
                 toSet.CommanderSmarts = EnemySmarts.IntAIligent; 
-            if (randomNum < 98)
+            if (randomNum > 98)
                 toSet.AllowRepairsOnFly = true;//top 2
 
             if (toSet.CommanderSmarts > EnemySmarts.Meh)
@@ -519,6 +523,20 @@ namespace TAC_AI.AI.Enemy
         {
             //Debug.Log("TACtical_AI: enemy AI active!");
             RunEvilOperations(thisInst, tank);
+            ScarePlayer(tank);
+        }
+        public static void ScarePlayer(Tank tank)
+        {
+            //Debug.Log("TACtical_AI: enemy AI active!");
+            var tonk = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            if (tonk.IsNotNull())
+            {
+                bool player = tonk.tank.IsPlayer;
+                if (player)
+                {
+                    Singleton.Manager<ManMusic>.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, tonk.tank);
+                }
+            }
         }
     }
 }

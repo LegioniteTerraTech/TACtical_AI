@@ -11,8 +11,9 @@ namespace TAC_AI.AI.Enemy
     {
         static float RANDRange = 50;
 
-        public static void LollyGag(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, bool holdGround = false)
+        public static bool LollyGag(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, bool holdGround = false)
         {
+            bool isRegenerating = false;
             if (mind.Hurt && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10))
             {
                 var energy = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
@@ -42,14 +43,20 @@ namespace TAC_AI.AI.Enemy
                         //Cannot repair block damage or recharge shields!
                         mind.Hurt = false;
                     }
+                    if (tank.IsAnchored && !mind.StartedAnchored)
+                    {
+                        isRegenerating = true;
+                    }
                 }
                 if (mind.CommanderSmarts == EnemySmarts.Smrt)
                 {
                     if (mind.PendingSystemsCheck && mind.AttemptedRepairs < 3)
                     {
-                        mind.PendingSystemsCheck = RRepair.RepairStepper(thisInst, tank, mind);
+                        bool venPower = false;
+                        if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
+                        mind.PendingSystemsCheck = RRepair.RepairStepper(thisInst, tank, mind, Super: venPower);
                         mind.AttemptedRepairs++;
-                        return;
+                        return true;
                     }
                 }
                 if (mind.CommanderSmarts >= EnemySmarts.IntAIligent)
@@ -64,10 +71,12 @@ namespace TAC_AI.AI.Enemy
                         }
                         else
                         {
-                            mind.PendingSystemsCheck = !RRepair.RepairLerp(tank, mind);
+                            bool venPower = false;
+                            if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
+                            mind.PendingSystemsCheck = RRepair.RepairStepper(thisInst, tank, mind, Super: venPower);
                             mind.AttemptedRepairs++;
                         }
-                        return;
+                        return true;
                     }
                 }
             }
@@ -103,6 +112,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst);
             else //Snap to ground
                 thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst, tank.blockBounds.size.y);
+            return isRegenerating;
         }
 
         public static void Engadge(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)

@@ -15,6 +15,15 @@ namespace TAC_AI.AI.Enemy
             BGeneral.ResetValues(thisInst);
             thisInst.Attempt3DNavi = true;
 
+            if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy.IsNotNull())
+            {
+                if ((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude > mind.Range)
+                {
+                    bool isMending = RGeneral.LollyGag(thisInst, tank, mind);
+                    if (isMending)
+                        return;
+                }
+            }
             if (thisInst.lastEnemy == null)
             {
                 RGeneral.LollyGag(thisInst, tank, mind);
@@ -27,6 +36,8 @@ namespace TAC_AI.AI.Enemy
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
 
+            thisInst.forceDrive = true;
+            thisInst.DriveVar = 1;
             if (mind.CommanderAttack == EnemyAttack.Coward)
             {
                 thisInst.SideToThreat = false;
@@ -153,7 +164,6 @@ namespace TAC_AI.AI.Enemy
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
             }
-            thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst);
         }
     }
 }

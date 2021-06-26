@@ -17,7 +17,7 @@ namespace TAC_AI.AI.Enemy
         }
 
         /// <summary>
-        /// Returns true if the tech is damaged or not
+        /// Returns true if the tech is damaged
         /// </summary>
         /// <param name="tank"></param>
         /// <param name="mind"></param>
@@ -36,6 +36,10 @@ namespace TAC_AI.AI.Enemy
         public static bool RepairLerp(Tank tank, RCore.EnemyMind mind, bool overrideChecker = false)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+            if (mind.TechMemor.IsNull())
+            {
+                Debug.Log("TACtical_AI: RepairLerp called with no valid EnemyDesignMemory!!!");
+            }
             int savedBCount = mind.TechMemor.ReturnContents().Count;
             int cBCount = cBlocks.Count;
             Debug.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
@@ -90,7 +94,7 @@ namespace TAC_AI.AI.Enemy
                         {
                             // if we are smrt, run heavier operation
                             List<TankBlock> posBlocks = mind.TechMemor.ReturnContents().FindAll(delegate (TankBlock cand) { return cand.BlockType == foundBlock.BlockType; });
-                            Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                            //Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                             for (int step2 = 0; step2 < posBlocks.Count; step2++)
                             {
                                 TankBlock template = posBlocks.ElementAt(step2);
@@ -136,7 +140,7 @@ namespace TAC_AI.AI.Enemy
 
             while (RepairAttempts > 0)
             {
-                if (rBCount < 1)
+                if (!SystemsCheck(tank, mind))
                 {
                     success = true;
                     break;
@@ -149,7 +153,7 @@ namespace TAC_AI.AI.Enemy
             return success;
         }
 
-        public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, int Delay = 35)
+        public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, int Delay = 35, bool Super = false)
         {
             if (mind.PendingSystemsCheck && mind.AttemptedRepairs == 0)
             {
@@ -165,7 +169,13 @@ namespace TAC_AI.AI.Enemy
                     thisInst.ActionPause = 0;
                 }
                 else if (thisInst.ActionPause == 0)
-                    thisInst.ActionPause = Delay / (int)mind.CommanderSmarts + 1;
+                {
+                    if (!Super)
+                        thisInst.ActionPause = Delay / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                    else
+                        thisInst.ActionPause = (Delay / 6) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+
+                }
                 else
                     thisInst.ActionPause--;
             }
@@ -181,7 +191,7 @@ namespace TAC_AI.AI.Enemy
         {
             if (mind.PendingSystemsCheck && mind.AttemptedRepairs == 0)
             {
-                mind.PendingSystemsCheck = !InstaRepair(tank, mind, mind.TechMemor.ReturnContents().Count());
+                mind.PendingSystemsCheck = !InstaRepair(tank, mind, mind.TechMemor.ReturnContents().Count() + 10);
                 mind.AttemptedRepairs = 1;
             }
             else

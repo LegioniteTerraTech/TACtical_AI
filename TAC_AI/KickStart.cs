@@ -25,13 +25,14 @@ namespace TAC_AI
 
         public static int Difficulty = 50;
 
-        public static int LowerDifficulty => Mathf.Clamp(Difficulty - 50, 0, 99);
-        public static int UpperDifficulty => Mathf.Clamp(Difficulty + 50, 1, 100);
+        public static int LowerDifficulty { get { return Mathf.Clamp(Difficulty - 50, 0, 99); } }
+        public static int UpperDifficulty { get { return Mathf.Clamp(Difficulty + 50, 1, 100); } }
 
         // NativeOptions Parameters
         public static OptionToggle betterAI;
         public static OptionRange dodgePeriod;
         public static OptionToggle painfulEnemies;
+        public static OptionRange diff;
 
 
         public static void Main()
@@ -68,16 +69,19 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
+            thisModConfig.BindConfig<KickStart>(null, "Difficulty");
 
             var TACAI = ModName;
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            if (isTougherEnemiesPresent)
+            if (isTougherEnemiesPresent || testEnemyAI)
             {
                 painfulEnemies = new OptionToggle("Painful Enemies", TACAI, enablePainMode);
                 painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                diff = new OptionRange("AI Difficulty", TACAI, Difficulty, -50, 150, 25);
+                diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             }
         }
 

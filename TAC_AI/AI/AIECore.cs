@@ -909,7 +909,7 @@ namespace TAC_AI.AI
                                 thisInst.EstTopSped = thisInst.recentSpeed;
                         }
                     }
-                    else if (((KickStart.enablePainMode && KickStart.isTougherEnemiesPresent) || KickStart.testEnemyAI) && tank.IsEnemy())
+                    else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy())
                     {   //MP is NOT supported!
                         //Enemy AI
                         if (thisInst.AIState != 2)

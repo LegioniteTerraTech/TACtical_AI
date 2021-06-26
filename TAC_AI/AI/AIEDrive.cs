@@ -141,6 +141,9 @@ namespace TAC_AI.AI
             else
             {
                 //ENEMY
+                var mind = thisInst.GetComponent<Enemy.RCore.EnemyMind>();
+                if (mind.IsNull())
+                    return;
                 bool Combat = TryCombatEnemy(thisControl, thisInst, tank);
                 if (!Combat)
                 {
@@ -160,6 +163,12 @@ namespace TAC_AI.AI
                         thisInst.MinimumRad = thisInst.lastTechExtents + 8;
                     }
                 }
+                if (mind.EvilCommander == Enemy.EnemyHandling.Naval)
+                    thisInst.lastDestination = AIEPathing.OffsetToSea(thisInst.lastDestination, thisInst);
+                else if (mind.EvilCommander == Enemy.EnemyHandling.Starship)
+                    thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst);
+                else
+                    thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst, tank.blockBounds.size.y);
             }
         }
 

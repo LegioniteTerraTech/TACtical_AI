@@ -30,10 +30,13 @@ namespace TAC_AI.AI.Enemy
             if (dist > 10)
             {
                 thisInst.ProceedToObjective = true;
+                thisInst.Steer = true;
                 thisInst.lastDestination = mind.HoldPos;
             }
             else
             {
+                thisInst.ProceedToObjective = true;
+                thisInst.Steer = true;
                 thisInst.PivotOnly = true;
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
             }

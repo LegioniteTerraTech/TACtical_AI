@@ -42,7 +42,7 @@ namespace TAC_AI
                                     return false;
                                 }
                             }
-                            else if (((KickStart.enablePainMode && KickStart.isTougherEnemiesPresent) || KickStart.testEnemyAI) && tank.IsEnemy())
+                            else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy())
                             {
                                 tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>().BetterAI(__instance.block.tank.control);
                                 return false;
@@ -362,7 +362,7 @@ namespace TAC_AI
                 var tAI = __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
                 if (tAI.IsNotNull())
                 {
-                    if (tAI.JustUnanchored)
+                    if (tAI.JustUnanchored && tAI.AIState == 1)
                     {   //Set the AI back to escort to continue operations if autoanchor is true
                         FieldInfo currentTreeActual = typeof(TechAI).GetField("m_CurrentAITreeType", BindingFlags.NonPublic | BindingFlags.Instance);
                         AITreeType AISetting = (AITreeType)currentTreeActual.GetValue(__instance);
