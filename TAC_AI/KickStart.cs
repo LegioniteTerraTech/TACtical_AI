@@ -23,6 +23,11 @@ namespace TAC_AI
         internal static bool isWaterModPresent = false;
         internal static bool isTougherEnemiesPresent = false;
 
+        public static int Difficulty = 50;
+
+        public static int LowerDifficulty => Mathf.Clamp(Difficulty - 50, 0, 99);
+        public static int UpperDifficulty => Mathf.Clamp(Difficulty + 50, 1, 100);
+
         // NativeOptions Parameters
         public static OptionToggle betterAI;
         public static OptionRange dodgePeriod;

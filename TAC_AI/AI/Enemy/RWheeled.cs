@@ -132,7 +132,7 @@ namespace TAC_AI.AI.Enemy
                     thisInst.ProceedToObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-                else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
+                else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
                 {
                     if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);

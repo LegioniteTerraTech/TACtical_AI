@@ -11,7 +11,7 @@ namespace TAC_AI.AI.Enemy
     {
         static float RANDRange = 50;
 
-        public static void LollyGag(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void LollyGag(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, bool holdGround = false)
         {
             if (mind.Hurt && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10))
             {
@@ -47,7 +47,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (mind.PendingSystemsCheck && mind.AttemptedRepairs < 3)
                     {
-                        mind.PendingSystemsCheck = !RRepair.RepairLerp(tank, mind);
+                        mind.PendingSystemsCheck = RRepair.RepairStepper(thisInst, tank, mind);
                         mind.AttemptedRepairs++;
                         return;
                     }
@@ -76,21 +76,26 @@ namespace TAC_AI.AI.Enemy
                 thisInst.anchorAttempts = 0;
             }
 
-            switch (mind.CommanderMind)
+            if (holdGround)
+                thisInst.lastDestination = mind.HoldPos;
+            else
             {
-                case EnemyAttitude.Default: // do dumb stuff
-                    DefaultIdle(thisInst, tank, mind);
-                    break;
-                case EnemyAttitude.Homing:  // Get nearest tech regardless of max combat range and attack them
-                    HomingIdle(thisInst, tank, mind);
-                    break;
-                //The cases below I still have to think of a reason for them to do the things
-                case EnemyAttitude.Miner:   // mine resources
-                    DefaultIdle(thisInst, tank, mind);
-                    break;
-                case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
-                    DefaultIdle(thisInst, tank, mind);
-                    break;
+                switch (mind.CommanderMind)
+                {
+                    case EnemyAttitude.Default: // do dumb stuff
+                        DefaultIdle(thisInst, tank, mind);
+                        break;
+                    case EnemyAttitude.Homing:  // Get nearest tech regardless of max combat range and attack them
+                        HomingIdle(thisInst, tank, mind);
+                        break;
+                    //The cases below I still have to think of a reason for them to do the things
+                    case EnemyAttitude.Miner:   // mine resources
+                        DefaultIdle(thisInst, tank, mind);
+                        break;
+                    case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
+                        DefaultIdle(thisInst, tank, mind);
+                        break;
+                }
             }
             if (mind.EvilCommander == EnemyHandling.Naval)
                 thisInst.lastDestination = AIEPathing.OffsetToSea(thisInst.lastDestination, thisInst);

@@ -15,6 +15,7 @@ namespace TAC_AI.AI.Enemy
 
             thisInst.lastDestination = mind.HoldPos;
             thisInst.Attempt3DNavi = true;
+            thisInst.Retreat = true;    //Prevent the auto-driveaaaa
 
             float dist = (tank.boundsCentreWorldNoCheck - mind.HoldPos).magnitude;
             thisInst.lastRange = dist;
@@ -29,6 +30,7 @@ namespace TAC_AI.AI.Enemy
             if (dist > 10)
             {
                 thisInst.ProceedToObjective = true;
+                thisInst.lastDestination = mind.HoldPos;
             }
             else
             {

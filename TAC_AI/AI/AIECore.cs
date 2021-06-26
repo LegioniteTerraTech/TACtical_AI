@@ -383,6 +383,9 @@ namespace TAC_AI.AI
                 thisInst.theBase = null;
                 thisInst.JustUnanchored = false;
                 thisInst.AIList.Clear();
+                var Mind = tank.gameObject.GetComponent<Enemy.RCore.EnemyMind>();
+                if (Mind.IsNotNull())
+                    Mind.SetForRemoval();
                 /*
                 FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
@@ -421,11 +424,6 @@ namespace TAC_AI.AI
                 control3D.m_State.m_InputRotation = Vector3.zero;
                 controlGet.SetValue(tank.control, control3D);
 
-                var mindE = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
-                if (mindE.IsNotNull())
-                {
-                    return;
-                }
                 foreach (ModuleAIExtension AIEx in thisInst.AIList)
                 {
                     if (AIEx.Prospector)
@@ -593,12 +591,10 @@ namespace TAC_AI.AI
                                 if (lastAuxVal < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
                                 {
                                     //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name + " and " + lastCloseAlly2.name);
-                                    //thisInst.IsLikelyJammed = true;
                                     IntVector3 ProccessedVal2 = GetOtherDir(lastCloseAlly) + GetOtherDir(lastCloseAlly2);
                                     return (targetIn + ProccessedVal2) / 3;
                                 }
                                 //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-                                //thisInst.IsLikelyJammed = true;
 
                                 IntVector3 ProccessedVal = GetOtherDir(lastCloseAlly);
                                 return (targetIn + ProccessedVal) / 2;
@@ -613,7 +609,6 @@ namespace TAC_AI.AI
                         if (lastAllyDist < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
                         {
                             //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-                            //thisInst.IsLikelyJammed = true;
                             IntVector3 ProccessedVal = GetOtherDir(lastCloseAlly);
                             return (targetIn + ProccessedVal) / 2;
                         }

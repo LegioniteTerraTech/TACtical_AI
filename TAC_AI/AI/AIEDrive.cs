@@ -317,18 +317,34 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    driveVal = tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized;
-                    int range = (int)(thisInst.lastDestination - tank.transform.position).magnitude;
-                    if (range < thisInst.MinimumRad - 1)
-                    {
-                        driveVal = -tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized * 0.3f;
-                    }
-                    else if (range > thisInst.MinimumRad + 1)
-                    {
-                        if (thisInst.DriveDir == EDriveType.Forwards)
-                            driveMultiplier = 1f;
+                    if (thisInst.lastEnemy.IsNotNull())
+                    {   //level alt with enemy
+                        float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
+                        driveVal = tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized;
+                        if (enemyOffsetH + (thisInst.IdealRangeCombat / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
+                        {
+                            driveVal.y = Mathf.Clamp(((thisInst.IdealRangeCombat / 4) - tank.boundsCentreWorld.y) / 10, -1, 1);
+                        }
                         else
-                            driveMultiplier = 0.4f;
+                        {
+                            driveVal.y = -1;
+                        }
+                    }
+                    else
+                    {
+                        driveVal = tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized;
+                        int range = (int)(thisInst.lastDestination - tank.transform.position).magnitude;
+                        if (range < thisInst.MinimumRad - 1)
+                        {
+                            driveVal = -tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized * 0.3f;
+                        }
+                        else if (range > thisInst.MinimumRad + 1)
+                        {
+                            if (thisInst.DriveDir == EDriveType.Forwards)
+                                driveMultiplier = 1f;
+                            else
+                                driveMultiplier = 0.4f;
+                        }
                     }
                 }
                 if (driveVal.y >= -0.5f && driveVal.y < 0f)

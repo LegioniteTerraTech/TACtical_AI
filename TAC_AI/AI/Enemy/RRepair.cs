@@ -13,88 +13,113 @@ namespace TAC_AI.AI.Enemy
 
         public static bool AttemptBlockAttach(Tank tank, TankBlock template, TankBlock canidate)
         {
-            Debug.Log("TACtical_AI: AI " + tank.name + ":  Replaced block " + template.name);
             return tank.blockman.AddBlockToTech(canidate, template.cachedLocalPosition, template.cachedLocalRotation);
+        }
+
+        /// <summary>
+        /// Returns true if the tech is damaged or not
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <param name="mind"></param>
+        /// <returns></returns>
+        public static bool SystemsCheck(Tank tank, RCore.EnemyMind mind)
+        {
+            List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+            int savedBCount = mind.TechMemor.ReturnContents().Count;
+            int cBCount = cBlocks.Count;
+            if (savedBCount != cBCount)
+            {
+                return true;
+            }
+            return false;
         }
         public static bool RepairLerp(Tank tank, RCore.EnemyMind mind, bool overrideChecker = false)
         {
-            bool success = false;
-            BlockManager.TableCache techCache = tank.blockman.GetTableCacheForPlacementCollection();
-            List<TankBlock> cBlocks = techCache.blockTable.Cast<TankBlock>().ToList();
-            int savedBCount = mind.TechMemor.SavedTech.Count;
+            List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+            int savedBCount = mind.TechMemor.ReturnContents().Count;
             int cBCount = cBlocks.Count;
+            Debug.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount < cBCount && !overrideChecker)
             {
-                Debug.Log("TACtical_AI: AI " + tank.name + ":  INVALID SAVED TECH DESIGN MEMORY!!!");
+                if (!overrideChecker)
+                    Debug.Log("TACtical_AI: AI " + tank.name + ":  INVALID SAVED TECH DESIGN MEMORY!!!");
                 mind.TechMemor.SaveTech();
                 return false;
             }
             if (savedBCount != cBCount)
             {
-                List<TankBlock> rBlocks = mind.TechMemor.SavedTech;
-                for (int step = 0; step < savedBCount; step++)
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
+                List<TankBlock> rBlocks = mind.TechMemor.ReturnContents();
+                for (int step = 0; step < cBCount; step++)
                 {
                     //deduct present blocks
-                    if (cBlocks.Contains(rBlocks.ElementAt(step)))
-                        rBlocks.RemoveAt(step);
+                    rBlocks.Remove(cBlocks.ElementAt(step));
                 }
-                
-                int sees = tank.Vision.VisibleCount;
-                for (int step = 0; step < sees; step++)
-                {
-                    TankBlock foundBlock = tank.Vision.IterateVisibles().Current.block;
-                    if (foundBlock.IsNull())
-                    {
-                        tank.Vision.IterateVisibles().MoveNext();
-                        continue;
-                    }
-                    else
-                    {
-                        if (foundBlock.tank.IsNull() && foundBlock.visible.holderStack.myHolder.IsNull())
-                        {
-                            if (rBlocks.Contains(foundBlock))
-                            {
-                                TankBlock template = rBlocks.ElementAt(rBlocks.IndexOf(foundBlock));
-                                bool attemptW = AttemptBlockAttach(tank, template, foundBlock);
+                Debug.Log("TACtical AI: RepairLerp - Blocks to repair = "+ rBlocks.Count);
 
-                                if (!attemptW)
-                                {
-                                    // Are we a smart enemy?
-                                    if (mind.CommanderSmarts >= EnemySmarts.Smrt)
-                                    {
-                                        // if we are smrt, run heavier operation
-                                        List<TankBlock> posBlocks = rBlocks.FindAll(delegate (TankBlock cand) { return cand == foundBlock; });
-                                        for (int step2 = 0; step2 < posBlocks.Count; step2++)
-                                        {
-                                            template = posBlocks.ElementAt(step);
-                                            attemptW = AttemptBlockAttach(tank, template, foundBlock);
-                                            if (attemptW)
-                                            {
-                                                Debug.Log("TACtical AI: RepairLerp - potential failiure point reached");
-                                                FieldInfo attachSFX = typeof(ManTechBuilder).GetField("m_BlockAttachSFXEvents", BindingFlags.NonPublic | BindingFlags.Instance);
-                                                FMODEvent[] soundSteal = (FMODEvent[])attachSFX.GetValue(Singleton.Manager<ManTechBuilder>.inst);
-                                                soundSteal[(int)foundBlock.BlockConnectionAudioType].PlayOneShot();
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    // if not we fail
-                                }
-                                else
-                                {
-                                    Debug.Log("TACtical AI: RepairLerp - potential failiure point reached");
-                                    FieldInfo attachSFX = typeof(ManTechBuilder).GetField("m_BlockAttachSFXEvents", BindingFlags.NonPublic | BindingFlags.Instance);
-                                    FMODEvent[] soundSteal = (FMODEvent[])attachSFX.GetValue(Singleton.Manager<ManTechBuilder>.inst);
-                                    soundSteal[(int)foundBlock.BlockConnectionAudioType].PlayOneShot();
-                                }
-                            }
+                List<TankBlock> fBlocks = new List<TankBlock>();
+                foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, (mind.Range / 3), new Bitfield<ObjectTypes>()))//new ObjectTypes[1]{ObjectTypes.Block})
+                {
+                    if (foundBlock.block.IsNotNull())
+                    {
+                        if (!foundBlock.block.tank && foundBlock.holderStack == null && Singleton.Manager<ManPointer>.inst.DraggingItem != foundBlock)
+                        {
+                            //Debug.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
+                            fBlocks.Add(foundBlock.block);
                         }
                     }
                 }
+                fBlocks = fBlocks.OrderBy((blok) => (blok.centreOfMassWorld - tank.boundsCentreWorld).sqrMagnitude).ToList();
+                int attachAttempts = fBlocks.Count();
+                Debug.Log("TACtical AI: RepairLerp - Found " + attachAttempts + " loose blocks to use");
+                for (int step = 0; step < attachAttempts; step++)
+                {
+                    TankBlock foundBlock = fBlocks[step];
+                    bool attemptW = false;
+                    int templateGet = rBlocks.IndexOf(foundBlock);
+                    if (templateGet != -1)
+                    {
+                        TankBlock template = rBlocks.ElementAt(templateGet);
+                        attemptW = AttemptBlockAttach(tank, template, foundBlock);
+                    }
+
+                    if (!attemptW)
+                    {
+                        // Are we a smart enemy?
+                        if (mind.CommanderSmarts >= EnemySmarts.Smrt)
+                        {
+                            // if we are smrt, run heavier operation
+                            List<TankBlock> posBlocks = mind.TechMemor.ReturnContents().FindAll(delegate (TankBlock cand) { return cand.BlockType == foundBlock.BlockType; });
+                            Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                            for (int step2 = 0; step2 < posBlocks.Count; step2++)
+                            {
+                                TankBlock template = posBlocks.ElementAt(step2);
+                                attemptW = AttemptBlockAttach(tank, template, foundBlock);
+                                if (attemptW)
+                                {
+                                    Debug.Log("TACtical_AI: AI " + tank.name + ":  Attaching " + foundBlock.name);
+                                    FieldInfo attachSFX = typeof(ManTechBuilder).GetField("m_BlockAttachSFXEvents", BindingFlags.NonPublic | BindingFlags.Instance);
+                                    FMODEvent[] soundSteal = (FMODEvent[])attachSFX.GetValue(Singleton.Manager<ManTechBuilder>.inst);
+                                    soundSteal[(int)foundBlock.BlockConnectionAudioType].PlayOneShot();
+                                    return true;
+                                }
+                            }
+                        }
+                        else
+                            Debug.Log("TACtical_AI: AI " + tank.name + ":  Could not attach " + foundBlock.name);
+                        // if not we fail
+                    }
+                    else
+                    {
+                        Debug.Log("TACtical_AI: AI " + tank.name + ":  Attaching " + foundBlock.name);
+                        FieldInfo attachSFX = typeof(ManTechBuilder).GetField("m_BlockAttachSFXEvents", BindingFlags.NonPublic | BindingFlags.Instance);
+                        FMODEvent[] soundSteal = (FMODEvent[])attachSFX.GetValue(Singleton.Manager<ManTechBuilder>.inst);
+                        soundSteal[(int)foundBlock.BlockConnectionAudioType].PlayOneShot();
+                        return true;
+                    }
+                }
             }
-            else
-                return false;
-            return success;
+            return false;
         }
 
         public static bool InstaRepair(Tank tank, RCore.EnemyMind mind, int RepairAttempts = 0)
@@ -103,11 +128,11 @@ namespace TAC_AI.AI.Enemy
 
             BlockManager.TableCache techCache = tank.blockman.GetTableCacheForPlacementCollection();
             List<TankBlock> cBlocks = techCache.blockTable.Cast<TankBlock>().ToList();
-            int savedBCount = mind.TechMemor.SavedTech.Count;
+            int savedBCount = mind.TechMemor.ReturnContents().Count;
             int cBCount = cBlocks.Count;
             int rBCount = savedBCount - cBCount;
             if (RepairAttempts == 0)
-                RepairAttempts = mind.TechMemor.SavedTech.Count();
+                RepairAttempts = mind.TechMemor.ReturnContents().Count();
 
             while (RepairAttempts > 0)
             {
@@ -124,11 +149,12 @@ namespace TAC_AI.AI.Enemy
             return success;
         }
 
-        public static bool MobileRepairs(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, int Delay = 35)
         {
             if (mind.PendingSystemsCheck && mind.AttemptedRepairs == 0)
             {
-                mind.PendingSystemsCheck = !RepairLerp(tank, mind);
+                RepairLerp(tank, mind);
+                mind.PendingSystemsCheck = SystemsCheck(tank, mind);
                 mind.AttemptedRepairs = 1;
             }
             else
@@ -139,22 +165,23 @@ namespace TAC_AI.AI.Enemy
                     thisInst.ActionPause = 0;
                 }
                 else if (thisInst.ActionPause == 0)
-                    thisInst.ActionPause = 20 / (int)mind.CommanderSmarts;
+                    thisInst.ActionPause = Delay / (int)mind.CommanderSmarts + 1;
                 else
                     thisInst.ActionPause--;
             }
             return mind.PendingSystemsCheck;
         }
 
+
         public static void SetupForNewTechConstruction(RCore.EnemyMind mind, List<TankBlock> tankTemplate)
         {
-            mind.TechMemor.SavedTech = tankTemplate;
+            mind.TechMemor.SaveTech(tankTemplate.FindAll(delegate (TankBlock cand) { return cand != null; }));
         }
         public static bool NewTechConstruction(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
         {
             if (mind.PendingSystemsCheck && mind.AttemptedRepairs == 0)
             {
-                mind.PendingSystemsCheck = !InstaRepair(tank, mind, mind.TechMemor.SavedTech.Count());
+                mind.PendingSystemsCheck = !InstaRepair(tank, mind, mind.TechMemor.ReturnContents().Count());
                 mind.AttemptedRepairs = 1;
             }
             else

@@ -34,12 +34,12 @@ namespace TAC_AI.AI.Enemy
                 thisInst.MoveFromObjective = true;
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 4))
                 {
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                    thisInst.BOOST = true;
                     if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    thisInst.BOOST = true;
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
@@ -60,7 +60,6 @@ namespace TAC_AI.AI.Enemy
                     thisInst.SettleDown();
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
-                    thisInst.SettleDown();
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
@@ -82,12 +81,12 @@ namespace TAC_AI.AI.Enemy
                 thisInst.Retreat = false;
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 2))
                 {
+                    thisInst.MoveFromObjective = true;
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
-                    thisInst.MoveFromObjective = true;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
@@ -120,12 +119,12 @@ namespace TAC_AI.AI.Enemy
                 thisInst.Retreat = false;
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
+                    thisInst.MoveFromObjective = true;
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
-                    thisInst.MoveFromObjective = true;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
@@ -133,7 +132,7 @@ namespace TAC_AI.AI.Enemy
                     thisInst.ProceedToObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-                else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
+                else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
                 {
                     if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);

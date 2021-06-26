@@ -14,7 +14,7 @@ namespace TAC_AI.AI.Enemy
             private Tank Tank;
             private EnemyMind Mind;
             private AIECore.TankAIHelper AIControl;
-            internal List<TankBlock> SavedTech = new List<TankBlock>();
+            public List<TankBlock> SavedTech { get; private set; }
 
             public void Initiate()
             {
@@ -22,9 +22,30 @@ namespace TAC_AI.AI.Enemy
                 AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
                 Mind = gameObject.GetComponent<EnemyMind>();
             }
+            public void Remove()
+            {
+                DestroyImmediate(this);
+            }
+            public List<TankBlock> ReturnContents()
+            {
+                if (SavedTech.Count() == 0)
+                {
+                    Debug.Log("TACtical_AI: INVALID TECH DATA STORED FOR TANK " + Tank.name);
+                }
+                return new List<TankBlock>(SavedTech);
+            }
             public void SaveTech()
             {
-                SavedTech = Tank.blockman.GetTableCacheForPlacementCollection().blockTable.Cast<TankBlock>().ToList();
+                List<TankBlock> ToSave = Tank.blockman.IterateBlocks().ToList();
+                if (ToSave.Count() == 0)
+                {
+                    Debug.Log("TACtical_AI: INVALID TECH DATA SAVED FOR TANK " + Tank.name);
+                }
+                SavedTech = new List<TankBlock>(ToSave);
+            }
+            public void SaveTech(List<TankBlock> overwrite)
+            {
+                SavedTech = new List<TankBlock>(overwrite.FindAll(delegate (TankBlock cand) { return cand != null; }));
             }
         }
 
@@ -59,12 +80,13 @@ namespace TAC_AI.AI.Enemy
 
             public void SetForRemoval()
             {
-                if (gameObject.GetComponent<EnemyDesignMemory>().IsNotNull())
+                if (gameObject.GetComponent<EnemyMind>().IsNotNull())
                 {
                     Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
                     remove = true;
-                    gameObject.GetComponent<EnemyDesignMemory>().Recycle();
-                    this.Recycle();
+                    if (gameObject.GetComponent<EnemyDesignMemory>().IsNotNull())
+                        gameObject.GetComponent<EnemyDesignMemory>().Remove();
+                    DestroyImmediate(this);
                 }
             }
             public void Initiate()
@@ -225,6 +247,11 @@ namespace TAC_AI.AI.Enemy
         public static void RunEvilOperations(AIECore.TankAIHelper thisInst, Tank tank)
         {
             var Mind = tank.gameObject.GetComponent<EnemyMind>();
+            if (Mind.IsNull())
+            {
+                RandomizeBrain(thisInst, tank);
+                return;
+            }
             if (Mind.remove)
             {
                 return;
@@ -239,7 +266,7 @@ namespace TAC_AI.AI.Enemy
                 BGeneral.AidDefend(thisInst, tank);
             }
             if (Mind.AllowRepairsOnFly)
-                RRepair.MobileRepairs(thisInst, tank, Mind);
+                RRepair.RepairStepper(thisInst, tank, Mind, 50);// longer while fighting
             switch (Mind.EvilCommander)
             {
                 case EnemyHandling.Wheeled:
@@ -298,7 +325,7 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.EvilCommander = EnemyHandling.Starship;
             }
-            else if (BM.IterateBlockComponents<ModuleGyro>().Count() > 3 && BM.IterateBlockComponents<ModuleBooster>().Count() > 0)
+            else if (BM.IterateBlockComponents<ModuleGyro>().Count() > 1 && BM.IterateBlockComponents<ModuleBooster>().Count() > 0)
             {
                 toSet.EvilCommander = EnemyHandling.Naval;
             }
@@ -310,6 +337,9 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.EvilCommander = EnemyHandling.SuicideMissile;
             }
+            else
+                toSet.EvilCommander = EnemyHandling.Wheeled;
+
 
             //Determine Attitude
             if (BM.IterateBlockComponents<ModuleWeaponGun>().Count() < BM.IterateBlockComponents<ModuleDrill>().Count() || toSet.MainFaction == FactionSubTypes.GC)
@@ -324,6 +354,13 @@ namespace TAC_AI.AI.Enemy
                 // Artillery
                 toSet.CommanderMind = EnemyAttitude.Homing;
                 toSet.CommanderAttack = EnemyAttack.Spyper;
+                fired = true;
+            }
+            else if (toSet.MainFaction == FactionSubTypes.VEN)
+            {
+                // Carrier
+                toSet.CommanderMind = EnemyAttitude.Default;
+                toSet.CommanderAttack = EnemyAttack.Circle;
                 fired = true;
             }
             else if (toSet.MainFaction == FactionSubTypes.HE)
@@ -355,7 +392,17 @@ namespace TAC_AI.AI.Enemy
 
             bool isMissionTech = RMission.TryHandleMissionAI(thisInst, tank, toSet);
             if (isMissionTech)
+            {
+                if (toSet.CommanderSmarts >= EnemySmarts.Smrt)
+                {
+                    toSet.TechMemor = tank.gameObject.GetComponent<EnemyDesignMemory>();
+                    if (toSet.TechMemor.IsNull())
+                        toSet.TechMemor = tank.gameObject.AddComponent<EnemyDesignMemory>();
+                    toSet.TechMemor.Initiate();
+                    toSet.TechMemor.SaveTech();
+                }
                 return;
+            }
 
             if (tank.Anchors.NumAnchored > 0)
                 toSet.StartedAnchored = true;
@@ -397,7 +444,7 @@ namespace TAC_AI.AI.Enemy
             catch { }//some population techs are devoid of schemes
             */
             //add Smartness
-            int randomNum = UnityEngine.Random.Range(1, 100);
+            int randomNum = UnityEngine.Random.Range(KickStart.LowerDifficulty, KickStart.UpperDifficulty);
             if (randomNum < 35)
                 toSet.CommanderSmarts = EnemySmarts.Default;
             else if (randomNum < 60)
@@ -407,7 +454,9 @@ namespace TAC_AI.AI.Enemy
             else if (randomNum < 92)
                 toSet.CommanderSmarts = EnemySmarts.Smrt;
             else
-                toSet.CommanderSmarts = EnemySmarts.IntAIligent;
+                toSet.CommanderSmarts = EnemySmarts.IntAIligent; 
+            if (randomNum < 98)
+                toSet.AllowRepairsOnFly = true;//top 2
 
             if (toSet.CommanderSmarts > EnemySmarts.Meh)
             {
@@ -419,11 +468,7 @@ namespace TAC_AI.AI.Enemy
             }
 
 
-            bool setEnemy = false;
-            //if (randomNum > 50)
-            //{
-                setEnemy = SetSmartAIStats(thisInst, tank, toSet);
-            //}
+            bool setEnemy = SetSmartAIStats(thisInst, tank, toSet);
             if (!setEnemy)
             {
                 //add Attitude
