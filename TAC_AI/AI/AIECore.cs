@@ -244,6 +244,9 @@ namespace TAC_AI.AI
             internal int FrustrationMeter = 0;
             internal float Urgency = 0;
             internal float UrgencyOverload = 0;
+            public bool PendingSystemsCheck;    // Is this tech damaged?
+            public int AttemptedRepairs = 0;    // How many times have we tried fix
+            public float DamageThreshold = 0;   // How much damage have we taken? (100 is total destruction)
             //internal float Oops = 0;
             internal Vector3 lastDestination;
 
@@ -285,6 +288,7 @@ namespace TAC_AI.AI
             //  !!ADVANCED!!
             internal bool Attempt3DNavi = false;
             internal Vector3 Navi3DDirect = Vector3.zero;
+            internal Vector3 Navi3DUp = Vector3.zero;
             public float GroundOffsetHeight = 35;    // flote above ground this dist
 
 
@@ -386,7 +390,7 @@ namespace TAC_AI.AI
                 var Mind = tank.gameObject.GetComponent<Enemy.RCore.EnemyMind>();
                 if (Mind.IsNotNull())
                     Mind.SetForRemoval();
-                /*
+
                 FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
                 control3D.m_State.m_Beam = false;
@@ -396,7 +400,6 @@ namespace TAC_AI.AI
                 control3D.m_State.m_InputMovement = Vector3.zero;
                 control3D.m_State.m_InputRotation = Vector3.zero;
                 controlGet.SetValue(tank.control, control3D);
-                */
             }
 
             public void RefreshAI()
@@ -948,6 +951,7 @@ namespace TAC_AI.AI
                             var Mind = tank.gameObject.GetComponent<Enemy.RCore.EnemyMind>();
                             if (Mind.IsNotNull())
                                 Mind.SetForRemoval();
+                            ResetAll(thisInst.tank);
                             thisInst.AIState = 0;
                         }
                     }

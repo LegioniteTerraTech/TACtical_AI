@@ -107,6 +107,7 @@
   <ItemGroup>
     <Compile Include="AI\AIEPathing.cs" />
     <Compile Include="AI\AIEBeam.cs" />
+    <Compile Include="AI\AIERepair.cs" />
     <Compile Include="AI\AIEWeapons.cs" />
     <Compile Include="AI\EDriveType.cs" />
     <Compile Include="AI\BAstrotech.cs" />

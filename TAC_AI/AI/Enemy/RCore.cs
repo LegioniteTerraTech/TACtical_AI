@@ -9,52 +9,12 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RCore
     {
-        public class EnemyDesignMemory : MonoBehaviour
-        {   // Save the design on load!
-            private Tank Tank;
-            private EnemyMind Mind;
-            private AIECore.TankAIHelper AIControl;
-            public List<TankBlock> SavedTech { get; private set; }
-
-            public void Initiate()
-            {
-                Tank = gameObject.GetComponent<Tank>();
-                AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
-                Mind = gameObject.GetComponent<EnemyMind>();
-            }
-            public void Remove()
-            {
-                DestroyImmediate(this);
-            }
-            public List<TankBlock> ReturnContents()
-            {
-                if (SavedTech.Count() == 0)
-                {
-                    Debug.Log("TACtical_AI: INVALID TECH DATA STORED FOR TANK " + Tank.name);
-                }
-                return new List<TankBlock>(SavedTech);
-            }
-            public void SaveTech()
-            {
-                List<TankBlock> ToSave = Tank.blockman.IterateBlocks().ToList();
-                if (ToSave.Count() == 0)
-                {
-                    Debug.Log("TACtical_AI: INVALID TECH DATA SAVED FOR TANK " + Tank.name);
-                }
-                SavedTech = new List<TankBlock>(ToSave);
-            }
-            public void SaveTech(List<TankBlock> overwrite)
-            {
-                SavedTech = new List<TankBlock>(overwrite.FindAll(delegate (TankBlock cand) { return cand != null; }));
-            }
-        }
-
         public class EnemyMind : MonoBehaviour
         {   // Where the brain is handled for enemies
             // ESSENTIALS
             private Tank Tank;
             private AIECore.TankAIHelper AIControl;
-            public EnemyDesignMemory TechMemor;
+            public AIERepair.DesignMemory TechMemor;
 
             // Set on spawn
             public EnemyHandling EvilCommander = EnemyHandling.Wheeled;
@@ -67,13 +27,11 @@ namespace TAC_AI.AI.Enemy
             public bool AllowRepairsOnFly = false;  // If we are feeling extra evil
             public bool InvertBullyPriority = false;// Shoot the big techs instead
 
-            public bool PendingSystemsCheck = false;// Check all blocks for key ones
             public bool SolarsAvail = false;        // Do whe currently have solar panels
             public bool Provoked = false;           // Were we hit from afar?
             public bool Hurt = false;               // Are we damaged?
             public int Range = 250;                 // Aggro range
             public int TargetLockDuration = 0;
-            public int AttemptedRepairs = 0;
             public Vector3 HoldPos = Vector3.zero;
 
             internal bool remove = false;
@@ -84,8 +42,8 @@ namespace TAC_AI.AI.Enemy
                 {
                     Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
                     remove = true;
-                    if (gameObject.GetComponent<EnemyDesignMemory>().IsNotNull())
-                        gameObject.GetComponent<EnemyDesignMemory>().Remove();
+                    if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
+                        gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
                     DestroyImmediate(this);
                 }
             }
@@ -128,7 +86,7 @@ namespace TAC_AI.AI.Enemy
                     var mind = tonk.GetComponent<EnemyMind>();
                     mind.AIControl.FIRE_NOW = true;
                     mind.Hurt = true;
-                    mind.PendingSystemsCheck = true;
+                    mind.AIControl.PendingSystemsCheck = true;
                 }
                 catch { }
             }
@@ -269,14 +227,25 @@ namespace TAC_AI.AI.Enemy
             {
                 bool venPower = false;
                 if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                RRepair.RepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
+                RRepair.EnemyRepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
+            }
+            switch (Mind.CommanderAttack)
+            {
+                case EnemyAttack.Coward:
+                    BGeneral.SelfDefend(thisInst, tank);
+                    break;
+                case EnemyAttack.Spyper:
+                    BGeneral.AimDefend(thisInst, tank);
+                    break;
+                default:
+                    BGeneral.AidDefend(thisInst, tank);
+                    break;
             }
             switch (Mind.EvilCommander)
             {
                 case EnemyHandling.Wheeled:
                     thisInst.PursueThreat = true;
                     RWheeled.TryAttack(thisInst, tank, Mind);
-                    BGeneral.AidDefend(thisInst, tank);
                     break;
                 case EnemyHandling.Airplane:
                     //awaiting coding
@@ -285,33 +254,27 @@ namespace TAC_AI.AI.Enemy
                     //awaiting coding, Starship but pid
                     thisInst.PursueThreat = true;
                     RStarship.TryAttack(thisInst, tank, Mind);
-                    BGeneral.AidDefend(thisInst, tank);
                     break;
                 case EnemyHandling.Starship:
                     thisInst.PursueThreat = true;
                     RStarship.TryAttack(thisInst, tank, Mind);
-                    BGeneral.AidDefend(thisInst, tank);
                     break;
                 case EnemyHandling.Naval:
                     thisInst.PursueThreat = true;
                     RNaval.TryAttack(thisInst, tank, Mind);
-                    BGeneral.AidDefend(thisInst, tank);
                     break;
                 case EnemyHandling.SuicideMissile:
                     thisInst.PursueThreat = true;
                     RSuicideMissile.RamTillDeath(thisInst, tank, Mind);
-                    BGeneral.AidDefend(thisInst, tank);
                     break;
                 case EnemyHandling.Stationary:
                     thisInst.PursueThreat = true;
                     RStation.HoldPosition(thisInst, tank, Mind);
-                    BGeneral.AidDefend(thisInst, tank);
                     break;
                 case EnemyHandling.Boss:
                     //awaiting coding, no plans yet for coding
                     thisInst.PursueThreat = true;
                     RStarship.TryAttack(thisInst, tank, Mind);
-                    BGeneral.AidDefend(thisInst, tank);
                     break;
             }
             //CommanderMind is handled in each seperate class
@@ -389,6 +352,7 @@ namespace TAC_AI.AI.Enemy
         {
             if (!tank.gameObject.GetComponent<EnemyMind>())
                 tank.gameObject.AddComponent<EnemyMind>();
+            thisInst.lastPlayer = null;
 
             var toSet = tank.gameObject.GetComponent<EnemyMind>();
             toSet.HoldPos = tank.boundsCentreWorldNoCheck;
@@ -399,9 +363,9 @@ namespace TAC_AI.AI.Enemy
             {
                 if (toSet.CommanderSmarts >= EnemySmarts.Smrt)
                 {
-                    toSet.TechMemor = tank.gameObject.GetComponent<EnemyDesignMemory>();
+                    toSet.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                     if (toSet.TechMemor.IsNull())
-                        toSet.TechMemor = tank.gameObject.AddComponent<EnemyDesignMemory>();
+                        toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                     toSet.TechMemor.Initiate();
                     toSet.TechMemor.SaveTech();
                 }
@@ -464,9 +428,9 @@ namespace TAC_AI.AI.Enemy
 
             if (toSet.CommanderSmarts > EnemySmarts.Meh)
             {
-                toSet.TechMemor = tank.gameObject.GetComponent<EnemyDesignMemory>();
+                toSet.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (toSet.TechMemor.IsNull())
-                    toSet.TechMemor = tank.gameObject.AddComponent<EnemyDesignMemory>();
+                    toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                 toSet.TechMemor.Initiate();
                 toSet.TechMemor.SaveTech();
             }

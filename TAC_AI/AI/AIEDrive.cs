@@ -204,34 +204,66 @@ namespace TAC_AI.AI
                 }
                 else
                 {   //for special cases we want to angle at the enemy
-                    turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+                    turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DUp)).eulerAngles;
+
                     Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
-                    if (Vector3.Dot(thisInst.Navi3DDirect, tank.rootBlockTrans.forward) < 0.6f && !thisInst.FullMelee)
+                    if (thisInst.Navi3DUp == Vector3.up)
                     {
-                        turnVal.x = turnValUp.x;
-                        if (turnVal.x > 180)
-                            turnVal.x = -((turnVal.x - 360) / 180);
+                        Debug.Log("TACtical_AI: Forwards");
+                        if (!thisInst.FullMelee && Vector3.Dot(thisInst.Navi3DDirect, tank.rootBlockTrans.forward) < 0.6f)
+                        {
+                            //If overtilt then try get back upright again
+                            turnVal.x = turnValUp.x;
+                            if (turnVal.x > 180)
+                                turnVal.x = -((turnVal.x - 360) / 180);
+                            else
+                                turnVal.x = -(turnVal.x / 180);
+                        }
                         else
-                            turnVal.x = -(turnVal.x / 180);
+                        {
+                            if (turnVal.x > 180)
+                                turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / 60), -1, 1);
+                            else
+                                turnVal.x = Mathf.Clamp(-(turnVal.x / 60), -1, 1);
+                        }
+                        turnVal.z = turnValUp.z;
+                        if (turnVal.z > 180)
+                            turnVal.z = -((turnVal.z - 360) / 180);
+                        else
+                            turnVal.z = -(turnVal.z / 180);
                     }
                     else
-                    {
+                    {   //Using broadside tilting
+                        if (!thisInst.FullMelee && Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up) < 0.6f)
+                        {
+                            //If overtilt then try get back upright again
+                            turnVal.z = turnValUp.z;
+                            if (turnVal.z > 180)
+                                turnVal.z = -((turnVal.z - 360) / 180);
+                            else
+                                turnVal.z = -(turnVal.z / 180);
+                            Debug.Log("TACtical_AI: Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
+                        }
+                        else
+                        {
+                            Debug.Log("TACtical_AI: Broadside Z-tilt active");
+                            if (turnVal.z > 180)
+                                turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / 60), -1, 1);
+                            else
+                                turnVal.z = Mathf.Clamp(-(turnVal.z / 60), -1, 1);
+                        }
+                        turnVal.x = turnValUp.x;
                         if (turnVal.x > 180)
                             turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / 60), -1, 1);
                         else
                             turnVal.x = Mathf.Clamp(-(turnVal.x / 60), -1, 1);
                     }
-                    turnVal.z = turnValUp.z;
 
                     //Convert turnVal to runnable format
                     if (turnVal.y > 180)
                         turnVal.y = Mathf.Clamp(-((turnVal.y - 360) / 60), -1, 1);
                     else
                         turnVal.y = Mathf.Clamp(-(turnVal.y / 60), -1, 1);
-                    if (turnVal.z > 180)
-                        turnVal.z = -((turnVal.z - 360) / 180);
-                    else
-                        turnVal.z = -(turnVal.z / 180);
 
                     //Debug.Log("TACtical_AI: TurnVal AIM " + turnVal);
                 }
@@ -239,11 +271,36 @@ namespace TAC_AI.AI
 
 
                 thisInst.Navi3DDirect = Vector3.zero;
+                thisInst.Navi3DUp = Vector3.up;
                 if (thisInst.Steer)
                 {
                     if (thisInst.AdviseAway)
                     {   //Move from target
-                        if (thisInst.DriveDir == EDriveType.Forwards)
+                        if (thisInst.DriveDir == EDriveType.Perpendicular)
+                        {   //Broadside the enemy
+                            control3D.m_State.m_InputRotation = turnVal;
+                            if (thisInst.lastEnemy.IsNotNull())
+                            {
+                                if (Vector3.Dot(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.right) < 0)
+                                {
+                                    thisInst.Navi3DDirect = Vector3.Cross(Vector3.up, (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
+                                    thisInst.Navi3DUp = Vector3.Cross((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, thisInst.Navi3DDirect).normalized;
+                                    //Debug.Log("TACtical_AI: Broadside Left A  up is " + thisInst.Navi3DUp);
+                                }
+                                else
+                                {
+                                    thisInst.Navi3DDirect = Vector3.Cross((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, Vector3.up).normalized;
+                                    thisInst.Navi3DUp = Vector3.Cross(thisInst.Navi3DDirect, (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
+                                    //Debug.Log("TACtical_AI: Broadside Right A  up is " + thisInst.Navi3DUp);
+                                }
+                            }
+                            else
+                            {
+                                //thisInst.Navi3DDirect = thisInst.lastDestination - tank.boundsCentreWorldNoCheck;
+                                thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);
+                            }
+                        }
+                        else if (thisInst.DriveDir == EDriveType.Forwards)
                         {
                             control3D.m_State.m_InputRotation = turnVal;//* Mathf.Clamp(1 - Vector3.Dot(turnFVal, tank.trans.forward), 0, 1)
                             if (thisInst.lastEnemy.IsNotNull())
@@ -268,10 +325,26 @@ namespace TAC_AI.AI
                         if (thisInst.DriveDir == EDriveType.Perpendicular)
                         {   //Broadside the enemy
                             control3D.m_State.m_InputRotation = turnVal;
-                            if (Vector3.Dot(thisInst.lastDestination - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.right) > 0)
-                                thisControl.m_Movement.FaceDirection(tank, Vector3.Cross(thisInst.lastDestination - tank.boundsCentreWorldNoCheck, Vector3.down), 1);
+                            if (thisInst.lastEnemy.IsNotNull())
+                            {
+                                if (Vector3.Dot(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.right) < 0)
+                                {
+                                    thisInst.Navi3DDirect = Vector3.Cross(Vector3.up, (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
+                                    thisInst.Navi3DUp = Vector3.Cross((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, thisInst.Navi3DDirect).normalized;
+                                    //Debug.Log("TACtical_AI: Broadside Left  up is " + thisInst.Navi3DUp);
+                                }
+                                else
+                                {
+                                    thisInst.Navi3DDirect = Vector3.Cross((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, Vector3.up).normalized;
+                                    thisInst.Navi3DUp = Vector3.Cross(thisInst.Navi3DDirect, (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
+                                    //Debug.Log("TACtical_AI: Broadside Right  up is " + thisInst.Navi3DUp);
+                                }
+                            }
                             else
-                                thisControl.m_Movement.FaceDirection(tank, Vector3.Cross(thisInst.lastDestination - tank.boundsCentreWorldNoCheck, Vector3.up), 1);
+                            {
+                                //thisInst.Navi3DDirect = thisInst.lastDestination - tank.boundsCentreWorldNoCheck;
+                                thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);
+                            }
                         }
                         else if (thisInst.DriveDir == EDriveType.Backwards)
                         {
@@ -309,10 +382,15 @@ namespace TAC_AI.AI
                     {
                         float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
                         driveVal = -tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized;
-                        if (enemyOffsetH + (thisInst.IdealRangeCombat / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
+                        if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
+                        {
+                            if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
+                                driveVal.y = -1;
+                        }
+                        else if (enemyOffsetH + (thisInst.GroundOffsetHeight / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
                         {
                             //Debug.Log("TACtical_AI: leveling");
-                            driveVal.y = Mathf.Clamp(((thisInst.IdealRangeCombat / 4) - tank.boundsCentreWorld.y) / 10, -1, 1);
+                            driveVal.y = Mathf.Clamp((enemyOffsetH + (thisInst.GroundOffsetHeight / 3) - tank.boundsCentreWorldNoCheck.y) / 10, -1, 1);
                         }
                         else
                         {
@@ -330,9 +408,14 @@ namespace TAC_AI.AI
                     {   //level alt with enemy
                         float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
                         driveVal = tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized;
-                        if (enemyOffsetH + (thisInst.IdealRangeCombat / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
+                        if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                         {
-                            driveVal.y = Mathf.Clamp(((thisInst.IdealRangeCombat / 4) - tank.boundsCentreWorld.y) / 10, -1, 1);
+                            if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
+                                driveVal.y = -1;
+                        }
+                        else if (enemyOffsetH + (thisInst.GroundOffsetHeight / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
+                        {
+                            driveVal.y = Mathf.Clamp((enemyOffsetH + (thisInst.GroundOffsetHeight / 3) - tank.boundsCentreWorldNoCheck.y) / 10, -1, 1);
                         }
                         else
                         {
@@ -365,7 +448,8 @@ namespace TAC_AI.AI
 
                 if (thisInst.PivotOnly)
                 {
-                    driveMultiplier = 0;
+                    driveVal.x = 0;
+                    driveVal.z = 0;
                 }
                 else if (thisInst.Yield)
                 {
@@ -408,36 +492,37 @@ namespace TAC_AI.AI
                 {
                     if (thisInst.AdviseAway)
                     {   //Move from target
-                        if (thisInst.DriveDir == EDriveType.Backwards)
-                        {
-                            thisControl.m_Movement.FaceDirection(tank, thisInst.lastDestination - tank.boundsCentreWorldNoCheck, 1);
-                            thisControl.DriveControl = 1f;
-                        }
-                        else
+                        if (thisInst.DriveDir == EDriveType.Forwards)
                         {
                             thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);
                             thisControl.DriveControl = -1f;
+                        }
+                        else
+                        {
+                            thisControl.m_Movement.FaceDirection(tank, thisInst.lastDestination - tank.boundsCentreWorldNoCheck, 1);
+                            thisControl.DriveControl = 1f;
                         }
                     }
                     if (thisInst.DriveDir == EDriveType.Perpendicular)
                     {   //Drive to target driving sideways, but obey distance
                         int range = (int)(thisInst.lastDestination - tank.boundsCentreWorldNoCheck).magnitude;
-                        if (range < thisInst.MinimumRad - 1)
+                        if (range < thisInst.MinimumRad + 1)
                         {
                             thisControl.m_Movement.FaceDirection(tank, thisInst.lastDestination - tank.boundsCentreWorldNoCheck, 1);
                         }
-                        else if (range > thisInst.MinimumRad + 1)
+                        else if (range > thisInst.MinimumRad + 18)
                         {
                             thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);
                         }
                         else  //ORBIT!
                         {
-                            if (Vector3.Dot(thisInst.lastDestination - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.right) > 0)
+                            //Debug.Log("TACtical_AI: AI " + tank.name + ":  ORBITING!!!!");
+                            if (Vector3.Dot(thisInst.lastDestination - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.right) < 0)
                                 thisControl.m_Movement.FaceDirection(tank, Vector3.Cross(thisInst.lastDestination - tank.boundsCentreWorldNoCheck, Vector3.down), 1);
                             else
                                 thisControl.m_Movement.FaceDirection(tank, Vector3.Cross(thisInst.lastDestination - tank.boundsCentreWorldNoCheck, Vector3.up), 1);
                         }
-                        thisControl.DriveControl = -1f;
+                        thisControl.DriveControl = 1f;
                     }
                     else if (thisInst.DriveDir == EDriveType.Backwards)
                     {   //Drive to target driving backwards
@@ -508,13 +593,31 @@ namespace TAC_AI.AI
             }
         }
 
-        //
+        /// <summary>
+        /// For allied AI to determine combat readiness
+        /// </summary>
+        /// <param name="thisInst"></param>
         public static void DetermineCombat(AIECore.TankAIHelper thisInst)
         {
-            if (thisInst.RangeToChase < thisInst.lastRange)
-                thisInst.Retreat = true;
-            else
-                thisInst.Retreat = false;
+            if (thisInst.lastPlayer.IsNotNull())
+            {
+                if (thisInst.IdealRangeCombat * 2 < (thisInst.lastBasePos.position - thisInst.tank.boundsCentreWorldNoCheck).magnitude && thisInst.DediAI == AIECore.DediAIType.Assault)
+                    thisInst.Retreat = true;
+                else if (thisInst.IdealRangeCombat < (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck - thisInst.tank.boundsCentreWorldNoCheck).magnitude && thisInst.DediAI != AIECore.DediAIType.Assault)
+                    thisInst.Retreat = true;
+                else if (thisInst.AdvancedAI)
+                {
+                    //WIP
+                    if (thisInst.DamageThreshold > 30)
+                    {
+                        thisInst.Retreat = true;
+                    }
+                }
+                else
+                {
+                    thisInst.Retreat = false;
+                }
+            }
         }
 
         //Combat handler for DriveDirector
@@ -539,7 +642,7 @@ namespace TAC_AI.AI
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
-                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5;
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
                     else if (driveDyna < 0)
@@ -547,14 +650,14 @@ namespace TAC_AI.AI
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.AdviseAway = true;
                         thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
-                        thisInst.MinimumRad = 0.5f;
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
                     else
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.lastDestination = thisInst.lastEnemy.transform.position;
-                        thisInst.MinimumRad = 0;
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.FacePosition(tank, thisInst.lastEnemy.transform.position, driveDyna);//Face the music
                     }
                 }
@@ -612,23 +715,23 @@ namespace TAC_AI.AI
                     else if (driveDyna == 1)
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastEnemy.transform.position);
-                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5;
+                        thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastEnemy.transform.position);
-                        thisInst.MinimumRad = 0.5f;
+                        thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
                     else
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.lastDestination = thisInst.lastEnemy.transform.position;
-                        thisInst.MinimumRad = 0;
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.FacePosition(tank, thisInst.lastEnemy.transform.position, driveDyna);//Face the music
                     }
                 }

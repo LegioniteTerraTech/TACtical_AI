@@ -27,6 +27,11 @@ namespace TAC_AI.AI
             thisInst.ProceedToMine = false;
         }
 
+        /// <summary>
+        /// Defend like default
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
         public static void AidDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI
@@ -43,6 +48,11 @@ namespace TAC_AI.AI
             }
         }
 
+        /// <summary>
+        /// Hold fire until aiming at target cab-forwards or after some time
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
         public static void AimDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
@@ -52,10 +62,21 @@ namespace TAC_AI.AI
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
                 thisInst.Urgency++;
-                if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.Urgency >= 30)
+                if (thisInst.SideToThreat)
                 {
-                    thisInst.DANGER = true;
-                    thisInst.Urgency = 30;
+                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.Urgency >= 30)
+                    {
+                        thisInst.DANGER = true;
+                        thisInst.Urgency = 30;
+                    }
+                }
+                else
+                {
+                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.Urgency >= 30)
+                    {
+                        thisInst.DANGER = true;
+                        thisInst.Urgency = 30;
+                    }
                 }
             }
             else
@@ -65,6 +86,11 @@ namespace TAC_AI.AI
             }
         }
 
+        /// <summary>
+        /// Prioritize removal of obsticles over attacking enemy
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
         public static void SelfDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Alternative of the above - does not aim at enemies while mining

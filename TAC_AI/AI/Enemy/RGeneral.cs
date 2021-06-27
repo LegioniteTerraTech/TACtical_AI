@@ -50,31 +50,31 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (mind.CommanderSmarts == EnemySmarts.Smrt)
                 {
-                    if (mind.PendingSystemsCheck && mind.AttemptedRepairs < 3)
+                    if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs < 3)
                     {
                         bool venPower = false;
                         if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                        mind.PendingSystemsCheck = RRepair.RepairStepper(thisInst, tank, mind, Super: venPower);
-                        mind.AttemptedRepairs++;
+                        thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                        thisInst.AttemptedRepairs++;
                         return true;
                     }
                 }
                 if (mind.CommanderSmarts >= EnemySmarts.IntAIligent)
                 {
-                    if (mind.PendingSystemsCheck && mind.AttemptedRepairs < 4)
+                    if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs < 4)
                     {
                         if (energy.currentAmount / energy.storageTotal > 0.5)
                         {
                             //flex yee building speeds on them players
-                            mind.PendingSystemsCheck = !RRepair.InstaRepair(tank, mind);
-                            mind.AttemptedRepairs++;
+                            thisInst.PendingSystemsCheck = !RRepair.EnemyInstaRepair(tank, mind);
+                            thisInst.AttemptedRepairs++;
                         }
                         else
                         {
                             bool venPower = false;
                             if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                            mind.PendingSystemsCheck = RRepair.RepairStepper(thisInst, tank, mind, Super: venPower);
-                            mind.AttemptedRepairs++;
+                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                            thisInst.AttemptedRepairs++;
                         }
                         return true;
                     }

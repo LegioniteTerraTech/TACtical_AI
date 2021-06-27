@@ -32,7 +32,6 @@ namespace TAC_AI.AI
                 thisInst.MoveFromObjective = true;
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
-                //thisInst.lastDestination = OffsetFromGround(thisInst.lastPlayer.centrePosition, thisInst);
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
@@ -49,7 +48,6 @@ namespace TAC_AI.AI
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Departing!");
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = OffsetFromGround(thisInst.lastPlayer.centrePosition, thisInst);
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -67,7 +65,6 @@ namespace TAC_AI.AI
             {
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = OffsetFromGround(thisInst.lastPlayer.centrePosition, thisInst);
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1f;
 
@@ -146,7 +143,6 @@ namespace TAC_AI.AI
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Settling");
-                //thisInst.lastDestination = OffsetFromGround(thisInst.lastPlayer.centrePosition, thisInst);
                 thisInst.AvoidStuff = true;
                 thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
@@ -166,7 +162,6 @@ namespace TAC_AI.AI
             {
                 //Likely idle
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  in resting state");
-                //thisInst.lastDestination = OffsetFromGround(tank.transform.position, thisInst);
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 thisInst.lastMoveAction = 0;
