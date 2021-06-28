@@ -27,6 +27,7 @@ namespace TAC_AI.AI.Enemy
             public bool StartedAnchored = false;
             public bool AllowRepairsOnFly = false;  // If we are feeling extra evil
             public bool InvertBullyPriority = false;// Shoot the big techs instead
+            public bool AllowInfBlocks = false;     // Can this tech spawn unlimited blocks?
 
             public bool SolarsAvail = false;        // Do whe currently have solar panels
             public bool Provoked = false;           // Were we hit from afar?

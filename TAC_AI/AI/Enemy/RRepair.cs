@@ -74,7 +74,7 @@ namespace TAC_AI.AI.Enemy
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Could not attach " + foundBlock.name);
                     // if not we fail
                 }
-                if (KickStart.EnemiesHaveCreativeInventory && mind.CommanderSmarts >= EnemySmarts.Smrt)
+                if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInfBlocks) && mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
                     List<BlockTypes> typesToRepair = new List<BlockTypes>();
                     int toFilter = mind.TechMemor.ReturnContents().Count();

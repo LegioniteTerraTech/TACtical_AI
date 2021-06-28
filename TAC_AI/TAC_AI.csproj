@@ -122,6 +122,7 @@
     <Compile Include="AI\Enemy\EEnemy.cs" />
     <Compile Include="AI\Enemy\RBolts.cs" />
     <Compile Include="AI\Enemy\RGeneral.cs" />
+    <Compile Include="AI\Enemy\RMiner.cs" />
     <Compile Include="AI\Enemy\RPathfinding.cs" />
     <Compile Include="AI\Enemy\RRepair.cs" />
     <Compile Include="AI\Enemy\RNaval.cs" />

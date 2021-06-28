@@ -45,6 +45,30 @@ namespace TAC_AI.AI.Enemy
                 return true;
             }
 
+            if (name == "Enemy HQ")
+            {   //Base where enemies spawn from
+                mind.AllowInfBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.AtFull;
+                return true;
+            }
+
+            if (name == "Missile #2")
+            {
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.SuicideMissile;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.MissionTrigger;
+                return true;
+            }
 
             return false;
         }

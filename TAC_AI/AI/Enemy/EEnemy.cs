@@ -47,6 +47,7 @@ namespace TAC_AI.AI.Enemy
     public enum EnemyBolts
     {                   // Handler for how you want your bolts used
         Default,        // Explode IMMEDEATELY
+        AtFull,         // Explode when tech is fully-built (requires smrt or above to utilize nicely)
         AtFullOnAggro,  // Explode when tech is fully-built and enemy in range (requires smrt or above to utilize nicely)
         Countdown,      // Explode after # of ingame FixedUpdate ticks
         MissionTrigger, // Hold until triggered by mission event

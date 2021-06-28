@@ -15,6 +15,7 @@ namespace TAC_AI
         const string ModName = "TACtical AIs";
 
         internal static bool testEnemyAI = true;
+        internal static int MaxEnemySplitLimit = 20;
 
         public static bool EnableBetterAI = true;
         public static int AIDodgeCheapness = 30;
