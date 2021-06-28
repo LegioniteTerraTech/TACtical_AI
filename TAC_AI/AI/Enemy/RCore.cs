@@ -21,6 +21,7 @@ namespace TAC_AI.AI.Enemy
             public EnemyAttitude CommanderMind = EnemyAttitude.Default;
             public EnemyAttack CommanderAttack = EnemyAttack.Circle;
             public EnemySmarts CommanderSmarts = EnemySmarts.Default;
+            public EnemyBolts CommanderBolts = EnemyBolts.Default;
 
             public FactionSubTypes MainFaction = FactionSubTypes.GSO;
             public bool StartedAnchored = false;
@@ -97,9 +98,9 @@ namespace TAC_AI.AI.Enemy
             /// <param name="inRange">value > 0</param>
             /// <param name="pos">MAX 3</param>
             /// <returns></returns>
-            public Tank FindEnemy(float inRange = 0, int pos = 1)
+            public Visible FindEnemy(float inRange = 0, int pos = 1)
             {
-                Tank target = null;
+                Visible target = AIControl.lastEnemy;
                 if (inRange <= 0) inRange = Range;
                 float TargetRange = Mathf.Pow(inRange, 2);
 
@@ -115,7 +116,7 @@ namespace TAC_AI.AI.Enemy
                             Tank cTank = techs.ElementAt(step);
                             if (cTank.IsEnemy(Tank.Team))
                             {
-                                target = cTank;
+                                target = cTank.visible;
                             }
                         }
                         TargetLockDuration = 250;
@@ -137,7 +138,7 @@ namespace TAC_AI.AI.Enemy
                                 if (cTank.blockman.blockCount > BlockCount && dist < TargetRange)
                                 {
                                     BlockCount = cTank.blockman.blockCount;
-                                    target = cTank;
+                                    target = cTank.visible;
                                 }
                             }
                         }
@@ -154,7 +155,7 @@ namespace TAC_AI.AI.Enemy
                                 if (cTank.blockman.blockCount < BlockCount && dist < TargetRange)
                                 {
                                     BlockCount = cTank.blockman.blockCount;
-                                    target = cTank;
+                                    target = cTank.visible;
                                 }
                             }
                         }
@@ -165,8 +166,8 @@ namespace TAC_AI.AI.Enemy
                     float TargRange2 = TargetRange;
                     float TargRange3 = TargetRange;
 
-                    Tank target2 = null;
-                    Tank target3 = null;
+                    Visible target2 = null;
+                    Visible target3 = null;
 
                     int launchCount = techs.Count();
                     for (int step = 0; step < launchCount; step++)
@@ -178,17 +179,17 @@ namespace TAC_AI.AI.Enemy
                             if (dist < TargetRange)
                             {
                                 TargetRange = dist;
-                                target = cTank;
+                                target = cTank.visible;
                             }
                             else if (pos > 1 && dist < TargRange2)
                             {
-                                TargetRange = dist;
-                                target = cTank;
+                                TargRange2 = dist;
+                                target2 = cTank.visible;
                             }
                             else if (pos > 2 && dist < TargRange3)
                             {
-                                TargetRange = dist;
-                                target = cTank;
+                                TargRange3 = dist;
+                                target3 = cTank.visible;
                             }
                         }
                     }
@@ -214,6 +215,8 @@ namespace TAC_AI.AI.Enemy
             {
                 return;
             }
+
+            RBolts.ManageBolts(thisInst, tank, Mind);
             if (Mind.CommanderAttack == EnemyAttack.Grudge)
             {
                 if (thisInst.lastEnemy.IsNull())
@@ -229,17 +232,20 @@ namespace TAC_AI.AI.Enemy
                 if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                 RRepair.EnemyRepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
             }
-            switch (Mind.CommanderAttack)
+            if (Mind.EvilCommander != EnemyHandling.Stationary)
             {
-                case EnemyAttack.Coward:
-                    BGeneral.SelfDefend(thisInst, tank);
-                    break;
-                case EnemyAttack.Spyper:
-                    BGeneral.AimDefend(thisInst, tank);
-                    break;
-                default:
-                    BGeneral.AidDefend(thisInst, tank);
-                    break;
+                switch (Mind.CommanderAttack)
+                {
+                    case EnemyAttack.Coward:
+                        RGeneral.SelfDefense(thisInst, tank, Mind);
+                        break;
+                    case EnemyAttack.Spyper:
+                        RGeneral.AimAttack(thisInst, tank, Mind);
+                        break;
+                    default:
+                        RGeneral.AidAttack(thisInst, tank, Mind);
+                        break;
+                }
             }
             switch (Mind.EvilCommander)
             {
@@ -269,6 +275,7 @@ namespace TAC_AI.AI.Enemy
                     break;
                 case EnemyHandling.Stationary:
                     thisInst.PursueThreat = true;
+                    RGeneral.AimAttack(thisInst, tank, Mind);
                     RStation.HoldPosition(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Boss:
@@ -422,9 +429,12 @@ namespace TAC_AI.AI.Enemy
             else if (randomNum < 92)
                 toSet.CommanderSmarts = EnemySmarts.Smrt;
             else
-                toSet.CommanderSmarts = EnemySmarts.IntAIligent; 
+                toSet.CommanderSmarts = EnemySmarts.IntAIligent;
             if (randomNum > 98)
+            {
                 toSet.AllowRepairsOnFly = true;//top 2
+                toSet.InvertBullyPriority = true;
+            }
 
             if (toSet.CommanderSmarts > EnemySmarts.Meh)
             {
@@ -433,6 +443,7 @@ namespace TAC_AI.AI.Enemy
                     toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                 toSet.TechMemor.Initiate();
                 toSet.TechMemor.SaveTech();
+                toSet.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
             }
 
 

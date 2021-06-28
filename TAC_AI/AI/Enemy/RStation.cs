@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -29,6 +30,7 @@ namespace TAC_AI.AI.Enemy
 
             if (dist > 10)
             {
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
                 thisInst.ProceedToObjective = true;
                 thisInst.Steer = true;
                 thisInst.lastDestination = mind.HoldPos;

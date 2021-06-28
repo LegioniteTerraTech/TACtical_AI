@@ -36,6 +36,7 @@ namespace TAC_AI.AI
         }
         public static void WeaponMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
+            thisInst.OverrideAim = 0;
             if (!tank.beam.IsActive)
             {
                 if (thisInst.IsMultiTech)
@@ -44,6 +45,7 @@ namespace TAC_AI.AI
                     {
                         if (thisInst.lastEnemy.IsNotNull())
                         {
+                            thisInst.OverrideAim = 3;
                             var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, AIECore.Extremes(targetTank.blockBounds.extents));
                         }
@@ -59,16 +61,24 @@ namespace TAC_AI.AI
                     {
                         try
                         {
-                            //Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
-                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.centrePosition, 3f);
+                            Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
+                            thisInst.OverrideAim = 2;
+                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position, 3f);
                         }
                         catch
                         {
                             Debug.Log("TACtical_AI: Crash on targeting scenery");
                         }
-                        if (thisInst.Obst.damageable.Invulnerable)
+                        try
                         {
-                            thisInst.Obst = null;
+                            if (thisInst.Obst.GetComponent<Damageable>().Invulnerable)
+                            {
+                                thisInst.Obst = null;
+                            }
+                        }
+                        catch
+                        {
+                            Debug.Log("TACtical_AI: Obst HAS NO DAMAGEABLE");
                         }
                     }
                 }
@@ -76,6 +86,7 @@ namespace TAC_AI.AI
                 {
                     if (thisInst.lastEnemy.IsNotNull())
                     {
+                        thisInst.OverrideAim = 1;
                         var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
                         thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, AIECore.Extremes(targetTank.blockBounds.extents));
                     }

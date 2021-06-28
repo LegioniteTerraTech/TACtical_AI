@@ -223,37 +223,88 @@ namespace TAC_AI
             }
         }
 
-        [HarmonyPatch(typeof(TargetAimer))]
+        [HarmonyPatch(typeof(TargetAimer))]// cannot override
         [HarmonyPatch("UpdateTarget")]//On targeting
         private static class PatchAimingToHelpAI
         {
-            private static void Prefix(TargetAimer __instance)
+            private static void Postfix(TargetAimer __instance)
             {
-                try
-                {
                     var AICommand = __instance.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
-                    if (AICommand.IsNotNull())
+                if (AICommand.IsNotNull() && !KickStart.isWeaponAimModPresent)
+                {
+                    if (AICommand.OverrideAim == 1)
                     {
-                        if (AICommand.OverrideAim)
+                        var tank = __instance.transform.root.GetComponent<Tank>();
+                        if (tank.IsNotNull() && !tank.IsPlayer)
                         {
-                            var tank = __instance.transform.root.GetComponent<Tank>();
-                            if (tank.IsNotNull() && !tank.IsPlayer)
+                            if (AICommand.lastEnemy.IsNotNull())
                             {
-                                FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
-                                targ.SetValue(__instance, AICommand.lastEnemy);
+                                //Debug.Log("TACtical_AI: Overriding targeting to aim at " + AICommand.lastEnemy.name + "  pos " + AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
+                                //FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
+                                //targ.SetValue(__instance, AICommand.lastEnemy);
 
                                 FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
-                                targPos.SetValue(__instance, tank.control.TargetPositionWorld);
+                                //targPos.SetValue(__instance, tank.control.TargetPositionWorld);
+                                targPos.SetValue(__instance, AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
+                                //Debug.Log("TACtical_AI: final aim is " + targPos.GetValue(__instance));
 
-                                return;
+                            }
+                        }
+                    }
+                    else if (AICommand.OverrideAim == 2)
+                    {
+                        var tank = __instance.transform.root.GetComponent<Tank>();
+                        if (tank.IsNotNull() && !tank.IsPlayer)
+                        {
+                            if (AICommand.Obst.IsNotNull())
+                            {
+                                Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
+
+                                FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+                                targPos.SetValue(__instance, AICommand.Obst.position);
+
+                            }
+                        }
+                    }
+                    else if (AICommand.OverrideAim == 3)
+                    {
+                        var tank = __instance.transform.root.GetComponent<Tank>();
+                        if (tank.IsNotNull() && !tank.IsPlayer)
+                        {
+                            if (AICommand.LastCloseAlly.IsNotNull())
+                            {
+                                //Debug.Log("TACtical_AI: Overriding targeting to aim at player's target");
+
+                                FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+                                targPos.SetValue(__instance, AICommand.LastCloseAlly.control.TargetPositionWorld);
+
                             }
                         }
                     }
                 }
-                catch { }
             }
         }
 
+        [HarmonyPatch(typeof(ModuleWeapon))]
+        [HarmonyPatch("UpdateAutoAimBehaviour")]//On targeting
+        private static class PatchAimingSystemsToHelpAI
+        {
+            private static void Postfix(TargetAimer __instance)
+            {
+                if (!KickStart.isWeaponAimModPresent)
+                {
+                    FieldInfo aimers = typeof(ModuleWeapon).GetField("m_TargetAimer", BindingFlags.NonPublic | BindingFlags.Instance);
+                    TargetAimer thisAimer = (TargetAimer)aimers.GetValue(__instance);
+
+                    if (thisAimer.HasTarget)
+                    {
+                        FieldInfo aimerTargPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+                        FieldInfo WeaponTargPos = typeof(ModuleWeapon).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+                        WeaponTargPos.SetValue(__instance, (Vector3)aimerTargPos.GetValue(thisAimer));
+                    }
+                }
+            }
+        }
 
 
         [HarmonyPatch(typeof(ResourceDispenser))]

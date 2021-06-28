@@ -109,6 +109,7 @@
     <Compile Include="AI\AIEBeam.cs" />
     <Compile Include="AI\AIERepair.cs" />
     <Compile Include="AI\AIEWeapons.cs" />
+    <Compile Include="AI\BlockMemory.cs" />
     <Compile Include="AI\EDriveType.cs" />
     <Compile Include="AI\BAstrotech.cs" />
     <Compile Include="AI\BEscort.cs" />
@@ -119,6 +120,7 @@
     <Compile Include="AI\AIECore.cs" />
     <Compile Include="AI\AIEDrive.cs" />
     <Compile Include="AI\Enemy\EEnemy.cs" />
+    <Compile Include="AI\Enemy\RBolts.cs" />
     <Compile Include="AI\Enemy\RGeneral.cs" />
     <Compile Include="AI\Enemy\RPathfinding.cs" />
     <Compile Include="AI\Enemy\RRepair.cs" />

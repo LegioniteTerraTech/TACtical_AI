@@ -66,7 +66,6 @@ namespace TAC_AI.AI.Enemy
                     thisInst.SettleDown();
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
-                    thisInst.SettleDown();
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
@@ -124,7 +123,7 @@ namespace TAC_AI.AI.Enemy
             {
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = false;
-                if (dist < thisInst.lastTechExtents + enemyExt + 2)
+                if (dist < thisInst.lastTechExtents + enemyExt - 2)
                 {
                     if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);

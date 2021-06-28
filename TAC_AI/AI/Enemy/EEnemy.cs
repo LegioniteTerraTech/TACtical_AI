@@ -44,4 +44,11 @@ namespace TAC_AI.AI.Enemy
         Smrt,       // anchors when left alone
         IntAIligent // enemies nearby this ai ALLY with this AI!
     }
+    public enum EnemyBolts
+    {                   // Handler for how you want your bolts used
+        Default,        // Explode IMMEDEATELY
+        AtFullOnAggro,  // Explode when tech is fully-built and enemy in range (requires smrt or above to utilize nicely)
+        Countdown,      // Explode after # of ingame FixedUpdate ticks
+        MissionTrigger, // Hold until triggered by mission event
+    }
 }

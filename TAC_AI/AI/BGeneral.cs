@@ -20,6 +20,7 @@ namespace TAC_AI.AI
             thisInst.forceDrive = false;
             thisInst.featherBoost = false;
 
+            //thisInst.OverrideAim = false;
             thisInst.Retreat = false;
             thisInst.MoveFromObjective = false;
             thisInst.ProceedToObjective = false;

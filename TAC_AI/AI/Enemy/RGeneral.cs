@@ -142,7 +142,7 @@ namespace TAC_AI.AI.Enemy
             //Try find next target to assault
             try
             {
-                thisInst.lastEnemy = mind.FindEnemy(inRange: 500).visible;
+                thisInst.lastEnemy = mind.FindEnemy(inRange: 500);
             }
             catch { }//No tanks available
         }
@@ -156,6 +156,81 @@ namespace TAC_AI.AI.Enemy
             final.z += UnityEngine.Random.Range(-RANDRange, RANDRange);
 
             return final;
+        }
+
+        // HOSTILITIES
+
+        /// <summary>
+        /// Attack like default
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        public static void AidAttack(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        {
+            // Determines the weapons actions and aiming of the AI
+            if (thisInst.lastEnemy != null)
+            {
+                thisInst.lastEnemy = mind.FindEnemy();
+                //Fire even when retreating - the AI's life depends on this!
+                thisInst.DANGER = true;
+            }
+            else
+            {
+                thisInst.DANGER = false;
+                thisInst.lastEnemy = mind.FindEnemy();
+            }
+        }
+
+        /// <summary>
+        /// Hold fire until aiming at target cab-forwards or after some time
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        public static void AimAttack(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        {
+            // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
+            thisInst.DANGER = false;
+            thisInst.lastEnemy = mind.FindEnemy();
+            if (thisInst.lastEnemy != null)
+            {
+                Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
+                thisInst.Urgency++;
+                if (thisInst.SideToThreat)
+                {
+                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.Urgency >= 30)
+                    {
+                        thisInst.DANGER = true;
+                        thisInst.Urgency = 30;
+                    }
+                }
+                else
+                {
+                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.Urgency >= 30)
+                    {
+                        thisInst.DANGER = true;
+                        thisInst.Urgency = 30;
+                    }
+                }
+            }
+            else
+            {
+                thisInst.Urgency = 0;
+                thisInst.DANGER = false;
+            }
+        }
+
+        /// <summary>
+        /// Prioritize removal of obsticles over attacking enemy
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        public static void SelfDefense(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        {
+            // Alternative of the above - does not aim at enemies while mining
+            if (thisInst.Obst == null)
+            {
+                AidAttack(thisInst, tank, mind);
+            }
         }
     }
 }

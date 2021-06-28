@@ -71,7 +71,6 @@ namespace TAC_AI.AI.Enemy
                     thisInst.SettleDown();
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
-                    thisInst.SettleDown();
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }

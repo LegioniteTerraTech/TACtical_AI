@@ -235,10 +235,11 @@ namespace TAC_AI.AI
 
 
             // General AI Handling
-            public bool OverrideAim => lastEnemy.IsNotNull();
+            public int OverrideAim = 0; // 0 is off, 1 is enemy, 2 is obsticle
 
             public int AIState = 0;
             public bool updateCA = false; //Collision avoidence
+            public bool useInventory = false; 
             public int lastMoveAction = 0;
             public int lastWeaponAction = 0;
             internal int FrustrationMeter = 0;
@@ -261,7 +262,7 @@ namespace TAC_AI.AI
 
             internal Visible lastPlayer;
             internal Visible lastEnemy;
-            internal Visible Obst;
+            internal Transform Obst;
 
             internal Tank LastCloseAlly;
 
@@ -373,12 +374,14 @@ namespace TAC_AI.AI
                 var thisInst = tank.gameObject.GetComponent<TankAIHelper>();
                 thisInst.DediAI = DediAIType.Escort;
                 thisInst.lastAIType = AITreeType.AITypes.Idle;
+                thisInst.AIState = 0;
                 thisInst.EstTopSped = 1;
                 thisInst.recentSpeed = 1;
                 thisInst.anchorAttempts = 0;
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.foundBase = false;
                 thisInst.foundGoal = false;
+                thisInst.useInventory = false;
                 thisInst.lastBasePos = null;
                 thisInst.lastResourcePos = Vector3.zero;
                 thisInst.lastPlayer = null;
@@ -411,6 +414,7 @@ namespace TAC_AI.AI
                 SecondAvoidence = false;// Should the AI avoid two techs at once?
                 OnlyPlayerMT = true;
                 SideToThreat = false;
+                useInventory = false;
 
                 thisInst.isProspectorAvail = false;
                 thisInst.isScrapperAvail = false;
@@ -688,20 +692,20 @@ namespace TAC_AI.AI
             }
 
 
-            public Visible GetObstruction() //VERY expensive operation - only use if absoluetely nesseary
+            public Transform GetObstruction() //VERY expensive operation - only use if absoluetely nesseary
             {
                 // Get the scenery that's obstructing if there's any (ignores monuments to be fair to Enemy AI)
                 LayerMask Filter = Globals.inst.layerScenery.mask;
                 float ext = Extremes(tank.blockBounds.extents);
                 Physics.SphereCast(tank.rbody.centerOfMass - tank.transform.InverseTransformVector(Vector3.forward * ext), ext, tank.blockman.GetRootBlock().transform.forward, out RaycastHit Pummel, 100, Filter, QueryTriggerInteraction.Ignore);
-                Visible Obstruction;
+                Transform Obstruction;
                 try
                 {
-                    var vaildTar = Pummel.collider.transform.parent.parent.parent.gameObject.GetComponent<Visible>();
+                    var vaildTar = Pummel.collider.transform.parent.parent.parent.gameObject.transform;
                     if (vaildTar != null)
                     {
                         Obstruction = vaildTar;
-                        //Debug.Log("TACtical_AI: GetObstruction - found " + Obstruction.name);
+                        Debug.Log("TACtical_AI: GetObstruction - found " + Obstruction.name);
                         return Obstruction;
                     }
                     Debug.Log("TACtical_AI: GetObstruction - Expected Scenery but got " + Pummel.collider.transform.parent.parent.parent.gameObject.name + " instead");
@@ -750,7 +754,6 @@ namespace TAC_AI.AI
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired DelayedUpdate!");
                     thisInst.updateCA = true;
                     thisInst.Attempt3DNavi = false;
-                    AIEDrive.DetermineCombat(thisInst);
 
                     if (thisInst.ActionPause > 0)
                         thisInst.ActionPause--;
@@ -851,6 +854,7 @@ namespace TAC_AI.AI
                             Debug.Log("TACtical_AI: AI NOT READY YET! - Tougher Enemies doesn't even exist yet hold your horses!");
                             break;
                     }
+                    AIEDrive.DetermineCombat(thisInst);
                 }
             }
 

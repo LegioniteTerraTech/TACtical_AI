@@ -19,9 +19,11 @@ namespace TAC_AI
         public static bool EnableBetterAI = true;
         public static int AIDodgeCheapness = 30;
         public static bool enablePainMode = false;
+        public static bool EnemiesHaveCreativeInventory = false;
 
         internal static bool isWaterModPresent = false;
         internal static bool isTougherEnemiesPresent = false;
+        internal static bool isWeaponAimModPresent = false;
 
         public static int Difficulty = 50;
 
@@ -33,6 +35,7 @@ namespace TAC_AI
         public static OptionRange dodgePeriod;
         public static OptionToggle painfulEnemies;
         public static OptionRange diff;
+        public static OptionToggle infEnemySupplies;
 
 
         public static void Main()
@@ -59,6 +62,12 @@ namespace TAC_AI
                 isWaterModPresent = true;
             }
 
+            if (LookForMod("WeaponAimMod"))
+            {
+                Debug.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
+                isWeaponAimModPresent = true;
+            }
+
             if (LookForMod("TougherEnemies"))
             {
                 Debug.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
@@ -70,6 +79,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "Difficulty");
+            thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
 
             var TACAI = ModName;
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
@@ -82,6 +92,8 @@ namespace TAC_AI
                 painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 diff = new OptionRange("AI Difficulty", TACAI, Difficulty, -50, 150, 25);
                 diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAI, EnemiesHaveCreativeInventory);
+                infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             }
         }
 
