@@ -18,7 +18,7 @@ namespace TAC_AI.AI
         public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
-            float dist = (tank.rbody.position - thisInst.lastDestination).magnitude;
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = thisInst.Feedback;
             thisInst.lastRange = dist;
 
@@ -28,7 +28,7 @@ namespace TAC_AI.AI
             {   //RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestHarvestReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out Tank theBase);
+                    thisInst.foundBase = AIECore.FetchClosestHarvestReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out Tank theBase);
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (theBase == null)
@@ -37,7 +37,7 @@ namespace TAC_AI.AI
                 }
                 else if (thisInst.theBase == null)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestHarvestReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
+                    thisInst.foundBase = AIECore.FetchClosestHarvestReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
                     thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     return;

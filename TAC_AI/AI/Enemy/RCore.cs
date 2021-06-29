@@ -93,8 +93,9 @@ namespace TAC_AI.AI.Enemy
                 catch { }
             }
 
+
             /// <summary>
-            ///  Gets the enemy position based on 
+            ///  Gets the enemy position based on current position and AI preferences
             /// </summary>
             /// <param name="inRange">value > 0</param>
             /// <param name="pos">MAX 3</param>
@@ -115,7 +116,7 @@ namespace TAC_AI.AI.Enemy
                         for (int step = 0; step < launchCount; step++)
                         {
                             Tank cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team))
+                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
                             {
                                 target = cTank.visible;
                             }
@@ -133,7 +134,7 @@ namespace TAC_AI.AI.Enemy
                         for (int step = 0; step < launchCount; step++)
                         {
                             Tank cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team))
+                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
                             {
                                 float dist = (cTank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).sqrMagnitude;
                                 if (cTank.blockman.blockCount > BlockCount && dist < TargetRange)
@@ -150,7 +151,7 @@ namespace TAC_AI.AI.Enemy
                         for (int step = 0; step < launchCount; step++)
                         {
                             Tank cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team))
+                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
                             {
                                 float dist = (cTank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).sqrMagnitude;
                                 if (cTank.blockman.blockCount < BlockCount && dist < TargetRange)
@@ -174,7 +175,7 @@ namespace TAC_AI.AI.Enemy
                     for (int step = 0; step < launchCount; step++)
                     {
                         Tank cTank = techs.ElementAt(step);
-                        if (cTank.IsEnemy(Tank.Team))
+                        if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
                         {
                             float dist = (cTank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).sqrMagnitude;
                             if (dist < TargetRange)

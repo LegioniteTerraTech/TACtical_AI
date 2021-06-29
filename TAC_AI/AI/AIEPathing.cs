@@ -33,14 +33,14 @@ namespace TAC_AI.AI
             {
                 for (int stepper = 0; Allies.Count > stepper; stepper++)
                 {
-                    float temp = (Allies.ElementAt(stepper).rbody.position - tankPos).sqrMagnitude;
+                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                     if (bestValue > temp && temp != 0)
                     {
                         bestValue = temp;
                         bestStep = stepper;
                     }
                 }
-                bestValue = (Allies.ElementAt(bestStep).rbody.position - tankPos).magnitude;
+                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 closestTank = Allies.ElementAt(bestStep);
                 //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
@@ -63,14 +63,14 @@ namespace TAC_AI.AI
             {
                 for (int stepper = 0; Allies.Count > stepper; stepper++)
                 {
-                    float temp = (Allies.ElementAt(stepper).rbody.position - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
+                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
                     if (bestValue > temp && temp != 0)
                     {
                         bestValue = temp;
                         bestStep = stepper;
                     }
                 }
-                bestValue = (Allies.ElementAt(bestStep).rbody.position - tankPos).magnitude;
+                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 closestTank = Allies.ElementAt(bestStep);
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
             }
@@ -94,7 +94,7 @@ namespace TAC_AI.AI
             {
                 for (int stepper = 0; Allies.Count > stepper; stepper++)
                 {
-                    float temp = (Allies.ElementAt(stepper).rbody.position - tankPos).sqrMagnitude;
+                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                     if (bestValue > temp && temp != 0)
                     {
                         auxStep = bestStep;
@@ -110,8 +110,8 @@ namespace TAC_AI.AI
                 }
                 secondTank = Allies.ElementAt(auxStep);
                 closestTank = Allies.ElementAt(bestStep);
-                auxBestValue = (Allies.ElementAt(auxStep).rbody.position - tankPos).magnitude;
-                bestValue = (Allies.ElementAt(bestStep).rbody.position - tankPos).magnitude;
+                auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
@@ -138,7 +138,7 @@ namespace TAC_AI.AI
             {
                 for (int stepper = 0; Allies.Count > stepper; stepper++)
                 {
-                    float temp = (Allies.ElementAt(stepper).rbody.position - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
+                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
                     if (bestValue > temp && temp != 0)
                     {
                         auxStep = bestStep;
@@ -172,8 +172,8 @@ namespace TAC_AI.AI
                 */
                 secondTank = Allies.ElementAt(auxStep);
                 closestTank = Allies.ElementAt(bestStep);
-                auxBestValue = (Allies.ElementAt(auxStep).rbody.position - tankPos).magnitude;
-                bestValue = (Allies.ElementAt(bestStep).rbody.position - tankPos).magnitude;
+                auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
@@ -193,7 +193,7 @@ namespace TAC_AI.AI
             Tank tank = AIHelp.tank;
             Vector3 end;
             //first we get the 
-            Vector3 centerThis = tank.boundsCentreWorld;
+            Vector3 centerThis = tank.boundsCentreWorldNoCheck;
             Vector3 offsetTo = tankToCopy.trans.InverseTransformPoint(centerThis);
 
             FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -238,6 +238,21 @@ namespace TAC_AI.AI
             end = tankToCopy.trans.TransformPoint(posToGo);
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
             return end;
+        }
+        public static bool AboveHeightFromGround(Vector3 input, float groundOffset = 50)
+        {
+            float final_y;
+            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            if (terrain)
+                final_y = height + groundOffset;
+            else
+                final_y = 50 + groundOffset;
+            if (KickStart.isWaterModPresent)
+            {
+                if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
+                    final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+            }
+            return (input.y > final_y);
         }
         public static Vector3 OffsetFromGround(Vector3 input, AIECore.TankAIHelper thisInst, float groundOffset = 0)
         {

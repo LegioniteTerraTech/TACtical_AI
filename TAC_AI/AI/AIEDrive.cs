@@ -7,6 +7,12 @@ namespace TAC_AI.AI
     {
         public static void DriveDirector(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
+            if (thisInst.Pilot.IsNotNull())
+            {   // Handoff all operations to AIEAirborne
+                bool fired = AIEAirborne.FlightMarshal(thisControl, thisInst, tank, thisInst.Pilot);
+                if (fired)
+                    return;
+            }
             thisControl.m_Movement.m_USE_AVOIDANCE = thisInst.AvoidStuff;
             thisInst.Steer = false;
             thisInst.DriveDir = EDriveType.Neutral;
@@ -155,14 +161,14 @@ namespace TAC_AI.AI
                         thisInst.Steer = true;
                         thisInst.DriveDir = EDriveType.Forwards;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastDestination);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, thisInst.lastDestination);
                         thisInst.MinimumRad = 0.5f;
                     }
                     else if (thisInst.ProceedToObjective)
                     {
                         thisInst.Steer = true;
                         thisInst.DriveDir = EDriveType.Forwards;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastDestination);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, thisInst.lastDestination);
                         thisInst.MinimumRad = thisInst.lastTechExtents + 8;
                     }
                 }
@@ -177,6 +183,13 @@ namespace TAC_AI.AI
 
         public static void DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
+            if (thisInst.Pilot.IsNotNull())
+            {   // Handoff all operations to AIEAirborne
+                bool fired = AIEAirborne.PilotTech(thisControl, thisInst, tank, thisInst.Pilot);
+                if (fired)
+                    return;
+            }
+
             FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
             TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
             if (thisInst.Attempt3DNavi)//3D movement
@@ -715,7 +728,7 @@ namespace TAC_AI.AI
                     else if (driveDyna == 1)
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastEnemy.transform.position);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, thisInst.lastEnemy.transform.position);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
@@ -723,7 +736,7 @@ namespace TAC_AI.AI
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastEnemy.transform.position);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, thisInst.lastEnemy.transform.position);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
@@ -747,7 +760,7 @@ namespace TAC_AI.AI
                     else if (driveDyna == 1)
                     {
                         thisInst.DriveDir = EDriveType.Forwards;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastEnemy.transform.position);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, thisInst.lastEnemy.transform.position);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
@@ -755,7 +768,7 @@ namespace TAC_AI.AI
                     {
                         thisInst.DriveDir = EDriveType.Forwards;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(thisInst.lastEnemy.transform.position);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, thisInst.lastEnemy.transform.position);
                         thisInst.MinimumRad = 0.5f;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }

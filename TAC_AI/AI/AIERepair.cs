@@ -23,9 +23,11 @@ namespace TAC_AI.AI
             public void Initiate()
             {
                 Tank = gameObject.GetComponent<Tank>();
+                gameObject.GetComponent<AIECore.TankAIHelper>().TechMemor = this;
             }
             public void Remove()
             {
+                gameObject.GetComponent<AIECore.TankAIHelper>().TechMemor = null;
                 DestroyImmediate(this);
             }
             public IntVector3 GetCentre()
@@ -111,6 +113,67 @@ namespace TAC_AI.AI
             }
             return false;
         }
+        /// <summary>
+        /// Returns true if the tech is damaged and DesignMemory is present
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <returns></returns>
+        public static bool SystemsCheck(Tank tank)
+        {
+            var TechMemor = tank.GetComponent<DesignMemory>();
+            if (TechMemor.IsNull())
+                return false;
+            if (TechMemor.ReturnContents().Count != tank.blockman.IterateBlocks().Count())
+            {
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        ///  Returns true if the tech can repair
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <returns></returns>
+        public static bool CanRepairNow(Tank tank)
+        {
+            var TechMemor = tank.gameObject.GetComponent<DesignMemory>();
+            if (TechMemor.IsNull())
+                return false;
+            var thisInst = tank.GetComponent<AIECore.TankAIHelper>();
+            bool blocksNearby = false;
+            foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, (thisInst.RangeToChase / 4), new Bitfield<ObjectTypes>()))//new ObjectTypes[1]{ObjectTypes.Block})
+            {
+                if (foundBlock.block.IsNotNull() && foundBlock.GetComponent<WorldSpaceObject>().IsEnabled)
+                {
+                    if (!foundBlock.block.tank && foundBlock.holderStack == null && Singleton.Manager<ManPointer>.inst.DraggingItem != foundBlock)
+                    {
+                        if (foundBlock.block.PreExplodePulse)
+                            continue; //explode? no thanks
+                                      //Debug.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
+                        if (TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.blockType == foundBlock.block.BlockType; }).Count() > 0)
+                        {
+                            blocksNearby = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (thisInst.AIState == 2)
+            {
+                var mind = tank.GetComponent<Enemy.RCore.EnemyMind>();
+                if ((mind.AllowRepairsOnFly || (thisInst.lastEnemy.IsNull())) && (blocksNearby || KickStart.EnemiesHaveCreativeInventory || mind.AllowInfBlocks))
+                {
+                    return true;
+                }
+            }
+            else if (thisInst.AIState == 1 && (blocksNearby || thisInst.useInventory))
+            {
+                return true;
+            }
+            return false;
+        }
+
         public static bool RepairLerp(Tank tank, DesignMemory TechMemor, AIECore.TankAIHelper thisInst, bool overrideChecker = false)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();

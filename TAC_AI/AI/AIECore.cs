@@ -196,6 +196,8 @@ namespace TAC_AI.AI
             public DediAIType DediAI = DediAIType.Escort;    // Will we swap the Escort AI for the Harvest AI for this Tech?
 
             public List<ModuleAIExtension> AIList;
+            public AIERepair.DesignMemory TechMemor;
+            public AIEAirborne.PIDAssistance Pilot;
 
             private const int DodgeStrength = 60;  //The motivation in trying to move away from a tech in the way
             //250
@@ -222,6 +224,7 @@ namespace TAC_AI.AI
             public bool isAssassinAvail = false;    //Is there an Assassin-enabled AI on this tech?
             public bool isAegisAvail = false;       //Is there an Aegis-enabled AI on this tech?
 
+            public bool isAviatorAvail = false;
             public bool isAstrotechAvail = false;
             public bool isBuccaneerAvail = false;
 
@@ -239,7 +242,8 @@ namespace TAC_AI.AI
 
             public int AIState = 0;
             public bool updateCA = false; //Collision avoidence
-            public bool useInventory = false; 
+            public bool useInventory = false;
+            public bool useAirControls = false;
             public int lastMoveAction = 0;
             public int lastWeaponAction = 0;
             internal int FrustrationMeter = 0;

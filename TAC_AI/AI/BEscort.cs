@@ -11,7 +11,7 @@ namespace TAC_AI.AI
 
             if (thisInst.lastPlayer == null)
                 return;
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.rbody.position).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             bool hasMessaged = thisInst.Feedback;// set this to false to get AI feedback testing
             thisInst.lastRange = dist;

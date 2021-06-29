@@ -9,7 +9,12 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RPathfinding
     {
-        public static Vector3 AvoidAssistEnemy(Vector3 pos)
+        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 pos)
+        {
+            //WIP
+            return pos;
+        }
+        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 pos, Vector3 OffsetForwards)
         {
             //WIP
             return pos;

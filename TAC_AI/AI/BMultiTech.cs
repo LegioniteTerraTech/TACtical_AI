@@ -35,7 +35,7 @@ namespace TAC_AI.AI
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    dist = (tank.transform.TransformPoint(tank.blockBounds.center) - vis.transform.TransformPoint(vis.blockBounds.center)).magnitude;
+                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
                 else
                 {
@@ -48,7 +48,7 @@ namespace TAC_AI.AI
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    dist = (tank.transform.TransformPoint(tank.blockBounds.center) - vis.transform.TransformPoint(vis.blockBounds.center)).magnitude;
+                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
                 float range = AIECore.Extremes(tank.blockBounds.extents) + AIECore.Extremes(vis.blockBounds.extents);
@@ -101,7 +101,7 @@ namespace TAC_AI.AI
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    dist = (tank.transform.TransformPoint(tank.blockBounds.center) - vis.transform.TransformPoint(vis.blockBounds.center)).magnitude;
+                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
                 else
                 {
@@ -113,7 +113,7 @@ namespace TAC_AI.AI
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    dist = (tank.transform.TransformPoint(tank.blockBounds.center) - vis.transform.TransformPoint(vis.blockBounds.center)).magnitude;
+                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
                 float range = AIECore.Extremes(tank.blockBounds.extents) + AIECore.Extremes(vis.blockBounds.extents);
