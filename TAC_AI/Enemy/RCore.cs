@@ -9,6 +9,10 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RCore
     {
+        /*
+            RELIES ON EVERYTHING IN THE "AI" FOLDER TO FUNCTION PROPERLY!!!  
+                [excluding the Designators in said folder]
+        */ 
         public class EnemyMind : MonoBehaviour
         {   // Where the brain is handled for enemies
             // ESSENTIALS
@@ -17,13 +21,13 @@ namespace TAC_AI.AI.Enemy
             public AIERepair.DesignMemory TechMemor;
 
             // Set on spawn
-            public EnemyHandling EvilCommander = EnemyHandling.Wheeled;
-            public EnemyAttitude CommanderMind = EnemyAttitude.Default;
-            public EnemyAttack CommanderAttack = EnemyAttack.Circle;
-            public EnemySmarts CommanderSmarts = EnemySmarts.Default;
-            public EnemyBolts CommanderBolts = EnemyBolts.Default;
+            public EnemyHandling EvilCommander = EnemyHandling.Wheeled; // What kind of vehicle is this Enemy?
+            public EnemyAttitude CommanderMind = EnemyAttitude.Default; // What the Enemy does if there's no threats around.
+            public EnemyAttack CommanderAttack = EnemyAttack.Circle;    // The way the Enemy acts if there's a threat.
+            public EnemySmarts CommanderSmarts = EnemySmarts.Default;   // The extent the Enemy will be "self-aware"
+            public EnemyBolts CommanderBolts = EnemyBolts.Default;      // When the Enemy should press X.
 
-            public FactionSubTypes MainFaction = FactionSubTypes.GSO;
+            public FactionSubTypes MainFaction = FactionSubTypes.GSO;   // Extra for determining mentality on auto-generation
             public bool StartedAnchored = false;
             public bool AllowRepairsOnFly = false;  // If we are feeling extra evil
             public bool InvertBullyPriority = false;// Shoot the big techs instead
@@ -293,23 +297,73 @@ namespace TAC_AI.AI.Enemy
             bool fired = false;
             var BM = tank.blockman;
             //Determine driving method
+
+            bool isFlying = false;
+            bool isFlyingDirectionForwards = true;
+            List<ModuleBooster> Engines = BM.IterateBlockComponents<ModuleBooster>().ToList();
+            Vector3 biasDirection = Vector3.zero;
+            Vector3 boostBiasDirection = Vector3.zero;
+
+            foreach (ModuleBooster module in Engines)
+            {
+                //Get the slowest spooling one
+                List<FanJet> jets = module.transform.GetComponentsInChildren<FanJet>().ToList();
+                foreach (FanJet jet in jets)
+                {
+                    if (jet.spinDelta <= 10)
+                    {
+                        biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                    }
+                }
+                List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
+                foreach (BoosterJet boost in boosts)
+                {
+                    //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
+                    boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection));
+                }
+            }
+            boostBiasDirection.Normalize();
+            biasDirection.Normalize();
+
+            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (boostBiasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+            else if (biasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (biasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+            Debug.Log("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
+
+            int modBoostCount = BM.IterateBlockComponents<ModuleBooster>().Count();
+            int modHoverCount = BM.IterateBlockComponents<ModuleHover>().Count();
+            int modGyroCount = BM.IterateBlockComponents<ModuleGyro>().Count();
+
             if (tank.IsAnchored)
             {
                 toSet.EvilCommander = EnemyHandling.Stationary;
             }
-            else if (BM.IterateBlockComponents<ModuleHover>().Count() > 2 || BM.IterateBlockComponents<ModuleAntiGravityEngine>().Count() > 0)
+            else if (modBoostCount > 3 && (modHoverCount > 2 || BM.IterateBlockComponents<ModuleAntiGravityEngine>().Count() > 0))
             {
                 toSet.EvilCommander = EnemyHandling.Starship;
             }
-            else if (BM.IterateBlockComponents<ModuleGyro>().Count() > 1 && BM.IterateBlockComponents<ModuleBooster>().Count() > 0)
-            {
-                toSet.EvilCommander = EnemyHandling.Naval;
-            }
-            else if (BM.IterateBlockComponents<ModuleWing>().Count() > 3 && BM.IterateBlockComponents<ModuleBooster>().Count() > 0)
+            else if (BM.IterateBlockComponents<ModuleWing>().Count() > 2 && isFlying && isFlyingDirectionForwards)
             {
                 toSet.EvilCommander = EnemyHandling.Airplane;
             }
-            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() < 3 && BM.IterateBlockComponents<ModuleBooster>().Count() > 0)
+            else if (modGyroCount > 0 && isFlying)
+            {
+                toSet.EvilCommander = EnemyHandling.Chopper;
+            }
+            else if (modGyroCount > 0 && modBoostCount > 0 && (BM.IterateBlockComponents<ModuleWheels>().Count() < 4 || modHoverCount > 1))
+            {
+                toSet.EvilCommander = EnemyHandling.Naval;
+            }
+            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() < 2 && modBoostCount > 0)
             {
                 toSet.EvilCommander = EnemyHandling.SuicideMissile;
             }
@@ -356,6 +410,13 @@ namespace TAC_AI.AI.Enemy
             return fired;
         }
 
+        public static Vector3 GetTargetCoordinates(Tank tank, Visible target, EnemyMind mind)
+        {
+            if (mind.CommanderSmarts >= EnemySmarts.Smrt)   // Rough Target leading
+                return target.tank.rbody.velocity + target.tank.boundsCentreWorldNoCheck;
+            else
+                return target.tank.boundsCentreWorldNoCheck;
+        }
 
         public static void RandomizeBrain(AIECore.TankAIHelper thisInst, Tank tank)
         {

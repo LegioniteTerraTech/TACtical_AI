@@ -1,24 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace TAC_AI.AI
 {
-    public static class BBuccaneer
+    public static class BEscort
     {
-        //Same as Airship but levels out with the sea and avoids terrain
-        public static void MotivateBote(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MotivateMove(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //The Handler that tells the naval ship (Escort) what to do movement-wise
-            if (!KickStart.isWaterModPresent)
-            {
-                //Fallback to normal escort if no watermod present
-                thisInst.DediAI = AIECore.DediAIType.Escort;
-                return;
-            }
+            //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);
 
             if (thisInst.lastPlayer == null)
@@ -46,6 +34,7 @@ namespace TAC_AI.AI
                     {
                         thisInst.unanchorCountdown = 15;
                         tank.TryToggleTechAnchor();
+                        thisInst.JustUnanchored = true;
                     }
                 }
             }
@@ -54,7 +43,7 @@ namespace TAC_AI.AI
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Departing!");
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = OffsetToSea(thisInst.lastPlayer.centrePosition, thisInst);
+                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -65,6 +54,7 @@ namespace TAC_AI.AI
                         Debug.Log("TACtical_AI: AI " + tank.name + ": Time to pack up and move out!");
                         thisInst.unanchorCountdown = 15;
                         tank.TryToggleTechAnchor();
+                        thisInst.JustUnanchored = true;
                     }
                 }
             }
@@ -72,7 +62,7 @@ namespace TAC_AI.AI
             {
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = OffsetToSea(thisInst.lastPlayer.centrePosition, thisInst);
+                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1f;
 
@@ -81,13 +71,13 @@ namespace TAC_AI.AI
                 if (dist > range * 2)
                 {
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Oh Crafty they are too far!");
-                    thisInst.Urgency++;
-                    thisInst.Urgency++;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 2;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1f;
+                    thisInst.featherBoost = true;
                     //Debug.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
                     if (thisInst.UrgencyOverload > 0)
-                        thisInst.UrgencyOverload--;
+                        thisInst.UrgencyOverload -= KickStart.AIClockPeriod / 5;
                 }
                 if (thisInst.UrgencyOverload > 50)
                 {
@@ -104,7 +94,7 @@ namespace TAC_AI.AI
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": I AM SUPER FAR BEHIND!");
                     thisInst.AvoidStuff = false;
                     thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
-                    thisInst.UrgencyOverload++;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 else if (thisInst.Urgency > 2)
                 {
@@ -114,7 +104,7 @@ namespace TAC_AI.AI
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1;
                     thisInst.featherBoost = true;
-                    thisInst.UrgencyOverload++;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 else if (thisInst.Urgency > 1 && thisInst.recentSpeed < 10)
                 {
@@ -124,7 +114,7 @@ namespace TAC_AI.AI
                     thisInst.FIRE_NOW = true;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 0.5f;
-                    thisInst.UrgencyOverload++;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 //OBSTRUCTION MANAGEMENT
                 if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
@@ -135,7 +125,7 @@ namespace TAC_AI.AI
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Trying to catch up!");
-                    thisInst.Urgency++;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1;
                 }
@@ -151,7 +141,7 @@ namespace TAC_AI.AI
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Settling");
-                //thisInst.lastDestination = OffsetToSea(tank.transform.position, thisInst);
+                //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
@@ -171,7 +161,7 @@ namespace TAC_AI.AI
             {
                 //Likely idle
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  in resting state");
-                //thisInst.lastDestination = OffsetToSea(tank.transform.position, thisInst);
+                //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 thisInst.lastMoveAction = 0;

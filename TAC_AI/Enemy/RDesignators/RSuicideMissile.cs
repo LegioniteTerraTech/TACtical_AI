@@ -16,22 +16,20 @@ namespace TAC_AI.AI.Enemy
                 thisInst.BOOST = true;
                 thisInst.FullMelee = true;
                 thisInst.Attempt3DNavi = true;
-                if (thisInst.ActionPause > 1 && thisInst.ActionPause < 7)
+                if (thisInst.ActionPause > 12 && thisInst.ActionPause < 20)
                 {
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-                if (thisInst.ActionPause == 1)
+                if (thisInst.ActionPause > 20)
                 {
                     thisInst.BOOST = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-                else if (thisInst.ActionPause == 0)
-                    thisInst.ActionPause = 20;
                 else
                 {
                     thisInst.BOOST = true;
                     thisInst.lastDestination = tank.boundsCentreWorldNoCheck + Vector3.up * (100);
-                    thisInst.ActionPause--;
+                    thisInst.ActionPause += KickStart.AIClockPeriod / 5;
                 }
             }
         }

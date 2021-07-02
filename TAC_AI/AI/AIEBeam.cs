@@ -6,6 +6,19 @@ namespace TAC_AI.AI
     {
         public static void BeamDirector(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
+            if (thisInst.Pilot.IsNotNull())
+            {   // Handoff all operations to AIEAirborne
+                if (!thisInst.Pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                {   //Become a ground vehicle for now
+                    if (tank.grounded && tank.AI.IsTankOverturned())
+                    {
+                        tank.beam.EnableBeam(true);
+                    }
+                    else
+                        tank.beam.EnableBeam(false);
+                    return;
+                }
+            }
             /*
             //Disabled this as it proved annoying
             if (tank.blockman.blockCount > lastBlockCount)

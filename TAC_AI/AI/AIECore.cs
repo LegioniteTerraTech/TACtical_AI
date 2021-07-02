@@ -6,6 +6,27 @@ using UnityEngine;
 
 namespace TAC_AI.AI
 {
+    /*
+        Summary of functions: Handles Allied AI, and enemy AI if TougherEnemies is installed or overriden to do so.
+        
+        AI Control is handled with 4 trees: 
+          AI Set Types and Attitudes - Tells the AI which Designator to utilize
+            VVVVVV
+          AI Action Designator - Handles the destinations the AI should drive to and how to do it (Classes like BEscort or RWheeled)
+            VVVVVV
+          AI Movement Director - Tells the AI how to navigate safely and avoid obsticles along the way
+            VVVVVV
+          AI Movement Maintainer - Makes the AI drive to the director's coordinates
+
+          As such, it's important to note that:
+            AI Set Types and Attitudes - fires on change and on spawn/load
+            Action Designators - must fire constantly (but can be slowed) to maintain consistant operation
+            Movement Directors - are the major CPU bottlenecks of this mod
+            Movement Maintainers - must be fired every Update to prevent AIs from bugging out on drive/fire operations
+
+        Important to note that this Allied AI will not fire Explosive Bolts under any cirumstances. 
+            The player should do that on their own accord as Explosive Bolts cost resources to make.
+    */
     public class AIECore
     {
         public static List<Tank> Allies;
@@ -341,6 +362,7 @@ namespace TAC_AI.AI
 
             public void Subscribe(Tank tank)
             {
+                Vector3 _ = tank.boundsCentreWorld;
                 var thisInst = gameObject.GetComponent<TankAIHelper>();
                 this.tank = tank;
                 tank.AttachEvent.Subscribe(OnAttach);
@@ -500,10 +522,10 @@ namespace TAC_AI.AI
                 var thisInst = gameObject.GetComponent<TankAIHelper>();
                 thisInst.lastTechExtents = Extremes(tank.blockBounds.extents);
 
-                AIEBeam.BeamDirector(thisControl, thisInst, tank);
                 if (thisInst.updateCA)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired CollisionAvoidUpdate!");
+                    AIEBeam.BeamDirector(thisControl, thisInst, tank);
                     AIEWeapons.WeaponDirector(thisControl, thisInst, tank);
                     AIEDrive.DriveDirector(thisControl, thisInst, tank);
                 }
@@ -582,7 +604,6 @@ namespace TAC_AI.AI
                     Debug.Log("TACtical_AI: AvoidAssist IS NaN!!");
                 return targetIn;
             }
-
             public Vector3 AvoidAssistPrecise(Vector3 targetIn)
             {
                 //The method to determine if we should avoid an ally nearby while navigating to the target
@@ -646,10 +667,9 @@ namespace TAC_AI.AI
                     Debug.Log("TACtical_AI: AI " + tank.name + ":  Can't move there - something's in the way!");
                 }
 
-                thisInst.UrgencyOverload++;
-                thisInst.UrgencyOverload++;
+                thisInst.UrgencyOverload += KickStart.AIClockPeriod / 2;
                 if (thisInst.Urgency > 0)
-                    thisInst.Urgency--;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 if (useRush && dist > thisInst.RangeToStopRush * 2)
                 {
                     //SCREW IT - GO FULL SPEED WE ARE TOO FAR BEHIND!
@@ -657,12 +677,12 @@ namespace TAC_AI.AI
                         RemoveObstruction(); 
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1f;
-                    thisInst.Urgency++;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 }
                 else if (10 < thisInst.FrustrationMeter)
                 {
                     //Try build beaming to clear debris
-                    thisInst.FrustrationMeter++;
+                    thisInst.FrustrationMeter += KickStart.AIClockPeriod / 5;
                     if (21 < thisInst.FrustrationMeter)
                     {
                         thisInst.FrustrationMeter = 0;
@@ -678,24 +698,13 @@ namespace TAC_AI.AI
                 else
                 {
                     //Shoot the freaking tree
-                    thisInst.FrustrationMeter++;
+                    thisInst.FrustrationMeter += KickStart.AIClockPeriod / 5;
                     if (useGun)
                         RemoveObstruction();
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 0.5f;
                 }
             }
-
-            public void SettleDown()
-            {
-                var thisInst = gameObject.GetComponent<TankAIHelper>();
-                thisInst.UrgencyOverload = 0;
-                thisInst.Urgency = 0;
-                thisInst.FrustrationMeter = 0;
-                thisInst.Obst = null;
-            }
-
-
             public Transform GetObstruction() //VERY expensive operation - only use if absoluetely nesseary
             {
                 // Get the scenery that's obstructing if there's any (ignores monuments to be fair to Enemy AI)
@@ -723,8 +732,6 @@ namespace TAC_AI.AI
                 }
                 return null;
             }
-
-
             public void RemoveObstruction()
             {
                 // Shoot at the scenery obsticle infront of us
@@ -732,9 +739,47 @@ namespace TAC_AI.AI
                 if (Obst.IsNull())
                 {
                     thisInst.Obst = GetObstruction();
-                    thisInst.Urgency++;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 }
                 thisInst.FIRE_NOW = true;
+            }
+            public void SettleDown()
+            {
+                var thisInst = gameObject.GetComponent<TankAIHelper>();
+                thisInst.UrgencyOverload = 0;
+                thisInst.Urgency = 0;
+                thisInst.FrustrationMeter = 0;
+                thisInst.Obst = null;
+            }
+
+
+            public void TestForFlyingAIRequirement()
+            {
+                if (AIState == 1 && DediAI == DediAIType.Aviator)
+                {
+                    if (Pilot.IsNull())
+                    {
+                        Pilot = AIEAirborne.PIDAssistance.Initiate(tank, this);
+                    }
+                }
+                else if (AIState == 2 && gameObject.GetComponent<Enemy.RCore.EnemyMind>().IsNotNull())
+                {
+                    var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
+                    if (enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
+                    {
+                        if (Pilot.IsNull())
+                        {
+                            Pilot = AIEAirborne.PIDAssistance.Initiate(tank, this, enemy);
+                        }
+                    }
+                }
+                else
+                {
+                    if (Pilot.IsNotNull())
+                    {
+                        Pilot.Recycle();
+                    }
+                }
             }
 
             public Visible GetPlayerTech()
@@ -886,6 +931,7 @@ namespace TAC_AI.AI
                     var thisInst = gameObject.GetComponent<TankAIHelper>();
                     var aI = tank.AI;
 
+                    TestForFlyingAIRequirement();
                     if (aI.HasAIModules && tank.IsFriendly())
                     {   //MP is NOT supported!
                         //Player-Allied AI
@@ -911,7 +957,7 @@ namespace TAC_AI.AI
                         if (thisInst.recentSpeed < 1)
                             thisInst.recentSpeed = 1;
                         thisInst.DelayedUpdateClock++;
-                        if (thisInst.DelayedUpdateClock > 5)//Mathf.Max(25 / thisInst.recentSpeed, 5)
+                        if (thisInst.DelayedUpdateClock > KickStart.AIClockPeriod)//Mathf.Max(25 / thisInst.recentSpeed, 5)
                         {
                             thisInst.recentSpeed = tank.GetForwardSpeed();
                             RunAlliedOperations();
@@ -942,7 +988,7 @@ namespace TAC_AI.AI
                         if (thisInst.recentSpeed < 1)
                             thisInst.recentSpeed = 1;
                         thisInst.DelayedUpdateClock++;
-                        if (thisInst.DelayedUpdateClock > 5)
+                        if (thisInst.DelayedUpdateClock > KickStart.AIClockPeriod)
                         {
                             thisInst.recentSpeed = tank.GetForwardSpeed();
                             TryRunEnemyOperations();

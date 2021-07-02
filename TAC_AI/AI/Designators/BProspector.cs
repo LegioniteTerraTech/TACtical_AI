@@ -50,7 +50,7 @@ namespace TAC_AI.AI
                 {
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Arrived in safety of the base.");
                     thisInst.AvoidStuff = false;
-                    thisInst.ActionPause--;
+                    thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
@@ -126,7 +126,7 @@ namespace TAC_AI.AI
                     {
                         hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Arrived at base and unloading!");
                         thisInst.AvoidStuff = false;
-                        thisInst.ActionPause--;
+                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
@@ -149,7 +149,7 @@ namespace TAC_AI.AI
                     {
                         hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Yielding base approach...");
                         thisInst.AvoidStuff = false;
-                        thisInst.ActionPause--;
+                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
@@ -164,7 +164,7 @@ namespace TAC_AI.AI
                     else
                     {
                         hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Arrived at base!");
-                        thisInst.ActionPause--;
+                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         //thisInst.Yield = true;
                         thisInst.SettleDown();
                     }

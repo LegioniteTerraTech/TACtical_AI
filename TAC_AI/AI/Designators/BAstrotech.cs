@@ -73,8 +73,7 @@ namespace TAC_AI.AI
                 if (dist > range * 2)
                 {
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Oh Crafty they are too far!");
-                    thisInst.Urgency++;
-                    thisInst.Urgency++;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 2;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1f;
                     //Debug.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
@@ -96,7 +95,7 @@ namespace TAC_AI.AI
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": I AM SUPER FAR BEHIND!");
                     thisInst.AvoidStuff = false;
                     thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
-                    thisInst.UrgencyOverload++;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 else if (thisInst.Urgency > 2)
                 {
@@ -106,7 +105,7 @@ namespace TAC_AI.AI
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1;
                     thisInst.featherBoost = true;
-                    thisInst.UrgencyOverload++;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 else if (thisInst.Urgency > 1 && thisInst.recentSpeed < 10)
                 {
@@ -116,7 +115,7 @@ namespace TAC_AI.AI
                     thisInst.FIRE_NOW = true;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 0.5f;
-                    thisInst.UrgencyOverload++;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 //OBSTRUCTION MANAGEMENT
                 if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
@@ -127,7 +126,7 @@ namespace TAC_AI.AI
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Trying to catch up!");
-                    thisInst.Urgency++;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1;
                 }

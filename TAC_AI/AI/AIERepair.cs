@@ -7,6 +7,12 @@ using UnityEngine;
 
 namespace TAC_AI.AI
 {
+    public class BlockMemory
+    {   // Save the blocks!
+        public Vector3 CachePos = Vector3.zero;
+        public OrthoRotation CacheRot;
+        public BlockTypes blockType = BlockTypes.GSOAIController_111;
+    }
     public class AIERepair
     {
         /// <summary>

@@ -16,6 +16,7 @@ namespace TAC_AI
 
         internal static bool testEnemyAI = true;
         internal static int MaxEnemySplitLimit = 20;
+        public static int AIClockPeriod = 5;  // How frequently we update
 
         public static bool EnableBetterAI = true;
         public static int AIDodgeCheapness = 30;
