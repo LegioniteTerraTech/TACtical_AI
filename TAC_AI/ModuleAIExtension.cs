@@ -69,6 +69,7 @@ namespace TAC_AI
         */
 
         // Set the ones you want your AI to support to true
+        //   note to self - make these flags because it's taking more RAM than it should
         // -----COMBAT-----
         // - Escort is enabled by default since you have to corral your minions somehow
         public bool Assault = false;
@@ -91,6 +92,7 @@ namespace TAC_AI
         public bool AdvAvoidence = false;   // Should the AI avoid two allied techs at once?
         public bool MTForAll = true;        // Should the AI only follow player BuildBeam Movements?
         public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's safety?
+        public bool SelfRepairAI = false;   // Can the AI self-repair?
         //public bool AnimeAI = false;      // Do we attempt a hookup to the AnimeAI mod and display a character for this AI?
 
         public float MaxCombatRange = 100;  // Range to chase enemy
@@ -107,13 +109,16 @@ namespace TAC_AI
             TankBlock.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             TankBlock.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             SavedAI = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().DediAI;
-            TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().AIList.Add(this);
-            TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().RefreshAI();
+            var thisInst = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+            //thisInst.AIList.Add(this);
+            //thisInst.RefreshAI();
         }
         public void OnDetach()
         {
-            TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().AIList.Remove(this);
-            TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().RefreshAI();
+            var thisInst = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+            //thisInst.AIList.Remove(this);
+            //if (!TankBlock.IsBeingRecycled())
+            //    thisInst.RefreshAI();
             TankBlock.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             TankBlock.serializeTextEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             SavedAI = AI.AIECore.DediAIType.Escort;
@@ -146,7 +151,14 @@ namespace TAC_AI
                     SerialData serialData2 = SerialData<SerialData>.Retrieve(blockSpec.saveState);
                     if (serialData2 != null)
                     {
-                        TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().DediAI = serialData2.savedMode;
+                        var thisInst = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+                        if (thisInst.DediAI != serialData2.savedMode)
+                        {
+                            thisInst.DediAI = serialData2.savedMode;
+                            thisInst.RefreshAI();
+                            if (serialData2.savedMode == AI.AIECore.DediAIType.Aviator)
+                                thisInst.TestForFlyingAIRequirement();
+                        }
                         SavedAI = serialData2.savedMode;
                         //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                     }

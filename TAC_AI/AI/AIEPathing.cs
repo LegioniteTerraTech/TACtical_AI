@@ -50,7 +50,6 @@ namespace TAC_AI.AI
             }
             return closestTank;
         }
-
         public static Tank ClosestAllyPrecision(Vector3 tankPos, out float bestValue)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
@@ -80,7 +79,6 @@ namespace TAC_AI.AI
             }
             return closestTank;
         }
-
 
         public static Tank SecondClosestAlly(Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue)
         {
@@ -123,7 +121,6 @@ namespace TAC_AI.AI
             secondTank = null;
             return null;
         }
-
         public static Tank SecondClosestAllyPrecision(Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue)
         {
             // Finds the two closest allies and outputs their respective distances as well as their beings
@@ -186,6 +183,8 @@ namespace TAC_AI.AI
             return null;
         }
 
+
+        // Other navigation utilities
         public static Vector3 GetDriveApproxAir(Tank tankToCopy, AIECore.TankAIHelper AIHelp)
         {
             //Get the position in which to drive inherited from player controls

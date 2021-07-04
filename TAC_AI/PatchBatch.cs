@@ -28,7 +28,7 @@ namespace TAC_AI
                         var tank = __instance.transform.root.GetComponent<Tank>();
                         if (!tank.PlayerFocused && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                         {
-                            if (aI.HasAIModules && tank.IsFriendly())
+                            if (aI.CheckAIAvailable() && tank.IsFriendly())
                             {
                                 //Debug.Log("TACtical_AI: AI Valid!");
                                 //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
@@ -139,6 +139,7 @@ namespace TAC_AI
                         else if (name == "HE_AI_Module_Guard_112")
                         {
                             ModuleAdd.Assault = true;
+                            ModuleAdd.Aviator = true;
                             ModuleAdd.Prospector = true;//Temp until main intended function arrives
                             ModuleAdd.AdvancedAI = true;
                             ModuleAdd.MinCombatRange = 50;
@@ -258,7 +259,7 @@ namespace TAC_AI
                         {
                             if (AICommand.Obst.IsNotNull())
                             {
-                                Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
+                                //Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
 
                                 FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
                                 targPos.SetValue(__instance, AICommand.Obst.position);

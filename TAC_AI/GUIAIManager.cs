@@ -143,16 +143,16 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                /*
-                // N/A!
                 if (lastTank.isAviatorAvail)
                 {
-                    if (GUI.Button(new Rect(100, 130, 80, 30), fetchAI == AI.AIEnhancedCore.DediAIType.Aviator ? "<color=#f23d3dff>PILOT</color>" : "Pilot"))
+                    if (GUI.Button(new Rect(100, 130, 80, 30), fetchAI == AI.AIECore.DediAIType.Aviator ? "<color=#f23d3dff>PILOT</color>" : "Pilot"))
                     {
-                        changeAI = AI.AIEnhancedCore.DediAIType.Aviator;
+                        changeAI = AI.AIECore.DediAIType.Aviator;
                         clicked = true;
                     }
                 }
+                /*
+                // N/A!
                 if (lastTank.isScrapperAvail)
                 {
                     if (GUI.Button(new Rect(20, 160, 80, 30), fetchAI == AI.AIEnhancedCore.DediAIType.Scrapper ? "<color=#f23d3dff>FETCH</color>" : "Fetch"))
@@ -207,6 +207,7 @@ namespace TAC_AI
         {
             lastTank.DediAI = dediAI;
             fetchAI = dediAI;
+            lastTank.TestForFlyingAIRequirement();
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
             CloseSubMenuClickable();
@@ -220,6 +221,7 @@ namespace TAC_AI
                 Debug.Log("TACtical_AI: TANK IS NULL!");
                 return;
             }
+            lastTank.RefreshAI();
             Debug.Log("TACtical_AI: Launched AI menu!");
             fetchAI = lastTank.DediAI;
             isCurrentlyOpen = true;

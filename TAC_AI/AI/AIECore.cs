@@ -218,7 +218,7 @@ namespace TAC_AI.AI
 
             public List<ModuleAIExtension> AIList;
             public AIERepair.DesignMemory TechMemor;
-            public AIEAirborne.PIDAssistance Pilot;
+            public AIEAirborne.AirAssistance Pilot;
 
             private const int DodgeStrength = 60;  //The motivation in trying to move away from a tech in the way
             //250
@@ -240,6 +240,7 @@ namespace TAC_AI.AI
 
 
             //AI Allowed types (self-filling)
+            //   I'll convert these to flags later
             public bool isProspectorAvail = false;  //Is there a Prospector-enabled AI on this tech?
             public bool isScrapperAvail = false;    //Is there a Scrapper-enabled AI on this tech?
             public bool isAssassinAvail = false;    //Is there an Assassin-enabled AI on this tech?
@@ -263,6 +264,7 @@ namespace TAC_AI.AI
 
             public int AIState = 0;
             public bool updateCA = false; //Collision avoidence
+            public bool allowAutoRepair = false;
             public bool useInventory = false;
             public bool useAirControls = false;
             public int lastMoveAction = 0;
@@ -274,7 +276,7 @@ namespace TAC_AI.AI
             public int AttemptedRepairs = 0;    // How many times have we tried fix
             public float DamageThreshold = 0;   // How much damage have we taken? (100 is total destruction)
             //internal float Oops = 0;
-            internal Vector3 lastDestination;
+            internal Vector3 lastDestination = Vector3.zero;
 
             //AutoCollection
             internal int anchorAttempts = 0;
@@ -324,6 +326,7 @@ namespace TAC_AI.AI
             internal int DelayedUpdateClock = 500;
             internal int DelayedAnchorClock = 0;
             internal int featherClock = 50;
+            internal int beamClock = 0;
             //internal int LastBuildClock = 0;
             internal int ActionPause = 0;
             internal int unanchorCountdown = 0;
@@ -370,6 +373,7 @@ namespace TAC_AI.AI
                 tank.TankRecycledEvent.Subscribe(OnRecycle);
                 thisInst.AIList = new List<ModuleAIExtension>();
                 Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnDeathOrRemoval);
+                Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Subscribe(OnSpawn);
             }
 
             public static void OnAttach(TankBlock newBlock, Tank tank)
@@ -378,29 +382,37 @@ namespace TAC_AI.AI
                 thisInst.EstTopSped = 1;
                 //thisInst.LastBuildClock = 0;
             }
-
             public static void OnDetach(TankBlock newBlock, Tank tank)
             {
                 var thisInst = tank.gameObject.GetComponent<TankAIHelper>();
                 thisInst.EstTopSped = 1;
                 thisInst.recentSpeed = 1;
             }
-            public static void OnDeathOrRemoval(Tank tankInfo, ManDamage.DamageInfo damage)
+
+            public static void OnSpawn(Tank tankInfo)
             {
+                //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnSpawn");
+                if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
                 ResetAll(tankInfo);
             }
-
+            public static void OnDeathOrRemoval(Tank tankInfo, ManDamage.DamageInfo damage)
+            {
+                //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnDeathOrRemoval");
+                tankInfo.gameObject.GetComponent<TankAIHelper>().DediAI = DediAIType.Escort;
+                ResetAll(tankInfo);
+            }
             public static void OnRecycle(Tank tank)
             {
+                //Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Called OnRecycle");
+                tank.gameObject.GetComponent<TankAIHelper>().DediAI = DediAIType.Escort;
                 ResetAll(tank);
             }
 
             public static void ResetAll(Tank tank)
             {
                 var thisInst = tank.gameObject.GetComponent<TankAIHelper>();
-                thisInst.DediAI = DediAIType.Escort;
-                thisInst.lastAIType = AITreeType.AITypes.Idle;
                 thisInst.AIState = 0;
+                thisInst.lastAIType = AITreeType.AITypes.Idle;
                 thisInst.EstTopSped = 1;
                 thisInst.recentSpeed = 1;
                 thisInst.anchorAttempts = 0;
@@ -415,10 +427,15 @@ namespace TAC_AI.AI
                 thisInst.LastCloseAlly = null;
                 thisInst.theBase = null;
                 thisInst.JustUnanchored = false;
-                thisInst.AIList.Clear();
                 var Mind = tank.gameObject.GetComponent<Enemy.RCore.EnemyMind>();
                 if (Mind.IsNotNull())
                     Mind.SetForRemoval();
+                var Mem = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
+                if (Mem.IsNotNull())
+                    Mem.Remove();
+                var Pilot = tank.gameObject.GetComponent<AIEAirborne.AirAssistance>();
+                if (Pilot.IsNotNull())
+                    Pilot.Recycle();
 
                 FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
@@ -433,8 +450,6 @@ namespace TAC_AI.AI
 
             public void RefreshAI()
             {
-                var thisInst = gameObject.GetComponent<TankAIHelper>();
-
                 FullMelee = false;      // Should the AI ram the enemy?
                 AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
                 SecondAvoidence = false;// Should the AI avoid two techs at once?
@@ -442,10 +457,12 @@ namespace TAC_AI.AI
                 SideToThreat = false;
                 useInventory = false;
 
-                thisInst.isProspectorAvail = false;
-                thisInst.isScrapperAvail = false;
-                thisInst.isAstrotechAvail = false;
-                thisInst.isBuccaneerAvail = false;
+                isProspectorAvail = false;
+                isScrapperAvail = false;
+
+                isAstrotechAvail = false;
+                isAviatorAvail = false;
+                isBuccaneerAvail = false;
 
                 FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
@@ -457,48 +474,88 @@ namespace TAC_AI.AI
                 control3D.m_State.m_InputRotation = Vector3.zero;
                 controlGet.SetValue(tank.control, control3D);
 
-                foreach (ModuleAIExtension AIEx in thisInst.AIList)
+                AIList.Clear();
+                List<ModuleAIBot> AIs = tank.blockman.IterateBlockComponents<ModuleAIBot>().ToList();
+                foreach (ModuleAIBot bot in AIs)
+                {
+                    var AIE = bot.gameObject.GetComponent<ModuleAIExtension>();
+                    if (AIE.IsNotNull())
+                        AIList.Add(AIE);
+                }
+                //Debug.Log("TACtical_AI: AI list for Tech " + tank.name + " has " + AIList.Count() + " entries");
+
+                foreach (ModuleAIExtension AIEx in AIList)
                 {
                     if (AIEx.Prospector)
-                        thisInst.isProspectorAvail = true;
+                        isProspectorAvail = true;
 
                     if (AIEx.Scrapper)
-                        thisInst.isScrapperAvail = true;
+                        isScrapperAvail = true;
 
                     if (AIEx.Astrotech)
-                        thisInst.isAstrotechAvail = true;
+                        isAstrotechAvail = true;
+
+                    if (AIEx.Aviator)
+                        isAviatorAvail = true;
 
                     if (AIEx.Buccaneer)
-                        thisInst.isBuccaneerAvail = true;
+                        isBuccaneerAvail = true;
 
                     if (AIEx.MeleePreferred)
-                        thisInst.FullMelee = true;
+                        FullMelee = true;
 
                     if (AIEx.AdvAvoidence)
-                        thisInst.SecondAvoidence = true;
+                        SecondAvoidence = true;
 
                     if (AIEx.MTForAll)
-                        thisInst.OnlyPlayerMT = false;
+                        OnlyPlayerMT = false;
 
                     if (AIEx.SidePreferred)
-                        thisInst.SideToThreat = true;
+                        SideToThreat = true;
 
                     if (AIEx.MinCombatRange > IdealRangeCombat)
-                        thisInst.IdealRangeCombat = AIEx.MinCombatRange;
+                        IdealRangeCombat = AIEx.MinCombatRange;
 
                     if (AIEx.MaxCombatRange > RangeToChase)
-                        thisInst.RangeToChase = AIEx.MaxCombatRange;
-                }
-                if (!thisInst.isAegisAvail && DediAI == DediAIType.Aegis)
-                    DediAI = DediAIType.Escort;
-                if (!thisInst.isAssassinAvail && DediAI == DediAIType.Assault)
-                    DediAI = DediAIType.Escort;
-                if (!thisInst.isProspectorAvail && DediAI == DediAIType.Prospector)
-                    DediAI = DediAIType.Escort;
-                if (!thisInst.isScrapperAvail && DediAI == DediAIType.Scrapper)
-                    DediAI = DediAIType.Escort;
+                        RangeToChase = AIEx.MaxCombatRange;
 
-                Debug.Log("TACtical_AI: Refreshed AI");
+                    if (AIEx.SelfRepairAI)
+                        allowAutoRepair = true;
+                }
+                // REMOVE any AI states that have been removed!!!
+                if (!isAegisAvail && DediAI == DediAIType.Aegis)
+                    DediAI = DediAIType.Escort;
+                if (!isAssassinAvail && DediAI == DediAIType.Assault)
+                    DediAI = DediAIType.Escort;
+                if (!isProspectorAvail && DediAI == DediAIType.Prospector)
+                    DediAI = DediAIType.Escort;
+                if (!isScrapperAvail && DediAI == DediAIType.Scrapper)
+                    DediAI = DediAIType.Escort;
+                if (!isAstrotechAvail && DediAI == DediAIType.Astrotech)
+                    DediAI = DediAIType.Escort;
+                if (!isAviatorAvail)
+                {
+                    if (DediAI == DediAIType.Aviator)
+                        DediAI = DediAIType.Escort;
+                    if (gameObject.GetComponent<AIEAirborne.AirAssistance>().IsNotNull())
+                        gameObject.GetComponent<AIEAirborne.AirAssistance>().Recycle();
+                }
+                else if (DediAI == DediAIType.Aviator)
+                {
+                    TestForFlyingAIRequirement();
+                }
+                if (allowAutoRepair)
+                {
+                    if (TechMemor.IsNull())
+                        tank.gameObject.AddComponent<AIERepair.DesignMemory>().Initiate();
+                }
+                else
+                {
+                    if (TechMemor.IsNotNull())
+                        TechMemor.Remove();
+                }
+
+                //Debug.Log("TACtical_AI: Refreshed AI");
             }
 
             public void ForceAllAIsToEscort()
@@ -513,7 +570,7 @@ namespace TAC_AI.AI
             }
 
             /// <summary>
-            /// Main controller for Allied AI
+            /// Main controller for ALL AI
             /// </summary>
             /// <param name="thisControl"></param>
             public void BetterAI(TankControl thisControl)
@@ -522,17 +579,17 @@ namespace TAC_AI.AI
                 var thisInst = gameObject.GetComponent<TankAIHelper>();
                 thisInst.lastTechExtents = Extremes(tank.blockBounds.extents);
 
+                AIEBeam.BeamDirector(thisControl, thisInst, tank);
                 if (thisInst.updateCA)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired CollisionAvoidUpdate!");
-                    AIEBeam.BeamDirector(thisControl, thisInst, tank);
                     AIEWeapons.WeaponDirector(thisControl, thisInst, tank);
                     AIEDrive.DriveDirector(thisControl, thisInst, tank);
                 }
                 AIEWeapons.WeaponMaintainer(thisControl, thisInst, tank);
                 AIEDrive.DriveMaintainer(thisControl, thisInst, tank);
             }
-
+            
             /// <summary>
             /// Gets the opposite direction of the target tech, accounting for size
             /// </summary>
@@ -548,7 +605,6 @@ namespace TAC_AI.AI
                 Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
                 return Final;
             }
-
 
 
             public Vector3 AvoidAssist(Vector3 targetIn)
@@ -601,7 +657,10 @@ namespace TAC_AI.AI
                     }
                 }
                 if (targetIn.IsNaN())
+                {
                     Debug.Log("TACtical_AI: AvoidAssist IS NaN!!");
+                    TankAIManager.FetchAllAllies();
+                }
                 return targetIn;
             }
             public Vector3 AvoidAssistPrecise(Vector3 targetIn)
@@ -652,7 +711,10 @@ namespace TAC_AI.AI
                     }
                 }
                 if (targetIn.IsNaN())
+                {
                     Debug.Log("TACtical_AI: AvoidAssistPrecise IS NaN!!");
+                    TankAIManager.FetchAllAllies();
+                }
                 return targetIn;
             }
 
@@ -757,9 +819,9 @@ namespace TAC_AI.AI
             {
                 if (AIState == 1 && DediAI == DediAIType.Aviator)
                 {
-                    if (Pilot.IsNull())
+                    if (Pilot == null)
                     {
-                        Pilot = AIEAirborne.PIDAssistance.Initiate(tank, this);
+                        Pilot = AIEAirborne.AirAssistance.Initiate(tank, this);
                     }
                 }
                 else if (AIState == 2 && gameObject.GetComponent<Enemy.RCore.EnemyMind>().IsNotNull())
@@ -767,17 +829,25 @@ namespace TAC_AI.AI
                     var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
                     if (enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
                     {
-                        if (Pilot.IsNull())
+                        if (Pilot == null)
                         {
-                            Pilot = AIEAirborne.PIDAssistance.Initiate(tank, this, enemy);
+                            Pilot = AIEAirborne.AirAssistance.Initiate(tank, this, enemy);
                         }
                     }
                 }
                 else
                 {
-                    if (Pilot.IsNotNull())
+                    if (Pilot != null)
                     {
                         Pilot.Recycle();
+                    }
+                    else
+                    {
+                        if (tank.GetComponent<AIEAirborne.AirAssistance>())
+                        {
+                            Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  DID NOT HAVE PILOT SET UP CORRECTLY!!! [TestForFlyingAIRequirement]");
+                            tank.GetComponent<AIEAirborne.AirAssistance>().Recycle();
+                        }
                     }
                 }
             }
@@ -890,12 +960,21 @@ namespace TAC_AI.AI
                             break;
 
                         case DediAIType.Astrotech:
-                            // Copycat
+                            // Grace from Space
                             thisInst.lastPlayer = GetPlayerTech();
                             thisInst.IsMultiTech = false;
                             thisInst.Attempt3DNavi = true;
                             BAstrotech.MotivateSpace(thisInst, tank);
                             BGeneral.AidDefend(thisInst, tank);
+                            break;
+
+                        case DediAIType.Aviator:
+                            // Fly and doggyfight
+                            thisInst.lastPlayer = GetPlayerTech();
+                            thisInst.IsMultiTech = false;
+                            thisInst.Attempt3DNavi = false;
+                            BAviator.MotivateFly(thisInst, tank);
+                            BAviator.Dogfighting(thisInst, tank);
                             break;
 
                         default:
@@ -931,18 +1010,15 @@ namespace TAC_AI.AI
                     var thisInst = gameObject.GetComponent<TankAIHelper>();
                     var aI = tank.AI;
 
-                    TestForFlyingAIRequirement();
-                    if (aI.HasAIModules && tank.IsFriendly())
+                    if (tank.IsFriendly() && aI.CheckAIAvailable())
                     {   //MP is NOT supported!
                         //Player-Allied AI
                         if (thisInst.AIState != 1)
                         {
-                            var Mind = tank.gameObject.GetComponent<Enemy.RCore.EnemyMind>();
-                            if (Mind.IsNotNull())
-                                Mind.SetForRemoval();
+                            ResetAll(thisInst.tank);
+                            thisInst.AIState = 1;
                             RefreshAI();
                             Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
-                            thisInst.AIState = 1;
                         }
 
                         thisInst.FixedDelayedUpdateClock++;
@@ -971,9 +1047,10 @@ namespace TAC_AI.AI
                         //Enemy AI
                         if (thisInst.AIState != 2)
                         {
+                            ResetAll(thisInst.tank);
+                            thisInst.AIState = 2;
                             Enemy.RCore.RandomizeBrain(thisInst, tank);
                             Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Ready to kick some Tech!");
-                            thisInst.AIState = 2;
                         }
 
                         thisInst.FixedDelayedUpdateClock++;
@@ -998,13 +1075,10 @@ namespace TAC_AI.AI
                         }
                     }
                     else
-                    {
+                    {   // Static tech
                         thisInst.DriveVar = 0;
-                        if (thisInst.AIState != 0)
-                        {
-                            var Mind = tank.gameObject.GetComponent<Enemy.RCore.EnemyMind>();
-                            if (Mind.IsNotNull())
-                                Mind.SetForRemoval();
+                        if (thisInst.AIState > 0)
+                        {   // Reset and ready for static tech
                             ResetAll(thisInst.tank);
                             thisInst.AIState = 0;
                         }

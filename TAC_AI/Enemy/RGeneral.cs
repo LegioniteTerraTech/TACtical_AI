@@ -114,7 +114,6 @@ namespace TAC_AI.AI.Enemy
                 thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst, tank.blockBounds.size.y);
             return isRegenerating;
         }
-
         public static void Engadge(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
         {
             if (!mind.StartedAnchored && tank.IsAnchored)
@@ -123,6 +122,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.anchorAttempts = 0;
             }
         }
+
 
         // Handle being bored AIs
         public static void DefaultIdle(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
@@ -146,7 +146,6 @@ namespace TAC_AI.AI.Enemy
             }
             catch { }//No tanks available
         }
-
         public static Vector3 GetRANDPos(Tank tank)
         {
             Vector3 final = tank.boundsCentreWorldNoCheck;
@@ -158,8 +157,8 @@ namespace TAC_AI.AI.Enemy
             return final;
         }
 
-        // HOSTILITIES
 
+        // HOSTILITIES
         /// <summary>
         /// Attack like default
         /// </summary>
@@ -194,7 +193,7 @@ namespace TAC_AI.AI.Enemy
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
-                thisInst.Urgency++;
+                thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 if (thisInst.SideToThreat)
                 {
                     if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.Urgency >= 30)
@@ -230,6 +229,25 @@ namespace TAC_AI.AI.Enemy
             if (thisInst.Obst == null)
             {
                 AidAttack(thisInst, tank, mind);
+            }
+        }
+        
+        /// <summary>
+        /// Find enemy and then chase the enemy until lost
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        public static void HoldGrudge(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        {
+            if (thisInst.lastEnemy != null)
+            {
+                //Hold that grudge!
+                thisInst.DANGER = true;
+            }
+            else
+            {
+                thisInst.DANGER = false;
+                thisInst.lastEnemy = mind.FindEnemy();
             }
         }
     }

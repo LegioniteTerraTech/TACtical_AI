@@ -6,19 +6,34 @@ namespace TAC_AI.AI
     {
         public static void BeamDirector(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            if (thisInst.Pilot.IsNotNull())
+            if (thisInst.beamClock > 0)
+            {
+                tank.beam.EnableBeam(true);
+                thisInst.BOOST = false;
+                thisInst.featherBoost = false;
+                thisControl.BoostControlJets = false;
+                if (thisInst.beamClock > 40)
+                {
+                    thisInst.beamClock = 0;
+                }
+                else
+                    thisInst.beamClock++;
+            }
+            else
+                tank.beam.EnableBeam(false);
+
+            if (thisInst.Pilot != null)
             {   // Handoff all operations to AIEAirborne
                 if (!thisInst.Pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
                 {   //Become a ground vehicle for now
                     if (tank.grounded && tank.AI.IsTankOverturned())
                     {
-                        tank.beam.EnableBeam(true);
+                        thisInst.beamClock = 1;
                     }
-                    else
-                        tank.beam.EnableBeam(false);
                     return;
                 }
             }
+
             /*
             //Disabled this as it proved annoying
             if (tank.blockman.blockCount > lastBlockCount)
@@ -70,7 +85,7 @@ namespace TAC_AI.AI
                     tank.beam.nudgeSpeedForward = 5;
                 }
                 */
-                tank.beam.EnableBeam(true);
+                thisInst.beamClock = 1;
             }
             else if (!thisInst.IsMultiTech && tank.AI.IsTankOverturned() && thisInst.RequestBuildBeam)
             {
@@ -83,23 +98,22 @@ namespace TAC_AI.AI
                         thisInst.ActionPause = 100;
                     else if (thisInst.ActionPause > 80)
                     {
-                        tank.beam.EnableBeam(true);
+                        thisInst.beamClock = 1;
                         thisInst.ActionPause--;
                     }
                     else if (thisInst.ActionPause == 80)
                         thisInst.ActionPause = 0;
-                    else
-                        tank.beam.EnableBeam(false);
                 }
                 else
-                    tank.beam.EnableBeam(true);
+                {
+                    thisInst.beamClock = 1;
+                }
             }
             else
             {
 
                 if (thisInst.DediAI == AIECore.DediAIType.Astrotech)
                     thisInst.ActionPause = 0;
-                tank.beam.EnableBeam(false);
                 if (thisInst.MTLockedToTechBeam && thisInst.IsMultiTech)
                 {   //Override and disable most driving abilities - We are going to follow the host tech!
                     if (thisInst.LastCloseAlly!= null)

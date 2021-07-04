@@ -27,7 +27,10 @@ namespace TAC_AI
         internal static bool isTougherEnemiesPresent = false;
         internal static bool isWeaponAimModPresent = false;
 
-        public static int Difficulty = 50;
+        public static int Difficulty = 50;  
+        // 50 means the full AI range is used
+        // -50 means only the simpleton AI spawns
+        // 150 means only the smartest AI spawns
 
         public static int LowerDifficulty { get { return Mathf.Clamp(Difficulty - 50, 0, 99); } }
         public static int UpperDifficulty { get { return Mathf.Clamp(Difficulty + 50, 1, 100); } }

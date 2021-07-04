@@ -14,7 +14,7 @@ namespace TAC_AI.AI.Enemy
             //WIP
             return pos;
         }
-        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 pos, Vector3 OffsetForwards)
+        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 pos, Vector3 OffsetPos)
         {
             //WIP
             return pos;

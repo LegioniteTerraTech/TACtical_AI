@@ -28,7 +28,7 @@ namespace TAC_AI.AI.Enemy
                 else
                 {
                     thisInst.BOOST = true;
-                    thisInst.lastDestination = tank.boundsCentreWorldNoCheck + Vector3.up * (100);
+                    thisInst.lastDestination = tank.boundsCentreWorldNoCheck + (Vector3.up * 100);
                     thisInst.ActionPause += KickStart.AIClockPeriod / 5;
                 }
             }
