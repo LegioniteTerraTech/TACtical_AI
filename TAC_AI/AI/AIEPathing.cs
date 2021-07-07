@@ -22,7 +22,97 @@ namespace TAC_AI.AI
         //3-axis steering is handled in AIEDrive
 
 
-        // COLLISION AVOIDENCE
+
+        // OBSTICLE AVOIDENCE
+        public static List<Visible> ObstructionAwareness(Vector3 posWorld, AIECore.TankAIHelper thisInst)
+        {
+            List<Visible> ObstList = new List<Visible>();
+            try
+            {
+                foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(posWorld, thisInst.lastTechExtents + 12, new Bitfield<ObjectTypes>()))
+                {
+                    if (vis.resdisp.IsNotNull())
+                    {
+                        ObstList.Add(vis);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: Error on ObstructionAwareness");
+                Debug.Log(e);
+            }
+            return ObstList;
+        }
+        public static Vector3 ObstOtherDir(Tank tank, AIECore.TankAIHelper thisInst, Visible vis)
+        {
+            //What actually does the avoidence
+            Vector3 inputOffset = tank.transform.position - vis.centrePosition;
+            float inputSpacing = vis.Radius + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
+            return Final;
+        }
+        public static Vector3 ObstDodgeOffset(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false)
+        {
+            worked = false;
+            if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
+                return Vector3.zero;    // don't bother with this
+            Vector3 TankPos;
+            Vector3 Offset = Vector3.zero;
+
+            if (tank.rbody != null)
+                TankPos = tank.boundsCentreWorldNoCheck + tank.rbody.velocity;
+            else
+                return targetIn; // no need, we are stationary
+
+            List<Visible> ObstList = ObstructionAwareness(TankPos, thisInst);
+            try
+            {
+                int bestStep = 0;
+                int auxStep = 0;
+                float bestValue = 500;
+                float auxBestValue = 500;
+                int steps = ObstList.Count;
+                bool moreThan2 = false;
+                if (steps <= 0)
+                    return targetIn;
+                else if (steps > 1)
+                    moreThan2 = true;
+                for (int stepper = 0; steps > stepper; stepper++)
+                {
+                    float temp = Mathf.Clamp((ObstList.ElementAt(stepper).centrePosition - tank.boundsCentreWorldNoCheck).sqrMagnitude - ObstList.ElementAt(stepper).Radius, 0, 500);
+                    if (bestValue > temp && temp != 0)
+                    {
+                        auxStep = bestStep;
+                        bestStep = stepper;
+                        auxBestValue = bestValue;
+                        bestValue = temp;
+                    }
+                    else if (useTwo && bestValue < temp && auxBestValue > temp && temp != 0)
+                    {
+                        auxStep = stepper;
+                        auxBestValue = temp;
+                    }
+                }
+                thisInst.Yield = true;
+                worked = true;
+                if (useTwo && moreThan2)
+                {
+                    Offset = (ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstOtherDir(tank, thisInst, ObstList.ElementAt(auxStep))) / 2;
+                }
+                else
+                    Offset = ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep));
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: Error on ObstDodgeOffset");
+                Debug.Log(e);
+            }
+            return Offset;
+        }
+
+
+        // ALLY COLLISION AVOIDENCE
         public static Tank ClosestAlly(Vector3 tankPos, out float bestValue)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
@@ -253,6 +343,28 @@ namespace TAC_AI.AI
             }
             return (input.y > final_y);
         }
+        public static bool AboveTheSea(Vector3 input)
+        {
+            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            if (terrain)
+            {
+                if (height < WaterMod.QPatch.WaterHeight)
+                    return true;
+            }
+            else
+                if (50 < WaterMod.QPatch.WaterHeight)
+                    return true;
+            return false;
+        }
+
+
+        /// <summary>
+        /// For use with land AI
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="thisInst"></param>
+        /// <param name="groundOffset"></param>
+        /// <returns></returns>
         public static Vector3 OffsetFromGround(Vector3 input, AIECore.TankAIHelper thisInst, float groundOffset = 0)
         {
             float final_y;
@@ -293,6 +405,35 @@ namespace TAC_AI.AI
                 {
                     final.y = final_y;
                 }
+            }
+            return final;
+        }
+
+        /// <summary>
+        /// For use with Air AI
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="thisInst"></param>
+        /// <param name="groundOffset"></param>
+        /// <returns></returns>
+        public static Vector3 OffsetFromGroundA(Vector3 input, AIECore.TankAIHelper thisInst, float groundOffset = 0)
+        {
+            float final_y;
+            Vector3 final = input;
+            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            if (groundOffset == 0) groundOffset = thisInst.GroundOffsetHeight;
+            if (terrain)
+                final_y = height + groundOffset;
+            else
+                final_y = 50 + groundOffset;
+            if (KickStart.isWaterModPresent)
+            {
+                if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
+                    final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+            }
+            if (input.y < final_y)
+            {
+                final.y = final_y;
             }
             return final;
         }

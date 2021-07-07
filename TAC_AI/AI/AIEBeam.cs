@@ -12,7 +12,9 @@ namespace TAC_AI.AI
                 thisInst.BOOST = false;
                 thisInst.featherBoost = false;
                 thisControl.BoostControlJets = false;
-                if (thisInst.beamClock > 40)
+                if (tank.rootBlockTrans.up.y > 0.95f)
+                    thisInst.beamClock = 0;
+                else if (thisInst.beamClock > 40)
                 {
                     thisInst.beamClock = 0;
                 }
@@ -85,7 +87,7 @@ namespace TAC_AI.AI
                     tank.beam.nudgeSpeedForward = 5;
                 }
                 */
-                thisInst.beamClock = 1;
+                thisInst.beamClock = 35;
             }
             else if (!thisInst.IsMultiTech && tank.AI.IsTankOverturned() && thisInst.RequestBuildBeam)
             {
@@ -132,9 +134,10 @@ namespace TAC_AI.AI
             }
         }
 
-        /*
-        //On second thought the ability to unjam two techs is unfair compared to the enemy so i'll leave this be 
+
+        //On second thought the ability to unjam two techs is unfair compared to the enemy so I'll leave this be 
         //  The boosters help this greatly already
+        /*
         private bool AttemptFree()
         {
             // Attempts to separate two jammed techs

@@ -63,8 +63,8 @@ namespace TAC_AI.AI
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.ProceedToObjective = true;
                 //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
-                thisInst.forceDrive = true;
-                thisInst.DriveVar = 1f;
+                //thisInst.forceDrive = true;
+                //thisInst.DriveVar = 1f;
 
 
                 //DISTANCE WARNINGS
@@ -165,7 +165,7 @@ namespace TAC_AI.AI
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 thisInst.lastMoveAction = 0;
-                thisInst.DriveVar = 0;
+                //thisInst.DriveVar = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)

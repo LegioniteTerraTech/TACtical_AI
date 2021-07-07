@@ -39,7 +39,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    hostTech = AIEPathing.ClosestAllyPrecision(tank.rbody.position, out dist);
+                    hostTech = AIEPathing.ClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out dist);
                     if (hostTech == null)
                     {
                         thisInst.MTLockedToTechBeam = false;
@@ -105,7 +105,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    hostTech = AIEPathing.ClosestAllyPrecision(tank.rbody.position, out dist);
+                    hostTech = AIEPathing.ClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out dist);
                     if (hostTech == null)
                     {
                         thisInst.MTLockedToTechBeam = false;

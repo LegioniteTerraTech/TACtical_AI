@@ -56,8 +56,11 @@ namespace TAC_AI.AI.Enemy
                         if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                         thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                         thisInst.AttemptedRepairs++;
+                        Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
+                    else
+                        mind.Hurt = false;
                 }
                 if (mind.CommanderSmarts >= EnemySmarts.IntAIligent)
                 {
@@ -73,17 +76,22 @@ namespace TAC_AI.AI.Enemy
                         {
                             bool venPower = false;
                             if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, 6, Super: venPower);
                             thisInst.AttemptedRepairs++;
                         }
+                        Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
+                    else
+                        mind.Hurt = false;
                 }
             }
             else
             {
                 thisInst.anchorAttempts = 0;
             }
+
+            //Debug.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
                 thisInst.lastDestination = mind.HoldPos;
@@ -97,10 +105,10 @@ namespace TAC_AI.AI.Enemy
                     case EnemyAttitude.Homing:  // Get nearest tech regardless of max combat range and attack them
                         HomingIdle(thisInst, tank, mind);
                         break;
-                    //The cases below I still have to think of a reason for them to do the things
                     case EnemyAttitude.Miner:   // mine resources
-                        DefaultIdle(thisInst, tank, mind);
+                        RMiner.MineYerOwnBusiness(thisInst, tank, mind);
                         break;
+                    //The case below I still have to think of a reason for them to do the things
                     case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
                         DefaultIdle(thisInst, tank, mind);
                         break;
@@ -231,7 +239,7 @@ namespace TAC_AI.AI.Enemy
                 AidAttack(thisInst, tank, mind);
             }
         }
-        
+
         /// <summary>
         /// Find enemy and then chase the enemy until lost
         /// </summary>
@@ -241,14 +249,15 @@ namespace TAC_AI.AI.Enemy
         {
             if (thisInst.lastEnemy != null)
             {
-                //Hold that grudge!
-                thisInst.DANGER = true;
+                if (thisInst.lastEnemy.isActive)
+                {
+                    //Hold that grudge!
+                    thisInst.DANGER = true;
+                    return;
+                }
             }
-            else
-            {
-                thisInst.DANGER = false;
-                thisInst.lastEnemy = mind.FindEnemy();
-            }
+            thisInst.DANGER = false;
+            thisInst.lastEnemy = mind.FindEnemy();
         }
     }
 }

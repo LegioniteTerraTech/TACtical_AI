@@ -15,13 +15,17 @@ namespace TAC_AI
         const string ModName = "TACtical AIs";
 
         internal static bool testEnemyAI = true;
+        internal static bool DesignsToLog = true;
         internal static int MaxEnemySplitLimit = 20;
-        public static int AIClockPeriod = 5;  // How frequently we update
+        internal static int MaxEnemyBaseLimit = 3;  // How many bases are allowed to exist in one instance
+        public static int AIClockPeriod = 5;        // How frequently we update
 
         public static bool EnableBetterAI = true;
         public static int AIDodgeCheapness = 30;
+        public static bool MuteNonPlayerRacket = true;
         public static bool enablePainMode = false;
         public static bool EnemiesHaveCreativeInventory = false;
+        public static bool AllowEnemiesToStartBases = false;
 
         internal static bool isWaterModPresent = false;
         internal static bool isTougherEnemiesPresent = false;
@@ -38,9 +42,11 @@ namespace TAC_AI
         // NativeOptions Parameters
         public static OptionToggle betterAI;
         public static OptionRange dodgePeriod;
+        public static OptionToggle muteNonPlayerBuildRacket;
         public static OptionToggle painfulEnemies;
         public static OptionRange diff;
         public static OptionToggle infEnemySupplies;
+        public static OptionToggle enemyBaseSpawn;
 
 
         public static void Main()
@@ -82,21 +88,27 @@ namespace TAC_AI
             ModConfig thisModConfig = new ModConfig();
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
+            thisModConfig.BindConfig<KickStart>(null, "MuteNonPlayerRacket");
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "Difficulty");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
+            thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
 
             var TACAI = ModName;
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, MuteNonPlayerRacket);
+            muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             if (isTougherEnemiesPresent || testEnemyAI)
             {
                 painfulEnemies = new OptionToggle("Painful Enemies", TACAI, enablePainMode);
                 painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 diff = new OptionRange("AI Difficulty", TACAI, Difficulty, -50, 150, 25);
                 diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAI, AllowEnemiesToStartBases);
+                enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAI, EnemiesHaveCreativeInventory);
                 infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             }

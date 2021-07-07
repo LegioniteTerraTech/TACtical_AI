@@ -28,20 +28,35 @@ namespace TAC_AI.AI
             float playerExt = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
             thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents) * 2;
 
+            if (tank.wheelGrounded)
+            {
+                if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
+                    thisInst.TryHandleObstruction(true, dist, true, true);
+                else
+                    thisInst.SettleDown();
+            }
+
             if (dist < ((thisInst.lastTechExtents + playerExt) * 2) + 5)
             {   // TOO CLOSE!!! WE DODGE!!!
-                thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
+                if (thisInst.lastEnemy != null)
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                else
+                    thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
                 thisInst.MoveFromObjective = true;
             }
             else if (dist > thisInst.lastTechExtents + playerExt && dist < range)
             {   // Follow the leader
-                thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
+                if (thisInst.lastEnemy != null)
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                else
+                    thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
                 thisInst.ProceedToObjective = true;
             }
             else
             {   // Far behind, must catch up
                 thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
                 thisInst.ProceedToObjective = true;
+                thisInst.Retreat = true;
                 thisInst.BOOST = true; // boost in forwards direction towards objective
             }
         }
@@ -55,20 +70,22 @@ namespace TAC_AI.AI
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                if (thisInst.SideToThreat)
-                {
-                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.Urgency >= 30)
+                if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && thisInst.Pilot.LargeAircraft)
+                {   // AC-130 broadside attack
+                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
                     {
                         thisInst.DANGER = true;
-                        thisInst.Urgency = 50;
+                        //thisInst.Urgency = 50;
+                        thisInst.SettleDown();
                     }
                 }
                 else
-                {
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.Urgency >= 30)
+                {   // Normal Dogfighting
+                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.25f || thisInst.Urgency >= 30)
                     {
                         thisInst.DANGER = true;
-                        thisInst.Urgency = 50;
+                        //thisInst.Urgency = 50;
+                        thisInst.SettleDown();
                     }
                 }
             }

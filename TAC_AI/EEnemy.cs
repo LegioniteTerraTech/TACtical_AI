@@ -26,6 +26,7 @@ namespace TAC_AI.AI.Enemy
         Homing,     // Beeline for the nearest enemy tech
         Miner,      // Attack resources
         Junker,     // Move towards patches of loose blocks
+        OnRails,    // Follow set destinations instead for MissionManager
     }
     public enum EnemyAttack
     {

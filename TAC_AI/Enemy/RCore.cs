@@ -28,7 +28,7 @@ namespace TAC_AI.AI.Enemy
             public EnemyBolts CommanderBolts = EnemyBolts.Default;      // When the Enemy should press X.
 
             public FactionSubTypes MainFaction = FactionSubTypes.GSO;   // Extra for determining mentality on auto-generation
-            public bool StartedAnchored = false;
+            public bool StartedAnchored = false;   
             public bool AllowRepairsOnFly = false;  // If we are feeling extra evil
             public bool InvertBullyPriority = false;// Shoot the big techs instead
             public bool AllowInfBlocks = false;     // Can this tech spawn unlimited blocks?
@@ -113,6 +113,12 @@ namespace TAC_AI.AI.Enemy
                 if (inRange <= 0) inRange = Range;
                 float TargetRange = inRange;
 
+                if (target != null)
+                {
+                    if ((target.tank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).magnitude > TargetRange)
+                        target = null;
+                }
+
                 List<Tank> techs = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
                 if (CommanderAttack == EnemyAttack.Pesterer)
                 {
@@ -123,7 +129,7 @@ namespace TAC_AI.AI.Enemy
                         for (int step = 0; step < launchCount; step++)
                         {
                             Tank cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
+                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank && cTank.visible.isActive)
                             {
                                 float dist = (cTank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).magnitude;
                                 if (dist < TargetRange)
@@ -132,7 +138,28 @@ namespace TAC_AI.AI.Enemy
                                 }
                             }
                         }
-                        TargetLockDuration = 250;
+                        TargetLockDuration = 50;
+                    }
+                    else if (target.IsNotNull())
+                    {
+                        if (!target.isActive)
+                        {
+                            int max = techs.Count();
+                            int launchCount = UnityEngine.Random.Range(0, max);
+                            for (int step = 0; step < launchCount; step++)
+                            {
+                                Tank cTank = techs.ElementAt(step);
+                                if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
+                                {
+                                    float dist = (cTank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).magnitude;
+                                    if (dist < TargetRange)
+                                    {
+                                        target = cTank.visible;
+                                    }
+                                }
+                            }
+                            TargetLockDuration = 50;
+                        }
                     }
                     TargetLockDuration--;
                 }
@@ -176,6 +203,11 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
+                    if (CommanderAttack == EnemyAttack.Grudge && target != null)
+                    {
+                        if (target.isActive)
+                            return target;
+                    }
                     float TargRange2 = TargetRange;
                     float TargRange3 = TargetRange;
 
@@ -234,13 +266,36 @@ namespace TAC_AI.AI.Enemy
             {
                 return;
             }
+            var bookworm = tank.GetComponent<Templates.BookmarkName>();
+            if (bookworm.IsNotNull())
+            {
+                tank.SetName(bookworm.savedName);
+                Mind.EvilCommander = EnemyHandling.Stationary;
+                Mind.CommanderMind = EnemyAttitude.Default;
+                Mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                Mind.CommanderAttack = EnemyAttack.Grudge;
+                Mind.CommanderBolts = EnemyBolts.AtFull;
+                Mind.AllowInfBlocks = true;
+                Mind.AllowRepairsOnFly = true;
+
+                Mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
+                if (Mind.TechMemor.IsNull())
+                {
+                    Mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                    Mind.TechMemor.Initiate();
+                }
+                Mind.TechMemor.SetupForNewTechConstruction(thisInst, bookworm.blueprint, !bookworm.infBlocks);
+                Mind.StartedAnchored = true;
+
+                UnityEngine.Object.Destroy(bookworm);
+            }
 
             RBolts.ManageBolts(thisInst, tank, Mind);
             if (Mind.AllowRepairsOnFly)
             {
                 bool venPower = false;
                 if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                RRepair.EnemyRepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
+                RRepair.EnemyRepairStepper(thisInst, tank, Mind, 34, venPower);// longer while fighting
             }
             if (Mind.EvilCommander != EnemyHandling.Stationary)
             {
@@ -266,10 +321,12 @@ namespace TAC_AI.AI.Enemy
                     RWheeled.TryAttack(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Airplane:
-                    //awaiting coding
+                    //-awaiting coding
+                    RAircraft.TryFly(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Chopper:
-                    //awaiting coding, Starship but pid
+                    //-awaiting coding, Starship but pid
+                    RChopper.TryFly(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Starship:
                     RStarship.TryAttack(thisInst, tank, Mind);
@@ -338,8 +395,9 @@ namespace TAC_AI.AI.Enemy
             var toSet = tank.gameObject.GetComponent<EnemyMind>();
             toSet.HoldPos = tank.boundsCentreWorldNoCheck;
             toSet.Initiate();
+            toSet.Range = 250;
 
-            bool isMissionTech = RMission.TryHandleMissionAI(thisInst, tank, toSet);
+            bool isMissionTech = RMission.SetupMissionAI(thisInst, tank, toSet);
             if (isMissionTech)
             {
                 if (toSet.CommanderSmarts >= EnemySmarts.Smrt)
@@ -348,7 +406,6 @@ namespace TAC_AI.AI.Enemy
                     if (toSet.TechMemor.IsNull())
                         toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                     toSet.TechMemor.Initiate();
-                    toSet.TechMemor.SaveTech();
                 }
                 if (toSet.CommanderAttack == EnemyAttack.Grudge)
                     toSet.FindEnemy();
@@ -357,43 +414,7 @@ namespace TAC_AI.AI.Enemy
 
             if (tank.Anchors.NumAnchored > 0)
                 toSet.StartedAnchored = true;
-            /*
-            try
-            {
-                ControlSchemeCategory Schemer = tank.control.ActiveScheme.Category;
-                switch (Schemer)
-                {
-                    case ControlSchemeCategory.Car:
-                        toSet.EvilCommander = EnemyHandling.Wheeled;
-                        break;
-                    case ControlSchemeCategory.Aeroplane:
-                        toSet.EvilCommander = EnemyHandling.Airplane;
-                        break;
-                    case ControlSchemeCategory.Helicopter:
-                        toSet.EvilCommander = EnemyHandling.Chopper;
-                        break;
-                    case ControlSchemeCategory.AntiGrav:
-                        toSet.EvilCommander = EnemyHandling.Starship;
-                        break;
-                    case ControlSchemeCategory.Rocket:
-                        toSet.EvilCommander = EnemyHandling.Starship;
-                        break;
-                    case ControlSchemeCategory.Hovercraft:
-                        toSet.EvilCommander = EnemyHandling.Starship;
-                        break;
-                    default:
-                        tank.control.sch
-                        string name = tank.control.ActiveScheme.CustomName;
-                        if (name == "Ship" || name == "ship" || name == "Naval" || name == "naval" || name == "Boat" || name == "boat")
-                        {
-                            toSet.EvilCommander = EnemyHandling.Naval;
-                        }
-                        //Else we just default to Wheeled
-                        break;
-                }
-            }
-            catch { }//some population techs are devoid of schemes
-            */
+
             //add Smartness
             int randomNum = UnityEngine.Random.Range(KickStart.LowerDifficulty, KickStart.UpperDifficulty);
             if (randomNum < 35)
@@ -411,14 +432,12 @@ namespace TAC_AI.AI.Enemy
                 toSet.AllowRepairsOnFly = true;//top 2
                 toSet.InvertBullyPriority = true;
             }
-
             if (toSet.CommanderSmarts > EnemySmarts.Meh)
             {
                 toSet.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (toSet.TechMemor.IsNull())
                     toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                 toSet.TechMemor.Initiate();
-                toSet.TechMemor.SaveTech();
                 toSet.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
             }
 
@@ -437,10 +456,17 @@ namespace TAC_AI.AI.Enemy
                         toSet.CommanderMind = EnemyAttitude.Homing;
                         break;
                     case 3:
-                        toSet.CommanderMind = EnemyAttitude.Junker;
+                        //toSet.CommanderMind = EnemyAttitude.Junker;
+                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                            toSet.CommanderMind = EnemyAttitude.Miner;
+                        else
+                            toSet.CommanderMind = EnemyAttitude.Default;
                         break;
                     case 4:
-                        toSet.CommanderMind = EnemyAttitude.Miner;
+                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                            toSet.CommanderMind = EnemyAttitude.Miner;
+                        else
+                            toSet.CommanderMind = EnemyAttitude.Default;
                         break;
                 }
                 //add Attack
@@ -467,10 +493,24 @@ namespace TAC_AI.AI.Enemy
                         break;
                 }
             }
+            if (toSet.CommanderSmarts == EnemySmarts.Default && toSet.EvilCommander == EnemyHandling.Wheeled)
+            {
+                thisInst.Hibernate = true;// enable the default AI
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
+                return;
+            }
             if (toSet.CommanderAttack == EnemyAttack.Grudge)
                 toSet.FindEnemy();
-            Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+            if (toSet.CommanderMind == EnemyAttitude.Miner)
+            {
+                thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
+                Templates.EnemyBaseLoader.TrySpawnBase(tank, thisInst);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+            }
+            else
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
         }
+
         public static bool SetSmartAIStats(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind toSet)
         {
             bool fired = false;
@@ -532,7 +572,9 @@ namespace TAC_AI.AI.Enemy
 
             if (tank.IsAnchored)
             {
+                toSet.StartedAnchored = true;
                 toSet.EvilCommander = EnemyHandling.Stationary;
+                toSet.CommanderBolts = EnemyBolts.AtFull;
             }
             else if (modBoostCount > 3 && (modHoverCount > 2 || BM.IterateBlockComponents<ModuleAntiGravityEngine>().Count() > 0))
             {
@@ -546,11 +588,11 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.EvilCommander = EnemyHandling.Chopper;
             }
-            else if (modGyroCount > 0 && modBoostCount > 0 && (BM.IterateBlockComponents<ModuleWheels>().Count() < 4 || modHoverCount > 1))
+            else if (KickStart.isWaterModPresent && modGyroCount > 0 && modBoostCount > 0 && (BM.IterateBlockComponents<ModuleWheels>().Count() < 4 || modHoverCount > 1))
             {
                 toSet.EvilCommander = EnemyHandling.Naval;
             }
-            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() < 2 && modBoostCount > 0)
+            else if (BM.IterateBlockComponents<ModuleWeaponGun>().Count() < 2 && BM.IterateBlockComponents<ModuleDrill>().Count() < 2 && modBoostCount > 0)
             {
                 toSet.EvilCommander = EnemyHandling.SuicideMissile;
             }
@@ -567,21 +609,36 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderAttack = EnemyAttack.Spyper;
                 fired = true;
             }
-            else if ((BM.IterateBlockComponents<ModuleWeaponGun>().Count() < BM.IterateBlockComponents<ModuleDrill>().Count() && BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0)|| toSet.MainFaction == FactionSubTypes.GC)
+            else if ( BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0 || toSet.MainFaction == FactionSubTypes.GC)
             {
                 // Miner
                 switch (UnityEngine.Random.Range(0, 3))
                 {
                     case 0:
-                        toSet.CommanderMind = EnemyAttitude.Miner;
+                        if (BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                            toSet.CommanderMind = EnemyAttitude.Miner;
+                        else
+                            toSet.CommanderMind = EnemyAttitude.Default;
                         toSet.CommanderAttack = EnemyAttack.Coward;
+                        toSet.Range = 64;
                         break;
                     default:
-                        toSet.CommanderMind = EnemyAttitude.Miner;
+                        if (BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                            toSet.CommanderMind = EnemyAttitude.Miner;
+                        else
+                            toSet.CommanderMind = EnemyAttitude.Default;
                         toSet.CommanderAttack = EnemyAttack.Bully;
+                        toSet.Range = 64;
                         toSet.InvertBullyPriority = true;
                         break;
                 }
+                fired = true;
+            }
+            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() > 50)
+            {
+                // Over-armed
+                toSet.CommanderMind = EnemyAttitude.Homing;
+                toSet.CommanderAttack = EnemyAttack.Bully;
                 fired = true;
             }
             else if (toSet.MainFaction == FactionSubTypes.VEN)
@@ -598,14 +655,44 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderAttack = EnemyAttack.Grudge;
                 fired = true;
             }
-            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() > 50)
-            {
-                // Over-armed
-                toSet.CommanderMind = EnemyAttitude.Homing;
-                toSet.CommanderAttack = EnemyAttack.Bully;
-                fired = true;
-            }
             return fired;
+        }
+        public static void SetFromScheme(EnemyMind toSet, Tank tank)
+        {
+            try
+            {
+                ControlSchemeCategory Schemer = tank.control.ActiveScheme.Category;
+                switch (Schemer)
+                {
+                    case ControlSchemeCategory.Car:
+                        toSet.EvilCommander = EnemyHandling.Wheeled;
+                        break;
+                    case ControlSchemeCategory.Aeroplane:
+                        toSet.EvilCommander = EnemyHandling.Airplane;
+                        break;
+                    case ControlSchemeCategory.Helicopter:
+                        toSet.EvilCommander = EnemyHandling.Chopper;
+                        break;
+                    case ControlSchemeCategory.AntiGrav:
+                        toSet.EvilCommander = EnemyHandling.Starship;
+                        break;
+                    case ControlSchemeCategory.Rocket:
+                        toSet.EvilCommander = EnemyHandling.Starship;
+                        break;
+                    case ControlSchemeCategory.Hovercraft:
+                        toSet.EvilCommander = EnemyHandling.Starship;
+                        break;
+                    default:
+                        string name = tank.control.ActiveScheme.CustomName;
+                        if (name == "Ship" || name == "ship" || name == "Naval" || name == "naval" || name == "Boat" || name == "boat")
+                        {
+                            toSet.EvilCommander = EnemyHandling.Naval;
+                        }
+                        //Else we just default to Wheeled
+                        break;
+                }
+            }
+            catch { }//some population techs are devoid of schemes
         }
     }
 }

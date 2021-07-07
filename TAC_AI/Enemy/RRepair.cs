@@ -10,7 +10,7 @@ namespace TAC_AI.AI.Enemy
     public static class RRepair
     {
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
-
+        //  Most major operations are called from AIERepair.
         public static bool EnemyRepairLerp(Tank tank, RCore.EnemyMind mind, bool overrideChecker = false)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
@@ -24,7 +24,7 @@ namespace TAC_AI.AI.Enemy
             }
             int savedBCount = mind.TechMemor.ReturnContents().Count;
             int cBCount = cBlocks.Count;
-            Debug.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
+            //Debug.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount < cBCount && !overrideChecker)
             {
                 if (!overrideChecker)
@@ -115,7 +115,6 @@ namespace TAC_AI.AI.Enemy
             }
             return false;
         }
-
         public static bool EnemyInstaRepair(Tank tank, RCore.EnemyMind mind, int RepairAttempts = 0)
         {
             bool success = false;
@@ -142,7 +141,6 @@ namespace TAC_AI.AI.Enemy
             }
             return success;
         }
-
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, int Delay = 35, bool Super = false)
         {
             if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
@@ -153,30 +151,27 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                if (thisInst.ActionPause == 1)
+                if (thisInst.repairClock == 1)
                 {
                     thisInst.AttemptedRepairs = 0;
-                    thisInst.ActionPause = 0;
+                    thisInst.repairClock = 0;
                 }
-                else if (thisInst.ActionPause == 0)
+                else if (thisInst.repairClock == 0)
                 {
                     if (!Super)
-                        thisInst.ActionPause = Delay / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                        thisInst.repairClock = Delay / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                     else
-                        thisInst.ActionPause = (Delay / 6) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                        thisInst.repairClock = (Delay / 6) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
 
                 }
                 else
-                    thisInst.ActionPause--;
+                    thisInst.repairClock--;
             }
             return thisInst.PendingSystemsCheck;
         }
 
 
-        public static void SetupForNewEnemyTechConstruction(RCore.EnemyMind mind, List<TankBlock> tankTemplate, IntVector3 GridCenter)
-        {
-            mind.TechMemor.SaveTech(tankTemplate.FindAll(delegate (TankBlock cand) { return cand != null; }), GridCenter);
-        }
+        // EXPERIMENTAL - AI-Based new Tech building
         public static bool EnemyNewTechConstruction(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
         {
             if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
@@ -186,15 +181,15 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                if (thisInst.ActionPause == 1)
+                if (thisInst.repairClock == 1)
                 {
                     thisInst.AttemptedRepairs = 0;
-                    thisInst.ActionPause = 0;
+                    thisInst.repairClock = 0;
                 }
-                else if (thisInst.ActionPause == 0)
-                    thisInst.ActionPause = 20;
+                else if (thisInst.repairClock == 0)
+                    thisInst.repairClock = 20;
                 else
-                    thisInst.ActionPause--;
+                    thisInst.repairClock--;
             }
             return thisInst.PendingSystemsCheck;
         }

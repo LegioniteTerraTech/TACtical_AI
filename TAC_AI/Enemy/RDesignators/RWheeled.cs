@@ -29,7 +29,7 @@ namespace TAC_AI.AI.Enemy
             RGeneral.Engadge(thisInst, tank, mind);
 
             float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.rbody.position).magnitude - enemyExt;
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
 
@@ -40,7 +40,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.MoveFromObjective = true;
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 4))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -49,7 +49,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -60,7 +60,7 @@ namespace TAC_AI.AI.Enemy
             {
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
-                if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                     thisInst.TryHandleObstruction(true, dist, true, true);
                 else
                     thisInst.SettleDown();
@@ -87,7 +87,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.Retreat = false;
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 2))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -101,7 +101,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -110,7 +110,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -125,7 +125,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.Retreat = false;
                 if (dist < thisInst.lastTechExtents + enemyExt - 2)
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -140,7 +140,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -149,7 +149,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();

@@ -34,6 +34,7 @@ namespace TAC_AI.AI
                 }
             }
         }
+
         public static void WeaponMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
             thisInst.OverrideAim = 0;
@@ -61,7 +62,7 @@ namespace TAC_AI.AI
                     {
                         try
                         {
-                            Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
+                            //Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
                             thisInst.OverrideAim = 2;
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position, 3f);
                         }

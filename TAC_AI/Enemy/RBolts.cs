@@ -19,8 +19,8 @@ namespace TAC_AI.AI.Enemy
 
         public static void ManageBolts(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
         {
-            if (tank.IsSleeping)
-                return;
+            //if (tank.IsSleeping)
+            //    return;
             switch (mind.CommanderBolts)
             {
                 case EnemyBolts.Default:        // Blow up like default - first emeny sighting
@@ -29,7 +29,7 @@ namespace TAC_AI.AI.Enemy
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (tank.IsAnchored && AllyCount(tank) < KickStart.MaxEnemySplitLimit && !AIERepair.SystemsCheck(tank, mind.TechMemor))
+                    if (AllyCount(tank) < KickStart.MaxEnemySplitLimit && !AIERepair.SystemsCheck(tank, mind.TechMemor))
                         tank.control.DetonateExplosiveBolt();
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health

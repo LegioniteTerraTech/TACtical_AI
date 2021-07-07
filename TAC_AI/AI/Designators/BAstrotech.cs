@@ -9,7 +9,7 @@ namespace TAC_AI.AI
 {
     public static class BAstrotech
     {
-        //Same a escort code, because the EEscort code supports 3D!
+        //Same a escort code, because the BEscort code supports 3D!
         // we just need to re-define how far above ground we should be
         public static void MotivateSpace(AIECore.TankAIHelper thisInst, Tank tank)
         {

@@ -75,6 +75,11 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.InputModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.JSONSerializeModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.JSONSerializeModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.Networking">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.Networking.dll</HintPath>
       <Private>False</Private>
@@ -126,6 +131,7 @@
     <Compile Include="Enemy\RDesignators\RChopper.cs" />
     <Compile Include="Enemy\RGeneral.cs" />
     <Compile Include="Enemy\RDesignators\RMiner.cs" />
+    <Compile Include="Enemy\RBases.cs" />
     <Compile Include="Enemy\RPathfinding.cs" />
     <Compile Include="Enemy\RRepair.cs" />
     <Compile Include="Enemy\RDesignators\RNaval.cs" />
@@ -142,6 +148,9 @@
     <Compile Include="PatchBatch.cs" />
     <Compile Include="AnimeAI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Templates\ESpawnBaseTypes.cs" />
+    <Compile Include="Templates\EnemyBaseLoader.cs" />
+    <Compile Include="Templates\LandBaseTemplates.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="mod.json">

@@ -32,7 +32,7 @@ namespace TAC_AI.AI.Enemy
             RGeneral.Engadge(thisInst, tank, mind);
 
             float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.rbody.position).magnitude - enemyExt;
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
 

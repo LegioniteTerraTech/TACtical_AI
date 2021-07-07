@@ -7,11 +7,62 @@ using UnityEngine;
 
 namespace TAC_AI.AI.Enemy
 {
-    class RMission
+    public static class RMission
     {
-        public static bool TryHandleMissionAI(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        /// <summary>
+        /// N/A until MissionManager exists
+        /// </summary>
+        public class OnRailsActions : MonoBehaviour
+        {   // Will sit on standby for MissionManager
+            public Tank Tank;
+            public AIECore.TankAIHelper AIControl;
+            public int MissionAIID = 0;
+
+
+            //public MissionManager.Mission Mission;
+            public static Event<Tank, OnRailsActions> MissionAIStatus;
+
+
+            public static void Initiate()
+            {
+                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(TankDestruction);
+            }
+            public static void TankDestruction(Tank tank, ManDamage.DamageInfo oof)
+            {
+                var rails = tank.GetComponent<OnRailsActions>();
+                if (rails.IsNotNull())
+                    MissionAIStatus.Send(tank, rails);
+            }
+
+            public void InitiateForTank()
+            {
+                Tank = gameObject.GetComponent<Tank>();
+                AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
+                //Tank.DamageEvent.Subscribe(OnHit);
+                //Tank.DetachEvent.Subscribe(OnBlockLoss);
+            }
+            public void Remove()
+            {
+                //Tank.DamageEvent.Unsubscribe(OnHit);
+                //Tank.DetachEvent.Unsubscribe(OnBlockLoss);
+                DestroyImmediate(this);
+            }
+            public void Reset()
+            {
+            }
+            public static void OnHit(Tank tank, OnRailsActions mAIState)
+            {   // compile relivant information here and deliver it to the MissionManager
+                MissionAIStatus.Send(tank, mAIState);
+            }
+            public static void ArrivalAtDest(Tank tank, OnRailsActions mAIState)
+            {   // compile relivant information here and deliver it to the MissionManager
+                MissionAIStatus.Send(tank, mAIState);
+            }
+        }
+        public static bool SetupMissionAI(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
         {
             string name = tank.name;
+            bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
             if (name == "Missile Defense")
             {
                 mind.AllowRepairsOnFly = true;
@@ -19,10 +70,9 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderAttack = EnemyAttack.Bully;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.Mild;
-                return true;
+                DidFire = true;
             }
-
-            if (name == "Wingnut")
+            else if (name == "Wingnut")
             {
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
@@ -30,22 +80,18 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderAttack = EnemyAttack.Bully;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                return true;
+                DidFire = true;
             }
-
-
-            // Racer
-            if (name == "Runner")
+            else if (name == "Runner")
             {   //WIP
                 mind.AllowRepairsOnFly = true;
                 mind.EvilCommander = EnemyHandling.Wheeled;
                 mind.CommanderAttack = EnemyAttack.Coward;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                return true;
+                DidFire = true;
             }
-
-            if (name == "Enemy HQ")
+            else if (name == "Enemy HQ")
             {   //Base where enemies spawn from
                 mind.AllowInfBlocks = true;
                 mind.AllowRepairsOnFly = true;
@@ -55,10 +101,9 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderBolts = EnemyBolts.AtFull;
-                return true;
+                DidFire = true;
             }
-
-            if (name == "Missile #2")
+            else if (name == "Missile #2")
             {
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
@@ -67,10 +112,34 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
-                return true;
+                DidFire = true;
             }
 
-            return false;
+            if (DidFire && mind.CommanderMind == EnemyAttitude.OnRails)
+            {
+                var rails = tank.GetComponent<OnRailsActions>();
+                if (rails.IsNull())
+                {
+                    rails = tank.gameObject.AddComponent<OnRailsActions>();
+                    rails.InitiateForTank();
+                }
+
+                rails.Reset();
+
+            }
+            else   // remove uneeded module
+            {
+                var rails = tank.GetComponent<OnRailsActions>();
+                if (rails.IsNotNull())
+                    rails.Remove();
+            }
+
+            return DidFire;
+        }
+
+        public static bool MissionHandler(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        {
+            return true;
         }
     }
 }

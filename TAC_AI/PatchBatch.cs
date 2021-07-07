@@ -13,6 +13,7 @@ namespace TAC_AI
 
     internal static class Patches
     {
+        // Where it all happens
         [HarmonyPatch(typeof(ModuleTechController))]
         [HarmonyPatch("ExecuteControl")]//On Control
         private static class PatchControlSystem
@@ -44,8 +45,12 @@ namespace TAC_AI
                             }
                             else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy())
                             {
-                                tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>().BetterAI(__instance.block.tank.control);
-                                return false;
+                                var tankAIHelp = tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
+                                if (!tankAIHelp.Hibernate)
+                                {
+                                    tankAIHelp.BetterAI(__instance.block.tank.control);
+                                    return false;
+                                }
                             }
                         }
                     }
@@ -315,8 +320,8 @@ namespace TAC_AI
             private static void Prefix(ResourceDispenser __instance)
             {
                 //Debug.Log("TACtical_AI: Added resource to list (OnSpawn)");
-                if (!AI.AIECore.Minables.Contains(__instance.transform))
-                    AI.AIECore.Minables.Add(__instance.transform);
+                if (!AI.AIECore.Minables.Contains(__instance.visible))
+                    AI.AIECore.Minables.Add(__instance.visible);
                 else
                     Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (OnSpawn)");
             }
@@ -329,8 +334,8 @@ namespace TAC_AI
             private static void Prefix(ResourceDispenser __instance)
             {
                 //Debug.Log("TACtical_AI: Added resource to list (OnSpawn)");
-                if (!AI.AIECore.Minables.Contains(__instance.transform))
-                    AI.AIECore.Minables.Add(__instance.transform);
+                if (!AI.AIECore.Minables.Contains(__instance.visible))
+                    AI.AIECore.Minables.Add(__instance.visible);
                 //else
                 //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (OnSpawn)");
             }
@@ -343,9 +348,9 @@ namespace TAC_AI
             private static void Prefix(ResourceDispenser __instance)
             {
                 //Debug.Log("TACtical_AI: Removed resource from list (Die)");
-                if (AI.AIECore.Minables.Contains(__instance.transform))
+                if (AI.AIECore.Minables.Contains(__instance.visible))
                 {
-                    AI.AIECore.Minables.Remove(__instance.transform);
+                    AI.AIECore.Minables.Remove(__instance.visible);
                 }
                 else
                     Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Die)");
@@ -359,9 +364,9 @@ namespace TAC_AI
             private static void Prefix(ResourceDispenser __instance)
             {
                 //Debug.Log("TACtical_AI: Removed resource from list (OnRecycle)");
-                if (AI.AIECore.Minables.Contains(__instance.transform))
+                if (AI.AIECore.Minables.Contains(__instance.visible))
                 {
-                    AI.AIECore.Minables.Remove(__instance.transform);
+                    AI.AIECore.Minables.Remove(__instance.visible);
                 }
                 //else
                 //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (OnRecycle)");

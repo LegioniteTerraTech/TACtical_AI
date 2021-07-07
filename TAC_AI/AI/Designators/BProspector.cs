@@ -7,19 +7,11 @@ namespace TAC_AI.AI
 {
     public static class BProspector
     {
-        public static List<Tank> Allies
-        {
-            get
-            {
-                return AIECore.Allies;
-            }
-        }
-
         public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
-            bool hasMessaged = thisInst.Feedback;
+            bool hasMessaged = false;//thisInst.Feedback;
             thisInst.lastRange = dist;
 
             BGeneral.ResetValues(thisInst);
@@ -189,7 +181,7 @@ namespace TAC_AI.AI
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.lastResourcePos, out thisInst.theResource);
+                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Scanning for resources...");
                     if (!thisInst.foundGoal)
                     {
@@ -205,7 +197,7 @@ namespace TAC_AI.AI
                 {
                     if (thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated || thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
                     {
-                        AIECore.Minables.Remove(thisInst.theResource.transform);
+                        AIECore.Minables.Remove(thisInst.theResource);
                         thisInst.theResource = null;
                         thisInst.foundGoal = false;
                         return;
@@ -216,7 +208,7 @@ namespace TAC_AI.AI
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Mining resource at " + thisInst.lastResourcePos);
+                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Mining resource at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     if (!thisInst.FullMelee)
@@ -231,13 +223,13 @@ namespace TAC_AI.AI
                 }
                 else if (dist < thisInst.lastTechExtents + 12)
                 {
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Arriving at resource at " + thisInst.lastResourcePos);
+                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Arriving at resource at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                     thisInst.RemoveObstruction();
                 }
-                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Moving out to mine at " + thisInst.lastResourcePos);
+                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
             }
