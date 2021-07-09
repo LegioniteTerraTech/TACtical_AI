@@ -174,9 +174,9 @@ namespace TAC_AI.Templates
         }
         public static BaseTemplate GetBaseTemplate(SpawnBaseTypes toSpawn)
         {
-            if (AllBaseTemplates.techBases.TryGetValue(toSpawn, out BaseTemplate baseT)) //Find(delegate (BaseTemplate cand) { return cand.baseType == toSpawn; });
+            if (BaseTemplateManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT)) //Find(delegate (BaseTemplate cand) { return cand.baseType == toSpawn; });
                 return baseT;
-            return AllBaseTemplates.techBases.ElementAtOrDefault(1).Value;
+            return BaseTemplateManager.techBases.ElementAtOrDefault(1).Value;
         }
         public static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra)
         {
@@ -185,7 +185,7 @@ namespace TAC_AI.Templates
 
             try
             {
-                List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates = AllBaseTemplates.techBases.ToList().FindAll
+                List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates = BaseTemplateManager.techBases.ToList().FindAll
                     (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
@@ -243,9 +243,9 @@ namespace TAC_AI.Templates
         {
             try
             {
-                int lookup = AllBaseTemplates.techBases.Values.ToList().FindIndex(delegate (BaseTemplate cand) { return cand.techName == Name; });
+                int lookup = BaseTemplateManager.techBases.Values.ToList().FindIndex(delegate (BaseTemplate cand) { return cand.techName == Name; });
                 if (lookup == -1) return SpawnBaseTypes.NotAvail;
-                return AllBaseTemplates.techBases.ElementAt(lookup).Key;
+                return BaseTemplateManager.techBases.ElementAt(lookup).Key;
             }
             catch 
             {
@@ -266,7 +266,7 @@ namespace TAC_AI.Templates
         }
         public static bool IsHQ(SpawnBaseTypes toSpawn)
         {
-            if (AllBaseTemplates.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
+            if (BaseTemplateManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
                 return baseT.purposes.Contains(BasePurpose.Headquarters);
             return false;
         }

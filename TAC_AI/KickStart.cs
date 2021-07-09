@@ -31,6 +31,7 @@ namespace TAC_AI
         internal static bool isWaterModPresent = false;
         internal static bool isTougherEnemiesPresent = false;
         internal static bool isWeaponAimModPresent = false;
+        internal static bool isBlockInjectorPresent = false;
 
         public static int Difficulty = 50;  
         // 50 means the full AI range is used
@@ -48,6 +49,9 @@ namespace TAC_AI
         public static OptionRange diff;
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
+
+
+        internal static bool firedAfterBlockInjector = false;
 
 
         public static void Main()
@@ -86,6 +90,12 @@ namespace TAC_AI
                 isTougherEnemiesPresent = true;
             }
 
+            if (LookForMod("BlockInjector"))
+            {
+                Debug.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
+                isBlockInjectorPresent = true;
+            }
+
             ModConfig thisModConfig = new ModConfig();
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
@@ -114,6 +124,23 @@ namespace TAC_AI
                 infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAI, EnemiesHaveCreativeInventory);
                 infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             }
+
+            // Now setup bases
+            if (isBlockInjectorPresent)
+            {
+                Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(DelayedBaseLoader);
+            }
+            else
+                InstantBaseLoader();
+        }
+        public static void DelayedBaseLoader(Mode mode)
+        {
+            if (Singleton.Manager<ManGameMode>.inst.GetCurrentGameType() == ManGameMode.GameType.Attract)
+                Templates.BaseTemplateManager.ValidateAllBasesBlocks();
+        }
+        public static void InstantBaseLoader()
+        {
+            Templates.BaseTemplateManager.ValidateAllBasesBlocks();
         }
 
         public static bool LookForMod(string name)

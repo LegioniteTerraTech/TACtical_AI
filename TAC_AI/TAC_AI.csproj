@@ -47,6 +47,10 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="BlockInjector">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\Nuterra.BlockInjector\BlockInjector.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="QModInstaller">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\QModInstaller.dll</HintPath>
       <Private>False</Private>
@@ -152,7 +156,7 @@
     <Compile Include="Templates\EBasePurpose.cs" />
     <Compile Include="Templates\ESpawnBaseTypes.cs" />
     <Compile Include="Templates\EnemyBaseLoader.cs" />
-    <Compile Include="Templates\AllBaseTemplates.cs" />
+    <Compile Include="Templates\BaseTemplateManager.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="mod.json">

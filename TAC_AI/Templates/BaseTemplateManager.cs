@@ -16,9 +16,60 @@ namespace TAC_AI.Templates
         public int startingFunds = 5000;
         public string savedTech = "{\"blockType\":125,\"CachePos\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"CacheRot\":0}";
     }
-    public static class AllBaseTemplates
+    public static class BaseTemplateManager
     {
-        public static Dictionary<SpawnBaseTypes, BaseTemplate> techBases = new Dictionary<SpawnBaseTypes, BaseTemplate>
+        public static void ValidateAllBasesBlocks()
+        {
+            techBases = new Dictionary<SpawnBaseTypes, BaseTemplate>();
+            foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in techBasesAll)
+            {
+                if (ValidateBlocksInTech(pair.Value.savedTech))
+                {
+                    techBases.Add(pair.Key, pair.Value);
+                }
+                else 
+                {
+                    Debug.Log("TACtical AIs: Could not load " + pair.Value.techName + " as it contained missing blocks");
+                }
+            }
+            techBasesAll.Clear();
+        }
+
+        public static bool ValidateBlocksInTech(string toLoad)
+        {
+            StringBuilder RAW = new StringBuilder();
+            foreach (char ch in toLoad)
+            {
+                if (ch != '\\')
+                {
+                    RAW.Append(ch);
+                }
+            }
+            List<AI.BlockMemory> mem = new List<AI.BlockMemory>();
+            StringBuilder blockCase = new StringBuilder();
+            string RAWout = RAW.ToString();
+            foreach (char ch in RAWout)
+            {
+                if (ch == '|')//new block
+                {
+                    mem.Add(JsonUtility.FromJson<AI.BlockMemory>(blockCase.ToString()));
+                    blockCase.Clear();
+                }
+                else
+                    blockCase.Append(ch);
+            }
+            bool valid = true;
+            foreach (AI.BlockMemory bloc in mem)
+            {
+                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bloc.blockType))
+                    valid = false;
+            }
+            return valid;
+        }
+
+        public static Dictionary<SpawnBaseTypes, BaseTemplate> techBases;
+
+        public static Dictionary<SpawnBaseTypes, BaseTemplate> techBasesAll = new Dictionary<SpawnBaseTypes, BaseTemplate>
         {
             { SpawnBaseTypes.NotAvail, new BaseTemplate {
                 techName = "error on load",
@@ -60,7 +111,7 @@ namespace TAC_AI.Templates
                 faction = FactionSubTypes.HE,
                 purposes = new List<BasePurpose>
                 {
-                    BasePurpose.TechProduction, 
+                    BasePurpose.TechProduction,
                     BasePurpose.Headquarters
                 },
                 startingFunds = 175000,
