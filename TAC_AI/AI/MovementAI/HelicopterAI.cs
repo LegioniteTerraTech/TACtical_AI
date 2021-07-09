@@ -91,7 +91,7 @@ namespace TAC_AI.AI.MovementAI
             pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 44);
             pilot.AirborneDest = this.AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
 
-            if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 34))
+            if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
             {
                 //Debug.Log("TACtical_AI: Tech " + this.pilot.tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;
@@ -148,7 +148,7 @@ namespace TAC_AI.AI.MovementAI
             pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 44);
             pilot.AirborneDest = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
 
-            if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 34))
+            if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
             {
                 //Debug.Log("TACtical_AI: Tech " + this.pilot.tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;

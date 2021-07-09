@@ -260,3 +260,4 @@ paket-files
 __pycache__
 .pyc
 TAC_AI/bin/Debug/TAC_AI.dll
+TAC_AI/HypeMusicOverride.cs

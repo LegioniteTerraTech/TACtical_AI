@@ -574,26 +574,75 @@ namespace TAC_AI.AI
         {
             TechMemor.SaveTech(tankTemplate.FindAll(delegate (TankBlock cand) { return cand != null; }));
         }
-        public static bool NewTechConstruction(AIECore.TankAIHelper thisInst, Tank tank, DesignMemory TechMemor)
+        
+        /// <summary>
+        /// Builds a Tech instantly, no requirements
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <param name="TechMemor"></param>
+        public static void Turboconstruct(Tank tank, DesignMemory TechMemor, bool fullyCharged = true)
         {
-            if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
+            Debug.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
+            int RepairAttempts = TechMemor.ReturnContents().Count();
+            while (RepairAttempts > 0)
             {
-                thisInst.PendingSystemsCheck = !InstaRepair(tank, TechMemor, TechMemor.ReturnContents().Count() + 10);
-                thisInst.AttemptedRepairs = 1;
+                TurboRepair(tank, TechMemor);
+                RepairAttempts--;
             }
-            else
+            if (fullyCharged)
+                tank.EnergyRegulator.SetAllStoresAmount(1);
+        }
+        public static void TurboRepair(Tank tank, DesignMemory TechMemor)
+        {
+            List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+            if (TechMemor.IsNull())
             {
-                if (thisInst.repairClock == 1)
+                Debug.Log("TACtical_AI: TurboRepair called with no valid EnemyDesignMemory!!!");
+                TechMemor = tank.gameObject.AddComponent<DesignMemory>();
+                TechMemor.Initiate();
+                return;
+            }
+            int savedBCount = TechMemor.ReturnContents().Count;
+            int cBCount = cBlocks.Count;
+            //Debug.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
+            if (savedBCount < cBCount)
+            {
+                TechMemor.SaveTech();
+                return;
+            }
+            if (savedBCount != cBCount)
+            {
+                //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
+                int attachAttempts;
+                //Debug.Log("TACtical AI: TurboRepair - Attempting to repair from inventory");
+                List<BlockTypes> typesToRepair = new List<BlockTypes>();
+                int toFilter = TechMemor.ReturnContents().Count();
+                for (int step = 0; step < toFilter; step++)
                 {
-                    thisInst.AttemptedRepairs = 0;
-                    thisInst.repairClock = 0;
+                    typesToRepair.Add(TechMemor.ReturnContents().ElementAt(step).blockType);
                 }
-                else if (thisInst.repairClock == 0)
-                    thisInst.repairClock = 20;
-                else
-                    thisInst.repairClock--;
+                typesToRepair = typesToRepair.Distinct().ToList();
+                attachAttempts = typesToRepair.Count();
+                for (int step = 0; step < attachAttempts; step++)
+                {
+                    TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnItem(new ItemTypeInfo(ObjectTypes.Block, (int)typesToRepair.ElementAt(step)), tank.boundsCentreWorldNoCheck + (Vector3.up * AIECore.Extremes(tank.blockBounds.extents)), Quaternion.identity, true).block;
+                    bool attemptW = false;
+
+                    List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.blockType == foundBlock.BlockType; });
+                    //Debug.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                    for (int step2 = 0; step2 < posBlocks.Count; step2++)
+                    {
+                        BlockMemory template = posBlocks.ElementAt(step2);
+                        attemptW = AttemptBlockAttach(tank, template, foundBlock, TechMemor);
+                        if (attemptW)
+                        {
+                            return;
+                        }
+                    }
+                    foundBlock.trans.Recycle();
+                }
             }
-            return thisInst.PendingSystemsCheck;
+            return;
         }
 
     }

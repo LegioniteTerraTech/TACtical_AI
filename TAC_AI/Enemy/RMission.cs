@@ -107,6 +107,19 @@ namespace TAC_AI.AI.Enemy
                     mind.CommanderBolts = EnemyBolts.MissionTrigger;
                     DidFire = true;
                 }
+
+                else if (name == "TAC InvaderAttract")
+                {
+                    mind.AllowInvBlocks = true;
+                    mind.AllowRepairsOnFly = true;
+                    mind.InvertBullyPriority = true;
+                    mind.EvilCommander = EnemyHandling.Starship;
+                    mind.CommanderAttack = EnemyAttack.Grudge;
+                    mind.CommanderMind = EnemyAttitude.Homing;
+                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                    mind.CommanderBolts = EnemyBolts.MissionTrigger;
+                    DidFire = true;
+                }
                 else
                 {
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
