@@ -151,7 +151,7 @@ namespace TAC_AI.AI.Enemy
             {
                 for (int stepper = 0; techCount > stepper; stepper++)
                 {
-                    if (techs.ElementAt(stepper).IsFriendly(tank.Team))
+                    if (techs.ElementAt(stepper).IsFriendly(tank.Team) && techs.ElementAt(stepper) != tank)
                     {
                         AllyList.Add(techs.ElementAt(stepper));
                     }
@@ -164,6 +164,7 @@ namespace TAC_AI.AI.Enemy
             }
             return AllyList;
         }
+
         public static Tank ClosestAllyE(Vector3 tankPos, out float bestValue, List<Tank> Allies)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
@@ -191,7 +192,6 @@ namespace TAC_AI.AI.Enemy
             }
             return closestTank;
         }
-
         public static Tank SecondClosestAllyE(Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue, List<Tank> Allies)
         {
             // Finds the two closest allies and outputs their respective distances as well as their beings

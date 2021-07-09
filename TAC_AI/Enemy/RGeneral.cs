@@ -14,7 +14,7 @@ namespace TAC_AI.AI.Enemy
         public static bool LollyGag(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, bool holdGround = false)
         {
             bool isRegenerating = false;
-            if (mind.Hurt && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10))
+            if (mind.Hurt)// && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10)
             {
                 var energy = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
                 if (mind.CommanderSmarts >= EnemySmarts.Meh)
@@ -175,17 +175,14 @@ namespace TAC_AI.AI.Enemy
         public static void AidAttack(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
         {
             // Determines the weapons actions and aiming of the AI
+            thisInst.lastEnemy = mind.FindEnemy();
             if (thisInst.lastEnemy != null)
             {
-                thisInst.lastEnemy = mind.FindEnemy();
                 //Fire even when retreating - the AI's life depends on this!
                 thisInst.DANGER = true;
             }
             else
-            {
                 thisInst.DANGER = false;
-                thisInst.lastEnemy = mind.FindEnemy();
-            }
         }
 
         /// <summary>

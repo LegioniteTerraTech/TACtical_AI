@@ -13,7 +13,7 @@ namespace TAC_AI.AI.Enemy
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
-            bool hasMessaged = false;//thisInst.Feedback;
+            bool hasMessaged = thisInst.Feedback;
             thisInst.lastRange = dist;
 
             BGeneral.ResetValues(thisInst);

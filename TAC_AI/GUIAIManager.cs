@@ -120,16 +120,14 @@ namespace TAC_AI
                     changeAI = AI.AIECore.DediAIType.MTTurret;
                     clicked = true;
                 }
-                /*
                 if (lastTank.isAegisAvail)
                 {
-                    if (GUI.Button(new Rect(20, 100, 80, 30), fetchAI == AI.AIEnhancedCore.DediAIType.Scrapper ? "<color=#f23d3dff>COLLECT</color>" : "Collect"))
+                    if (GUI.Button(new Rect(20, 100, 80, 30), fetchAI == AI.AIECore.DediAIType.Aegis ? "<color=#f23d3dff>COLLECT</color>" : "Aegis"))
                     {
-                        changeAI = AI.AIEnhancedCore.DediAIType.Scrapper;
+                        changeAI = AI.AIECore.DediAIType.Aegis;
                         clicked = true;
                     }
                 }
-                */
                 if (GUI.Button(new Rect(100, 100, 80, 30), fetchAI == AI.AIECore.DediAIType.MTMimic ? "<color=#f23d3dff>MIMIC</color>" : "Mimic"))
                 {
                     changeAI = AI.AIECore.DediAIType.MTMimic;

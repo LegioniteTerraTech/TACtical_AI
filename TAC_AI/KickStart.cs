@@ -15,9 +15,9 @@ namespace TAC_AI
         const string ModName = "TACtical AIs";
 
         internal static bool testEnemyAI = true;
-        internal static bool DesignsToLog = true;
         internal static int MaxEnemySplitLimit = 20;
         internal static int MaxEnemyBaseLimit = 3;  // How many bases are allowed to exist in one instance
+        internal static int MaxEnemyHQLimit = 1;    // How many HQs are allowed to exist in one instance
         public static int AIClockPeriod = 5;        // How frequently we update
 
         public static bool EnableBetterAI = true;
@@ -26,6 +26,7 @@ namespace TAC_AI
         public static bool enablePainMode = false;
         public static bool EnemiesHaveCreativeInventory = false;
         public static bool AllowEnemiesToStartBases = false;
+        public static bool DesignsToLog = false;
 
         internal static bool isWaterModPresent = false;
         internal static bool isTougherEnemiesPresent = false;
@@ -93,6 +94,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "Difficulty");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
+            thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
 
             var TACAI = ModName;
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);

@@ -57,15 +57,12 @@ namespace TAC_AI.AI
             worked = false;
             if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
                 return Vector3.zero;    // don't bother with this
-            Vector3 TankPos;
             Vector3 Offset = Vector3.zero;
 
-            if (tank.rbody != null)
-                TankPos = tank.boundsCentreWorldNoCheck + tank.rbody.velocity;
-            else
-                return targetIn; // no need, we are stationary
+            if (tank.rbody == null)
+                return Vector3.zero; // no need, we are stationary
 
-            List<Visible> ObstList = ObstructionAwareness(TankPos, thisInst);
+            List<Visible> ObstList = ObstructionAwareness(tank.boundsCentreWorldNoCheck + tank.rbody.velocity, thisInst);
             try
             {
                 int bestStep = 0;
@@ -75,7 +72,7 @@ namespace TAC_AI.AI
                 int steps = ObstList.Count;
                 bool moreThan2 = false;
                 if (steps <= 0)
-                    return targetIn;
+                    return Vector3.zero;
                 else if (steps > 1)
                     moreThan2 = true;
                 for (int stepper = 0; steps > stepper; stepper++)

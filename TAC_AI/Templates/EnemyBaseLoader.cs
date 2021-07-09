@@ -7,22 +7,29 @@ using UnityEngine;
 
 namespace TAC_AI.Templates
 {
+    /*
     public class BookmarkName : MonoBehaviour
     {
         public string savedName;
         public string blueprint;
         public bool infBlocks;
     }
+    */
 
     public static class EnemyBaseLoader
     {
-        static bool ForceSpawn = true;
+        static bool ForceSpawn = true;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
 
-        public static void TrySpawnBase(Tank tank, AI.AIECore.TankAIHelper thisInst)
+        // Main initiation function
+        public static void TrySpawnBase(Tank tank, AI.AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
         {
             if (!KickStart.AllowEnemiesToStartBases)
                 return;
+
+            MakeSureCanExistWithBase(tank);
+            if (GetEnemyBaseCountForTeam(tank.Team) > 0)
+                return; // want no base spam on world load
 
             if (GetEnemyBaseCount() >= KickStart.MaxEnemyBaseLimit)
             {
@@ -48,56 +55,94 @@ namespace TAC_AI.Templates
                 return;
 
 
-            MakeSureCanExistWithBase(tank);
-            if (GetEnemyBaseCountForTeam(tank.Team) > 0)
-                return; // want no base spam on world load
             // We validated?  
             //   Alright let's spawn the base!
-            SpawnBaseAtPosition(tank, pos, tank.Team, GetEnemyBaseType(tank.GetMainCorp()));
+            SpawnBaseAtPosition(tank, pos, tank.Team, purpose);
         }
 
+
         /// <summary>
-            /// Spawns a LOYAL enemy base 
-            /// - this means this shouldn't be called for capture base missions.
-            /// </summary>
-            /// <param name="pos"></param>
-            /// <param name="Team"></param>
-            /// <param name="toSpawn"></param>
-        public static void SpawnBaseAtPosition(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn)
+        /// Spawns a LOYAL enemy base 
+        /// - this means this shouldn't be called for capture base missions.
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <param name="Team"></param>
+        /// <param name="toSpawn"></param>
+        public static void SpawnBaseAtPosition(Tank spawnerTank, Vector3 pos, int Team, BasePurpose purpose)
         {
             TryClearAreaForBase(pos);
 
-            if (KickStart.isWaterModPresent)
+            bool haveBB;
+            switch (purpose)
+            {
+                case BasePurpose.Headquarters:
+                case BasePurpose.Harvesting:
+                case BasePurpose.TechProduction:
+                    haveBB = true;
+                    break;
+                default:
+                    haveBB = false;
+                    break;
+            }
+
+            // Are we a defended HQ?
+            if (purpose == BasePurpose.Headquarters)
+            {   // Summon additional defenses
+                SpawnBaseAtPosition(spawnerTank, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
+                SpawnBaseAtPosition(spawnerTank, pos - (Vector3.forward * 64), Team, BasePurpose.Defense);
+                SpawnBaseAtPosition(spawnerTank, pos + (Vector3.right * 64), Team, BasePurpose.Defense);
+                SpawnBaseAtPosition(spawnerTank, pos - (Vector3.right * 64), Team, BasePurpose.Defense);
+                Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+            }
+
+            // Now spawn teh main host
+            if (spawnerTank.GetComponent<AI.AIEAirborne.AirAssistance>())
+            {
+                SpawnAirBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air), haveBB);
+                return;
+            }
+            else if (KickStart.isWaterModPresent)
             {
                 if (AI.AIEPathing.AboveTheSea(pos))
                 {
-                    SpawnSeaBase(spawnerTank, pos, Team, toSpawn);
+                    SpawnSeaBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea), haveBB);
                     return;
                 }
             }
-            SpawnLandBase(spawnerTank, pos, Team, toSpawn);
+            SpawnLandBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Land), haveBB);
         }
-        public static void SpawnLandBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn)
+        public static void SpawnLandBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
         {
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
-            string baseTemplate = GetBaseTemplate(toSpawn);
+            string baseBlueprint = GetBlueprint(toSpawn);
             Vector3 position = pos;
             position.y = offset;
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AI.AIERepair.JSONToFirstBlock(baseTemplate), position, quat);
+            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AI.AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
 
-            Tank theBase = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, "INSTANTIATED_BASE");
-
+            Tank theBase;
+            if (storeBB)
+                theBase = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn) + " ¥¥" + GetBaseStartingFunds(toSpawn));
+            else
+                theBase = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
+            
+            
             theBase.FixupAnchors(true);
+            /*;
             var namesav = theBase.gameObject.AddComponent<BookmarkName>();
             namesav.savedName = GetEnglishName(toSpawn);
-            namesav.blueprint = baseTemplate;
+            namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+            */
         }
-        public static void SpawnSeaBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn)
+        public static void SpawnSeaBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function");
+        }
+        public static void SpawnAirBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
+        {   // N/A!!! WIP!!!
+            Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function");
         }
 
 
@@ -127,67 +172,106 @@ namespace TAC_AI.Templates
                     return false;
             }
         }
-        public static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction)
+        public static BaseTemplate GetBaseTemplate(SpawnBaseTypes toSpawn)
+        {
+            if (AllBaseTemplates.techBases.TryGetValue(toSpawn, out BaseTemplate baseT)) //Find(delegate (BaseTemplate cand) { return cand.baseType == toSpawn; });
+                return baseT;
+            return AllBaseTemplates.techBases.ElementAtOrDefault(1).Value;
+        }
+        public static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra)
         {
             if (ForceSpawn)
-            {
                 return forcedBaseSpawn;
+
+            try
+            {
+                List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates = AllBaseTemplates.techBases.ToList().FindAll
+                    (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
+
+                canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
+                {
+                    if (purpose == BasePurpose.AnyNonHQ)
+                    {
+                        if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
+                            return false;
+                        return true;
+                    }
+                    if (cand.Value.purposes.Count == 0)
+                        return false;
+                    return cand.Value.purposes.Contains(purpose);
+                }); 
+                
+                canidates = canidates.FindAll
+                    (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.terrain == terra; });
+
+                if (canidates.Count == 0)
+                    return forcedBaseSpawn;
+                List<SpawnBaseTypes> final = new List<SpawnBaseTypes>();
+                foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in canidates)
+                    final.Add(pair.Key);
+
+                return final.ElementAt(UnityEngine.Random.Range(0, canidates.Count - 1));
             }
-            int lowerRANDRange = 0;
-            int higherRANDRange = 18;
+            catch { } // we resort to legacy
+
+            int lowerRANDRange = 1;
+            int higherRANDRange = 20;
             if (faction == FactionSubTypes.GSO)
             {
-                lowerRANDRange = 0;
-                higherRANDRange = 4;
+                lowerRANDRange = 1;
+                higherRANDRange = 6;
             }
             else if (faction == FactionSubTypes.GC)
             {
-                lowerRANDRange = 5;
-                higherRANDRange = 8;
+                lowerRANDRange = 7;
+                higherRANDRange = 10;
             }
             else if (faction == FactionSubTypes.VEN)
             {
-                lowerRANDRange = 9;
-                higherRANDRange = 12;
+                lowerRANDRange = 11;
+                higherRANDRange = 14;
             }
             else if (faction == FactionSubTypes.HE)
             {
-                lowerRANDRange = 13;
-                higherRANDRange = 18;
+                lowerRANDRange = 15;
+                higherRANDRange = 20;
             }
 
             return (SpawnBaseTypes)UnityEngine.Random.Range(lowerRANDRange, higherRANDRange);
         }
-        public static string GetBaseTemplate(SpawnBaseTypes toSpawn)
+        public static SpawnBaseTypes GetEnemyBaseTypeFromName(string Name)
         {
-            switch (toSpawn)
+            try
             {
-                case SpawnBaseTypes.GSOSeller:
-                    return LandBaseTemplates.GSOSeller;
-                case SpawnBaseTypes.GSOMidBase:
-                    return LandBaseTemplates.GSOMidBase;
-                //WIP!!!
-                case SpawnBaseTypes.GSOAIMinerProduction:
-                    return LandBaseTemplates.GSOSeller;
-                default:
-                    return LandBaseTemplates.GSOSeller;
+                int lookup = AllBaseTemplates.techBases.Values.ToList().FindIndex(delegate (BaseTemplate cand) { return cand.techName == Name; });
+                if (lookup == -1) return SpawnBaseTypes.NotAvail;
+                return AllBaseTemplates.techBases.ElementAt(lookup).Key;
             }
+            catch 
+            {
+                return SpawnBaseTypes.NotAvail;
+            }
+        }
+        public static string GetBlueprint(SpawnBaseTypes toSpawn)
+        {
+            return GetBaseTemplate(toSpawn).savedTech;
         }
         public static string GetEnglishName(SpawnBaseTypes toSpawn)
         {
-            switch (toSpawn)
-            {
-                case SpawnBaseTypes.GSOSeller:
-                    return "GSO Seller Base";
-                case SpawnBaseTypes.GSOMidBase:
-                    return "GSO Furlough Base";
-                //WIP!!!
-                case SpawnBaseTypes.GSOAIMinerProduction:
-                    return "GSO Production";
-                default:
-                    return "error on load";
-            }
+            return GetBaseTemplate(toSpawn).techName;
         }
+        public static int GetBaseStartingFunds(SpawnBaseTypes toSpawn)
+        {
+            return GetBaseTemplate(toSpawn).startingFunds;
+        }
+        public static bool IsHQ(SpawnBaseTypes toSpawn)
+        {
+            if (AllBaseTemplates.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
+                return baseT.purposes.Contains(BasePurpose.Headquarters);
+            return false;
+        }
+
+
         public static int GetEnemyBaseCount()
         {
             int baseCount = 0;

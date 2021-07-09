@@ -74,7 +74,7 @@ namespace TAC_AI.AI.Enemy
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Could not attach " + foundBlock.name);
                     // if not we fail
                 }
-                if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInfBlocks) && mind.CommanderSmarts >= EnemySmarts.Smrt)
+                if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks) && mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
                     List<BlockTypes> typesToRepair = new List<BlockTypes>();
                     int toFilter = mind.TechMemor.ReturnContents().Count();
@@ -100,7 +100,7 @@ namespace TAC_AI.AI.Enemy
                         for (int step2 = 0; step2 < posBlocks.Count; step2++)
                         {
                             BlockMemory template = posBlocks[step2];
-                            attemptW = AIERepair.AttemptBlockAttach(tank, template, foundBlock, mind.TechMemor);
+                            attemptW = AIERepair.AttemptBlockAttach(tank, template, foundBlock, mind.TechMemor, true);
                             if (attemptW)
                             {
                                 return true;
@@ -141,7 +141,7 @@ namespace TAC_AI.AI.Enemy
             }
             return success;
         }
-        public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, int Delay = 35, bool Super = false)
+        public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, int Delay = 25, bool Super = false)
         {
             if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
             {
@@ -161,7 +161,7 @@ namespace TAC_AI.AI.Enemy
                     if (!Super)
                         thisInst.repairClock = Delay / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                     else
-                        thisInst.repairClock = (Delay / 6) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                        thisInst.repairClock = (Delay / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
 
                 }
                 else

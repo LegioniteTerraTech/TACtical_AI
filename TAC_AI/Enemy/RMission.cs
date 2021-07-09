@@ -63,56 +63,97 @@ namespace TAC_AI.AI.Enemy
         {
             string name = tank.name;
             bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
-            if (name == "Missile Defense")
+            if (!DidFire)
             {
-                mind.AllowRepairsOnFly = true;
-                mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
-                mind.CommanderMind = EnemyAttitude.Homing;
-                mind.CommanderSmarts = EnemySmarts.Mild;
-                DidFire = true;
-            }
-            else if (name == "Wingnut")
-            {
-                mind.AllowRepairsOnFly = true;
-                mind.InvertBullyPriority = true;
-                mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
-                mind.CommanderMind = EnemyAttitude.Homing;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                DidFire = true;
-            }
-            else if (name == "Runner")
-            {   //WIP
-                mind.AllowRepairsOnFly = true;
-                mind.EvilCommander = EnemyHandling.Wheeled;
-                mind.CommanderAttack = EnemyAttack.Coward;
-                mind.CommanderMind = EnemyAttitude.Homing;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                DidFire = true;
-            }
-            else if (name == "Enemy HQ")
-            {   //Base where enemies spawn from
-                mind.AllowInfBlocks = true;
-                mind.AllowRepairsOnFly = true;
-                mind.InvertBullyPriority = true;
-                mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
-                mind.CommanderMind = EnemyAttitude.Homing;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                mind.CommanderBolts = EnemyBolts.AtFull;
-                DidFire = true;
-            }
-            else if (name == "Missile #2")
-            {
-                mind.AllowRepairsOnFly = true;
-                mind.InvertBullyPriority = true;
-                mind.EvilCommander = EnemyHandling.SuicideMissile;
-                mind.CommanderAttack = EnemyAttack.Grudge;
-                mind.CommanderMind = EnemyAttitude.Homing;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                mind.CommanderBolts = EnemyBolts.MissionTrigger;
-                DidFire = true;
+                if (name == "Missile Defense")
+                {
+                    mind.AllowRepairsOnFly = true;
+                    mind.EvilCommander = EnemyHandling.Stationary;
+                    mind.CommanderAttack = EnemyAttack.Bully;
+                    mind.CommanderMind = EnemyAttitude.Homing;
+                    mind.CommanderSmarts = EnemySmarts.Mild;
+                    DidFire = true;
+                }
+                else if (name == "Wingnut")
+                {
+                    mind.AllowRepairsOnFly = true;
+                    mind.InvertBullyPriority = true;
+                    mind.EvilCommander = EnemyHandling.Stationary;
+                    mind.CommanderAttack = EnemyAttack.Bully;
+                    mind.CommanderMind = EnemyAttitude.Homing;
+                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                    DidFire = true;
+                }
+                else if (name == "Enemy HQ")
+                {   //Base where enemies spawn from
+                    mind.AllowInvBlocks = true;
+                    mind.AllowRepairsOnFly = true;
+                    mind.InvertBullyPriority = true;
+                    mind.EvilCommander = EnemyHandling.Stationary;
+                    mind.CommanderAttack = EnemyAttack.Bully;
+                    mind.CommanderMind = EnemyAttitude.Homing;
+                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                    mind.CommanderBolts = EnemyBolts.AtFull;
+                    DidFire = true;
+                }
+                else if (name == "Missile #2")
+                {
+                    mind.AllowRepairsOnFly = true;
+                    mind.InvertBullyPriority = true;
+                    mind.EvilCommander = EnemyHandling.SuicideMissile;
+                    mind.CommanderAttack = EnemyAttack.Grudge;
+                    mind.CommanderMind = EnemyAttitude.Homing;
+                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                    mind.CommanderBolts = EnemyBolts.MissionTrigger;
+                    DidFire = true;
+                }
+                else
+                {
+                    if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
+                    {
+                        if (tree == AITreeType.AITypes.Flee)
+                        {   // setup for runner 
+                            mind.AllowRepairsOnFly = true;
+                            mind.EvilCommander = EnemyHandling.Wheeled;
+                            mind.CommanderAttack = EnemyAttack.Coward;
+                            mind.CommanderMind = EnemyAttitude.Homing;
+                            RCore.AutoSetIntelligence(mind, tank);
+                            DidFire = true;
+                        }
+                        else if (tree == AITreeType.AITypes.ChargeAtSKU)
+                        {   // setup for Sumo 
+                            mind.AllowRepairsOnFly = false;
+                            mind.EvilCommander = EnemyHandling.Wheeled;
+                            mind.CommanderAttack = EnemyAttack.Grudge;
+                            mind.CommanderMind = EnemyAttitude.Homing;
+                            mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                            DidFire = true;
+                        }
+                        else if (tree == AITreeType.AITypes.Invader)
+                        {   // setup for Invaders
+                            //   Who needs a timer anyways?  Let's just attack when the player gets close.
+                            mind.AllowRepairsOnFly = false;
+                            RCore.BlockSetEnemyHandling(tank, mind);
+                            if (KickStart.Difficulty > 100)// in Soviet GSO, Invader come to you
+                            {
+                                mind.CommanderAttack = EnemyAttack.Spyper;
+                                mind.CommanderMind = EnemyAttitude.Invader;
+                            }
+                            else
+                            {
+                                mind.CommanderAttack = EnemyAttack.Grudge;
+                                mind.CommanderMind = EnemyAttitude.Invader;
+                            }
+                            RCore.AutoSetIntelligence(mind, tank);
+                            DidFire = true;
+                        }
+                        else if (tree == AITreeType.AITypes.Specific)
+                        {   // setup for idk
+                            thisInst.Hibernate = true;
+                            DidFire = true;
+                        }
+                    }
+                }
             }
 
             if (DidFire && mind.CommanderMind == EnemyAttitude.OnRails)

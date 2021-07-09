@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using UnityEngine.Serialization;
 using UnityEngine;
 
@@ -26,7 +27,8 @@ namespace TAC_AI.AI
             private Tank Tank;
             public AIECore.TankAIHelper thisInst;
             public bool rejectSaveAttempts = false;
-            public int limitedParts = -1;   //-1 for inf
+            public bool unlimitedParts = false;
+            public bool ranOutOfParts = false;
 
             public List<BlockMemory> SavedTech = new List<BlockMemory>();
 
@@ -110,55 +112,56 @@ namespace TAC_AI.AI
                 //BlockMemory mem = new BlockMemory();
                 if (SavedTech.Count == 0)
                     return;
-                string JSONTechRAW = JsonUtility.ToJson(SavedTech.First());
+                StringBuilder JSONTechRAW = new StringBuilder();
+                JSONTechRAW.Append(JsonUtility.ToJson(SavedTech.First()));
                 for (int step = 1; step < SavedTech.Count; step++)
                 {
-                    JSONTechRAW += "|";
-                    JSONTechRAW += JsonUtility.ToJson(SavedTech.ElementAt(step));
+                    JSONTechRAW.Append("|");
+                    JSONTechRAW.Append(JsonUtility.ToJson(SavedTech.ElementAt(step)));
                 }
-                string JSONTech = "";
-                foreach (char ch in JSONTechRAW)
+                string JSONTechRAWout = JSONTechRAW.ToString();
+                StringBuilder JSONTech = new StringBuilder();
+                foreach (char ch in JSONTechRAWout)
                 {
                     if (ch == '"')
                     {
-                        JSONTech += "\\";
-                        JSONTech += ch.ToString();
+                        JSONTech.Append("\\");
+                        JSONTech.Append(ch);
                     }
                     else
-                        JSONTech += ch.ToString();
+                        JSONTech.Append(ch);
                 }
-                Debug.Log("TACtical_AI: " + JSONTech);
+                Debug.Log("TACtical_AI: " + JSONTech.ToString());
             }
-            public void JSONToTech(string toLoad, bool useLimitedParts = false)
+            public void JSONToTech(string toLoad)
             {   // Loading a Tech from the BlockMemory
-                string RAW = "";
+                StringBuilder RAW = new StringBuilder();
                 foreach (char ch in toLoad)
                 {
                     if (ch != '\\')
                     {
-                        RAW += ch.ToString();
+                        RAW.Append(ch);
                     }
                 }
                 List<BlockMemory> mem = new List<BlockMemory>();
-                string blockCase = "";
-                foreach (char ch in RAW)
+                StringBuilder blockCase = new StringBuilder();
+                string RAWout = RAW.ToString();
+                foreach (char ch in RAWout)
                 {
                     if (ch == '|')//new block
                     {
-                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase));
-                        blockCase = "";
+                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                        blockCase.Clear();
                     }
                     else
-                        blockCase += ch.ToString();
+                        blockCase.Append(ch);
                 }
                 Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
-                if (useLimitedParts)
-                    limitedParts = mem.Count + 5;// spare parts
                 MemoryToTech(mem);
             }
-            public void SetupForNewTechConstruction(AIECore.TankAIHelper thisInst, string JSON, bool useLimitedParts = false)
+            public void SetupForNewTechConstruction(AIECore.TankAIHelper thisInst, string JSON)
             {
-                JSONToTech(JSON, useLimitedParts);
+                JSONToTech(JSON);
                 thisInst.PendingSystemsCheck = true;
             }
 
@@ -174,45 +177,62 @@ namespace TAC_AI.AI
         }
         public static BlockTypes JSONToFirstBlock(string toLoad)
         {   // Loading a Tech from the BlockMemory
-            string RAW = "";
+            StringBuilder RAW = new StringBuilder();
             foreach (char ch in toLoad)
             {
                 if (ch != '\\')
                 {
-                    RAW += ch.ToString();
+                    RAW.Append(ch);
                 }
             }
             BlockMemory mem = new BlockMemory();
-            string blockCase = "";
-            foreach (char ch in RAW)
+            string RAWout = RAW.ToString();
+            StringBuilder blockCase = new StringBuilder();
+            foreach (char ch in RAWout)
             {
                 if (ch == '|')//new block
                 {
-                    mem = JsonUtility.FromJson<BlockMemory>(blockCase);
+                    mem = JsonUtility.FromJson<BlockMemory>(blockCase.ToString());
                     break;
                 }
                 else
-                    blockCase += ch.ToString();
+                    blockCase.Append(ch);
             }
             return mem.blockType;
         }
 
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
-        public static bool AttemptBlockAttach(Tank tank, BlockMemory template, TankBlock canidate, DesignMemory TechMemor)
+        public static bool AttemptBlockAttach(Tank tank, BlockMemory template, TankBlock canidate, DesignMemory TechMemor, bool useLimitedSupplies = false)
         {
-            if (TechMemor.limitedParts == 0)
+            if (!TechMemor.unlimitedParts && useLimitedSupplies)
             {
-                //Debug.Log("TACtical_AI: AI " + tank.name + ":  depleted block reserves!!!");
-                TechMemor.thisInst.PendingSystemsCheck = false;
-                return false;
+                if (!Enemy.RBases.PurchasePossible(canidate.BlockType, tank.Team))
+                {
+                    //Debug.Log("TACtical_AI: AI " + tank.name + ":  depleted block reserves!!!");
+                    TechMemor.ranOutOfParts = true;
+                    TechMemor.thisInst.PendingSystemsCheck = false;
+                    return false;
+                }
             }
+            TechMemor.ranOutOfParts = false;
             bool success;
             //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
             success = tank.blockman.AddBlockToTech(canidate, template.CachePos, new OrthoRotation(template.CacheRot));
             if (success)
-            {
-                if (TechMemor.limitedParts > 0)
-                    TechMemor.limitedParts--;
+            {            
+                //Debug.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
+                if (!TechMemor.unlimitedParts && useLimitedSupplies)
+                {
+                    if (Enemy.RBases.TryMakePurchase(canidate.BlockType, tank.Team))
+                    {
+                        Debug.Log("TACtical_AI: AI " + tank.name + ": bought " + canidate + " from the shop for " + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(canidate.BlockType, true));
+
+                        if (!KickStart.MuteNonPlayerRacket)
+                            Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Buy);
+                        return true;
+                    }
+                }
+
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  Attaching " + canidate.name);
                 if (!KickStart.MuteNonPlayerRacket)
                 {
@@ -348,7 +368,7 @@ namespace TAC_AI.AI
             }
             return success;
         }
-        public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, DesignMemory TechMemor, int Delay = 14, bool Super = false)
+        public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, DesignMemory TechMemor, int Delay = 25, bool Super = false)
         {
             if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
             {
@@ -368,7 +388,7 @@ namespace TAC_AI.AI
                     if (!Super)
                         thisInst.repairClock = Delay;
                     else
-                        thisInst.repairClock = Delay / 6;
+                        thisInst.repairClock = Delay / 4;
 
                 }
                 else
@@ -411,7 +431,7 @@ namespace TAC_AI.AI
             if (thisInst.AIState == 2)
             {
                 var mind = tank.GetComponent<Enemy.RCore.EnemyMind>();
-                if ((mind.AllowRepairsOnFly || (thisInst.lastEnemy.IsNull())) && (blocksNearby || KickStart.EnemiesHaveCreativeInventory || mind.AllowInfBlocks))
+                if ((mind.AllowRepairsOnFly || (thisInst.lastEnemy.IsNull())) && (blocksNearby || KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks))
                 {
                     return true;
                 }
@@ -430,7 +450,7 @@ namespace TAC_AI.AI
         /// <returns></returns>
         public static bool SystemsCheck(Tank tank, DesignMemory TechMemor)
         {
-            if (TechMemor.ReturnContents().Count != tank.blockman.IterateBlocks().Count() && TechMemor.limitedParts != 0)
+            if (TechMemor.ReturnContents().Count != tank.blockman.IterateBlocks().Count() && !TechMemor.ranOutOfParts)
             {
                 return true;
             }
@@ -446,7 +466,15 @@ namespace TAC_AI.AI
             var TechMemor = tank.GetComponent<DesignMemory>();
             if (TechMemor.IsNull())
                 return false;
-            if (TechMemor.ReturnContents().Count != tank.blockman.IterateBlocks().Count() && TechMemor.limitedParts != 0)
+            if (TechMemor.ReturnContents().Count != tank.blockman.IterateBlocks().Count() && !TechMemor.ranOutOfParts)
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool SystemsCheckBolts(Tank tank, DesignMemory TechMemor)
+        {
+            if (TechMemor.ReturnContents().Count != tank.blockman.IterateBlocks().Count())
             {
                 return true;
             }

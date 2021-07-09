@@ -11,6 +11,8 @@ namespace TAC_AI.Templates
     }
     public enum SpawnBaseTypes
     {
+        // error
+        NotAvail,
         // GSO
         GSOSeller,
         GSOMidBase,

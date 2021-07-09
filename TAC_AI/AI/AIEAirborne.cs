@@ -11,7 +11,7 @@ namespace TAC_AI.AI
     public static class AIEAirborne
     {
         public enum FlightType
-        {                   
+        {
             Aircraft,   // Horizontal flight
             Helicopter, // Vertical flight
             VTOL,       // Both Horizontal and vertical flight
@@ -34,7 +34,7 @@ namespace TAC_AI.AI
             //Manuvering
             public Vector3 AirborneDest = Vector3.zero;
             public float DestSuccessRad // When we have reached our airborne destination
-            { 
+            {
                 get { try { return thisInst.MinimumRad; } catch { return 10; } }
             }
 
@@ -44,13 +44,15 @@ namespace TAC_AI.AI
 
             /// <summary> IN m/s !!!</summary>
             public const float Stallspeed = 25;
+            public const float GroundAttackStagingDist = 250;
 
             //Data Gathering
             public float SlowestPropLerpSpeed = 1;
             public float PropLerpValue = 10;
             public float AerofoilSluggishness = 1;
             public float RollStrength = 1;
-            public int PerformUTurn = 0;    //set this to one to ignite the multi-stage process
+            public int PerformDiveAttack = 0;       //set this to one to launch dive bombing
+            public int PerformUTurn = 0;            //set this to one to ignite the multi-stage process
             public Vector3 FlyingChillFactor = Vector3.one * 30; //The higher the values, the less stiff the controls will be
 
             //Error-Checking
@@ -61,7 +63,8 @@ namespace TAC_AI.AI
             public bool ForcePitchUp = false;
             public bool TakeOff = false;
             public bool Grounded = false;
-            public bool CutEngines = false;         // Too high! Too high!
+            public bool TargetGrounded = false;     // Are we dealing with a target that is on the ground?
+            public bool LowerEngines = false;       // Choppers: Too high! Too high!  Airplanes: conserve booster fuel
 
             public static AirAssistance Initiate(Tank tank, AIECore.TankAIHelper thisInst, Enemy.RCore.EnemyMind mind = null)
             {
@@ -290,6 +293,7 @@ namespace TAC_AI.AI
                 return false;
             }
             TestForMayday(thisInst, tank, pilot);
+
             if (thisInst.AIState == 1)
             {
                 pilot.ForcePitchUp = false;
@@ -351,10 +355,12 @@ namespace TAC_AI.AI
                     bool combat = TryHandleDogfighting(pilot, thisInst, tank);
                     if (combat)
                     {
+                        pilot.LowerEngines = true;
                         pilot.AirborneDest = thisInst.lastDestination;
                     }
                     else
                     {
+                        pilot.LowerEngines = false;
                         if (thisInst.ProceedToObjective)
                         {   // Fly to target
                             if ((thisInst.lastDestination - tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
@@ -383,7 +389,8 @@ namespace TAC_AI.AI
                         }
                     }
 
-                    pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, thisInst);
+                    if (!pilot.TargetGrounded)
+                        pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, thisInst);
                     pilot.AirborneDest = AvoidAssistAir(tank, pilot.AirborneDest, tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness));
                     AdviseThrottle(pilot, thisInst, tank, pilot.AirborneDest);
 
@@ -408,7 +415,8 @@ namespace TAC_AI.AI
             else if (thisInst.AIState == 2) //enemy
             {
                 var mind = tank.GetComponent<Enemy.RCore.EnemyMind>();
-                thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
+                if (!pilot.TargetGrounded)
+                    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
                 if (pilot.FlyStyle == FlightType.Helicopter)
                 {
                     pilot.ForcePitchUp = false;
@@ -422,7 +430,7 @@ namespace TAC_AI.AI
 
                         return true;
                     }
-                    bool combat = AIEDrive.TryCombatEnemy(thisInst, tank, mind); 
+                    bool combat = AIEDrive.TryCombatEnemy(thisInst, tank, mind);
                     if (combat)
                     {
                         pilot.AirborneDest = thisInst.lastDestination;
@@ -479,13 +487,15 @@ namespace TAC_AI.AI
                         return true;
                     }
                     thisInst.Retreat = false;
-                    bool combat = TryDogfightingEnemy(pilot, thisInst, tank, mind);// Placeholder for now, will have dogfighting AI
+                    bool combat = TryDogfightingEnemy(pilot, thisInst, tank, mind);
                     if (combat)
                     {
+                        pilot.LowerEngines = true;
                         pilot.AirborneDest = thisInst.lastDestination;
                     }
                     else
                     {
+                        pilot.LowerEngines = false;
                         if ((pilot.AirborneDest - tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                         {   //We are at target
                             Debug.Log("TACtical_AI: Tech " + tank.name + " Arrived at destination");
@@ -496,7 +506,7 @@ namespace TAC_AI.AI
                             else
                                 lFlat = tank.rootBlockTrans.right + (tank.rootBlockTrans.forward * 2);
                             lFlat.y = 0.1f;
-                            pilot.AirborneDest =pilot.AirborneDest + (lFlat * 50);
+                            pilot.AirborneDest = pilot.AirborneDest + (lFlat * 50);
                         }
                         else if (thisInst.ProceedToObjective)
                         {   // Fly to target
@@ -526,11 +536,13 @@ namespace TAC_AI.AI
                             {   //Fly off the screen
                                 Vector3 fFlat = tank.rootBlockTrans.forward;
                                 fFlat.y = 0.25f;
-                                pilot.AirborneDest =(fFlat.normalized * 1000) + tank.boundsCentreWorldNoCheck;
+                                pilot.AirborneDest = (fFlat.normalized * 1000) + tank.boundsCentreWorldNoCheck;
                             }
                         }
                     }
-                    pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, thisInst);
+
+                    if (!pilot.TargetGrounded)
+                        pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, thisInst);
                     pilot.AirborneDest = Enemy.RPathfinding.AvoidAssistEnemy(tank, pilot.AirborneDest, tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness), thisInst, mind);
                     AdviseThrottle(pilot, thisInst, tank, pilot.AirborneDest);
 
@@ -551,7 +563,7 @@ namespace TAC_AI.AI
                         }
                     }
                 }
-            }    
+            }
             return true;
         }
 
@@ -573,7 +585,7 @@ namespace TAC_AI.AI
                 case FlightType.VTOL:       // Combination of Helicopter and Aircraft based on altitude
                     return PilotTechVTOL(thisControl, thisInst, tank, pilot);
             }
-            Debug.Log("TACtical_AI: AI " + tank.name + ":  OutOfBoundsException");
+            Debug.Log("TACtical_AI:  FlightMaintainer - OutOfBoundsException: " + tank.name + " called an invalid FlyStyle");
 
             return false;
         }
@@ -598,13 +610,13 @@ namespace TAC_AI.AI
                     else if (driveDyna == 1)
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
-                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness));
+                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot));
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness));
+                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot));
                     }
                     else
                     {
@@ -622,19 +634,23 @@ namespace TAC_AI.AI
                     else if (driveDyna == 1)
                     {
                         thisInst.DriveDir = EDriveType.Forwards;
-                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness));
+                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot));
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.DriveDir = EDriveType.Forwards;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness));
+                        thisInst.lastDestination = AvoidAssistAir(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot));
                     }
                     else
                     {
                         thisInst.lastDestination = ForeAiming(thisInst.lastEnemy);
                     }
                 }
+
+                thisInst.lastRange = (thisInst.lastEnemy.tank.boundsCentreWorld - tank.boundsCentreWorldNoCheck).magnitude;
+
+                pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck , pilot.AerofoilSluggishness + 25);
                 AdviseThrottleTarget(pilot, thisInst, tank, thisInst.lastEnemy);
             }
             return output;
@@ -657,13 +673,13 @@ namespace TAC_AI.AI
                     else if (driveDyna == 1)
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness), thisInst, mind);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot), thisInst, mind);
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.DriveDir = EDriveType.Perpendicular;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness), thisInst, mind);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot), thisInst, mind);
                     }
                     else
                     {
@@ -681,13 +697,13 @@ namespace TAC_AI.AI
                     else if (driveDyna == 1)
                     {
                         thisInst.DriveDir = EDriveType.Forwards;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness), thisInst, mind);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot), thisInst, mind);
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.DriveDir = EDriveType.Forwards;
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness), thisInst, mind);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, ForeAiming(thisInst.lastEnemy), TryGetVelocityOffset(tank, pilot), thisInst, mind);
                     }
                     else
                     {
@@ -695,6 +711,10 @@ namespace TAC_AI.AI
                     }
                 }
                 //pilot.AdvisedThrottle = driveDyna;
+
+                thisInst.lastRange = (thisInst.lastEnemy.tank.boundsCentreWorld - tank.boundsCentreWorldNoCheck).magnitude;
+
+                pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck, pilot.AerofoilSluggishness + 25);
                 if (mind.CommanderSmarts >= Enemy.EnemySmarts.Meh)
                     AdviseThrottleTarget(pilot, thisInst, tank, thisInst.lastEnemy);
                 else
@@ -718,6 +738,7 @@ namespace TAC_AI.AI
                 return true;
             }
             //Debug.Log("TACtical_AI: Tech " + tank.name + " plane drive was called");
+
             if (tank.wheelGrounded || pilot.ForcePitchUp)
             {   // Try and takeoff
                 pilot.MainThrottle = 1;
@@ -727,45 +748,94 @@ namespace TAC_AI.AI
             }
             else
             {
-                if (pilot.PerformUTurn > 0)
-                {   //The Immelmann Turn
-                    //Debug.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
-                    pilot.MainThrottle = 1;
-                    UpdateThrottle(thisInst, pilot, thisControl);
-                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AirAssistance.Stallspeed + 4)
-                    {   //ABORT!!!
-                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.tank.rbody.velocity).z);
-                        pilot.PerformUTurn = -1;
-                        pilot.ErrorsInUTurn++;
-                        if (pilot.ErrorsInUTurn > 3)
-                            Debug.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
-                    }
-                    else if (Vector3.Dot(Vector3.down, tank.rbody.velocity.normalized) > 0.3f)
-                    {   //ABORT!!!
-                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
-                        pilot.PerformUTurn = -1;
-                    }
-                    if (pilot.PerformUTurn == 1)
-                    {   // Accelerate
-                        AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
-                        if (pilot.CurrentThrottle > 0.95)
-                            pilot.PerformUTurn = 2;
-                    }
-                    else if (pilot.PerformUTurn == 2)
-                    {   // Pitch Up
+                if (pilot.TargetGrounded)
+                {  // We previously disabled the ground offset terrain avoider and aim directly at the enemy
+                    float dist = (thisInst.lastDestination - (tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime))).magnitude;
+                    Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(thisInst.lastDestination - tank.boundsCentreWorldNoCheck);
+                    if (pilot.ForcePitchUp)
+                        pilot.PerformDiveAttack = 0; // too low and we break off from the attack
+                    if (dist < 32)
+                    {   // target is in the air but grounded!?!?
+                        pilot.PerformDiveAttack = 0; // abort
+
+                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborting attack! Target too close!");
+                        // AND PITCH UP NOW
+                        pilot.MainThrottle = 1;
+                        UpdateThrottle(thisInst, pilot, thisControl);
                         AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
-                        if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
-                            pilot.PerformUTurn = 3;
                     }
-                    else if (pilot.PerformUTurn == 3)
-                    {   // Aim back at target
-                        AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
-                        if (Vector3.Dot((pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.25f)
+                    else if (pilot.PerformDiveAttack == 1)
+                    {
+                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Aiming at target!");
+                        if (Heading.z > 0.25f)
+                            pilot.PerformDiveAttack = 1; // too low and we break off from the attack
+                        if (pilot.PerformUTurn > 0)
+                        {   //The Immelmann Turn
+                            UTurn(thisControl, thisInst, tank, pilot);
+                            return true;
+                        }
+                        else
                         {
-                            pilot.ErrorsInUTurn = 0;
-                            pilot.PerformUTurn = 0;
+                            UpdateThrottle(thisInst, pilot, thisControl);
+                            AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
                     }
+                    else if (pilot.PerformDiveAttack == 2)
+                    {
+                        Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
+                        if (tank.GetForwardSpeed() < AirAssistance.Stallspeed + 16)
+                            pilot.AdvisedThrottle = 1;
+                        else
+                            pilot.AdvisedThrottle = 0;
+                        if (Heading.z < 0)
+                            pilot.PerformDiveAttack = 0; // Passed by target
+                        if (pilot.PerformUTurn > 0)
+                        {   //The Immelmann Turn
+                            UTurn(thisControl, thisInst, tank, pilot);
+                            return true;
+                        }
+                        else
+                        {
+                            UpdateThrottle(thisInst, pilot, thisControl);
+                            AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
+                        }
+                    }
+                    else if (dist > AirAssistance.GroundAttackStagingDist && Heading.z < 0)
+                    {   // Launch teh attack run
+                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
+                        pilot.PerformDiveAttack = 1;
+                    }
+                    else    // hold off on the U-Turn
+                    {
+                        pilot.PerformUTurn = 0;
+                        if (Heading.z < 0)
+                        {   // Moving away from target
+                            Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
+                            pilot.MainThrottle = 1;
+                            UpdateThrottle(thisInst, pilot, thisControl);
+                            Vector3 AwayFlat = -Heading;
+                            AwayFlat.y = 0;
+                            AwayFlat.Normalize();
+                            AwayFlat.y = 0.05f;
+                            AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (AwayFlat.normalized * 300));
+                        }
+                        else
+                        {   // Moving to target
+                            Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
+                            if (tank.GetForwardSpeed() < AirAssistance.Stallspeed + 16)
+                                pilot.AdvisedThrottle = 1;
+                            else
+                                pilot.AdvisedThrottle = 0;
+                            UpdateThrottle(thisInst, pilot, thisControl);
+                            AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
+                        }
+                    }
+                    return true;
+                }
+
+                if (pilot.PerformUTurn > 0)
+                {   //The Immelmann Turn
+                    UTurn(thisControl, thisInst, tank, pilot);
                     return true;
                 }
                 else if (pilot.PerformUTurn == -1)
@@ -774,7 +844,11 @@ namespace TAC_AI.AI
                     UpdateThrottle(thisInst, pilot, thisControl);
                     AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                     if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
+                    {
                         pilot.PerformUTurn = 0;
+                        if (pilot.PerformDiveAttack == 1)
+                            pilot.PerformDiveAttack = 2;
+                    }
                     return true;
                 }
                 else
@@ -786,6 +860,51 @@ namespace TAC_AI.AI
             }
 
             return true;
+        }
+        public static void UTurn(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AirAssistance pilot)
+        {
+            //Debug.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
+            pilot.MainThrottle = 1;
+            UpdateThrottle(thisInst, pilot, thisControl);
+            if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AirAssistance.Stallspeed)
+            {   //ABORT!!!
+                Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.tank.rbody.velocity).z);
+                pilot.PerformUTurn = -1;
+                pilot.ErrorsInUTurn++;
+                if (pilot.ErrorsInUTurn > 3)
+                    Debug.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
+            }
+            else if (Vector3.Dot(Vector3.down, tank.rbody.velocity.normalized) > 0.3f)
+            {   //ABORT!!!
+                Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
+                pilot.PerformUTurn = -1;
+                pilot.ErrorsInUTurn++;
+                if (pilot.ErrorsInUTurn > 3)
+                    Debug.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
+            }
+            if (pilot.PerformUTurn == 1)
+            {   // Accelerate
+                AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
+                if (pilot.CurrentThrottle > 0.95)
+                    pilot.PerformUTurn = 2;
+            }
+            else if (pilot.PerformUTurn == 2)
+            {   // Pitch Up
+                AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
+                if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
+                    pilot.PerformUTurn = 3;
+            }
+            else if (pilot.PerformUTurn == 3)
+            {   // Aim back at target
+                AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                if (Vector3.Dot((pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.2f)
+                {
+                    pilot.ErrorsInUTurn = 0;
+                    pilot.PerformUTurn = 0;
+                    if (pilot.PerformDiveAttack == 1)
+                        pilot.PerformDiveAttack = 2;
+                }
+            }
         }
         public static Vector3 DetermineRoll(Tank tank, AirAssistance pilot, Vector3 Navi3DDirect)
         {
@@ -942,20 +1061,25 @@ namespace TAC_AI.AI
                             throttleToSet = (foreTarg - Extremes) / pilot.PropLerpValue;
                         pilot.AdvisedThrottle = Mathf.Clamp(throttleToSet, 0, 1);
 
-                        if (pilot.NoProps)
-                        {
-                            if (!pilot.ForcePitchUp && foreTarg > Extremes && tank.rbody.velocity.y > -10 && Vector3.Dot((target - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
-                                thisInst.BOOST = true;
+                        if (!pilot.LowerEngines)
+                        {   // Save fuel for chasing the enemy
+                            if (pilot.NoProps)
+                            {
+                                if (!pilot.ForcePitchUp && foreTarg > Extremes && tank.rbody.velocity.y > -10 && Vector3.Dot((target - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
+                                    thisInst.BOOST = true;
+                                else
+                                    thisInst.BOOST = false;
+                            }
                             else
-                                thisInst.BOOST = false;
+                            {
+                                if (!pilot.ForcePitchUp && throttleToSet > 1.25f && tank.rbody.velocity.y > -10 && Vector3.Dot((target - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
+                                    thisInst.BOOST = true;
+                                else
+                                    thisInst.BOOST = false;
+                            }
                         }
                         else
-                        {
-                            if (!pilot.ForcePitchUp && throttleToSet > 1.25f  && tank.rbody.velocity.y > -10 && Vector3.Dot((target - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
-                                thisInst.BOOST = true;
-                            else
-                                thisInst.BOOST = false;
-                        }
+                            thisInst.BOOST = false;
                         return;
                     }
                 }
@@ -995,7 +1119,7 @@ namespace TAC_AI.AI
                         return;
                     }
                     //else
-                        //Debug.Log("TACtical_AI: not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AirAssistance.Stallspeed);
+                    //Debug.Log("TACtical_AI: not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AirAssistance.Stallspeed);
                 }
                 pilot.AdvisedThrottle = 1;
             }
@@ -1146,10 +1270,10 @@ namespace TAC_AI.AI
                 fFlat.y = Heading.y;
             else
             {
-                if (pilot.CutEngines)
+                if (pilot.LowerEngines)
                     fFlat.y = 0;
                 else if (thisInst.MoveFromObjective || thisInst.AdviseAway)
-                    fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity ).z / (10 / pilot.SlowestPropLerpSpeed)) + 0.1f, -0.35f, 0.35f);
+                    fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).z / (10 / pilot.SlowestPropLerpSpeed)) + 0.1f, -0.35f, 0.35f);
                 else if (thisInst.ProceedToObjective)
                     fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).z / (10 / pilot.SlowestPropLerpSpeed)) - 0.1f, -0.35f, 0.35f);
                 else
@@ -1164,7 +1288,7 @@ namespace TAC_AI.AI
         }
         public static float ModerateUpwardsThrust(Tank tank, AIECore.TankAIHelper thisInst, AirAssistance pilot, Vector3 targetHeight, bool ForceUp = false)
         {
-            pilot.CutEngines = false;
+            pilot.LowerEngines = false;
             float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + 0.5f;
             //Debug.Log("TACtical_AI: " + tank.name + " thrust = " + final + " | velocity " + tank.rbody.velocity);
             if (ForceUp)
@@ -1174,7 +1298,7 @@ namespace TAC_AI.AI
             else if (final <= -0.4f)
             {
                 //Debug.Log("TACtical_AI: " + tank.name + " Too high!! Cutting engines!!");
-                pilot.CutEngines = true;
+                pilot.LowerEngines = true;
                 final = -0.1f;
                 if (tank.rbody.velocity.y < 0)
                 {
@@ -1441,41 +1565,38 @@ namespace TAC_AI.AI
             //The method to determine if we should avoid an ally nearby while navigating to the target
             var thisInst = tank.GetComponent<AIECore.TankAIHelper>();
 
-            if (thisInst.AvoidStuff)
+            try
             {
-                try
+                Tank lastCloseAlly;
+                float lastAllyDist;
+                if (thisInst.SecondAvoidence)// MORE processing power
                 {
-                    Tank lastCloseAlly;
-                    float lastAllyDist;
-                    if (thisInst.SecondAvoidence)// MORE processing power
-                    {
-                        lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(predictionOffset, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal);
-                        if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
-                        {
-                            if (lastAuxVal < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
-                            {
-                                IntVector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2);
-                                return (targetIn + ProccessedVal2) / 3;
-                            }
-                            IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly);
-                            return (targetIn + ProccessedVal) / 2;
-                        }
-
-                    }
-                    lastCloseAlly = AIEPathing.ClosestAllyPrecision(predictionOffset, out lastAllyDist);
-                    if (lastCloseAlly == null)
-                        Debug.Log("TACtical_AI: ALLY IS NULL");
+                    lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(predictionOffset, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal);
                     if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                     {
+                        if (lastAuxVal < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
+                        {
+                            IntVector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2);
+                            return (targetIn + ProccessedVal2) / 3;
+                        }
                         IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly);
                         return (targetIn + ProccessedVal) / 2;
                     }
+
                 }
-                catch (Exception e)
+                lastCloseAlly = AIEPathing.ClosestAllyPrecision(predictionOffset, out lastAllyDist);
+                if (lastCloseAlly == null)
+                    Debug.Log("TACtical_AI: ALLY IS NULL");
+                if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
-                    Debug.Log("TACtical_AI: Crash on Avoid " + e);
-                    return targetIn;
+                    IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly);
+                    return (targetIn + ProccessedVal) / 2;
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: Crash on AvoidAssistAir " + e);
+                return targetIn;
             }
             if (targetIn.IsNaN())
             {
@@ -1490,6 +1611,12 @@ namespace TAC_AI.AI
                 return target.tank.boundsCentreWorldNoCheck;
             else
                 return target.tank.rbody.velocity + target.tank.boundsCentreWorldNoCheck;
+        }
+        public static Vector3 TryGetVelocityOffset(Tank tank, AirAssistance pilot)
+        {
+            if (tank.rbody.IsNotNull())
+                return tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness);
+            return tank.boundsCentreWorldNoCheck;
         }
 
 

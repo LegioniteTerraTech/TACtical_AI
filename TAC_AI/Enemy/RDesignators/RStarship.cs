@@ -45,7 +45,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.MoveFromObjective = true;
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 4))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -54,7 +54,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -65,7 +65,7 @@ namespace TAC_AI.AI.Enemy
             {
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
-                if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                     thisInst.TryHandleObstruction(true, dist, true, true);
                 else
                     thisInst.SettleDown();
@@ -92,7 +92,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.Retreat = false;
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 2))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -106,7 +106,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -115,7 +115,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -130,7 +130,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.Retreat = false;
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -145,7 +145,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -154,7 +154,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();

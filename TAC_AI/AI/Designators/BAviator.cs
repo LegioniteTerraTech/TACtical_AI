@@ -30,7 +30,7 @@ namespace TAC_AI.AI
 
             if (tank.wheelGrounded)
             {
-                if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 8))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                     thisInst.TryHandleObstruction(true, dist, true, true);
                 else
                     thisInst.SettleDown();

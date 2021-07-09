@@ -23,6 +23,12 @@ namespace TAC_AI.AI.Enemy
             BGeneral.ResetValues(thisInst);
             thisInst.Attempt3DNavi = false;
 
+            //Singleton.Manager<ManTechs>.inst.
+            if (tank.rbody.IsNull())
+            {   // remove aircraft AI from the world because it's outta player range
+                tank.Recycle();
+            }
+
             if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy != null)
             {
                 if ((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude > mind.Range)
@@ -39,10 +45,10 @@ namespace TAC_AI.AI.Enemy
             }
             RGeneral.Engadge(thisInst, tank, mind);
 
-                float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
-                float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
-                float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
-                thisInst.lastRange = dist;
+            float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
+            float dist = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
+            float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
+            thisInst.lastRange = dist;
 
             if (mind.CommanderAttack == EnemyAttack.Coward)
             {
@@ -55,7 +61,7 @@ namespace TAC_AI.AI.Enemy
                     thisInst.BOOST = true;
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -65,12 +71,11 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
             }
             else if (mind.CommanderAttack == EnemyAttack.Circle)
@@ -79,7 +84,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.Retreat = false;
                 if (tank.wheelGrounded)
                 {
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -111,7 +116,7 @@ namespace TAC_AI.AI.Enemy
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -119,14 +124,13 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
-                    thisInst.PivotOnly = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
                 {
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -138,7 +142,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -152,13 +156,15 @@ namespace TAC_AI.AI.Enemy
             {
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = false;
+                thisInst.ProceedToObjective = true;
+                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -166,48 +172,42 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
-                    thisInst.PivotOnly = true;
-                    thisInst.ProceedToObjective = true;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
                 {
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
-                    thisInst.ProceedToObjective = true;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
                 else
                 {
                     if (tank.wheelGrounded)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
                     thisInst.BOOST = true;
-                    thisInst.ProceedToObjective = true;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
             }
         }
 
-        public static void EnemyDogfighting(AIECore.TankAIHelper thisInst, Tank tank)
-        {   // Will have to account for the different types of flight methods available
+        public static void EnemyDogfighting(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        {   // Only accounts for airplanes
 
             thisInst.DANGER = false;
-            thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            thisInst.lastEnemy = mind.FindEnemyAir(thisInst.Pilot);
+
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && thisInst.Pilot.LargeAircraft)
+                if (KickStart.isWeaponAimModPresent && mind.CommanderAttack == EnemyAttack.Circle && thisInst.Pilot.LargeAircraft)
                 {   // AC-130 broadside attack
                     if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
                     {

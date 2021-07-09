@@ -280,7 +280,6 @@ namespace TAC_AI.AI
 
             //AutoCollection
             internal int anchorAttempts = 0;
-            //internal int lastBlockCount = 0;
             internal float lastTechExtents = 0;
             internal float lastRange = 0;
             internal float EstTopSped = 0;
@@ -747,6 +746,7 @@ namespace TAC_AI.AI
                 //Something is in the way - try fetch the scenery to shoot at
                 var thisInst = gameObject.GetComponent<TankAIHelper>();
 
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  Obstructed");
                 if (!hasMessaged)
                 {
                     Debug.Log("TACtical_AI: AI " + tank.name + ":  Can't move there - something's in the way!");
@@ -900,6 +900,12 @@ namespace TAC_AI.AI
                 }
             }
 
+            public bool IsTechMoving(float minSpeed)
+            {
+                if (tank.rbody.IsNull())
+                    return false;
+                return tank.rbody.velocity.sqrMagnitude > minSpeed * minSpeed;
+            }
             public Visible GetPlayerTech()
             {
                 foreach (Visible thatTech in tank.Vision.IterateVisibles(ObjectTypes.Vehicle))

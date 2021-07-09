@@ -117,11 +117,11 @@ namespace TAC_AI.AI
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 //OBSTRUCTION MANAGEMENT
-                if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
-                else if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 2))
+                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 2))
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Trying to catch up!");

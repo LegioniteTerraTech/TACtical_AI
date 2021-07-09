@@ -5,39 +5,31 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.Designators
 {
-    public static class BBuccaneer
+    public static class BAegis
     {
-        //Same as Airship but levels out with the sea and avoids terrain
-        public static void MotivateBote(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MotivateMove(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //The Handler that tells the naval ship (Escort) what to do movement-wise
-            if (!KickStart.isWaterModPresent)
-            {
-                //Fallback to normal escort if no watermod present
-                thisInst.DediAI = AIECore.DediAIType.Escort;
-                return;
-            }
+            //The Handler that tells the Tank (Aegis) what to do movement-wise
             BGeneral.ResetValues(thisInst);
 
-            if (thisInst.lastPlayer == null)
+            if (thisInst.LastCloseAlly == null)
                 return;
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.LastCloseAlly.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.LastCloseAlly.blockBounds.extents);
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             bool hasMessaged = thisInst.Feedback;// set this to false to get AI feedback testing
             thisInst.lastRange = dist;
 
-            float playerExt = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
+            float AllyExt = AIECore.Extremes(thisInst.LastCloseAlly.blockBounds.extents);
 
-            if (dist < thisInst.lastTechExtents + playerExt + 2)
+            if (dist < thisInst.lastTechExtents + AllyExt + 2)
             {
                 thisInst.DelayedAnchorClock = 0;
-                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
+                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving " + thisInst.LastCloseAlly.name + " some room...");
                 thisInst.MoveFromObjective = true;
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = -1;
-                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
@@ -46,15 +38,15 @@ namespace TAC_AI.AI
                     {
                         thisInst.unanchorCountdown = 15;
                         tank.TryToggleTechAnchor();
+                        thisInst.JustUnanchored = true;
                     }
                 }
             }
-            else if (dist < range + playerExt && dist > (range / 2) + playerExt)
+            else if (dist < range + AllyExt && dist > (range / 2) + AllyExt)
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Departing!");
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = OffsetToSea(thisInst.lastPlayer.centrePosition, thisInst);
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -65,16 +57,14 @@ namespace TAC_AI.AI
                         Debug.Log("TACtical_AI: AI " + tank.name + ": Time to pack up and move out!");
                         thisInst.unanchorCountdown = 15;
                         tank.TryToggleTechAnchor();
+                        thisInst.JustUnanchored = true;
                     }
                 }
             }
-            else if (dist >= range + playerExt)
+            else if (dist >= range + AllyExt)
             {
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = OffsetToSea(thisInst.lastPlayer.centrePosition, thisInst);
-                thisInst.forceDrive = true;
-                thisInst.DriveVar = 1f;
 
 
                 //DISTANCE WARNINGS
@@ -84,9 +74,10 @@ namespace TAC_AI.AI
                     thisInst.Urgency += KickStart.AIClockPeriod / 2;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1f;
+                    thisInst.featherBoost = true;
                     //Debug.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
                     if (thisInst.UrgencyOverload > 0)
-                        thisInst.UrgencyOverload--;
+                        thisInst.UrgencyOverload -= KickStart.AIClockPeriod / 5;
                 }
                 if (thisInst.UrgencyOverload > 50)
                 {
@@ -146,11 +137,11 @@ namespace TAC_AI.AI
                 }
                 thisInst.lastMoveAction = 1;
             }
-            else if (dist < (range / 4) + playerExt)
+            else if (dist < (range / 4) + AllyExt)
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Settling");
-                //thisInst.lastDestination = OffsetToSea(tank.transform.position, thisInst);
+                //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
@@ -170,11 +161,11 @@ namespace TAC_AI.AI
             {
                 //Likely idle
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  in resting state");
-                //thisInst.lastDestination = OffsetToSea(tank.transform.position, thisInst);
+                //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 thisInst.lastMoveAction = 0;
-                thisInst.DriveVar = 0;
+                //thisInst.DriveVar = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)

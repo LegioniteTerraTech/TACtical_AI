@@ -55,14 +55,14 @@ namespace TAC_AI.AI.Enemy
                     if (dist < thisInst.lastTechExtents + enemyExt + (range / 4))
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
                     else if (dist < thisInst.lastTechExtents + enemyExt + range)
                     {
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -73,7 +73,7 @@ namespace TAC_AI.AI.Enemy
                 {   // Orbit strafe while attacking
                     thisInst.SideToThreat = true;
                     thisInst.Retreat = false;
-                    if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -106,7 +106,7 @@ namespace TAC_AI.AI.Enemy
                     else if (dist < thisInst.lastTechExtents + enemyExt + range)
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -114,7 +114,7 @@ namespace TAC_AI.AI.Enemy
                     else
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -128,7 +128,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                         thisInst.MoveFromObjective = true;
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -142,7 +142,7 @@ namespace TAC_AI.AI.Enemy
                     else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -151,7 +151,7 @@ namespace TAC_AI.AI.Enemy
                     else
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!tank.AI.IsTankMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();

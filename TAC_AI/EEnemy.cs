@@ -18,7 +18,6 @@ namespace TAC_AI.AI.Enemy
         Naval,
         SuicideMissile, // set for bolt tech splitoffs with less than 2 weapons (excluding cabs)
         Stationary,     // sit there like a good wingnut
-        Boss,           // end the player  REALLY PAINFULLY
     }
     public enum EnemyAttitude
     {
@@ -27,6 +26,8 @@ namespace TAC_AI.AI.Enemy
         Miner,      // Attack resources
         Junker,     // Move towards patches of loose blocks
         OnRails,    // Follow set destinations instead for MissionManager
+        Boss,       // Build a big base and show off your power on the off-world
+        Invader,    // One. job.   INVADE      end the player  REALLY PAINFULLY
     }
     public enum EnemyAttack
     {

@@ -18,13 +18,20 @@ namespace TAC_AI.AI
             }
             thisControl.m_Movement.m_USE_AVOIDANCE = thisInst.AvoidStuff;
             thisInst.Steer = false;
-            thisInst.DriveDir = EDriveType.Neutral;
+            thisInst.DriveDir = EDriveType.Forwards;
 
             if (thisInst.AIState == 1)// Allied
             {
                 if (thisInst.IsMultiTech)
                 {   //Override and disable most driving abilities
-                    if (thisInst.lastEnemy != null && thisInst.DediAI == AIECore.DediAIType.MTTurret)
+                    if (thisInst.DediAI == AIECore.DediAIType.MTSlave)
+                    {   // act like a trailer
+                        thisInst.DriveDir = EDriveType.Neutral;
+                        thisInst.Steer = false;
+                        thisInst.lastDestination = thisInst.lastEnemy.transform.position;
+                        thisInst.MinimumRad = 0;
+                    }
+                    else if (thisInst.lastEnemy != null && thisInst.DediAI == AIECore.DediAIType.MTTurret)
                     {
                         thisInst.Steer = true;
                         thisInst.lastDestination = thisInst.lastEnemy.transform.position;
@@ -96,6 +103,7 @@ namespace TAC_AI.AI
                 }
                 else if (thisInst.DediAI == AIECore.DediAIType.Aegis)
                 {
+                    thisInst.LastCloseAlly = AIEPathing.ClosestAlly(tank.boundsCentreWorldNoCheck, out float bestval);
                     bool Combat = TryHandleCombat(thisInst, tank);
                     if (!Combat)
                     {
@@ -177,7 +185,7 @@ namespace TAC_AI.AI
                     }
                     else
                     {
-                        if (thisInst.FullMelee)
+                        if (mind.MainFaction == FactionSubTypes.GC)
                         {
                             thisInst.Steer = true;
                             thisInst.DriveDir = EDriveType.Forwards;
@@ -201,7 +209,10 @@ namespace TAC_AI.AI
                         if (thisInst.MoveFromObjective)
                         {
                             thisInst.Steer = true;
-                            thisInst.DriveDir = EDriveType.Forwards;
+                            if (thisInst.Retreat)
+                                thisInst.DriveDir = EDriveType.Backwards;
+                            else
+                                thisInst.DriveDir = EDriveType.Forwards;
                             thisInst.AdviseAway = true;
                             thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, thisInst.lastDestination, thisInst, mind);
                             thisInst.MinimumRad = 0.5f;
@@ -252,15 +263,15 @@ namespace TAC_AI.AI
                 {
                     if (thisInst.AdviseAway)
                     {   //Move from target
-                        if (thisInst.DriveDir == EDriveType.Forwards)
-                        {
-                            thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);
-                            thisControl.DriveControl = -1f;
-                        }
-                        else
+                        if (thisInst.DriveDir == EDriveType.Backwards)
                         {
                             thisControl.m_Movement.FaceDirection(tank, destDirect, 1);
                             thisControl.DriveControl = 1f;
+                        }
+                        else
+                        {
+                            thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);
+                            thisControl.DriveControl = -1f;
                         }
                     }
                     if (thisInst.DriveDir == EDriveType.Perpendicular)
@@ -311,17 +322,33 @@ namespace TAC_AI.AI
                     }
                 }
 
+                if (thisInst.DriveDir == EDriveType.Neutral)
+                {   // become brakeless
+                    thisControl.DriveControl = 0.001f;
+                    return;
+                }
+
                 if (thisInst.PivotOnly)
                 {
                     thisControl.DriveControl = 0;
                 }
                 if (thisInst.Yield)
                 {
-                    //Only works with forwards
-                    if (thisInst.recentSpeed > 10)
-                        thisControl.DriveControl = -0.2f;
-                    else
-                        thisControl.DriveControl = 0.5f;
+                    if (thisInst.DriveDir == EDriveType.Backwards)
+                    {
+                        if (thisInst.recentSpeed > 10)
+                            thisControl.DriveControl = 0.2f;
+                        else
+                            thisControl.DriveControl = -0.5f;
+                    }
+                    else 
+                    {
+                        // works with forwards
+                        if (thisInst.recentSpeed > 10)
+                            thisControl.DriveControl = -0.2f;
+                        else
+                            thisControl.DriveControl = 0.5f;
+                    }
                 }
                 else if (thisInst.forceDrive)
                 {
