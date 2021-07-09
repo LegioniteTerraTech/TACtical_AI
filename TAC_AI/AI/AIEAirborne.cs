@@ -343,7 +343,7 @@ namespace TAC_AI.AI
                     pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, thisInst, 44);
                     pilot.AirborneDest = AvoidAssistAir(tank, pilot.AirborneDest, tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness));
 
-                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * Time.deltaTime), 34))
+                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * Time.deltaTime), 26))
                     {
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  Avoiding Ground!");
                         pilot.ForcePitchUp = true;
@@ -466,7 +466,7 @@ namespace TAC_AI.AI
                     pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, thisInst, 44);
                     pilot.AirborneDest = Enemy.RPathfinding.AvoidAssistEnemy(tank, pilot.AirborneDest, tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness), thisInst, mind);
 
-                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * Time.deltaTime), 34))
+                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * Time.deltaTime), 26))
                     {
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  Avoiding Ground!");
                         pilot.ForcePitchUp = true;
@@ -1270,6 +1270,9 @@ namespace TAC_AI.AI
                 fFlat.y = Heading.y;
             else
             {
+                fFlat.y = 0;
+                /*
+                // Rotors on some chopper designs were acting funky and cutting out due to pitch so I disabled pitching
                 if (pilot.LowerEngines)
                     fFlat.y = 0;
                 else if (thisInst.MoveFromObjective || thisInst.AdviseAway)
@@ -1278,6 +1281,7 @@ namespace TAC_AI.AI
                     fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).z / (10 / pilot.SlowestPropLerpSpeed)) - 0.1f, -0.35f, 0.35f);
                 else
                     fFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).z / (10 / pilot.SlowestPropLerpSpeed), -0.35f, 0.35f);
+                */
             }
             // Because tilting forwards too hard causes the chopper to stall on some builds
             fFlat.y = fFlat.y - (fFlat.y * pilot.CurrentThrottle);

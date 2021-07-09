@@ -126,21 +126,19 @@ namespace TAC_AI
             }
 
             // Now setup bases
-            if (isBlockInjectorPresent)
-            {
-                Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(DelayedBaseLoader);
-            }
-            else
+            if (!isBlockInjectorPresent)
                 InstantBaseLoader();
         }
-        public static void DelayedBaseLoader(Mode mode)
+        public static void DelayedBaseLoader()
         {
-            if (Singleton.Manager<ManGameMode>.inst.GetCurrentGameType() == ManGameMode.GameType.Attract)
-                Templates.BaseTemplateManager.ValidateAllBasesBlocks();
+            Debug.Log("TACtical_AI: LAUNCHED MODDED BLOCKS BASE VALIDATOR");
+            Templates.TempManager.ValidateAllStringTechs();
+            firedAfterBlockInjector = true;
         }
         public static void InstantBaseLoader()
         {
-            Templates.BaseTemplateManager.ValidateAllBasesBlocks();
+            Debug.Log("TACtical_AI: LAUNCHED BASE VALIDATOR");
+            Templates.TempManager.ValidateAllStringTechs();
         }
 
         public static bool LookForMod(string name)

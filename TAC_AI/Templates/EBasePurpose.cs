@@ -21,7 +21,8 @@ namespace TAC_AI.Templates
     {
         Land,
         Sea,
-        Air
+        Air,
+        Space
     }
     public enum BasePurpose
     {
@@ -30,5 +31,7 @@ namespace TAC_AI.Templates
         Harvesting,
         TechProduction,
         Headquarters,
+        NotABase,
+        NoAutoSearch,
     }
 }

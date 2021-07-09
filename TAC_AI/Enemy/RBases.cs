@@ -180,6 +180,31 @@ namespace TAC_AI.AI.Enemy
                 tank.Anchors.TryAnchorAll(true);
                 DidFire = true;
             }
+            if (tank.GetComponent<Templates.BookmarkBuilder>())
+            {
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                RCore.BlockSetEnemyHandling(tank, mind);
+                RCore.RandomSetMindAttack(mind, tank);
+                //mind.InvertBullyPriority = true;
+                //mind.EvilCommander = EnemyHandling.Starship;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                //mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.MissionTrigger;
+
+                var builder = tank.GetComponent<Templates.BookmarkBuilder>();
+                mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
+                if (mind.TechMemor.IsNull())
+                {
+                    mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                    mind.TechMemor.Initiate();
+                }
+                mind.TechMemor.SetupForNewTechConstruction(thisInst, builder.blueprint);
+                AIERepair.Turboconstruct(tank, mind.TechMemor);
+                UnityEngine.Object.DestroyImmediate(builder);
+                DidFire = true;
+            }
             if (name.Contains(" ¥¥"))
             {
                 if (name.Contains("#"))
@@ -213,11 +238,11 @@ namespace TAC_AI.AI.Enemy
                         mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                         mind.TechMemor.Initiate();
                     }
-                    Templates.SpawnBaseTypes type = Templates.EnemyBaseLoader.GetEnemyBaseTypeFromName(funds.GetActualName(name));
+                    Templates.SpawnBaseTypes type = Templates.RawTechLoader.GetEnemyBaseTypeFromName(funds.GetActualName(name));
                     Debug.Log("TACtical_AI: " + funds.GetActualName(name) + " |type " + type.ToString());
                     SetupBaseType(type, mind);
-                    mind.TechMemor.SetupForNewTechConstruction(thisInst, Templates.EnemyBaseLoader.GetBlueprint(type));
-                    mind.TechMemor.unlimitedParts = Templates.EnemyBaseLoader.GetEnemyBaseSupplies(type);
+                    mind.TechMemor.SetupForNewTechConstruction(thisInst, Templates.RawTechLoader.GetBlueprint(type));
+                    mind.TechMemor.unlimitedParts = Templates.RawTechLoader.GetEnemyBaseSupplies(type);
                     DidFire = true;
                 }
             }

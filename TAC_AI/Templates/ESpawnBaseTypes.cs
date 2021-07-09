@@ -37,6 +37,9 @@ namespace TAC_AI.Templates
         HETankFactory,
         HEMunitionsDepot,
         HEAircraftGarrison,
+        // TAC lol
+        TACInvaderAttract,
+        TACInvaderAttract2,
     }
 
 }
