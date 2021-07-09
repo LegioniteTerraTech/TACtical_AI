@@ -121,6 +121,13 @@
     <Compile Include="AI\AIEWeapons.cs" />
     <Compile Include="AI\Designators\BAegis.cs" />
     <Compile Include="AI\Designators\BAviator.cs" />
+    <Compile Include="AI\ITechDriver.cs" />
+    <Compile Include="AI\MovementAI\AircraftUtils.cs" />
+    <Compile Include="AI\MovementAI\AirplaneAI.cs" />
+    <Compile Include="AI\MovementAI\HelicopterAI.cs" />
+    <Compile Include="AI\MovementAI\HelicopterUtils.cs" />
+    <Compile Include="AI\MovementAI\IMovementAI.cs" />
+    <Compile Include="AI\MovementAI\VtolAI.cs" />
     <Compile Include="EDriveType.cs" />
     <Compile Include="AI\Designators\BAstrotech.cs" />
     <Compile Include="AI\Designators\BEscort.cs" />

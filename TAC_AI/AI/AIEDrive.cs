@@ -493,8 +493,6 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: TurnVal AIM " + turnVal);
             }
 
-
-
             thisInst.Navi3DDirect = Vector3.zero;
             thisInst.Navi3DUp = Vector3.up;
             if (thisInst.Steer)

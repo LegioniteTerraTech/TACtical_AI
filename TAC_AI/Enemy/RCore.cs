@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI.MovementAI;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -275,7 +276,7 @@ namespace TAC_AI.AI.Enemy
                 List<Tank> techs = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
                 if (CommanderAttack == EnemyAttack.Pesterer)
                 {
-                    scanCenter = AIEAirborne.ForeAiming(Tank.visible);
+                    scanCenter = AircraftUtils.ForeAiming(Tank.visible);
                     int launchCount = techs.Count();
                     for (int step = 0; step < launchCount; step++)
                     {
