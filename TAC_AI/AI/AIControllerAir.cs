@@ -11,6 +11,8 @@ namespace TAC_AI.AI
     class AIControllerAir : MonoBehaviour, IMovementAIController
     {
         internal static FieldInfo boostGet = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo boostDir = typeof(BoosterJet).GetField("m_LocalBoostDirection", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo fanDir = typeof(FanJet).GetField("m_LocalBoostDirection", BindingFlags.NonPublic | BindingFlags.Instance);
 
         public enum FlightType
         {
@@ -83,6 +85,9 @@ namespace TAC_AI.AI
         public int ErrorsInUTurn = 0;           // If this gets too high, then this tech isn't meant to Immelmann
         public bool DestroyOnTerrain = false;   // Should the aircraft disintegrate on collision with terrain?
         public bool LargeAircraft = false;      // Restrict turning to 45 and no U-Turns
+        public bool BankOnly = false;
+        public float BoosterThrustBias = 0.5f;
+        public float NoStallThreshold = 1.5f;
         public bool ForcePitchUp = false;
         public bool TakeOff = false;
         public bool Grounded = false;
@@ -209,13 +214,15 @@ namespace TAC_AI.AI
         }
         private void CheckEngines()
         {
-            FieldInfo boostGet = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
-
             float lowestDelta = 100;
             float guzzleLevel = 0;
             int consumeBoosters = 0;
             Vector3 biasDirection = Vector3.zero;
             Vector3 boostBiasDirection = Vector3.zero;
+
+            float fanThrust = 0.0f;
+            float boosterThrust = 0.0f;
+
             foreach (ModuleBooster module in Engines)
             {
                 //Get the slowest spooling one
@@ -228,6 +235,11 @@ namespace TAC_AI.AI
                         if (jet.spinDelta < lowestDelta)
                             lowestDelta = jet.spinDelta;
                     }
+                    Vector3 fanDirection = (Vector3) fanDir.GetValue(jet);
+                    if (fanDirection.y < -0.5)
+                    {
+                        fanThrust += jet.force;
+                    }
                 }
                 List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
                 foreach (BoosterJet boost in boosts)
@@ -237,10 +249,21 @@ namespace TAC_AI.AI
                         consumeBoosters++;
                         guzzleLevel += boost.BurnRate;
                     }
+
+                    float force = (float)boostGet.GetValue(boost);
+                    Vector3 jetDirection = (Vector3) boostDir.GetValue(boost);
+                    if (jetDirection.y < -0.5)
+                    {
+                        boosterThrust += force;
+                    }
+
                     //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                    boostBiasDirection -= Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection)) * (float)boostGet.GetValue(boost);
+                    boostBiasDirection -= Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection)) * force;
                 }
             }
+
+            float totalThrust = (fanThrust + boosterThrust * this.BoosterThrustBias);
+            this.BankOnly = totalThrust * totalThrust < (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).sqrMagnitude;
 
             if (lowestDelta > 10 && boostBiasDirection == Vector3.zero)
             {   //IT HAS NO VALID PROPS OR BOOSTERS!!!!

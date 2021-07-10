@@ -71,7 +71,8 @@ namespace TAC_AI.AI
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && ((AIControllerAir) thisInst.MovementController).LargeAircraft)
+                AIControllerAir pilot = (AIControllerAir) thisInst.MovementController;
+                if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && (pilot.LargeAircraft || pilot.BankOnly))
                 {   // AC-130 broadside attack
                     if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
                     {

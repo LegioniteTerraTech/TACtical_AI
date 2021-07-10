@@ -201,7 +201,7 @@ namespace TAC_AI.AI.MovementAI
             pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
             AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 
-            if (pilot.LargeAircraft)
+            if (pilot.LargeAircraft || pilot.BankOnly)
             {
                 if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
                 {
@@ -294,7 +294,7 @@ namespace TAC_AI.AI.MovementAI
             pilot.AirborneDest = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
             AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 
-            if (pilot.LargeAircraft)
+            if (pilot.LargeAircraft || pilot.BankOnly)
             {
                 if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 2) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
                 {
