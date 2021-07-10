@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TAC_AI.AI.Enemy
+namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public class RNaval
+    public static class RNaval
     {
         //Same as RWheeled but has terrain avoidence
-        public static void TryAttack(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void TryAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);

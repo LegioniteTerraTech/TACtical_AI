@@ -39,8 +39,8 @@ namespace TAC_AI.AI
             get => _AI;
             internal set => _AI = value;
         }
-        private Enemy.RCore.EnemyMind _mind;
-        public Enemy.RCore.EnemyMind EnemyMind
+        private Enemy.EnemyMind _mind;
+        public Enemy.EnemyMind EnemyMind
         {
             get => _mind;
             internal set => _mind = value;
@@ -94,7 +94,7 @@ namespace TAC_AI.AI
         public bool TargetGrounded = false;     // Are we dealing with a target that is on the ground?
         public bool LowerEngines = false;       // Choppers: Too high! Too high!  Airplanes: conserve booster fuel
 
-        public void Initiate(Tank tank, AIECore.TankAIHelper thisInst, Enemy.RCore.EnemyMind mind = null)
+        public void Initiate(Tank tank, AIECore.TankAIHelper thisInst, Enemy.EnemyMind mind = null)
         {
             this.Tank = tank;
             this.Helper = thisInst;
@@ -370,7 +370,7 @@ namespace TAC_AI.AI
             }
             else if (thisInst.AIState == 2) //enemy
             {
-                Enemy.RCore.EnemyMind mind = tank.GetComponent<Enemy.RCore.EnemyMind>();
+                Enemy.EnemyMind mind = tank.GetComponent<Enemy.EnemyMind>();
                 if (!this.TargetGrounded)
                     thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
 

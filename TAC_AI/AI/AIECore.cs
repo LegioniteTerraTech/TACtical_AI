@@ -438,7 +438,7 @@ namespace TAC_AI.AI
                 this.LastCloseAlly = null;
                 this.theBase = null;
                 this.JustUnanchored = false;
-                var Mind = tank.gameObject.GetComponent<Enemy.RCore.EnemyMind>();
+                var Mind = tank.gameObject.GetComponent<Enemy.EnemyMind>();
                 if (Mind.IsNotNull())
                     Mind.SetForRemoval();
                 var Mem = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
@@ -459,7 +459,7 @@ namespace TAC_AI.AI
 
             public bool TestForFlyingAIRequirement()
             {
-                var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
+                var enemy = gameObject.GetComponent<Enemy.EnemyMind>();
                 if (AIState == 1 && DediAI == AIType.Aviator)
                 {
                     if (!(this.MovementController is AIControllerAir pilot))
@@ -475,7 +475,7 @@ namespace TAC_AI.AI
                     this.MovementController.Initiate(tank, this);
                     return true;
                 }
-                else if (AIState == 2 && gameObject.GetComponent<Enemy.RCore.EnemyMind>().IsNotNull())
+                else if (AIState == 2 && gameObject.GetComponent<Enemy.EnemyMind>().IsNotNull())
                 {
                     if (enemy && enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
                     {
@@ -592,7 +592,7 @@ namespace TAC_AI.AI
                     DediAI = AIType.Escort;
 
                 this.MovementController = null;
-                Enemy.RCore.EnemyMind enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
+                Enemy.EnemyMind enemy = gameObject.GetComponent<Enemy.EnemyMind>();
 
                 if (!isAviatorAvail)
                 {

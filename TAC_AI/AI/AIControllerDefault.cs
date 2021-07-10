@@ -29,8 +29,8 @@ namespace TAC_AI.AI
             get => _AI;
             internal set => _AI = value;
         }
-        private Enemy.RCore.EnemyMind _mind;
-        public Enemy.RCore.EnemyMind EnemyMind
+        private Enemy.EnemyMind _mind;
+        public Enemy.EnemyMind EnemyMind
         {
             get => _mind;
             internal set => _mind = value;
@@ -63,7 +63,7 @@ namespace TAC_AI.AI
             this.AICore.DriveMaintainer(thisControl, this.Helper, this.Tank);
         }
 
-        public void Initiate(Tank tank, AIECore.TankAIHelper helper, RCore.EnemyMind mind = null)
+        public void Initiate(Tank tank, AIECore.TankAIHelper helper, EnemyMind mind = null)
         {
             this.Tank = tank;
             this.Helper = helper;

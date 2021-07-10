@@ -16,11 +16,11 @@ namespace TAC_AI.AI.MovementAI
 
         bool DriveDirector();
 
-        bool DriveDirectorEnemy(Enemy.RCore.EnemyMind mind);
+        bool DriveDirectorEnemy(Enemy.EnemyMind mind);
 
         bool TryAdjustForCombat();
 
-        bool TryAdjustForCombatEnemy(Enemy.RCore.EnemyMind mind);
+        bool TryAdjustForCombatEnemy(Enemy.EnemyMind mind);
 
         Vector3 AvoidAssist(Vector3 targetIn, Vector3 predictionOffset);
     }

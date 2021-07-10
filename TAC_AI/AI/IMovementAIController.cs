@@ -24,12 +24,12 @@ namespace TAC_AI.AI {
             get;
         }
 
-        Enemy.RCore.EnemyMind EnemyMind
+        Enemy.EnemyMind EnemyMind
         {
             get;
         }
 
-        void Initiate(Tank tank, AIECore.TankAIHelper helper, Enemy.RCore.EnemyMind mind = null);
+        void Initiate(Tank tank, AIECore.TankAIHelper helper, Enemy.EnemyMind mind = null);
 
         void DriveDirector();
 

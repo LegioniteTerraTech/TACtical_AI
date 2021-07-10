@@ -220,7 +220,7 @@ namespace TAC_AI.AI.MovementAI
             return true;
         }
 
-        public bool DriveDirectorEnemy(Enemy.RCore.EnemyMind mind)
+        public bool DriveDirectorEnemy(Enemy.EnemyMind mind)
         {
             pilot.AdvisedThrottle = -1;
             pilot.ForcePitchUp = false;
@@ -376,7 +376,7 @@ namespace TAC_AI.AI.MovementAI
             }
             return output;
         }
-        public bool TryAdjustForCombatEnemy(Enemy.RCore.EnemyMind mind)
+        public bool TryAdjustForCombatEnemy(Enemy.EnemyMind mind)
         {
             bool output = false;
             if (!this.pilot.Helper.Retreat && this.pilot.Helper.lastEnemy.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)

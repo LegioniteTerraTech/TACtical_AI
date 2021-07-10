@@ -168,7 +168,7 @@ namespace TAC_AI.AI.MovementAI
             return true;
         }
 
-        public bool DriveDirectorEnemy(RCore.EnemyMind mind)
+        public bool DriveDirectorEnemy(EnemyMind mind)
         {
             if (mind.IsNull())
                 return false;
@@ -774,7 +774,7 @@ namespace TAC_AI.AI.MovementAI
             return output;
         }
 
-        public bool TryAdjustForCombatEnemy(RCore.EnemyMind mind)
+        public bool TryAdjustForCombatEnemy(EnemyMind mind)
         {
             AIECore.TankAIHelper thisInst = this.controller.Helper;
             bool output = false;

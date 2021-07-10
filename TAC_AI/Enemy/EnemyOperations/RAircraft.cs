@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
 
-namespace TAC_AI.AI.Enemy
+namespace TAC_AI.AI.Enemy.EnemyOperations
 {
     public static class RAircraft
     {
@@ -19,7 +19,7 @@ namespace TAC_AI.AI.Enemy
             Pesterer,   // Switch to the next closest possible target after attacking one aircraft.  Do not try to dodge and prioritize attack
             Spyper,     // Take aim and fire at the best possible moment in our aiming 
         */
-        public static void TryFly(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void TryFly(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             BGeneral.ResetValues(thisInst);
             thisInst.Attempt3DNavi = false;
@@ -198,7 +198,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public static void EnemyDogfighting(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void EnemyDogfighting(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {   // Only accounts for airplanes
 
             thisInst.DANGER = false;

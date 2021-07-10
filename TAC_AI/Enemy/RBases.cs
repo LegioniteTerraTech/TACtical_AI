@@ -171,7 +171,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public static bool SetupBaseAI(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static bool SetupBaseAI(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {   // iterate through EVERY BASE dammit
             string name = tank.name;
             bool DidFire = false;
@@ -250,7 +250,7 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static void SetupBaseType(Templates.SpawnBaseTypes type, RCore.EnemyMind mind)
+        public static void SetupBaseType(Templates.SpawnBaseTypes type, EnemyMind mind)
         {   // iterate through EVERY BASE dammit
             switch (type)
             {

@@ -142,6 +142,8 @@
     <Compile Include="AI\AlliedOperations\BProspector.cs" />
     <Compile Include="AI\AIECore.cs" />
     <Compile Include="EEnemy.cs" />
+    <Compile Include="Enemy\EnemyMind.cs" />
+    <Compile Include="Enemy\EnemyOperations\EnemyOperationsController.cs" />
     <Compile Include="Enemy\EnemyOperations\RAircraft.cs" />
     <Compile Include="Enemy\RBolts.cs" />
     <Compile Include="Enemy\EnemyOperations\RChopper.cs" />

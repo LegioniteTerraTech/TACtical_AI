@@ -101,7 +101,7 @@ namespace TAC_AI.AI.MovementAI
             return true;
         }
 
-        public bool DriveDirectorEnemy(Enemy.RCore.EnemyMind mind)
+        public bool DriveDirectorEnemy(Enemy.EnemyMind mind)
         {
             pilot.ForcePitchUp = false;
             if (pilot.Grounded)
@@ -277,7 +277,7 @@ namespace TAC_AI.AI.MovementAI
             return output;
         }
 
-        public bool TryAdjustForCombatEnemy(RCore.EnemyMind mind)
+        public bool TryAdjustForCombatEnemy(EnemyMind mind)
         {
             AIECore.TankAIHelper thisInst = this.pilot.Helper;
             bool output = false;

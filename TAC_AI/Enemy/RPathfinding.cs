@@ -17,7 +17,7 @@ namespace TAC_AI.AI.Enemy
         /// <param name="thisInst"></param>
         /// <param name="mind"></param>
         /// <returns></returns>
-        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 targetIn, AIECore.TankAIHelper thisInst, RCore.EnemyMind mind)
+        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 targetIn, AIECore.TankAIHelper thisInst, EnemyMind mind)
         {   //WIP
             List<Tank> Allies = AllyList(tank);
             if (!thisInst.AvoidStuff)
@@ -83,7 +83,7 @@ namespace TAC_AI.AI.Enemy
         /// <param name="thisInst"></param>
         /// <param name="mind"></param>
         /// <returns></returns>
-        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 targetIn, Vector3 predictionOffset, AIECore.TankAIHelper thisInst, RCore.EnemyMind mind)
+        public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 targetIn, Vector3 predictionOffset, AIECore.TankAIHelper thisInst, EnemyMind mind)
         {   //WIP
             List<Tank> Allies = AllyList(tank);
             if (!thisInst.AvoidStuff)
