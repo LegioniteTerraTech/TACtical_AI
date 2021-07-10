@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using TAC_AI.AI.Movement;
 using TAC_AI.AI.AlliedOperations;
 
 namespace TAC_AI.AI
@@ -15,14 +16,14 @@ namespace TAC_AI.AI
         AI Control is handled via 2 separate execution flows.
         
         Flow 1 - Execution of plan:
-        TanControl.Update -> ModuleTechController.ExecuteControl -> AIECore.BetterAI
+        TanControl.Update -> ModuleTechController.ExecuteControl -> TankAIHelper.BetterAI
          - AI Movement Controller (IMovementAIController) handles all execution.
              - AI Movement Director - Tells the AI how to navigate safely and avoid obsticles along the way
              - AI Movement Maintainer - Makes the AI drive to the director's coordinates
              - AI Core - Each Core implements Director and Maintainer, and contain the details of how to move (Classes like AiplaneAICore vs VehicleAICore)
 
         Flow 2 - Planning flow:
-        AIECore.FixedUpdate -> AlliedOperationsController.Execute
+        TankAIHelper.FixedUpdate -> AlliedOperationsController.Execute
          - AI types are reset/refreshed - Tells the AI which Allied/Enemy Operations to run, and which IMovementAIController to use
             VVVVV
          - Allied Operations are executed - Handles the destinations AI should drive to, and how to do it (Classes like BEscort or RWheeled)

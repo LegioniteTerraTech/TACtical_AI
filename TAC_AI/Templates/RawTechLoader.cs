@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
+using TAC_AI.AI.Movement;
 
 namespace TAC_AI.Templates
 {
@@ -101,7 +102,7 @@ namespace TAC_AI.Templates
             }
             else if (KickStart.isWaterModPresent)
             {
-                if (AI.AIEPathing.AboveTheSea(pos))
+                if (AIEPathing.AboveTheSea(pos))
                 {
                     SpawnSeaBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea), haveBB);
                     return;

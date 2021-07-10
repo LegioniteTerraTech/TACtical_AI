@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using TAC_AI.AI;
 using UnityEngine;
 
-namespace TAC_AI.AI.MovementAI
+namespace TAC_AI.AI.Movement.AICores
 {
     public interface IMovementAICore
     {

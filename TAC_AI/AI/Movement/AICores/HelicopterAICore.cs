@@ -8,7 +8,7 @@ using UnityEngine;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 
-namespace TAC_AI.AI.MovementAI
+namespace TAC_AI.AI.Movement.AICores
 {
     public class HelicopterAICore : IMovementAICore
     {

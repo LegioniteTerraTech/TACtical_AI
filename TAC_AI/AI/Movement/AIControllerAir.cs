@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using UnityEngine;
-using TAC_AI.AI.MovementAI;
+using TAC_AI.AI.Movement;
+using TAC_AI.AI.Movement.AICores;
 
 namespace TAC_AI.AI
 {

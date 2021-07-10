@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using TAC_AI.AI.MovementAI;
+using TAC_AI.AI.Movement;
+using TAC_AI.AI.Movement.AICores;
 using TAC_AI.AI.Enemy.EnemyOperations;
 using UnityEngine;
 

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using TAC_AI.AI.Enemy;
-using TAC_AI.AI.MovementAI;
+using TAC_AI.AI.Movement.AICores;
 using UnityEngine;
 
 namespace TAC_AI.AI

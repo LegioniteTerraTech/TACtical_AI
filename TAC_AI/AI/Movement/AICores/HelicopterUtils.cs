@@ -5,7 +5,7 @@ using System.Text;
 using System.Reflection;
 using UnityEngine;
 
-namespace TAC_AI.AI.MovementAI
+namespace TAC_AI.AI.Movement.AICores
 {
     internal class HelicopterUtils
     {

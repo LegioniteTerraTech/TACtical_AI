@@ -114,9 +114,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AI\AIControllerAir.cs" />
-    <Compile Include="AI\AIControllerDefault.cs" />
-    <Compile Include="AI\AIEPathing.cs" />
+    <Compile Include="AI\Movement\AIControllerAir.cs" />
+    <Compile Include="AI\Movement\AIControllerDefault.cs" />
+    <Compile Include="AI\Movement\AIEPathing.cs" />
     <Compile Include="AI\AIEBeam.cs" />
     <Compile Include="AI\AIERepair.cs" />
     <Compile Include="AI\AIEWeapons.cs" />
@@ -125,14 +125,14 @@
     <Compile Include="AI\CombatUtils.cs" />
     <Compile Include="AI\AlliedOperations\BAegis.cs" />
     <Compile Include="AI\AlliedOperations\BAviator.cs" />
-    <Compile Include="AI\IMovementAIController.cs" />
-    <Compile Include="AI\MovementAI\AircraftUtils.cs" />
-    <Compile Include="AI\MovementAI\AirplaneAICore.cs" />
-    <Compile Include="AI\MovementAI\HelicopterAICore.cs" />
-    <Compile Include="AI\MovementAI\HelicopterUtils.cs" />
-    <Compile Include="AI\MovementAI\IMovementAICore.cs" />
-    <Compile Include="AI\MovementAI\VehicleAICore.cs" />
-    <Compile Include="AI\MovementAI\VtolAICore.cs" />
+    <Compile Include="AI\Movement\IMovementAIController.cs" />
+    <Compile Include="AI\Movement\AICores\AircraftUtils.cs" />
+    <Compile Include="AI\Movement\AICores\AirplaneAICore.cs" />
+    <Compile Include="AI\Movement\AICores\HelicopterAICore.cs" />
+    <Compile Include="AI\Movement\AICores\HelicopterUtils.cs" />
+    <Compile Include="AI\Movement\AICores\IMovementAICore.cs" />
+    <Compile Include="AI\Movement\AICores\VehicleAICore.cs" />
+    <Compile Include="AI\Movement\AICores\VtolAICore.cs" />
     <Compile Include="EDriveType.cs" />
     <Compile Include="AI\AlliedOperations\BAstrotech.cs" />
     <Compile Include="AI\AlliedOperations\BEscort.cs" />

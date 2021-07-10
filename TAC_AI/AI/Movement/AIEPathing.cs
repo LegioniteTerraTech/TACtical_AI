@@ -4,9 +4,8 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.Movement
 {
-
     public static class AIEPathing
     {
         public static List<Tank> Allies

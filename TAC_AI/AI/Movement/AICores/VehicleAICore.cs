@@ -6,7 +6,7 @@ using System.Reflection;
 using TAC_AI.AI.Enemy;
 using UnityEngine;
 
-namespace TAC_AI.AI.MovementAI
+namespace TAC_AI.AI.Movement.AICores
 {
     public class VehicleAICore : IMovementAICore
     {
