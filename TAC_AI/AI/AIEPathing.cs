@@ -21,8 +21,6 @@ namespace TAC_AI.AI
 
         //3-axis steering is handled in AIEDrive
 
-
-
         // OBSTICLE AVOIDENCE
         public static List<Visible> ObstructionAwareness(Vector3 posWorld, AIECore.TankAIHelper thisInst)
         {
