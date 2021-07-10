@@ -68,8 +68,6 @@ namespace TAC_AI.AI.Enemy
                     remove = true;
                     if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
                         gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
-                    if (gameObject.GetComponent<AIEAirborne.AirAssistance>().IsNotNull())
-                        gameObject.GetComponent<AIEAirborne.AirAssistance>().Recycle();
                     DestroyImmediate(this);
                 }
             }
@@ -257,7 +255,7 @@ namespace TAC_AI.AI.Enemy
                 return target;
             }
 
-            public Visible FindEnemyAir(AIEAirborne.AirAssistance pilot, float inRange = 0, int pos = 1)
+            public Visible FindEnemyAir(float inRange = 0, int pos = 1)
             {
                 Visible target = AIControl.lastEnemy;
 
@@ -545,11 +543,8 @@ namespace TAC_AI.AI.Enemy
             if (!tank.gameObject.GetComponent<EnemyMind>())
                 tank.gameObject.AddComponent<EnemyMind>();
             thisInst.lastPlayer = null;
-            if (tank.gameObject.GetComponent<AIEAirborne.AirAssistance>().IsNotNull())
-            {
-                thisInst.allowAutoRepair = false;
-                tank.gameObject.GetComponent<AIEAirborne.AirAssistance>().Recycle();
-            }
+
+            thisInst.ResetToDefaultAIController();
 
             var toSet = tank.gameObject.GetComponent<EnemyMind>();
             toSet.HoldPos = tank.boundsCentreWorldNoCheck;

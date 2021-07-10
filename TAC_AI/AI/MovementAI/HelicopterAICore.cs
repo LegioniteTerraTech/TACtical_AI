@@ -10,17 +10,19 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public class HelicopterAI : IMovementAI
+    public class HelicopterAI : IMovementAICore
     {
-        private AIEAirborne.AirAssistance pilot;
+        private AIControllerAir pilot;
+        private Tank tank;
 
-        public void Initiate(Tank tank, ITechDriver pilot)
+        public void Initiate(Tank tank, IMovementAIController pilot)
         {
-            this.pilot = (AIEAirborne.AirAssistance) pilot;
-            this.pilot.FlyStyle = AIEAirborne.FlightType.Helicopter;
+            this.tank = tank;
+            this.pilot = (AIControllerAir) pilot;
+            this.pilot.FlyStyle = AIControllerAir.FlightType.Helicopter;
             this.pilot.FlyingChillFactor = Vector3.one * 30;
         }
-        public bool DriveTech(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
@@ -58,7 +60,7 @@ namespace TAC_AI.AI.MovementAI
 
         public bool DriveDirector()
         {
-            bool combat = AIEDrive.TryHandleCombat(this.pilot.Helper, this.pilot.Tank);
+            bool combat = this.TryAdjustForCombat();
             if (combat)
             {
                 pilot.AirborneDest = this.pilot.Helper.lastDestination;
@@ -112,7 +114,7 @@ namespace TAC_AI.AI.MovementAI
 
                 return true;
             }
-            bool combat = AIEDrive.TryCombatEnemy(this.pilot.Helper, this.pilot.Tank, mind);
+            bool combat = this.TryAdjustForCombatEnemy(mind);
             if (combat)
             {
                 pilot.AirborneDest = this.pilot.Helper.lastDestination;
@@ -205,12 +207,142 @@ namespace TAC_AI.AI.MovementAI
 
         public bool TryAdjustForCombat()
         {
-            return true;
+            AIECore.TankAIHelper thisInst = this.pilot.Helper;
+            bool output = false;
+            if (thisInst.PursueThreat && !thisInst.Retreat && thisInst.lastEnemy.IsNotNull())
+            {
+                output = true;
+                thisInst.Steer = true;
+                float driveDyna = Mathf.Clamp(((thisInst.lastEnemy.transform.position - tank.boundsCentreWorldNoCheck).magnitude - thisInst.IdealRangeCombat) / 3f, -1, 1);
+                if (thisInst.SideToThreat)
+                {
+                    if (thisInst.FullMelee)
+                    {   //orbit WHILE at enemy!
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.lastDestination = thisInst.lastEnemy.transform.position;
+                        thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
+                    }
+                    else if (driveDyna == 1)
+                    {
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
+                    }
+                    else if (driveDyna < 0)
+                    {
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.AdviseAway = true;
+                        thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
+                    }
+                    else
+                    {
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.lastDestination = thisInst.lastEnemy.transform.position;
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
+                    }
+                }
+                else
+                {
+                    if (thisInst.FullMelee)
+                    {
+                        thisInst.DriveDir = EDriveType.Forwards;
+                        thisInst.lastDestination = thisInst.lastEnemy.transform.position;
+                        thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
+                                                //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.ForwardOnly, thisInst.lastEnemy, Mathf.Max(thisInst.lastTechExtents - 10, 0.2f));
+                    }
+                    else if (driveDyna == 1)
+                    {
+                        thisInst.DriveDir = EDriveType.Forwards;
+                        thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5;
+                        //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
+                    }
+                    else if (driveDyna < 0)
+                    {
+                        thisInst.DriveDir = EDriveType.Forwards;
+                        thisInst.AdviseAway = true;
+                        thisInst.lastDestination = thisInst.AvoidAssist(thisInst.lastEnemy.transform.position);
+                        thisInst.MinimumRad = 0.5f;
+                        //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
+                    }
+                    else
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.transform.position;
+                        thisInst.MinimumRad = 0;
+                        //thisControl.m_Movement.FacePosition(tank, thisInst.lastEnemy.transform.position, driveDyna);//Face the music
+                    }
+                }
+            }
+            return output;
         }
 
         public bool TryAdjustForCombatEnemy(RCore.EnemyMind mind)
         {
-            return true;
+            AIECore.TankAIHelper thisInst = this.pilot.Helper;
+            bool output = false;
+            if (!thisInst.Retreat && thisInst.lastEnemy.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)
+            {
+                output = true;
+                thisInst.Steer = true;
+                float driveDyna = Mathf.Clamp(((thisInst.lastEnemy.transform.position - tank.boundsCentreWorldNoCheck).magnitude - thisInst.IdealRangeCombat) / 3f, -1, 1);
+                if (mind.CommanderAttack == Enemy.EnemyAttack.Circle)
+                {
+                    if (mind.CommanderMind == Enemy.EnemyAttitude.Miner)
+                    {   //orbit WHILE at enemy!
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
+                    }
+                    else if (driveDyna == 1)
+                    {
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 2;
+                    }
+                    else if (driveDyna < 0)
+                    {
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.AdviseAway = true;
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 2;
+                    }
+                    else
+                    {
+                        thisInst.DriveDir = EDriveType.Perpendicular;
+                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 2;
+                    }
+                }
+                else
+                {
+                    if (mind.CommanderMind == Enemy.EnemyAttitude.Miner)
+                    {
+                        thisInst.DriveDir = EDriveType.Forwards;
+                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
+                    }
+                    else if (driveDyna == 1)
+                    {
+                        thisInst.DriveDir = EDriveType.Forwards;
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5;
+                    }
+                    else if (driveDyna < 0)
+                    {
+                        thisInst.DriveDir = EDriveType.Forwards;
+                        thisInst.AdviseAway = true;
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.MinimumRad = 0.5f;
+                    }
+                    else
+                    {
+                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.MinimumRad = 0;
+                    }
+                }
+            }
+            return output;
         }
     }
 }

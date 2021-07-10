@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using TAC_AI.AI.MovementAI;
 
 namespace TAC_AI.AI
 {
@@ -29,6 +30,8 @@ namespace TAC_AI.AI
     */
     public class AIECore
     {
+        internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
+
         public static List<Tank> Allies;
         //public static List<ResourceDispenser> Minables;
         public static List<Visible> Minables;
@@ -216,7 +219,6 @@ namespace TAC_AI.AI
 
             public List<ModuleAIExtension> AIList;
             public AIERepair.DesignMemory TechMemor;
-            public AIEAirborne.AirAssistance Pilot;
 
             internal const int DodgeStrength = 60;  //The motivation in trying to move away from a tech in the way
                                                    //250
@@ -249,8 +251,6 @@ namespace TAC_AI.AI
             public bool isAviatorAvail = false;
             public bool isAstrotechAvail = false;
             public bool isBuccaneerAvail = false;
-
-
 
             //BROKEN - cannot set AI types!
             public bool AutoAnchor = false;      // Should the AI toggle the anchor when it is still?
@@ -292,7 +292,6 @@ namespace TAC_AI.AI
 
             internal Tank LastCloseAlly;
 
-
             // Resource AI Handling
             internal bool ProceedToBase = false;
             internal bool ProceedToMine = false;
@@ -317,7 +316,6 @@ namespace TAC_AI.AI
             internal Vector3 Navi3DUp = Vector3.zero;
             public float GroundOffsetHeight = 35;    // flote above ground this dist
 
-
             //Timestep
             internal int FixedDelayedUpdateClock = 0;
             internal int DirectionalHandoffDelay = 0;
@@ -340,7 +338,6 @@ namespace TAC_AI.AI
             /// <summary> Drive AWAY from target </summary>
             internal bool AdviseAway = false;
 
-
             //Finals
             internal float MinimumRad = 0;
             internal float DriveVar = 0;
@@ -360,6 +357,9 @@ namespace TAC_AI.AI
             internal bool Retreat = false;
 
             internal bool JustUnanchored = false;
+
+            // AI Core
+            public IMovementAIController MovementController;
 
 
             public void Subscribe(Tank tank)
@@ -407,6 +407,15 @@ namespace TAC_AI.AI
                 ResetAll(tank);
             }
 
+            public void ResetToDefaultAIController()
+            {
+                if (this.MovementController is AIControllerAir pilot)
+                {
+                    this.MovementController = null;
+                    pilot.Recycle();
+                    this.MovementController = gameObject.AddComponent<AIControllerDefault>();
+                }
+            }
 
             public static void ResetAll(Tank tank)
             {
@@ -433,11 +442,14 @@ namespace TAC_AI.AI
                 var Mem = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (Mem.IsNotNull())
                     Mem.Remove();
-                var Pilot = tank.gameObject.GetComponent<AIEAirborne.AirAssistance>();
-                if (Pilot.IsNotNull())
-                    Pilot.Recycle();
 
-                FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
+                thisInst.MovementController = null;
+                IMovementAIController controller = tank.GetComponent<IMovementAIController>();
+                if (controller != null)
+                {
+                    controller.Recycle();
+                }
+
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
                 control3D.m_State.m_Beam = false;
                 control3D.m_State.m_BoostJets = false;
@@ -446,6 +458,37 @@ namespace TAC_AI.AI
                 control3D.m_State.m_InputMovement = Vector3.zero;
                 control3D.m_State.m_InputRotation = Vector3.zero;
                 controlGet.SetValue(tank.control, control3D);
+            }
+
+            public bool TestForFlyingAIRequirement()
+            {
+                if (AIState == 1 && DediAI == DediAIType.Aviator)
+                {
+                    this.MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
+                    this.MovementController.Initiate(tank, this);
+                    return true;
+                }
+                else if (AIState == 2 && gameObject.GetComponent<Enemy.RCore.EnemyMind>().IsNotNull())
+                {
+                    var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
+                    if (enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
+                    {
+                        this.MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
+                        this.MovementController.Initiate(tank, this, enemy);
+                    }
+                    return true;
+                }
+                else
+                {
+                    AIControllerAir pilot = gameObject.GetComponent<AIControllerAir>();
+                    if (pilot.IsNotNull())
+                    {
+                        this.MovementController = null;
+                        pilot.Recycle();
+                    }
+                    this.MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                    return false;
+                }
             }
 
             public void RefreshAI()
@@ -533,17 +576,38 @@ namespace TAC_AI.AI
                     DediAI = DediAIType.Escort;
                 if (!isAstrotechAvail && DediAI == DediAIType.Astrotech)
                     DediAI = DediAIType.Escort;
+
+                this.MovementController = null;
+                Enemy.RCore.EnemyMind enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
+
                 if (!isAviatorAvail)
                 {
                     if (DediAI == DediAIType.Aviator)
                         DediAI = DediAIType.Escort;
-                    if (gameObject.GetComponent<AIEAirborne.AirAssistance>().IsNotNull())
-                        gameObject.GetComponent<AIEAirborne.AirAssistance>().Recycle();
+
+                    AIControllerAir airController = gameObject.GetComponent<AIControllerAir>();
+                    if (airController.IsNotNull())
+                    {
+                        airController.Recycle();
+                    }
+
+                    this.MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
                 }
                 else if (DediAI == DediAIType.Aviator)
                 {
-                    TestForFlyingAIRequirement();
+                    this.TestForFlyingAIRequirement();
                 }
+
+                if (this.MovementController != null)
+                {
+                    this.MovementController.Initiate(tank, this, enemy);
+                }
+                else
+                {
+                    this.MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                    this.MovementController.Initiate(tank, this, enemy);
+                }
+
                 if (allowAutoRepair)
                 {
                     if (TechMemor.IsNull())
@@ -554,8 +618,6 @@ namespace TAC_AI.AI
                     if (TechMemor.IsNotNull())
                         TechMemor.Remove();
                 }
-
-                //Debug.Log("TACtical_AI: Refreshed AI");
             }
 
             public void ForceAllAIsToEscort()
@@ -585,10 +647,12 @@ namespace TAC_AI.AI
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired CollisionAvoidUpdate!");
                     AIEWeapons.WeaponDirector(thisControl, thisInst, tank);
-                    AIEDrive.DriveDirector(thisControl, thisInst, tank);
+
+                    thisInst.AdviseAway = false;
+                    this.MovementController.DriveDirector();
                 }
                 AIEWeapons.WeaponMaintainer(thisControl, thisInst, tank);
-                AIEDrive.DriveMaintainer(thisControl, thisInst, tank);
+                this.MovementController.DriveMaintainer(thisControl);
             }
             
             /// <summary>
@@ -862,44 +926,6 @@ namespace TAC_AI.AI
                 thisInst.Obst = null;
             }
 
-
-            public void TestForFlyingAIRequirement()
-            {
-                if (AIState == 1 && DediAI == DediAIType.Aviator)
-                {
-                    if (Pilot == null)
-                    {
-                        Pilot = AIEAirborne.AirAssistance.Initiate(tank, this);
-                    }
-                }
-                else if (AIState == 2 && gameObject.GetComponent<Enemy.RCore.EnemyMind>().IsNotNull())
-                {
-                    var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
-                    if (enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
-                    {
-                        if (Pilot == null)
-                        {
-                            Pilot = AIEAirborne.AirAssistance.Initiate(tank, this, enemy);
-                        }
-                    }
-                }
-                else
-                {
-                    if (Pilot != null)
-                    {
-                        Pilot.Recycle();
-                    }
-                    else
-                    {
-                        if (tank.GetComponent<AIEAirborne.AirAssistance>())
-                        {
-                            Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  DID NOT HAVE PILOT SET UP CORRECTLY!!! [TestForFlyingAIRequirement]");
-                            tank.GetComponent<AIEAirborne.AirAssistance>().Recycle();
-                        }
-                    }
-                }
-            }
-
             public bool IsTechMoving(float minSpeed)
             {
                 if (tank.rbody.IsNull())
@@ -1074,7 +1100,7 @@ namespace TAC_AI.AI
                         {
                             ResetAll(thisInst.tank);
                             thisInst.AIState = 1;
-                            RefreshAI();
+                            this.RefreshAI();
                             Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
                         }
 

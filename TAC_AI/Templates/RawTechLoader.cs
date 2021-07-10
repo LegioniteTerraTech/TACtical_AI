@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI;
 
 namespace TAC_AI.Templates
 {
@@ -93,7 +94,7 @@ namespace TAC_AI.Templates
             }
 
             // Now spawn teh main host
-            if (spawnerTank.GetComponent<AI.AIEAirborne.AirAssistance>())
+            if (spawnerTank.GetComponent<AIControllerAir>())
             {
                 SpawnAirBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air), haveBB);
                 return;

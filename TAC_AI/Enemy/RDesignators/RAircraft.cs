@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -201,13 +202,13 @@ namespace TAC_AI.AI.Enemy
         {   // Only accounts for airplanes
 
             thisInst.DANGER = false;
-            thisInst.lastEnemy = mind.FindEnemyAir(thisInst.Pilot);
+            thisInst.lastEnemy = mind.FindEnemyAir();
 
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                if (KickStart.isWeaponAimModPresent && mind.CommanderAttack == EnemyAttack.Circle && thisInst.Pilot.LargeAircraft)
+                if (KickStart.isWeaponAimModPresent && mind.CommanderAttack == EnemyAttack.Circle && ((AIControllerAir) thisInst.MovementController).LargeAircraft)
                 {   // AC-130 broadside attack
                     if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
                     {

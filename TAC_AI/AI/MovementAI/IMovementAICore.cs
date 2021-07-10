@@ -8,11 +8,11 @@ using UnityEngine;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public interface IMovementAI
+    public interface IMovementAICore
     {
-        bool DriveTech(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank);
+        bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank);
 
-        void Initiate(Tank tank, ITechDriver pilot);
+        void Initiate(Tank tank, IMovementAIController controller);
 
         bool DriveDirector();
 

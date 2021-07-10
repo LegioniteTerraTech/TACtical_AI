@@ -12,12 +12,12 @@ namespace TAC_AI.AI.MovementAI
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        public static void UTurn(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIEAirborne.AirAssistance pilot)
+        public static void UTurn(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot)
         {
             //Debug.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
             pilot.MainThrottle = 1;
-            AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
-            if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIEAirborne.AirAssistance.Stallspeed)
+            pilot.UpdateThrottle(thisInst, thisControl);
+            if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIControllerAir.Stallspeed)
             {   //ABORT!!!
                 Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
                 pilot.PerformUTurn = -1;
@@ -57,7 +57,7 @@ namespace TAC_AI.AI.MovementAI
                 }
             }
         }
-        public static Vector3 DetermineRoll(Tank tank, AIEAirborne.AirAssistance pilot, Vector3 Navi3DDirect)
+        public static Vector3 DetermineRoll(Tank tank, AIControllerAir pilot, Vector3 Navi3DDirect)
         {
             //Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
 
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.MovementAI
             }
             return direct;
         }
-        public static void AngleTowards(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIEAirborne.AirAssistance pilot, Vector3 position)
+        public static void AngleTowards(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
         {
             //AI Steering Rotational
             TankControl.ControlState control3D = (TankControl.ControlState) AircraftUtils.controlGet.GetValue(thisControl);
@@ -192,13 +192,13 @@ namespace TAC_AI.AI.MovementAI
             controlGet.SetValue(tank.control, control3D);
             return;
         }
-        public static void AdviseThrottle(AIEAirborne.AirAssistance pilot, AIECore.TankAIHelper thisInst, Tank tank, Vector3 target)
+        public static void AdviseThrottle(AIControllerAir pilot, AIECore.TankAIHelper thisInst, Tank tank, Vector3 target)
         {
             if (pilot.AdvisedThrottle == -1)
             {
                 if (tank.rbody.IsNotNull())
                 {
-                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIEAirborne.AirAssistance.Stallspeed)
+                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIControllerAir.Stallspeed)
                     {
                         float ExtAvoid = 32;
                         if (thisInst.lastPlayer.IsNotNull())
@@ -236,13 +236,13 @@ namespace TAC_AI.AI.MovementAI
                 pilot.AdvisedThrottle = 1;
             }
         }
-        public static void AdviseThrottleTarget(AIEAirborne.AirAssistance pilot, AIECore.TankAIHelper thisInst, Tank tank, Visible target)
+        public static void AdviseThrottleTarget(AIControllerAir pilot, AIECore.TankAIHelper thisInst, Tank tank, Visible target)
         {
             if (pilot.AdvisedThrottle == -1)
             {
                 if (tank.rbody.IsNotNull())
                 {
-                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIEAirborne.AirAssistance.Stallspeed)
+                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIControllerAir.Stallspeed)
                     {
                         float throttleToSet = 1;
                         float foreTarg = tank.rootBlockTrans.InverseTransformPoint(target.tank.boundsCentreWorldNoCheck).z;
@@ -269,7 +269,7 @@ namespace TAC_AI.AI.MovementAI
                         return;
                     }
                     //else
-                    //Debug.Log("TACtical_AI: not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AIEAirborne.AirAssistance.Stallspeed);
+                    //Debug.Log("TACtical_AI: not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AIControllerAir.Stallspeed);
                 }
                 pilot.AdvisedThrottle = 1;
             }
@@ -282,7 +282,7 @@ namespace TAC_AI.AI.MovementAI
             else
                 return target.tank.rbody.velocity + target.tank.boundsCentreWorldNoCheck;
         }
-        public static Vector3 TryGetVelocityOffset(Tank tank, AIEAirborne.AirAssistance pilot)
+        public static Vector3 TryGetVelocityOffset(Tank tank, AIControllerAir pilot)
         {
             if (tank.rbody.IsNotNull())
                 return tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness);

@@ -10,14 +10,14 @@ using TAC_AI.AI;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public class VtolAI : AirplaneAI, IMovementAI
+    public class VtolAI : AirplaneAI, IMovementAICore
     {
-        public override void Initiate(Tank tank, ITechDriver pilot)
+        public override void Initiate(Tank tank, IMovementAIController pilot)
         {
             base.Initiate(tank, pilot);
-            this.pilot.FlyStyle = AIEAirborne.FlightType.VTOL;
+            this.pilot.FlyStyle = AIControllerAir.FlightType.VTOL;
         }
-        public override bool DriveTech(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public override bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
@@ -32,7 +32,7 @@ namespace TAC_AI.AI.MovementAI
             if (tank.wheelGrounded || pilot.ForcePitchUp)
             {   // Try and takeoff like helicopter
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, AIECore.Extremes(tank.blockBounds.extents) * 2));
-                AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                this.pilot.UpdateThrottle(thisInst, thisControl);
                 HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck, true);
             }
             else
@@ -41,8 +41,8 @@ namespace TAC_AI.AI.MovementAI
                 {   //The Immelmann Turn
                     //Debug.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
                     pilot.MainThrottle = 1;
-                    AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
-                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIEAirborne.AirAssistance.Stallspeed - 4)
+                    this.pilot.UpdateThrottle(thisInst, thisControl);
+                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIControllerAir.Stallspeed - 4)
                     {   //ABORT!!!
                         Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
                         pilot.PerformUTurn = -1;
@@ -75,7 +75,7 @@ namespace TAC_AI.AI.MovementAI
                 else if (pilot.PerformUTurn == -1)
                 {
                     pilot.MainThrottle = 1;
-                    AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                    this.pilot.UpdateThrottle(thisInst, thisControl);
                     AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                     if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
                         pilot.PerformUTurn = 0;
@@ -83,7 +83,7 @@ namespace TAC_AI.AI.MovementAI
                 }
                 else
                 {
-                    AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                    this.pilot.UpdateThrottle(thisInst, thisControl);
                     AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                 }
             }

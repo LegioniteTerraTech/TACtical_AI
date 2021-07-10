@@ -11,7 +11,7 @@ namespace TAC_AI.AI.MovementAI
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        public static void AngleTowardsUp(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIEAirborne.AirAssistance pilot, Vector3 position, bool ForceAccend = false)
+        public static void AngleTowardsUp(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position, bool ForceAccend = false)
         {
             //AI Steering Rotational
             TankControl.ControlState control3D = (TankControl.ControlState) HelicopterUtils.controlGet.GetValue(thisControl);
@@ -86,7 +86,7 @@ namespace TAC_AI.AI.MovementAI
             controlGet.SetValue(tank.control, control3D);
             return;
         }
-        public static void DeterminePitchRoll(Tank tank, AIEAirborne.AirAssistance pilot, Vector3 DestinationVector, AIECore.TankAIHelper thisInst, bool PointAtTarget = false)
+        public static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestinationVector, AIECore.TankAIHelper thisInst, bool PointAtTarget = false)
         {
             Vector3 Heading = (DestinationVector - tank.boundsCentreWorldNoCheck).normalized;
             Vector3 fFlat = Heading;
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.MovementAI
             thisInst.Navi3DDirect = fFlat.normalized;
             thisInst.Navi3DUp = directUp;
         }
-        public static float ModerateUpwardsThrust(Tank tank, AIECore.TankAIHelper thisInst, AIEAirborne.AirAssistance pilot, Vector3 targetHeight, bool ForceUp = false)
+        public static float ModerateUpwardsThrust(Tank tank, AIECore.TankAIHelper thisInst, AIControllerAir pilot, Vector3 targetHeight, bool ForceUp = false)
         {
             pilot.LowerEngines = false;
             float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + 0.5f;
@@ -176,7 +176,7 @@ namespace TAC_AI.AI.MovementAI
 
             return Mathf.Clamp(final, -0.1f, 1);
         }
-        public static void UpdateThrottleCopter(AIEAirborne.AirAssistance pilot, AIECore.TankAIHelper thisInst, TankControl control)
+        public static void UpdateThrottleCopter(AIControllerAir pilot, AIECore.TankAIHelper thisInst, TankControl control)
         {
             control.BoostControlProps = false;
             if (pilot.NoProps)

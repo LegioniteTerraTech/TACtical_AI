@@ -15,9 +15,10 @@ namespace TAC_AI.AI
 
             if (thisInst.lastPlayer == null)
                 return;
-            if (thisInst.Pilot == null)
+
+            if (!(thisInst.MovementController is AIControllerAir))
             {
-                Debug.Log("TACtical_AI: AI " + tank.name + ":  FIRED MotivateFly WITHOUT THE REQUIRED AirAssistance MODULE!!!");
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  FIRED MotivateFly WITHOUT THE REQUIRED AIControllerAir MODULE!!!");
                 return;
             }
 
@@ -70,7 +71,7 @@ namespace TAC_AI.AI
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && thisInst.Pilot.LargeAircraft)
+                if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && ((AIControllerAir) thisInst.MovementController).LargeAircraft)
                 {   // AC-130 broadside attack
                     if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
                     {

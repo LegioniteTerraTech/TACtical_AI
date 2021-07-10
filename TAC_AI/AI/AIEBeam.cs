@@ -24,9 +24,9 @@ namespace TAC_AI.AI
             else
                 tank.beam.EnableBeam(false);
 
-            if (thisInst.Pilot != null)
+            if (thisInst.MovementController is AIControllerAir pilot)
             {   // Handoff all operations to AIEAirborne
-                if (!thisInst.Pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                if (!pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
                 {   //Become a ground vehicle for now
                     if (tank.grounded && tank.AI.IsTankOverturned())
                     {

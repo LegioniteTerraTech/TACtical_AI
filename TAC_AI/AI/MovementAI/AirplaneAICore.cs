@@ -10,16 +10,16 @@ using TAC_AI.AI;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public class AirplaneAI : IMovementAI
+    public class AirplaneAI : IMovementAICore
     {
-        internal AIEAirborne.AirAssistance pilot;
+        internal AIControllerAir pilot;
 
-        public virtual void Initiate(Tank tank, ITechDriver pilot)
+        public virtual void Initiate(Tank tank, IMovementAIController pilot)
         {
-            this.pilot = (AIEAirborne.AirAssistance) pilot;
-            this.pilot.FlyStyle = AIEAirborne.FlightType.Aircraft;
+            this.pilot = (AIControllerAir) pilot;
+            this.pilot.FlyStyle = AIControllerAir.FlightType.Aircraft;
         }
-        public virtual bool DriveTech(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public virtual bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
             if (pilot.Grounded || thisInst.forceDrive)
             {   //Become a ground vehicle for now
@@ -37,7 +37,7 @@ namespace TAC_AI.AI.MovementAI
             {   // Try and takeoff
                 pilot.MainThrottle = 1;
                 pilot.PerformUTurn = 0;
-                AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                this.pilot.UpdateThrottle(thisInst, thisControl);
                 AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
             }
             else
@@ -55,7 +55,7 @@ namespace TAC_AI.AI.MovementAI
                         Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborting attack! Target too close!");
                         // AND PITCH UP NOW
                         pilot.MainThrottle = 1;
-                        AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                        this.pilot.UpdateThrottle(thisInst, thisControl);
                         AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
                     }
                     else if (pilot.PerformDiveAttack == 1)
@@ -70,14 +70,14 @@ namespace TAC_AI.AI.MovementAI
                         }
                         else
                         {
-                            AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                            this.pilot.UpdateThrottle(thisInst, thisControl);
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
                     }
                     else if (pilot.PerformDiveAttack == 2)
                     {
                         Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
-                        if (tank.GetForwardSpeed() < AIEAirborne.AirAssistance.Stallspeed + 16)
+                        if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16)
                             pilot.AdvisedThrottle = 1;
                         else
                             pilot.AdvisedThrottle = 0;
@@ -90,11 +90,11 @@ namespace TAC_AI.AI.MovementAI
                         }
                         else
                         {
-                            AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                            this.pilot.UpdateThrottle(thisInst, thisControl);
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
                     }
-                    else if (dist > AIEAirborne.AirAssistance.GroundAttackStagingDist && Heading.z < 0)
+                    else if (dist > AIControllerAir.GroundAttackStagingDist && Heading.z < 0)
                     {   // Launch teh attack run
                         Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
                         pilot.PerformDiveAttack = 1;
@@ -106,7 +106,7 @@ namespace TAC_AI.AI.MovementAI
                         {   // Moving away from target
                             Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
                             pilot.MainThrottle = 1;
-                            AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                            this.pilot.UpdateThrottle(thisInst, thisControl);
                             Vector3 AwayFlat = -Heading;
                             AwayFlat.y = 0;
                             AwayFlat.Normalize();
@@ -116,11 +116,11 @@ namespace TAC_AI.AI.MovementAI
                         else
                         {   // Moving to target
                             Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
-                            if (tank.GetForwardSpeed() < AIEAirborne.AirAssistance.Stallspeed + 16)
+                            if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16)
                                 pilot.AdvisedThrottle = 1;
                             else
                                 pilot.AdvisedThrottle = 0;
-                            AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                            this.pilot.UpdateThrottle(thisInst, thisControl);
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
                     }
@@ -135,7 +135,7 @@ namespace TAC_AI.AI.MovementAI
                 else if (pilot.PerformUTurn == -1)
                 {
                     pilot.MainThrottle = 1;
-                    AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                    this.pilot.UpdateThrottle(thisInst, thisControl);
                     AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                     if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
                     {
@@ -148,7 +148,7 @@ namespace TAC_AI.AI.MovementAI
                 else
                 {
                     pilot.MainThrottle = pilot.AdvisedThrottle;
-                    AIEAirborne.UpdateThrottle(thisInst, pilot, thisControl);
+                    this.pilot.UpdateThrottle(thisInst, thisControl);
                     AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                 }
             }
