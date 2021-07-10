@@ -5,10 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAviator
-    {
+    public static class BAviator {
         public static void MotivateFly(AIECore.TankAIHelper thisInst, Tank tank)
         {   // Will have to account for the different types of flight methods available
             BGeneral.ResetValues(thisInst);

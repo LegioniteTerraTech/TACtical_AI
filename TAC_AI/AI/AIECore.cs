@@ -3,25 +3,34 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
-using TAC_AI.AI.MovementAI;
+using TAC_AI.AI.AlliedOperations;
 
 namespace TAC_AI.AI
 {
     /*
         Summary of functions: Handles Allied AI, and enemy AI if TougherEnemies is installed or overriden to do so.
         
-        AI Control is handled with 4 trees: 
-          AI Set Types and Attitudes - Tells the AI which Designator to utilize
-            VVVVVV
-          AI Action Designator - Handles the destinations the AI should drive to and how to do it (Classes like BEscort or RWheeled)
-            VVVVVV
-          AI Movement Director - Tells the AI how to navigate safely and avoid obsticles along the way
-            VVVVVV
-          AI Movement Maintainer - Makes the AI drive to the director's coordinates
+        AIECore contains the macro parameters that direct AI execution
+
+        AI Control is handled via 2 separate execution flows.
+        
+        Flow 1 - Execution of plan:
+        TanControl.Update -> ModuleTechController.ExecuteControl -> AIECore.BetterAI
+         - AI Movement Controller (IMovementAIController) handles all execution.
+             - AI Movement Director - Tells the AI how to navigate safely and avoid obsticles along the way
+             - AI Movement Maintainer - Makes the AI drive to the director's coordinates
+             - AI Core - Each Core implements Director and Maintainer, and contain the details of how to move (Classes like AiplaneAICore vs VehicleAICore)
+
+        Flow 2 - Planning flow:
+        AIECore.FixedUpdate -> AlliedOperationsController.Execute
+         - AI types are reset/refreshed - Tells the AI which Allied/Enemy Operations to run, and which IMovementAIController to use
+            VVVVV
+         - Allied Operations are executed - Handles the destinations AI should drive to, and how to do it (Classes like BEscort or RWheeled)
+         - Enemy Operations are executed
 
           As such, it's important to note that:
             AI Set Types and Attitudes - fires on change and on spawn/load
-            Action Designators - must fire constantly (but can be slowed) to maintain consistant operation
+            Operations - must fire constantly (but can be slowed) to maintain consistant operation
             Movement Directors - are the major CPU bottlenecks of this mod
             Movement Maintainers - must be fired every Update to prevent AIs from bugging out on drive/fire operations
 
@@ -38,30 +47,6 @@ namespace TAC_AI.AI
         public static List<Transform> Depots;
         public static bool moreThan2Allies;
         private static int lastTechCount = 0;
-
-        public enum DediAIType
-        {   //like the old plans, we make the AI do stuff
-            // COMBAT
-            Escort,     // Good ol' player defender                     (Classic player defense numbnut)
-            Assault,    // Run off and attack the enemies on your radar (Runs off (beyond radar range!) to attack enemies)
-            Aegis,      // Protects the nearest non-player allied Tech  (Follows nearest ally, will chase enemy some distance)
-
-            // RESOURCES
-            Prospector, // Harvest Chunks and return them to base       (Returns chunks when full to nearest receiver)
-            Scrapper,   // Grab loose blocks but avoid combat           (Return to nearest base when threatened)
-            Energizer,  // Charges up and/or heals other techs          (Return to nearest base when out of power)
-
-            // MISC        (MultiTech) - BuildBeam disabled, will fire at any angle.
-            MTTurret,   // Only turns to aim at enemy                   
-            MTSlave,    // Does not move on own but does shoot back     
-            MTMimic,    // Copies the actions of the closest non-MT Tech in relation     
-
-            // ADVANCED    (REQUIRES TOUGHER ENEMIES TO USE!)           (can't just do the same without the enemies attacking these ways as well...)
-            Aviator,    // Flies aircraft, death from above, nuff said  (Flies above ground, by the player and keeps distance) [unload distance will break!]
-            Buccaneer,  // Sails ships amongst ye seas~                 (Avoids terrain above water level)
-            Astrotech,  // Flies hoverships and kicks Tech              (Follows player a certain distance above ground level and can follow into the sky)
-        }
-        //All of their operating ranges are ultimately determined by the Tech's biggest provided vision/radar range.
 
         public static float Extremes(Vector3 input)
         {
@@ -215,7 +200,23 @@ namespace TAC_AI.AI
             public Tank tank;
             public AITreeType.AITypes lastAIType;
             //Tweaks (controlled by Module)
-            public DediAIType DediAI = DediAIType.Escort;    // Will we swap the Escort AI for the Harvest AI for this Tech?
+            public AIType DediAI = AIType.Escort;
+            private AlliedOperationsController _OpsController;
+            public AlliedOperationsController OpsController
+            {
+                get
+                {
+                    if (this._OpsController != null)
+                    {
+                        return this._OpsController;
+                    }
+                    else
+                    {
+                        this._OpsController = new AlliedOperationsController(this);
+                        return this._OpsController;
+                    }
+                }
+            }
 
             public List<ModuleAIExtension> AIList;
             public AIERepair.DesignMemory TechMemor;
@@ -394,13 +395,13 @@ namespace TAC_AI.AI
             public void OnDeathOrRemoval(Tank tankInfo, ManDamage.DamageInfo damage)
             {
                 //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnDeathOrRemoval");
-                tankInfo.gameObject.GetComponent<TankAIHelper>().DediAI = DediAIType.Escort;
+                tankInfo.gameObject.GetComponent<TankAIHelper>().DediAI = AIType.Escort;
                 this.ResetAll(tankInfo);
             }
             public void OnRecycle(Tank tank)
             {
                 //Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Called OnRecycle");
-                tank.gameObject.GetComponent<TankAIHelper>().DediAI = DediAIType.Escort;
+                tank.gameObject.GetComponent<TankAIHelper>().DediAI = AIType.Escort;
                 this.ResetAll(tank);
             }
 
@@ -459,7 +460,7 @@ namespace TAC_AI.AI
             public bool TestForFlyingAIRequirement()
             {
                 var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
-                if (AIState == 1 && DediAI == DediAIType.Aviator)
+                if (AIState == 1 && DediAI == AIType.Aviator)
                 {
                     if (!(this.MovementController is AIControllerAir pilot))
                     {
@@ -579,24 +580,24 @@ namespace TAC_AI.AI
                         allowAutoRepair = true;
                 }
                 // REMOVE any AI states that have been removed!!!
-                if (!isAegisAvail && DediAI == DediAIType.Aegis)
-                    DediAI = DediAIType.Escort;
-                if (!isAssassinAvail && DediAI == DediAIType.Assault)
-                    DediAI = DediAIType.Escort;
-                if (!isProspectorAvail && DediAI == DediAIType.Prospector)
-                    DediAI = DediAIType.Escort;
-                if (!isScrapperAvail && DediAI == DediAIType.Scrapper)
-                    DediAI = DediAIType.Escort;
-                if (!isAstrotechAvail && DediAI == DediAIType.Astrotech)
-                    DediAI = DediAIType.Escort;
+                if (!isAegisAvail && DediAI == AIType.Aegis)
+                    DediAI = AIType.Escort;
+                if (!isAssassinAvail && DediAI == AIType.Assault)
+                    DediAI = AIType.Escort;
+                if (!isProspectorAvail && DediAI == AIType.Prospector)
+                    DediAI = AIType.Escort;
+                if (!isScrapperAvail && DediAI == AIType.Scrapper)
+                    DediAI = AIType.Escort;
+                if (!isAstrotechAvail && DediAI == AIType.Astrotech)
+                    DediAI = AIType.Escort;
 
                 this.MovementController = null;
                 Enemy.RCore.EnemyMind enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
 
                 if (!isAviatorAvail)
                 {
-                    if (DediAI == DediAIType.Aviator)
-                        DediAI = DediAIType.Escort;
+                    if (DediAI == AIType.Aviator)
+                        DediAI = AIType.Escort;
 
                     AIControllerAir airController = gameObject.GetComponent<AIControllerAir>();
                     if (airController.IsNotNull())
@@ -606,7 +607,7 @@ namespace TAC_AI.AI
 
                     this.MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
                 }
-                else if (DediAI == DediAIType.Aviator)
+                else if (DediAI == AIType.Aviator)
                 {
                     this.TestForFlyingAIRequirement();
                 }
@@ -650,10 +651,10 @@ namespace TAC_AI.AI
                 {
                     if (this.lastBasePos.IsNotNull())
                     {
-                        if (this.IdealRangeCombat * 2 < (this.lastBasePos.position - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI == AIECore.DediAIType.Assault)
+                        if (this.IdealRangeCombat * 2 < (this.lastBasePos.position - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI == AIType.Assault)
                             DoNotEngage = true;
                     }
-                    if (this.IdealRangeCombat < (this.lastPlayer.tank.boundsCentreWorldNoCheck - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI != AIECore.DediAIType.Assault)
+                    if (this.IdealRangeCombat < (this.lastPlayer.tank.boundsCentreWorldNoCheck - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI != AIType.Assault)
                         DoNotEngage = true;
                     else if (this.AdvancedAI)
                     {
@@ -841,7 +842,6 @@ namespace TAC_AI.AI
                 return targetIn;
             }
 
-
             // Obstruction Management
             public void TryHandleObstruction(bool hasMessaged, float dist, bool useRush, bool useGun)
             {
@@ -993,111 +993,8 @@ namespace TAC_AI.AI
                     if (this.ActionPause > 0)
                         this.ActionPause--;
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  current mode " + this.DediAI.ToString());
-                    switch (this.DediAI)
-                    {
-                        case DediAIType.Escort:
-                            // We move to victory
-                            this.lastPlayer = GetPlayerTech();
-                            this.foundGoal = false;
-                            //this.IsMultiTech = false;// Disabled so that on tech split it can be set automatically
-                            BEscort.MotivateMove(this, tank);
-                            BGeneral.AidDefend(this, tank);
-                            break;
 
-                        case DediAIType.Assault:
-                            // Up your arsenal
-                            this.IsMultiTech = false;
-                            this.foundGoal = false;
-                            //EAssassin.MotivateKill(this, tank);
-                            //EAssassin.ShootToDestroy(this, tank);
-                            Debug.Log("TACtical_AI: AI NOT READY YET!");
-                            break;
-
-                        case DediAIType.Aegis:
-                            // I fight for my friends (priority resource techs)
-                            this.lastPlayer = GetPlayerTech();
-                            this.foundGoal = false;
-                            this.IsMultiTech = false;
-                            //EAegis.MotivateProtect(this, tank);
-                            BGeneral.AidDefend(this, tank);
-                            Debug.Log("TACtical_AI: AI NOT READY YET!");
-                            break;
-
-                        case DediAIType.Prospector:
-                            // We back in the mine
-                            this.IsMultiTech = false;
-                            BProspector.MotivateMine(this, tank);
-                            BGeneral.SelfDefend(this, tank);
-                            break;
-
-                        case DediAIType.Scrapper:
-                            // Grab Scrape and sell
-                            this.IsMultiTech = false;
-                            this.foundGoal = false;
-                            //EScrapper.MotivateFind(this, tank);
-                            BGeneral.SelfDefend(this, tank);
-                            Debug.Log("TACtical_AI: AI NOT READY YET!");
-                            break;
-
-                        case DediAIType.Energizer:
-                            // The thing that keeps going
-                            this.IsMultiTech = false;
-                            //EEnergizer.MotivateCharge(this, tank);
-                            BGeneral.SelfDefend(this, tank);
-                            Debug.Log("TACtical_AI: AI NOT READY YET!");
-                            break;
-
-                        case DediAIType.MTTurret:
-                            // Load, Aim,    FIIIIIRRRRRRRRRRRRRRRRRRRRRRRRRRRE!!!
-                            this.lastPlayer = GetPlayerTech();
-                            this.IsMultiTech = true;
-                            BGeneral.ResetValues(this);
-                            //EMultiTech.FollowTurretBelow(this, tank);
-                            BMultiTech.BeamLockWithinBounds(this, tank); //lock rigidbody with closest non-MT Tech on build beam
-                            BMultiTech.MimicDefend(this, tank);
-                            break;
-
-                        case DediAIType.MTSlave:
-                            // Defend and sit like good guard dog
-                            this.lastPlayer = GetPlayerTech();
-                            this.IsMultiTech = true;
-                            BGeneral.ResetValues(this);
-                            BMultiTech.BeamLockWithinBounds(this, tank); //lock rigidbody with closest non-MT Tech on build beam
-                            BMultiTech.MimicDefend(this, tank);
-                            break;
-
-                        case DediAIType.MTMimic:
-                            // Copycat
-                            this.lastPlayer = GetPlayerTech();
-                            this.IsMultiTech = true;
-                            this.Attempt3DNavi = true;
-                            BGeneral.ResetValues(this);
-                            BMultiTech.MimicClosestAlly(this, tank);
-                            break;
-
-                        case DediAIType.Astrotech:
-                            // Grace from Space
-                            this.lastPlayer = GetPlayerTech();
-                            this.IsMultiTech = false;
-                            this.Attempt3DNavi = true;
-                            BAstrotech.MotivateSpace(this, tank);
-                            BGeneral.AidDefend(this, tank);
-                            break;
-
-                        case DediAIType.Aviator:
-                            // Fly and doggyfight
-                            this.lastPlayer = GetPlayerTech();
-                            this.IsMultiTech = false;
-                            this.Attempt3DNavi = false;
-                            BAviator.MotivateFly(this, tank);
-                            BAviator.Dogfighting(this, tank);
-                            break;
-
-                        default:
-                            // It's one of the other showboat AIs(VEN(Air) or TAC(Navy) or Legion(Star)).  Not yet dammit!
-                            Debug.Log("TACtical_AI: AI NOT READY YET! - Tougher Enemies doesn't even exist yet hold your horses!");
-                            break;
-                    }
+                    this.OpsController.Execute();
                     this.DetermineCombat();
                 }
             }

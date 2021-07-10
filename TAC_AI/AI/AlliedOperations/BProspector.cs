@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BProspector
-    {
+    public static class BProspector{
         public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
@@ -234,6 +233,5 @@ namespace TAC_AI.AI
                 thisInst.foundBase = false;
             }
         }
-
     }
 }

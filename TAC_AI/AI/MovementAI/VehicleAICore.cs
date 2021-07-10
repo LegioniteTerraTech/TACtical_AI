@@ -30,14 +30,14 @@ namespace TAC_AI.AI.MovementAI
             // Debug.Log("TACtical_AI: Tech " + tank.name + " drive was called");
             if (this.controller.Helper.IsMultiTech)
             {   //Override and disable most driving abilities
-                if (this.controller.Helper.DediAI == AIECore.DediAIType.MTSlave)
+                if (this.controller.Helper.DediAI == AIType.MTSlave)
                 {   // act like a trailer
                     this.controller.Helper.DriveDir = EDriveType.Neutral;
                     this.controller.Helper.Steer = false;
                     this.controller.Helper.lastDestination = this.controller.Helper.lastEnemy.transform.position;
                     this.controller.Helper.MinimumRad = 0;
                 }
-                else if (this.controller.Helper.lastEnemy != null && this.controller.Helper.DediAI == AIECore.DediAIType.MTTurret)
+                else if (this.controller.Helper.lastEnemy != null && this.controller.Helper.DediAI == AIType.MTTurret)
                 {
                     this.controller.Helper.Steer = true;
                     this.controller.Helper.lastDestination = this.controller.Helper.lastEnemy.transform.position;
@@ -46,7 +46,7 @@ namespace TAC_AI.AI.MovementAI
                     //float driveDyna = Mathf.Abs(Mathf.Clamp((this.controller.Tank.rootBlockTrans.forward - aimTo).magnitude / 1.5f, -1, 1));
                     //thisControl.m_Movement.FacePosition(this.controller.Tank, this.controller.Helper.lastEnemy.transform.position, driveDyna);//Face the music
                 }
-                else if (this.controller.Helper.MTMimicHostAvail && this.controller.Helper.LastCloseAlly != null && this.controller.Helper.DediAI == AIECore.DediAIType.MTMimic)
+                else if (this.controller.Helper.MTMimicHostAvail && this.controller.Helper.LastCloseAlly != null && this.controller.Helper.DediAI == AIType.MTMimic)
                 {
                     this.controller.Helper.MinimumRad = 0.05f;
                     this.controller.Helper.lastDestination = AIEPathing.GetDriveApproxAir(this.controller.Helper.LastCloseAlly, this.controller.Helper);
@@ -107,7 +107,7 @@ namespace TAC_AI.AI.MovementAI
                     }
                 }
             }
-            else if (this.controller.Helper.DediAI == AIECore.DediAIType.Aegis)
+            else if (this.controller.Helper.DediAI == AIType.Aegis)
             {
                 this.controller.Helper.LastCloseAlly = AIEPathing.ClosestAlly(this.controller.Tank.boundsCentreWorldNoCheck, out float bestval);
                 bool Combat = this.TryAdjustForCombat();
@@ -162,7 +162,7 @@ namespace TAC_AI.AI.MovementAI
             }
             if (this.controller.Helper.Attempt3DNavi && !(this.controller.Helper.FullMelee && this.controller.Helper.lastEnemy.IsNotNull()))
                 this.controller.Helper.lastDestination = AIEPathing.OffsetFromGround(this.controller.Helper.lastDestination, this.controller.Helper);
-            else if (this.controller.Helper.DediAI == AIECore.DediAIType.Buccaneer)
+            else if (this.controller.Helper.DediAI == AIType.Buccaneer)
                 this.controller.Helper.lastDestination = AIEPathing.OffsetToSea(this.controller.Helper.lastDestination, this.controller.Helper);
 
             return true;

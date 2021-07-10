@@ -5,6 +5,7 @@ using System.Linq;
 using Harmony;
 using UnityEngine;
 using UnityEngine.UI;
+using TAC_AI.AI;
 
 namespace TAC_AI
 {
@@ -586,13 +587,13 @@ namespace TAC_AI
             private static void Prefix(TankControl __instance, ref TankControl other)
             {
                 if (__instance.Tech.blockman.IterateBlockComponents<ModuleWheels>().Count() > 0 || __instance.Tech.blockman.IterateBlockComponents<ModuleHover>().Count() > 0)
-                    __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AI.AIECore.DediAIType.Escort;
+                    __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.Escort;
                 else
                 {
                     if (__instance.Tech.blockman.IterateBlockComponents<ModuleWeapon>().Count() > 0)
-                        __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AI.AIECore.DediAIType.MTTurret;
+                        __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.MTTurret;
                     else
-                        __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AI.AIECore.DediAIType.MTSlave;
+                        __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.MTSlave;
                 }
             }
         }
