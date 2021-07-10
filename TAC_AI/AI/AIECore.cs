@@ -235,8 +235,8 @@ namespace TAC_AI.AI
             public bool SecondAvoidence = false;// Should the AI avoid two techs at once?
             public bool SideToThreat = false;   // Should the AI circle the enemy?
 
-            public float RangeToChase = 100;    // How far should we pursue the enemy?
-            public float RangeToStopRush = 50;  // The range the AI will linger from the player
+            public float RangeToChase = 50;    // How far should we pursue the enemy?
+            public float RangeToStopRush = 20;  // The range the AI will linger from the player
             public float IdealRangeCombat = 25; // The range the AI will linger from the enemy if PursueThreat is true
             public int AnchorAimDampening = 45; // How much do we dampen anchor movements by?
 
@@ -846,50 +846,51 @@ namespace TAC_AI.AI
             public void TryHandleObstruction(bool hasMessaged, float dist, bool useRush, bool useGun)
             {
                 //Something is in the way - try fetch the scenery to shoot at
-                var thisInst = gameObject.GetComponent<TankAIHelper>();
-
                 Debug.Log("TACtical_AI: AI " + tank.name + ":  Obstructed");
                 if (!hasMessaged)
                 {
                     Debug.Log("TACtical_AI: AI " + tank.name + ":  Can't move there - something's in the way!");
                 }
 
-                thisInst.UrgencyOverload += KickStart.AIClockPeriod / 2;
-                if (thisInst.Urgency > 0)
-                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                if (useRush && dist > thisInst.RangeToStopRush * 2)
+                this.forceDrive = true;
+                this.DriveVar = 1;
+
+                this.UrgencyOverload += KickStart.AIClockPeriod / 2;
+                if (this.Urgency > 0)
+                    this.Urgency += KickStart.AIClockPeriod / 5;
+                if (useRush && dist > this.RangeToStopRush * 2)
                 {
                     //SCREW IT - GO FULL SPEED WE ARE TOO FAR BEHIND!
                     if (useGun)
                         RemoveObstruction(); 
-                    thisInst.forceDrive = true;
-                    thisInst.DriveVar = 1f;
-                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
+                    this.forceDrive = true;
+                    this.DriveVar = 1f;
+                    this.Urgency += KickStart.AIClockPeriod / 5;
                 }
-                else if (10 < thisInst.FrustrationMeter)
+                else if (10 < this.FrustrationMeter)
                 {
                     //Try build beaming to clear debris
-                    thisInst.FrustrationMeter += KickStart.AIClockPeriod / 5;
-                    if (30 < thisInst.FrustrationMeter)
+                    this.FrustrationMeter += KickStart.AIClockPeriod / 5;
+                    if (30 < this.FrustrationMeter)
                     {
-                        thisInst.FrustrationMeter = 0;
+                        this.FrustrationMeter = 0;
                     }
-                    else if (15 < thisInst.FrustrationMeter)
+                    else if (15 < this.FrustrationMeter)
                     {
-                        thisInst.forceDrive = true;
-                        thisInst.DriveVar = -1;
+                        this.forceDrive = true;
+                        this.DriveVar = -1;
                     }
                     else
-                        thisInst.forceBeam = true;
+                        this.forceBeam = true;
                 }
                 else
                 {
                     //Shoot the freaking tree
-                    thisInst.FrustrationMeter += KickStart.AIClockPeriod / 5;
+                    this.FrustrationMeter += KickStart.AIClockPeriod / 5;
                     if (useGun)
                         RemoveObstruction();
-                    thisInst.forceDrive = true;
-                    thisInst.DriveVar = 0.5f;
+                    this.forceDrive = true;
+                    this.DriveVar = 0.5f;
                 }
             }
             /*

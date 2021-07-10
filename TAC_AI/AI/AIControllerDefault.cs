@@ -59,28 +59,8 @@ namespace TAC_AI.AI
 
         public void DriveMaintainer(TankControl thisControl)
         {
-            if (thisControl.IsNotNull())
-            {
-                if (thisControl.m_Movement is Movement movement)
-                {
-                    if (this.Helper.IsNull())
-                    {
-                        Debug.Log("TACtical_AI: AIControllerDefault HAS NULL Helper");
-                    }
-                    else
-                    {
-                        movement.m_USE_AVOIDANCE = this.Helper.AvoidStuff;
-                    }
-                }
-                else
-                {
-                    Debug.Log("TACtical_AI: GIVEN TankControl WITH NULL m_Movement");
-                }
-            }
-            else
-            {
-                Debug.Log("TACtical_AI: GIVEN NULL TankControl");
-            }
+            thisControl.m_Movement.m_USE_AVOIDANCE = this.Helper.AvoidStuff;
+            this.AICore.DriveMaintainer(thisControl, this.Helper, this.Tank);
         }
 
         public void Initiate(Tank tank, AIECore.TankAIHelper helper, RCore.EnemyMind mind = null)
@@ -88,6 +68,7 @@ namespace TAC_AI.AI
             this.Tank = tank;
             this.Helper = helper;
             this.EnemyMind = mind;
+
             this.AICore = new VehicleAICore();
             this.AICore.Initiate(tank, this);
 
