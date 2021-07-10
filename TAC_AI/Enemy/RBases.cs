@@ -184,15 +184,12 @@ namespace TAC_AI.AI.Enemy
             {
                 mind.AllowInvBlocks = true;
                 mind.AllowRepairsOnFly = true;
-                RCore.BlockSetEnemyHandling(tank, mind);
-                RCore.RandomSetMindAttack(mind, tank);
                 //mind.InvertBullyPriority = true;
                 //mind.EvilCommander = EnemyHandling.Starship;
                 mind.CommanderAttack = EnemyAttack.Grudge;
                 //mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
-
                 var builder = tank.GetComponent<Templates.BookmarkBuilder>();
                 mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (mind.TechMemor.IsNull())
@@ -201,9 +198,15 @@ namespace TAC_AI.AI.Enemy
                     mind.TechMemor.Initiate();
                 }
                 mind.TechMemor.SetupForNewTechConstruction(thisInst, builder.blueprint);
-                AIERepair.Turboconstruct(tank, mind.TechMemor);
+                tank.MainCorps.Add(builder.faction);
                 UnityEngine.Object.DestroyImmediate(builder);
+                AIERepair.Turboconstruct(tank, mind.TechMemor);
+
+                RCore.BlockSetEnemyHandling(tank, mind);
+                RCore.RandomSetMindAttack(mind, tank);
+
                 DidFire = true;
+                //Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + mind.EvilCommander.ToString() + " based enemy with attitude " + mind.CommanderAttack.ToString() + " | Mind " + mind.CommanderMind.ToString() + " | Smarts " + mind.CommanderSmarts.ToString() + " inbound!");
             }
             if (name.Contains(" ¥¥"))
             {
@@ -243,6 +246,7 @@ namespace TAC_AI.AI.Enemy
                     SetupBaseType(type, mind);
                     mind.TechMemor.SetupForNewTechConstruction(thisInst, Templates.RawTechLoader.GetBlueprint(type));
                     mind.TechMemor.unlimitedParts = Templates.RawTechLoader.GetEnemyBaseSupplies(type);
+                    tank.MainCorps.Add(Templates.RawTechLoader.GetMainCorp(type));
                     DidFire = true;
                 }
             }

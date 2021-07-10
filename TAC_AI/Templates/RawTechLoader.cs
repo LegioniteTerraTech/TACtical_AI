@@ -13,6 +13,7 @@ namespace TAC_AI.Templates
     {
         public string blueprint;
         public bool infBlocks;
+        public FactionSubTypes faction;
     }
 
     public static class RawTechLoader
@@ -189,6 +190,7 @@ namespace TAC_AI.Templates
             var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+            namesav.faction = GetMainCorp(toSpawn);
         }
         public static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotABase, bool silentFail = true)
         {
@@ -214,21 +216,20 @@ namespace TAC_AI.Templates
                 }
             }
 
-            Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             string baseBlueprint = GetBlueprint(toSpawn);
             Vector3 position = pos;
-            position.y = offset;
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
             TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AI.AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
 
             Tank theTech;
             theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
-
-            theTech.FixupAnchors(true);
+            
+            Debug.Log("TACtical_AI: SpawnAttractTech - Spawned " + GetEnglishName(toSpawn));
             var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+            namesav.faction = GetMainCorp(toSpawn);
             return true;
         }
 
@@ -264,7 +265,7 @@ namespace TAC_AI.Templates
         }
         public static BaseTemplate GetBaseTemplate(SpawnBaseTypes toSpawn)
         {
-            if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT)) //Find(delegate (BaseTemplate cand) { return cand.baseType == toSpawn; });
+            if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
                 return baseT;
             return TempManager.techBases.ElementAtOrDefault(1).Value;
         }
@@ -361,6 +362,10 @@ namespace TAC_AI.Templates
         public static string GetEnglishName(SpawnBaseTypes toSpawn)
         {
             return GetBaseTemplate(toSpawn).techName;
+        }
+        public static FactionSubTypes GetMainCorp(SpawnBaseTypes toSpawn)
+        {
+            return GetBaseTemplate(toSpawn).faction;
         }
         public static int GetBaseStartingFunds(SpawnBaseTypes toSpawn)
         {

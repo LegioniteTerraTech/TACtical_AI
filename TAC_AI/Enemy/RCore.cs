@@ -48,31 +48,6 @@ namespace TAC_AI.AI.Enemy
             {
                 return;
             }
-            /*
-            var bookworm = tank.GetComponent<Templates.BookmarkName>();
-            if (bookworm.IsNotNull())
-            {
-                tank.SetName(bookworm.savedName);
-                Mind.EvilCommander = EnemyHandling.Stationary;
-                Mind.CommanderMind = EnemyAttitude.Default;
-                Mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                Mind.CommanderAttack = EnemyAttack.Grudge;
-                Mind.CommanderBolts = EnemyBolts.AtFull;
-                Mind.AllowInvBlocks = true;
-                Mind.AllowRepairsOnFly = true;
-
-                Mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
-                if (Mind.TechMemor.IsNull())
-                {
-                    Mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
-                    Mind.TechMemor.Initiate();
-                }
-                Mind.TechMemor.SetupForNewTechConstruction(thisInst, bookworm.blueprint, !bookworm.infBlocks);
-                Mind.StartedAnchored = true;
-
-                UnityEngine.Object.Destroy(bookworm);
-            }
-            */
 
             RBolts.ManageBolts(thisInst, tank, Mind);
             if (Mind.AllowRepairsOnFly)
@@ -134,17 +109,7 @@ namespace TAC_AI.AI.Enemy
             bool isMissionTech = RMission.SetupMissionAI(thisInst, tank, toSet);
             if (isMissionTech)
             {
-                if (toSet.CommanderSmarts >= EnemySmarts.Smrt)
-                {
-                    toSet.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
-                    if (toSet.TechMemor.IsNull())
-                    {
-                        toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
-                        toSet.TechMemor.Initiate();
-                    }
-                }
-                if (toSet.CommanderAttack == EnemyAttack.Grudge)
-                    toSet.FindEnemy();
+                FinalCleanup(thisInst, toSet, tank);
                 return;
             }
 
@@ -159,46 +124,7 @@ namespace TAC_AI.AI.Enemy
             {
                 RandomSetMindAttack(toSet, tank);
             }
-            if (toSet.CommanderSmarts == EnemySmarts.Default && toSet.EvilCommander == EnemyHandling.Wheeled)
-            {
-                thisInst.Hibernate = true;// enable the default AI
-                Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
-                return;
-            }
-
-            if (!Singleton.Manager<ManGameMode>.inst.GetIsInPlayableMode())
-            {   // make sure they fight
-                if (toSet.EvilCommander != EnemyHandling.Wheeled)
-                    toSet.CommanderAttack = EnemyAttack.Grudge;
-                if (toSet.CommanderAttack == EnemyAttack.Coward)
-                    toSet.CommanderAttack = EnemyAttack.Bully;
-                if (toSet.CommanderAttack == EnemyAttack.Spyper)
-                    toSet.CommanderAttack = EnemyAttack.Grudge;
-                toSet.CommanderMind = EnemyAttitude.Homing;
-            }
-
-            if (toSet.CommanderAttack == EnemyAttack.Grudge)
-                toSet.FindEnemy();
-            if (toSet.CommanderMind == EnemyAttitude.Miner)
-            {
-                thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst);
-                Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-            }
-            else if (toSet.CommanderMind == EnemyAttitude.Boss)
-            {
-                thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, Templates.BasePurpose.Headquarters);
-                Debug.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-            }
-            else if (toSet.CommanderMind == EnemyAttitude.Invader)
-            {
-                thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, Templates.BasePurpose.AnyNonHQ);
-                Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-            }
-            else
-                Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+            FinalCleanup(thisInst, toSet, tank);
         }
 
 
@@ -222,14 +148,6 @@ namespace TAC_AI.AI.Enemy
                 toSet.AllowRepairsOnFly = true;//top 2
                 toSet.InvertBullyPriority = true;
             }
-            if (toSet.CommanderSmarts > EnemySmarts.Meh)
-            {
-                toSet.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
-                if (toSet.TechMemor.IsNull())
-                    toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
-                toSet.TechMemor.Initiate();
-                toSet.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
-            }
         }
         public static bool SetSmartAIStats(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind toSet)
         {
@@ -237,8 +155,6 @@ namespace TAC_AI.AI.Enemy
             var BM = tank.blockman;
             //Determine driving method
             BlockSetEnemyHandling(tank, toSet);
-
-            thisInst.TestForFlyingAIRequirement();
 
             //Determine Attitude
             if (BM.blockCount > 250 && KickStart.MaxEnemyHQLimit > RBases.GetEnemyHQCount())
@@ -433,6 +349,59 @@ namespace TAC_AI.AI.Enemy
                     toSet.CommanderAttack = EnemyAttack.Spyper;
                     break;
             }
+        }
+        public static void FinalCleanup(AIECore.TankAIHelper thisInst, EnemyMind toSet, Tank tank)
+        {
+            if (toSet.CommanderSmarts > EnemySmarts.Meh)
+            {
+                toSet.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
+                if (toSet.TechMemor.IsNull())
+                    toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                toSet.TechMemor.Initiate();
+                toSet.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
+            }
+            thisInst.TestForFlyingAIRequirement();
+
+            if (toSet.CommanderSmarts == EnemySmarts.Default && toSet.EvilCommander == EnemyHandling.Wheeled)
+            {
+                thisInst.Hibernate = true;// enable the default AI
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
+                return;
+            }
+
+            if (!Singleton.Manager<ManGameMode>.inst.GetIsInPlayableMode())
+            {   // make sure they fight
+                if (toSet.EvilCommander != EnemyHandling.Wheeled)
+                    toSet.CommanderAttack = EnemyAttack.Grudge;
+                if (toSet.CommanderAttack == EnemyAttack.Coward)
+                    toSet.CommanderAttack = EnemyAttack.Bully;
+                if (toSet.CommanderAttack == EnemyAttack.Spyper)
+                    toSet.CommanderAttack = EnemyAttack.Grudge;
+                toSet.CommanderMind = EnemyAttitude.Homing;
+            }
+
+            if (toSet.CommanderAttack == EnemyAttack.Grudge)
+                toSet.FindEnemy();
+            if (toSet.CommanderMind == EnemyAttitude.Miner)
+            {
+                thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
+                Templates.RawTechLoader.TrySpawnBase(tank, thisInst);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+            }
+            else if (toSet.CommanderMind == EnemyAttitude.Boss)
+            {
+                thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
+                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, Templates.BasePurpose.Headquarters);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+            }
+            else if (toSet.CommanderMind == EnemyAttitude.Invader)
+            {
+                thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
+                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, Templates.BasePurpose.AnyNonHQ);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+            }
+            else
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
         }
         public static void SetFromScheme(EnemyMind toSet, Tank tank)
         {

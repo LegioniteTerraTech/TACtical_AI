@@ -107,7 +107,7 @@ namespace TAC_AI.AI.Enemy
                     mind.CommanderBolts = EnemyBolts.MissionTrigger;
                     DidFire = true;
                 }
-
+                /*
                 else if (name == "TAC InvaderAttract")
                 {
                     mind.AllowInvBlocks = true;
@@ -120,6 +120,7 @@ namespace TAC_AI.AI.Enemy
                     mind.CommanderBolts = EnemyBolts.MissionTrigger;
                     DidFire = true;
                 }
+                */
                 else
                 {
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))

@@ -77,6 +77,40 @@ namespace TAC_AI
                     KickStart.DelayedBaseLoader();
             }
         }
+        [HarmonyPatch(typeof(ModeAttract))]
+        [HarmonyPatch("UpdateModeImpl")]
+        private static class RestartAttract
+        {
+            private static void Prefix(ModeAttract __instance)
+            {
+                FieldInfo state = typeof(ModeAttract).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);
+                int mode = (int)state.GetValue(__instance);
+                if (mode == 2)
+                {
+                    bool restart = true;
+                    List<Tank> active = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
+                    foreach (Tank tonk in active)
+                    {
+                        if (tonk.Weapons.GetFirstWeapon().IsNotNull())
+                        {
+                            foreach (Tank tonk2 in active)
+                            {
+                                if (tonk.IsEnemy(tonk2.Team))
+                                    restart = false;
+                            }
+                        }
+                    }
+                    if (restart == true)
+                    {
+                        UILoadingScreenHints.SuppressNextHint = true;
+                        Singleton.Manager<ManUI>.inst.FadeToBlack();
+                        state.SetValue(__instance, 3);
+                    }
+
+                }
+
+            }
+        }
 
         [HarmonyPatch(typeof(ModeAttract))]
         [HarmonyPatch("SetupTechs")]//lol
@@ -86,7 +120,6 @@ namespace TAC_AI
             {
                 try
                 {
-
                     if (UnityEngine.Random.Range(1, 100) > 5)
                     {
                         Debug.Log("TACtical_AI: Ooop - the special threshold has been met");
@@ -94,68 +127,87 @@ namespace TAC_AI
                         Vector3 spawn = tankPos.boundsCentreWorld + (tankPos.rootBlockTrans.forward * 20);
                         Singleton.Manager<ManWorld>.inst.GetTerrainHeight(spawn, out float height);
                         spawn.y = height;
+                        bool caseOverride = true;
 
-                        int randNum = (int)(UnityEngine.Random.Range(1, 100) + 0.5f);
-                        if (randNum < 10)
-                        {   // space invader
-                            //Debug.Log("TACtical_AI: Throwing in TAC ref lol");
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Space);
-                        }
-                        else if (randNum < 18)
-                        {   // Aircraft fight
-                            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
-                            {
-                                Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 10);
-                                position.y += 10;
+                        int TechCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
+                        List<Tank> tanksToConsider = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
+                        for (int step = 0; TechCount > step; step++)
+                        {
+                            Tank tech = tanksToConsider.ElementAt(step);
+                            Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 32);
+                            position.y += 64;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Air))
-                                    tech.Recycle();
-                            }
+                            if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, Templates.BaseTerrain.Air, silentFail: false))
+                                tech.visible.RemoveFromGame();
                         }
-                        else if (randNum < 24)
-                        {   // Airship assault
-                            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
-                            {
-                                Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 10);
-                                position.y += 10;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Space))
-                                    tech.Recycle();
+                        if (!caseOverride)
+                        {
+                            int randNum = (int)(UnityEngine.Random.Range(1, 100) + 0.5f);
+                            if (randNum < 10)
+                            {   // space invader
+                                //Debug.Log("TACtical_AI: Throwing in TAC ref lol");
+                                Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Space);
                             }
-                        }
-                        else if (randNum < 32)
-                        {   // Naval Brawl
-                            //if (KickStart.isWaterModPresent)
-                            //{
-                            //    Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Templates.BaseTerrain.Sea);
-                            //}
-                            //else
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
-                        }
-                        else if (randNum < 45)
-                        {   // HQ Siege
-                            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
-                            {
-                                tech.SetTeam(4114);
-                            }
-                            tankPos.SetTeam(916);
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, tankPos.Team, Vector3.forward, Templates.BaseTerrain.Land, tankPos.GetMainCorp(), Templates.BasePurpose.Headquarters);
-                        }
-                        else if (randNum < 60)
-                        {   // pending
-                            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
-                            {
-                                Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 10);
-                                position.y += 10;
+                            else if (randNum < 18)
+                            {   // Aircraft fight
+                                for (int step = 0; TechCount > step; step++)
+                                {
+                                    Tank tech = tanksToConsider.ElementAt(step);
+                                    Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 32);
+                                    position.y += 64;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Land))
-                                    tech.Recycle();
+                                    if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, Templates.BaseTerrain.Air, silentFail: false))
+                                        tech.visible.RemoveFromGame();
+                                }
                             }
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Space);
-                        }
-                        else
-                        {   // Land battle invoker
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
+                            else if (randNum < 24)
+                            {   // Airship assault
+                                for (int step = 0; TechCount > step; step++)
+                                {
+                                    Tank tech = tanksToConsider.ElementAt(step);
+                                    Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 48);
+                                    position.y += 64;
+
+                                    if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Space, silentFail: false))
+                                        tech.visible.RemoveFromGame();
+                                }
+                            }
+                            else if (randNum < 32)
+                            {   // Naval Brawl
+                                //if (KickStart.isWaterModPresent)
+                                //{
+                                //    Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Templates.BaseTerrain.Sea);
+                                //}
+                                //else
+                                Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
+                            }
+                            else if (randNum < 45)
+                            {   // HQ Siege
+                                foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
+                                {
+                                    tech.SetTeam(4114);
+                                }
+                                tankPos.SetTeam(916);
+                                Templates.RawTechLoader.SpawnAttractTech(spawn, tankPos.Team, Vector3.forward, Templates.BaseTerrain.Land, tankPos.GetMainCorp(), Templates.BasePurpose.Headquarters);
+                            }
+                            else if (randNum < 60)
+                            {   // pending
+                                for (int step = 0; TechCount > step; step++)
+                                {
+                                    Tank tech = tanksToConsider.ElementAt(step);
+                                    Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 10);
+                                    position.y += 10;
+
+                                    if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Land))
+                                        tech.visible.RemoveFromGame();
+                                }
+                                Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Space);
+                            }
+                            else
+                            {   // Land battle invoker
+                                Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
+                            }
                         }
                     }
                 }

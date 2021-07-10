@@ -11,6 +11,7 @@ namespace TAC_AI.Templates
     }
     public enum SpawnBaseTypes
     {
+        // STATIONARY TECHS
         // error
         NotAvail,
         // GSO
@@ -37,6 +38,10 @@ namespace TAC_AI.Templates
         HETankFactory,
         HEMunitionsDepot,
         HEAircraftGarrison,
+
+        // MOBILE TECHS
+        // Hybridz
+        AttractServo,
         // TAC lol
         TACInvaderAttract,
         TACInvaderAttract2,
