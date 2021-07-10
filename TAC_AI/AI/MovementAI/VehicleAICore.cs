@@ -27,7 +27,7 @@ namespace TAC_AI.AI.MovementAI
 
         public bool DriveDirector()
         {
-            Debug.Log("TACtical_AI: Tech " + tank.name + " drive was called");
+            // Debug.Log("TACtical_AI: Tech " + tank.name + " drive was called");
             if (this.controller.Helper.IsMultiTech)
             {   //Override and disable most driving abilities
                 if (this.controller.Helper.DediAI == AIECore.DediAIType.MTSlave)
@@ -245,7 +245,7 @@ namespace TAC_AI.AI.MovementAI
 
         public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            Debug.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
+            // Debug.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
             if (thisInst.Attempt3DNavi)
             {
                 //3D movement
