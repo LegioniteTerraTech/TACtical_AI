@@ -57,7 +57,7 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        Debug.Log("TACtical_AI: Failiure on handling AI addition!");
+                        Debug.Log("TACtical_AI: Failure on handling AI addition!");
                         Debug.Log(e);
                     }
                 }

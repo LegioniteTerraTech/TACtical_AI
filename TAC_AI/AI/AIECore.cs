@@ -406,11 +406,16 @@ namespace TAC_AI.AI
 
             public void ResetToDefaultAIController()
             {
-                if (this.MovementController is AIControllerAir pilot)
+                if (!(this.MovementController is AIControllerDefault))
                 {
+                    IMovementAIController controller = this.MovementController;
                     this.MovementController = null;
-                    pilot.Recycle();
+                    if (controller != null)
+                    {
+                        controller.Recycle();
+                    }
                     this.MovementController = gameObject.AddComponent<AIControllerDefault>();
+                    this.MovementController.Initiate(this.tank, this);
                 }
             }
 
@@ -439,12 +444,7 @@ namespace TAC_AI.AI
                 if (Mem.IsNotNull())
                     Mem.Remove();
 
-                this.MovementController = null;
-                IMovementAIController controller = tank.GetComponent<IMovementAIController>();
-                if (controller != null)
-                {
-                    controller.Recycle();
-                }
+                this.ResetToDefaultAIController();
 
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
                 control3D.m_State.m_Beam = false;
@@ -458,17 +458,35 @@ namespace TAC_AI.AI
 
             public bool TestForFlyingAIRequirement()
             {
+                var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
                 if (AIState == 1 && DediAI == DediAIType.Aviator)
                 {
+                    if (!(this.MovementController is AIControllerAir pilot))
+                    {
+                        IMovementAIController controller = this.MovementController;
+                        this.MovementController = null;
+                        if (controller != null)
+                        {
+                            controller.Recycle();
+                        }
+                    }
                     this.MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
                     this.MovementController.Initiate(tank, this);
                     return true;
                 }
                 else if (AIState == 2 && gameObject.GetComponent<Enemy.RCore.EnemyMind>().IsNotNull())
                 {
-                    var enemy = gameObject.GetComponent<Enemy.RCore.EnemyMind>();
-                    if (enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
+                    if (enemy && enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
                     {
+                        if (!(this.MovementController is AIControllerAir pilot))
+                        {
+                            IMovementAIController controller = this.MovementController;
+                            this.MovementController = null;
+                            if (controller != null)
+                            {
+                                controller.Recycle();
+                            }
+                        }
                         this.MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
                         this.MovementController.Initiate(tank, this, enemy);
                     }
@@ -476,13 +494,13 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    AIControllerAir pilot = gameObject.GetComponent<AIControllerAir>();
-                    if (pilot.IsNotNull())
+                    if (this.MovementController is AIControllerAir pilot)
                     {
                         this.MovementController = null;
                         pilot.Recycle();
+                        this.MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                        this.MovementController.Initiate(tank, this, enemy);
                     }
-                    this.MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
                     return false;
                 }
             }
@@ -503,7 +521,6 @@ namespace TAC_AI.AI
                 isAviatorAvail = false;
                 isBuccaneerAvail = false;
 
-                FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
                 control3D.m_State.m_Beam = false;
                 control3D.m_State.m_BoostJets = false;
@@ -600,8 +617,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    this.MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
-                    this.MovementController.Initiate(tank, this, enemy);
+                    this.ResetToDefaultAIController();
                 }
 
                 if (allowAutoRepair)
@@ -659,6 +675,11 @@ namespace TAC_AI.AI
             {
                 // The interface method for actually handling the tank - note that this fires at a different rate
                 this.lastTechExtents = Extremes(this.tank.blockBounds.extents);
+
+                if (this.MovementController is null)
+                {
+                    Debug.Log("NULL MOVEMENT CONTROLLER");
+                }
 
                 AIEBeam.BeamDirector(thisControl, this, this.tank);
                 if (this.updateCA)
