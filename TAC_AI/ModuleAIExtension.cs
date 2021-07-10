@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI;
 
 namespace TAC_AI
 {
@@ -11,7 +12,7 @@ namespace TAC_AI
     {
         TankBlock TankBlock;
 
-        public AI.AIECore.DediAIType SavedAI;
+        public AIType SavedAI;
 
         /*
         // What can this new AI do? 
@@ -121,13 +122,13 @@ namespace TAC_AI
             //    thisInst.RefreshAI();
             TankBlock.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             TankBlock.serializeTextEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
-            SavedAI = AI.AIECore.DediAIType.Escort;
+            SavedAI = AIType.Escort;
         }
 
         [Serializable]
         private new class SerialData : SerialData<SerialData>
         {
-            public AI.AIECore.DediAIType savedMode;
+            public AIType savedMode;
         }
 
         private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)
@@ -156,7 +157,7 @@ namespace TAC_AI
                         {
                             thisInst.DediAI = serialData2.savedMode;
                             thisInst.RefreshAI();
-                            if (serialData2.savedMode == AI.AIECore.DediAIType.Aviator)
+                            if (serialData2.savedMode == AIType.Aviator)
                                 thisInst.TestForFlyingAIRequirement();
                         }
                         SavedAI = serialData2.savedMode;

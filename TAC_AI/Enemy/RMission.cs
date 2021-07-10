@@ -59,7 +59,7 @@ namespace TAC_AI.AI.Enemy
                 MissionAIStatus.Send(tank, mAIState);
             }
         }
-        public static bool SetupMissionAI(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static bool SetupMissionAI(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             string name = tank.name;
             bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
@@ -191,7 +191,7 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static bool MissionHandler(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static bool MissionHandler(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             return true;
         }

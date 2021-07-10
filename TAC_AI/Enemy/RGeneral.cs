@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI.Movement;
+using TAC_AI.AI.Enemy.EnemyOperations;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -11,7 +13,7 @@ namespace TAC_AI.AI.Enemy
     {
         static float RANDRange = 50;
 
-        public static bool LollyGag(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, bool holdGround = false)
+        public static bool LollyGag(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool holdGround = false)
         {
             bool isRegenerating = false;
             if (mind.Hurt)// && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10)
@@ -122,7 +124,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst, tank.blockBounds.size.y);
             return isRegenerating;
         }
-        public static void Engadge(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void Engadge(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (!mind.StartedAnchored && tank.IsAnchored)
             {
@@ -133,7 +135,7 @@ namespace TAC_AI.AI.Enemy
 
 
         // Handle being bored AIs
-        public static void DefaultIdle(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void DefaultIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (thisInst.ActionPause == 1)
             {
@@ -145,7 +147,7 @@ namespace TAC_AI.AI.Enemy
             else
                 thisInst.ActionPause--;
         }
-        public static void HomingIdle(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void HomingIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //Try find next target to assault
             try
@@ -172,7 +174,7 @@ namespace TAC_AI.AI.Enemy
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void AidAttack(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void AidAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             // Determines the weapons actions and aiming of the AI
             thisInst.lastEnemy = mind.FindEnemy();
@@ -190,7 +192,7 @@ namespace TAC_AI.AI.Enemy
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void AimAttack(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void AimAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             thisInst.DANGER = false;
@@ -228,7 +230,7 @@ namespace TAC_AI.AI.Enemy
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void SelfDefense(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void SelfDefense(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             // Alternative of the above - does not aim at enemies while mining
             if (thisInst.Obst == null)
@@ -242,7 +244,7 @@ namespace TAC_AI.AI.Enemy
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void HoldGrudge(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void HoldGrudge(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (thisInst.lastEnemy != null)
             {

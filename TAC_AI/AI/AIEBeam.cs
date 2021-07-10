@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI
 {
@@ -24,9 +25,9 @@ namespace TAC_AI.AI
             else
                 tank.beam.EnableBeam(false);
 
-            if (thisInst.Pilot != null)
+            if (thisInst.MovementController is AIControllerAir pilot)
             {   // Handoff all operations to AIEAirborne
-                if (!thisInst.Pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                if (!pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
                 {   //Become a ground vehicle for now
                     if (tank.grounded && tank.AI.IsTankOverturned())
                     {
@@ -91,7 +92,7 @@ namespace TAC_AI.AI
             }
             else if (!thisInst.IsMultiTech && tank.AI.IsTankOverturned() && thisInst.RequestBuildBeam)
             {
-                if (thisInst.DediAI == AIECore.DediAIType.Astrotech)
+                if (thisInst.DediAI == AIType.Astrotech)
                 {
                     //reduce build beam spam when aiming
                     thisInst.ActionPause++;
@@ -114,7 +115,7 @@ namespace TAC_AI.AI
             else
             {
 
-                if (thisInst.DediAI == AIECore.DediAIType.Astrotech)
+                if (thisInst.DediAI == AIType.Astrotech)
                     thisInst.ActionPause = 0;
                 if (thisInst.MTLockedToTechBeam && thisInst.IsMultiTech)
                 {   //Override and disable most driving abilities - We are going to follow the host tech!

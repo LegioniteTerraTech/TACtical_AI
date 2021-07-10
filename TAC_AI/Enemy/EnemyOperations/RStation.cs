@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace TAC_AI.AI.Enemy
+namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public class RStation
+    public static class RStation
     {
-        public static void HoldPosition(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void HoldPosition(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);

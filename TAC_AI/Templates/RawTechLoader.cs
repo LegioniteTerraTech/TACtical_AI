@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI;
+using TAC_AI.AI.Movement;
 
 namespace TAC_AI.Templates
 {
@@ -93,14 +95,14 @@ namespace TAC_AI.Templates
             }
 
             // Now spawn teh main host
-            if (spawnerTank.GetComponent<AI.AIEAirborne.AirAssistance>())
+            if (spawnerTank.GetComponent<AIControllerAir>())
             {
                 SpawnAirBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air), haveBB);
                 return;
             }
             else if (KickStart.isWaterModPresent)
             {
-                if (AI.AIEPathing.AboveTheSea(pos))
+                if (AIEPathing.AboveTheSea(pos))
                 {
                     SpawnSeaBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea), haveBB);
                     return;

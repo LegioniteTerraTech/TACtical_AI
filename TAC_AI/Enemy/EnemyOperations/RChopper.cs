@@ -5,9 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace TAC_AI.AI.Enemy
+namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    class RChopper
+    public static class RChopper
     {
         // ENEMY CONTROLLERS
         /*  
@@ -18,7 +18,7 @@ namespace TAC_AI.AI.Enemy
             Pesterer,   // Randomly switch targets on 5 second intervals
             Spyper,     // OPPOSITE!!!  Bombs the enemy from high above instead! 
         */
-        public static void TryFly(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void TryFly(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             BGeneral.ResetValues(thisInst);
             thisInst.Attempt3DNavi = false;

@@ -5,15 +5,19 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAstrotech
-    {
-        //Same a escort code, because the BEscort code supports 3D!
-        // we just need to re-define how far above ground we should be
-        public static void MotivateSpace(AIECore.TankAIHelper thisInst, Tank tank)
+    public static class BBuccaneer {
+        //Same as Airship but levels out with the sea and avoids terrain
+        public static void MotivateBote(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //The Handler that tells the ship (Escort) what to do movement-wise
+            //The Handler that tells the naval ship (Escort) what to do movement-wise
+            if (!KickStart.isWaterModPresent)
+            {
+                //Fallback to normal escort if no watermod present
+                thisInst.DediAI = AIType.Escort;
+                return;
+            }
             BGeneral.ResetValues(thisInst);
 
             if (thisInst.lastPlayer == null)
@@ -31,7 +35,8 @@ namespace TAC_AI.AI
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
                 thisInst.MoveFromObjective = true;
                 thisInst.forceDrive = true;
-                thisInst.DriveVar = 1;
+                thisInst.DriveVar = -1;
+                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
@@ -48,6 +53,7 @@ namespace TAC_AI.AI
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Departing!");
                 thisInst.ProceedToObjective = true;
+                //thisInst.lastDestination = OffsetToSea(thisInst.lastPlayer.centrePosition, thisInst);
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -65,6 +71,7 @@ namespace TAC_AI.AI
             {
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.ProceedToObjective = true;
+                //thisInst.lastDestination = OffsetToSea(thisInst.lastPlayer.centrePosition, thisInst);
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1f;
 
@@ -142,6 +149,7 @@ namespace TAC_AI.AI
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Settling");
+                //thisInst.lastDestination = OffsetToSea(tank.transform.position, thisInst);
                 thisInst.AvoidStuff = true;
                 thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
@@ -161,6 +169,7 @@ namespace TAC_AI.AI
             {
                 //Likely idle
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  in resting state");
+                //thisInst.lastDestination = OffsetToSea(tank.transform.position, thisInst);
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 thisInst.lastMoveAction = 0;

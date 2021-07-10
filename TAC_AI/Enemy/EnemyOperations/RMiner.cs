@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace TAC_AI.AI.Enemy
+namespace TAC_AI.AI.Enemy.EnemyOperations
 {
     public static class RMiner
     {
-        public static void MineYerOwnBusiness(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void MineYerOwnBusiness(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;

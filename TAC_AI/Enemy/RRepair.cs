@@ -11,7 +11,7 @@ namespace TAC_AI.AI.Enemy
     {
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
         //  Most major operations are called from AIERepair.
-        public static bool EnemyRepairLerp(Tank tank, RCore.EnemyMind mind, bool overrideChecker = false)
+        public static bool EnemyRepairLerp(Tank tank, EnemyMind mind, bool overrideChecker = false)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             if (mind.TechMemor.IsNull())
@@ -115,7 +115,7 @@ namespace TAC_AI.AI.Enemy
             }
             return false;
         }
-        public static bool EnemyInstaRepair(Tank tank, RCore.EnemyMind mind, int RepairAttempts = 0)
+        public static bool EnemyInstaRepair(Tank tank, EnemyMind mind, int RepairAttempts = 0)
         {
             bool success = false;
 
@@ -141,7 +141,7 @@ namespace TAC_AI.AI.Enemy
             }
             return success;
         }
-        public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind, int Delay = 25, bool Super = false)
+        public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, int Delay = 25, bool Super = false)
         {
             if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
             {
@@ -172,7 +172,7 @@ namespace TAC_AI.AI.Enemy
 
 
         // EXPERIMENTAL - AI-Based new Tech building
-        public static bool EnemyNewTechConstruction(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static bool EnemyNewTechConstruction(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
             {

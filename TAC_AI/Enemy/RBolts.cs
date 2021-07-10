@@ -17,7 +17,7 @@ namespace TAC_AI.AI.Enemy
         MissionTrigger, // Hold until triggered by mission event (basically no internal fire)
          */
 
-        public static void ManageBolts(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void ManageBolts(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //if (tank.IsSleeping)
             //    return;

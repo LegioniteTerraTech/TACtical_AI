@@ -1,12 +1,18 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using UnityEngine;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BEscort
-    {
-        public static void MotivateMove(AIECore.TankAIHelper thisInst, Tank tank)
+    public static class BAstrotech {
+        //Same a escort code, because the BEscort code supports 3D!
+        // we just need to re-define how far above ground we should be
+        public static void MotivateSpace(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //The Handler that tells the Tank (Escort) what to do movement-wise
+            //The Handler that tells the ship (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);
 
             if (thisInst.lastPlayer == null)
@@ -24,8 +30,7 @@ namespace TAC_AI.AI
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
                 thisInst.MoveFromObjective = true;
                 thisInst.forceDrive = true;
-                thisInst.DriveVar = -1;
-                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
+                thisInst.DriveVar = 1;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
@@ -34,7 +39,6 @@ namespace TAC_AI.AI
                     {
                         thisInst.unanchorCountdown = 15;
                         tank.TryToggleTechAnchor();
-                        thisInst.JustUnanchored = true;
                     }
                 }
             }
@@ -43,7 +47,6 @@ namespace TAC_AI.AI
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Departing!");
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -54,7 +57,6 @@ namespace TAC_AI.AI
                         Debug.Log("TACtical_AI: AI " + tank.name + ": Time to pack up and move out!");
                         thisInst.unanchorCountdown = 15;
                         tank.TryToggleTechAnchor();
-                        thisInst.JustUnanchored = true;
                     }
                 }
             }
@@ -62,9 +64,8 @@ namespace TAC_AI.AI
             {
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.ProceedToObjective = true;
-                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
-                //thisInst.forceDrive = true;
-                //thisInst.DriveVar = 1f;
+                thisInst.forceDrive = true;
+                thisInst.DriveVar = 1f;
 
 
                 //DISTANCE WARNINGS
@@ -74,10 +75,9 @@ namespace TAC_AI.AI
                     thisInst.Urgency += KickStart.AIClockPeriod / 2;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1f;
-                    thisInst.featherBoost = true;
                     //Debug.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
                     if (thisInst.UrgencyOverload > 0)
-                        thisInst.UrgencyOverload -= KickStart.AIClockPeriod / 5;
+                        thisInst.UrgencyOverload--;
                 }
                 if (thisInst.UrgencyOverload > 50)
                 {
@@ -141,7 +141,6 @@ namespace TAC_AI.AI
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Settling");
-                //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
@@ -161,11 +160,10 @@ namespace TAC_AI.AI
             {
                 //Likely idle
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  in resting state");
-                //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 thisInst.lastMoveAction = 0;
-                //thisInst.DriveVar = 0;
+                thisInst.DriveVar = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
@@ -180,4 +178,5 @@ namespace TAC_AI.AI
             }
         }
     }
+
 }

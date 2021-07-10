@@ -1,35 +1,30 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
+﻿using UnityEngine;
 
-namespace TAC_AI.AI.Designators
+namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAegis
-    {
+    public static class BEscort {
         public static void MotivateMove(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //The Handler that tells the Tank (Aegis) what to do movement-wise
+            //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);
 
-            if (thisInst.LastCloseAlly == null)
+            if (thisInst.lastPlayer == null)
                 return;
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.LastCloseAlly.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.LastCloseAlly.blockBounds.extents);
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             bool hasMessaged = thisInst.Feedback;// set this to false to get AI feedback testing
             thisInst.lastRange = dist;
 
-            float AllyExt = AIECore.Extremes(thisInst.LastCloseAlly.blockBounds.extents);
+            float playerExt = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
 
-            if (dist < thisInst.lastTechExtents + AllyExt + 2)
+            if (dist < thisInst.lastTechExtents + playerExt + 2)
             {
                 thisInst.DelayedAnchorClock = 0;
-                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving " + thisInst.LastCloseAlly.name + " some room...");
+                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
                 thisInst.MoveFromObjective = true;
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = -1;
+                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
@@ -42,11 +37,12 @@ namespace TAC_AI.AI.Designators
                     }
                 }
             }
-            else if (dist < range + AllyExt && dist > (range / 2) + AllyExt)
+            else if (dist < range + playerExt && dist > (range / 2) + playerExt)
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Departing!");
                 thisInst.ProceedToObjective = true;
+                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -61,10 +57,13 @@ namespace TAC_AI.AI.Designators
                     }
                 }
             }
-            else if (dist >= range + AllyExt)
+            else if (dist >= range + playerExt)
             {
                 thisInst.DelayedAnchorClock = 0;
                 thisInst.ProceedToObjective = true;
+                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
+                //thisInst.forceDrive = true;
+                //thisInst.DriveVar = 1f;
 
 
                 //DISTANCE WARNINGS
@@ -137,7 +136,7 @@ namespace TAC_AI.AI.Designators
                 }
                 thisInst.lastMoveAction = 1;
             }
-            else if (dist < (range / 4) + AllyExt)
+            else if (dist < (range / 4) + playerExt)
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Settling");

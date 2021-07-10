@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using System.Reflection;
+using TAC_AI.AI.Movement;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BMultiTech
-    {
+    public static class BMultiTech {
         public static void MimicClosestAlly(AIECore.TankAIHelper thisInst, Tank tank)
         {
             Tank hostTech;

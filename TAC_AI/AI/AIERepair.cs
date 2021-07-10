@@ -430,7 +430,7 @@ namespace TAC_AI.AI
             }
             if (thisInst.AIState == 2)
             {
-                var mind = tank.GetComponent<Enemy.RCore.EnemyMind>();
+                var mind = tank.GetComponent<Enemy.EnemyMind>();
                 if ((mind.AllowRepairsOnFly || (thisInst.lastEnemy.IsNull())) && (blocksNearby || KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks))
                 {
                     return true;

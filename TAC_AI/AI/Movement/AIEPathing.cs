@@ -4,9 +4,8 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 
-namespace TAC_AI.AI
+namespace TAC_AI.AI.Movement
 {
-
     public static class AIEPathing
     {
         public static List<Tank> Allies
@@ -20,8 +19,6 @@ namespace TAC_AI.AI
         //The default steering handles the ground steering
 
         //3-axis steering is handled in AIEDrive
-
-
 
         // OBSTICLE AVOIDENCE
         public static List<Visible> ObstructionAwareness(Vector3 posWorld, AIECore.TankAIHelper thisInst)

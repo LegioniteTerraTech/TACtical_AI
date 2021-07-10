@@ -5,11 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace TAC_AI.AI.Enemy
+namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public class RSuicideMissile
+    public static class RSuicideMissile
     {
-        public static void RamTillDeath(AIECore.TankAIHelper thisInst, Tank tank, RCore.EnemyMind mind)
+        public static void RamTillDeath(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (thisInst.lastEnemy.IsNotNull())
             {
