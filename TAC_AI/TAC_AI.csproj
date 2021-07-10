@@ -114,7 +114,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AI\AIEAirborne.cs" />
+    <Compile Include="AI\AIControllerAir.cs" />
+    <Compile Include="AI\AIControllerDefault.cs" />
     <Compile Include="AI\AIEPathing.cs" />
     <Compile Include="AI\AIEBeam.cs" />
     <Compile Include="AI\AIERepair.cs" />
@@ -122,14 +123,14 @@
     <Compile Include="AI\CombatUtils.cs" />
     <Compile Include="AI\Designators\BAegis.cs" />
     <Compile Include="AI\Designators\BAviator.cs" />
-    <Compile Include="AI\ITechDriver.cs" />
+    <Compile Include="AI\IMovementAIController.cs" />
     <Compile Include="AI\MovementAI\AircraftUtils.cs" />
-    <Compile Include="AI\MovementAI\AirplaneAI.cs" />
-    <Compile Include="AI\MovementAI\HelicopterAI.cs" />
+    <Compile Include="AI\MovementAI\AirplaneAICore.cs" />
+    <Compile Include="AI\MovementAI\HelicopterAICore.cs" />
     <Compile Include="AI\MovementAI\HelicopterUtils.cs" />
-    <Compile Include="AI\MovementAI\IMovementAI.cs" />
-    <Compile Include="AI\MovementAI\VehicleAI.cs" />
-    <Compile Include="AI\MovementAI\VtolAI.cs" />
+    <Compile Include="AI\MovementAI\IMovementAICore.cs" />
+    <Compile Include="AI\MovementAI\VehicleAICore.cs" />
+    <Compile Include="AI\MovementAI\VtolAICore.cs" />
     <Compile Include="EDriveType.cs" />
     <Compile Include="AI\Designators\BAstrotech.cs" />
     <Compile Include="AI\Designators\BEscort.cs" />
@@ -138,7 +139,6 @@
     <Compile Include="AI\Designators\BBuccaneer.cs" />
     <Compile Include="AI\Designators\BProspector.cs" />
     <Compile Include="AI\AIECore.cs" />
-    <Compile Include="AI\AIEDrive.cs" />
     <Compile Include="EEnemy.cs" />
     <Compile Include="Enemy\RDesignators\RAircraft.cs" />
     <Compile Include="Enemy\RBolts.cs" />
@@ -164,8 +164,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Templates\EBasePurpose.cs" />
     <Compile Include="Templates\ESpawnBaseTypes.cs" />
-    <Compile Include="Templates\EnemyBaseLoader.cs" />
-    <Compile Include="Templates\BaseTemplateManager.cs" />
+    <Compile Include="Templates\RawTechLoader.cs" />
+    <Compile Include="Templates\TempManager.cs" />
+    <Compile Include="Templates\TempStorage.cs" />
+    <Compile Include="UnityEngineExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="mod.json">
