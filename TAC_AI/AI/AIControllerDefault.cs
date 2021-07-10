@@ -67,7 +67,7 @@ namespace TAC_AI.AI
             this.Tank = tank;
             this.Helper = helper;
             this.EnemyMind = mind;
-            this.AICore = new VehicleAI();
+            this.AICore = new VehicleAICore();
             this.AICore.Initiate(tank, this);
 
             tank.AttachEvent.Subscribe(OnAttach);

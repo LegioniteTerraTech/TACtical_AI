@@ -10,7 +10,7 @@ using TAC_AI.AI;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public class VtolAI : AirplaneAI, IMovementAICore
+    public class VtolAICore : AirplaneAICore, IMovementAICore
     {
         public override void Initiate(Tank tank, IMovementAIController pilot)
         {

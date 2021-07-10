@@ -10,7 +10,7 @@ using TAC_AI.AI;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public class AirplaneAI : IMovementAICore
+    public class AirplaneAICore : IMovementAICore
     {
         internal AIControllerAir pilot;
 

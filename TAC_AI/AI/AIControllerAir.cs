@@ -111,17 +111,17 @@ namespace TAC_AI.AI
                 {
                     if (Vector3.Dot(this.PropBias, Vector3.up) > 0.6f)
                     {   // Likely a helicopter
-                        this.AICore = new HelicopterAI();
+                        this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                     }
                     else if (Vector3.Dot(this.PropBias, Vector3.up) > 0.3f)
                     {   // Likely a VTOL
-                        this.AICore = new VtolAI();
+                        this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
                     }
                     else
                     {   // Likely an airplane
-                        this.AICore = new AirplaneAI();
+                        this.AICore = new AirplaneAICore();
                         this.AICore.Initiate(tank, this);
                     }
                 }
@@ -129,17 +129,17 @@ namespace TAC_AI.AI
                 {
                     if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.6f)
                     {   // Likely a helicopter
-                        this.AICore = new HelicopterAI();
+                        this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                     }
                     else if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.3f)
                     {   // Likely a VTOL
-                        this.AICore = new VtolAI();
+                        this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
                     }
                     else
                     {   // Likely an airplane
-                        this.AICore = new AirplaneAI();
+                        this.AICore = new AirplaneAICore();
                         this.AICore.Initiate(tank, this);
                     }
                 }
@@ -151,19 +151,19 @@ namespace TAC_AI.AI
                 {
                     if (Vector3.Dot(this.PropBias, Vector3.up) > 0.6f)
                     {   // Likely a helicopter
-                        this.AICore = new HelicopterAI();
+                        this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Chopper;
                     }
                     else if (Vector3.Dot(this.PropBias, Vector3.up) > 0.3f)
                     {   // Likely a VTOL
-                        this.AICore = new VtolAI();
+                        this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }
                     else
                     {   // Likely an airplane
-                        this.AICore = new AirplaneAI();
+                        this.AICore = new AirplaneAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }
@@ -172,19 +172,19 @@ namespace TAC_AI.AI
                 {
                     if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.6f)
                     {   // Likely a helicopter
-                        this.AICore = new HelicopterAI();
+                        this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Chopper;
                     }
                     else if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.3f)
                     {   // Likely a VTOL
-                        this.AICore = new VtolAI();
+                        this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }
                     else
                     {   // Likely an airplane
-                        this.AICore = new AirplaneAI();
+                        this.AICore = new AirplaneAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }

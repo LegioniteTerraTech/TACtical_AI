@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public class VehicleAI : IMovementAICore
+    public class VehicleAICore : IMovementAICore
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
         private AIControllerDefault controller;

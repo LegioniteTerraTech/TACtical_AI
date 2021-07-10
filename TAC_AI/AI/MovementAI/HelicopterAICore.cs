@@ -10,7 +10,7 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.AI.MovementAI
 {
-    public class HelicopterAI : IMovementAICore
+    public class HelicopterAICore : IMovementAICore
     {
         private AIControllerAir pilot;
         private Tank tank;
