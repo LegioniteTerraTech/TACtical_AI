@@ -627,6 +627,29 @@ namespace TAC_AI.AI
                 }
             }
 
+            private void DetermineCombat()
+            {
+                bool DoNotEngage = false;
+                if (this.lastPlayer.IsNotNull())
+                {
+                    if (this.lastBasePos.IsNotNull())
+                    {
+                        if (this.IdealRangeCombat * 2 < (this.lastBasePos.position - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI == AIECore.DediAIType.Assault)
+                            DoNotEngage = true;
+                    }
+                    if (this.IdealRangeCombat < (this.lastPlayer.tank.boundsCentreWorldNoCheck - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI != AIECore.DediAIType.Assault)
+                        DoNotEngage = true;
+                    else if (this.AdvancedAI)
+                    {
+                        //WIP
+                        if (this.DamageThreshold > 30)
+                        {
+                            DoNotEngage = true;
+                        }
+                    }
+                }
+                this.Retreat = DoNotEngage;
+            }
 
             /// <summary>
             /// Main controller for ALL AI
@@ -1053,7 +1076,7 @@ namespace TAC_AI.AI
                             Debug.Log("TACtical_AI: AI NOT READY YET! - Tougher Enemies doesn't even exist yet hold your horses!");
                             break;
                     }
-                    AIEDrive.DetermineCombat(this);
+                    this.DetermineCombat();
                 }
             }
 
