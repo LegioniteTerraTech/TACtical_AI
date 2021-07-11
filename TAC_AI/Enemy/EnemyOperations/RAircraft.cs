@@ -39,7 +39,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         return;
                 }
             }
-            else if (thisInst.lastEnemy == null)
+            if (thisInst.lastEnemy == null)
             {
                 RGeneral.LollyGag(thisInst, tank, mind);
                 return;
@@ -206,7 +206,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             if (thisInst.lastEnemy != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
+                Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 if (KickStart.isWeaponAimModPresent && mind.CommanderAttack == EnemyAttack.Circle && ((AIControllerAir) thisInst.MovementController).LargeAircraft)
                 {   // AC-130 broadside attack

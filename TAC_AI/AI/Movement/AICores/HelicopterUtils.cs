@@ -131,7 +131,7 @@ namespace TAC_AI.AI.Movement.AICores
                 */
             }
             // Because tilting forwards too hard causes the chopper to stall on some builds
-            fFlat.y = fFlat.y - (fFlat.y * pilot.CurrentThrottle);
+            //fFlat.y = fFlat.y - (fFlat.y * pilot.CurrentThrottle);
 
             thisInst.Navi3DDirect = fFlat.normalized;
             thisInst.Navi3DUp = directUp;

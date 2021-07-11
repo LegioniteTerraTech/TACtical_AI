@@ -31,24 +31,26 @@ namespace TAC_AI.AI.Enemy
         public bool InvertBullyPriority = false;// Shoot the big techs instead
         public bool AllowInvBlocks = false;     // Can this tech spawn blocks from inventory?
 
-        public bool SolarsAvail = false;        // Do whe currently have solar panels
+        public bool SolarsAvail = false;        // Do we currently have solar panels
         public bool Provoked = false;           // Were we hit from afar?
         public bool Hurt = false;               // Are we damaged?
         public int Range = 250;                 // Aggro range
         public int TargetLockDuration = 0;      // For pesterer's random target swatching
         public Vector3 HoldPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
 
-        internal bool remove = false;
+        internal bool queueRemove = false;
         internal const float SpyperMaxRange = 1000;
 
         public void Initiate()
         {
-            remove = false;
+            queueRemove = false;
             Tank = gameObject.GetComponent<Tank>();
+            Debug.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
             AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
             EnemyOpsController = new EnemyOperationsController(this);
             Tank.DamageEvent.Subscribe(OnHit);
             Tank.DetachEvent.Subscribe(OnBlockLoss);
+            AIControl.MovementController.UpdateEnemyMind(this);
             try
             {
                 MainFaction = Tank.GetMainCorp();   //Will help determine their Attitude
@@ -63,9 +65,10 @@ namespace TAC_AI.AI.Enemy
             if (gameObject.GetComponent<EnemyMind>().IsNotNull())
             {
                 Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
-                remove = true;
+                queueRemove = true;
                 if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
                     gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
+                AIControl.MovementController.UpdateEnemyMind(null);
                 DestroyImmediate(this);
             }
         }

@@ -31,6 +31,7 @@ namespace TAC_AI.AI {
         }
 
         void Initiate(Tank tank, AIECore.TankAIHelper helper, Enemy.EnemyMind mind = null);
+        void UpdateEnemyMind(Enemy.EnemyMind mind);
 
         void DriveDirector();
 

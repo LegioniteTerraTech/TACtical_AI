@@ -352,8 +352,10 @@ namespace TAC_AI.AI
                         }
                         //Debug.Log("TACtical AI: RepairLerp - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
                         IsBlockStoredInInventory(tank, typesMissing.ElementAt(step), true);
+
+                        // everything else failed, time to resort to timbuktu
                         foundBlock.damage.SelfDestruct(0.1f);
-                        Vector3 yeet = -Vector3.one * 450000;
+                        Vector3 yeet = Vector3.forward * 450000;
                         foundBlock.transform.position = yeet;
                     }
                 }
@@ -652,7 +654,7 @@ namespace TAC_AI.AI
                 typesToRepair = typesToRepair.Distinct().ToList();
 
                 int attachAttempts;
-                Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
+                //Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
 
                 attachAttempts = typesMissing.Count();
                 for (int step = 0; step < attachAttempts; step++)
@@ -672,8 +674,10 @@ namespace TAC_AI.AI
                         }
                     }
                     //Debug.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+
+                    // everything else failed, time to resort to timbuktu
                     foundBlock.damage.SelfDestruct(0.1f);
-                    Vector3 yeet = -Vector3.one * 450000;
+                    Vector3 yeet = Vector3.forward * 450000;
                     foundBlock.transform.position = yeet;
                 }
             }

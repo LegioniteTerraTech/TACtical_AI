@@ -38,14 +38,19 @@ namespace TAC_AI.AI.Enemy
         // Begin the AI tree
         public static void RunEvilOperations(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            EnemyMind Mind = thisInst.MovementController.EnemyMind;
+            //EnemyMind Mind = tank.GetComponent<EnemyMind>();
+            var Mind = thisInst.MovementController.EnemyMind;
             if (Mind.IsNull())
             {
-                RandomizeBrain(thisInst, tank);
-                return;
+                Mind = tank.GetComponent<EnemyMind>();
+                Debug.Log("TACtical_AI: Updating MovementController for " + tank.name);
+                thisInst.MovementController.UpdateEnemyMind(Mind);
+                //RandomizeBrain(thisInst, tank);
+                //return;
             }
-            if (Mind.remove)
+            if (Mind.queueRemove)
             {
+                Debug.Log("TACtical_AI: Removing Enemy AI (delayed) for " + tank.name);
                 return;
             }
 

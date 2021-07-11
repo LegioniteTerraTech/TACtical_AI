@@ -75,6 +75,10 @@ namespace TAC_AI.AI
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
         }
+        public void UpdateEnemyMind(EnemyMind mind)
+        {
+            this.EnemyMind = mind;
+        }
 
         public void OnAttach(TankBlock block, Tank tank)
         {

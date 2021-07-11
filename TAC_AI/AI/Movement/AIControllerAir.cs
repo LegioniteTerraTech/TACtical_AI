@@ -198,6 +198,10 @@ namespace TAC_AI.AI
                 Debug.Log("TACtical_AI: Tech " + tank.name + " has been assigned aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + this.FlyStyle.ToString() + " and flying chill of " + this.FlyingChillFactor);
             }
         }
+        public void UpdateEnemyMind(Enemy.EnemyMind mind)
+        {
+            this.EnemyMind = mind;
+        }
         public void Recycle()
         {
             this.AICore = null;

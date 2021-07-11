@@ -198,7 +198,13 @@ namespace TAC_AI.AI.Enemy
                     mind.TechMemor.Initiate();
                 }
                 mind.TechMemor.SetupForNewTechConstruction(thisInst, builder.blueprint);
-                tank.MainCorps.Add(builder.faction);
+                tank.MainCorps = new List<FactionSubTypes> { builder.faction };
+                if (builder.faction != FactionSubTypes.NULL)
+                {
+                    tank.MainCorps = new List<FactionSubTypes> { builder.faction };
+                    mind.MainFaction = builder.faction;
+                    //Debug.Log("TACtical_AI: Tech " + tank.name + " set faction " + tank.GetMainCorp().ToString());
+                }
                 UnityEngine.Object.DestroyImmediate(builder);
                 AIERepair.Turboconstruct(tank, mind.TechMemor);
 

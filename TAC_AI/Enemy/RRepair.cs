@@ -111,10 +111,12 @@ namespace TAC_AI.AI.Enemy
                             }
                         }
                         //Debug.Log("TACtical AI: EnemyRepairLerp - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!"); foundBlock.damage.SelfDestruct(0.1f);
-                        Singleton.Manager<ManLooseBlocks>.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
-                        //foundBlock.damage.SelfDestruct(0.1f);
-                        //Vector3 yeet = -Vector3.one * 450000;
-                        //foundBlock.transform.position = yeet;
+                        //Singleton.Manager<ManLooseBlocks>.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
+                        
+                        // everything else failed, time to resort to timbuktu
+                        foundBlock.damage.SelfDestruct(0.1f);
+                        Vector3 yeet = Vector3.forward * 450000;
+                        foundBlock.transform.position = yeet;
                     }
                 }
             }

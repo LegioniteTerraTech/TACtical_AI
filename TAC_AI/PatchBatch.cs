@@ -127,19 +127,11 @@ namespace TAC_AI
                         Vector3 spawn = tankPos.boundsCentreWorld + (tankPos.rootBlockTrans.forward * 20);
                         Singleton.Manager<ManWorld>.inst.GetTerrainHeight(spawn, out float height);
                         spawn.y = height;
-                        bool caseOverride = true;
+                        bool caseOverride = false;
 
                         int TechCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
                         List<Tank> tanksToConsider = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
-                        for (int step = 0; TechCount > step; step++)
-                        {
-                            Tank tech = tanksToConsider.ElementAt(step);
-                            Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 32);
-                            position.y += 64;
 
-                            if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, Templates.BaseTerrain.Air, silentFail: false))
-                                tech.visible.RemoveFromGame();
-                        }
 
                         if (!caseOverride)
                         {

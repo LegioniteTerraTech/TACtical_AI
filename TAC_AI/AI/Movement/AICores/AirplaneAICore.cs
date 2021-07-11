@@ -42,7 +42,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                if (pilot.TargetGrounded)
+                if (pilot.TargetGrounded) // Divebombing mode
                 {  // We previously disabled the ground offset terrain avoider and aim directly at the enemy
                     float dist = (thisInst.lastDestination - (tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime))).magnitude;
                     Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(thisInst.lastDestination - tank.boundsCentreWorldNoCheck);
@@ -77,7 +77,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (pilot.PerformDiveAttack == 2)
                     {
                         Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
-                        if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16)
+                        if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
                             pilot.AdvisedThrottle = 1;
                         else
                             pilot.AdvisedThrottle = 0;
@@ -116,7 +116,7 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {   // Moving to target
                             Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
-                            if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16)
+                            if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
                                 pilot.AdvisedThrottle = 1;
                             else
                                 pilot.AdvisedThrottle = 0;

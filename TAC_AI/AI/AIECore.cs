@@ -370,9 +370,9 @@ namespace TAC_AI.AI
                 this.tank = tank;
                 tank.AttachEvent.Subscribe(OnAttach);
                 tank.DetachEvent.Subscribe(OnDetach);
-                tank.TankRecycledEvent.Subscribe(OnRecycle);
+                //tank.TankRecycledEvent.Subscribe(OnRecycle);
                 this.AIList = new List<ModuleAIExtension>();
-                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnDeathOrRemoval);
+                //Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnDeathOrRemoval);
                 Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Subscribe(OnSpawn);
             }
 
@@ -393,6 +393,7 @@ namespace TAC_AI.AI
                 if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
                 this.ResetAll(tankInfo);
             }
+            /*
             public void OnDeathOrRemoval(Tank tankInfo, ManDamage.DamageInfo damage)
             {
                 //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnDeathOrRemoval");
@@ -405,11 +406,13 @@ namespace TAC_AI.AI
                 tank.gameObject.GetComponent<TankAIHelper>().DediAI = AIType.Escort;
                 this.ResetAll(tank);
             }
+            */
 
             public void ResetToDefaultAIController()
             {
                 if (!(this.MovementController is AIControllerDefault))
                 {
+                    Debug.Log("TACtical_AI: Resetting Back to Default AI for " + tank.name);
                     IMovementAIController controller = this.MovementController;
                     this.MovementController = null;
                     if (controller != null)
@@ -423,6 +426,7 @@ namespace TAC_AI.AI
 
             public void ResetAll(Tank tank)
             {
+                Debug.Log("TACtical_AI: Resetting all for " + tank.name);
                 this.Hibernate = false;
                 this.AIState = 0;
                 this.lastAIType = AITreeType.AITypes.Idle;
@@ -540,7 +544,7 @@ namespace TAC_AI.AI
                     if (AIE.IsNotNull())
                         AIList.Add(AIE);
                 }
-                //Debug.Log("TACtical_AI: AI list for Tech " + tank.name + " has " + AIList.Count() + " entries");
+                Debug.Log("TACtical_AI: AI list for Tech " + tank.name + " has " + AIList.Count() + " entries");
 
                 foreach (ModuleAIExtension AIEx in AIList)
                 {
@@ -1064,8 +1068,8 @@ namespace TAC_AI.AI
                         {
                             ResetAll(this.tank);
                             this.AIState = 2;
-                            Enemy.RCore.RandomizeBrain(this, tank);
                             Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Ready to kick some Tech!");
+                            Enemy.RCore.RandomizeBrain(this, tank);
                         }
                         if (!this.Hibernate)
                         {
@@ -1096,6 +1100,7 @@ namespace TAC_AI.AI
                         this.DriveVar = 0;
                         if (this.AIState > 0)
                         {   // Reset and ready for static tech
+                            Debug.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
                             ResetAll(this.tank);
                             this.AIState = 0;
                         }

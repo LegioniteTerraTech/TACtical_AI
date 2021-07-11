@@ -88,7 +88,7 @@ namespace TAC_AI.AI
                     if (thisInst.lastEnemy.IsNotNull())
                     {
                         thisInst.OverrideAim = 1;
-                        var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
+                        var targetTank = thisInst.lastEnemy.tank;
                         thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, AIECore.Extremes(targetTank.blockBounds.extents));
                     }
                 }

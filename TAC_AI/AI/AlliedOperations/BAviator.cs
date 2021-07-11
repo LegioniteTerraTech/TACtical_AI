@@ -68,7 +68,7 @@ namespace TAC_AI.AI.AlliedOperations
             thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
             if (thisInst.lastEnemy != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
+                Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 AIControllerAir pilot = (AIControllerAir) thisInst.MovementController;
                 if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && (pilot.LargeAircraft || pilot.BankOnly))
