@@ -52,6 +52,9 @@ namespace TAC_AI.AI.Movement.AICores
             if (Mathf.Abs(turnVal.z) < 0.05f)
                 turnVal.z = 0;
 
+            // limit rotation speed
+
+
             // stop pitching if the main prop is trying to force us into the ground
             if (tank.rbody.velocity.y < -2)
                 turnVal.y = 0;
@@ -73,7 +76,11 @@ namespace TAC_AI.AI.Movement.AICores
             DriveVar.x = Mathf.Clamp(DriveVar.x + xOffset, -1, 1);
             DriveVar.z = Mathf.Clamp(DriveVar.z, -1, 1);
             DriveVar.y = 0;
-            if (thisInst.MoveFromObjective)
+            if (thisInst.PivotOnly) 
+            {
+                // Do nothing and let the inertia dampener kick in
+            }
+            else if (thisInst.MoveFromObjective)
                 DriveVar.z = -1;
             else if (thisInst.ProceedToObjective)
                 DriveVar.z = 1;

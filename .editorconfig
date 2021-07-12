@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# CS1685: The predefined type 'ExtensionAttribute' is defined in multiple assemblies in the global alias; using definition from 'Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null'
+dotnet_diagnostic.CS1685.severity = warning

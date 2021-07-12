@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Reflection;
 using UnityEngine;
 
 namespace TAC_AI.AI.Enemy
@@ -12,9 +13,14 @@ namespace TAC_AI.AI.Enemy
         /*
             RELIES ON EVERYTHING IN THE "AI" FOLDER TO FUNCTION PROPERLY!!!  
                 [excluding the Designators in said folder]
-        */ 
-        
+        */
+
+        internal static FieldInfo charge = typeof(ModuleShieldGenerator).GetField("m_EnergyDeficit", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo charge2 = typeof(ModuleShieldGenerator).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo charge3 = typeof(ModuleShieldGenerator).GetField("m_Shield", BindingFlags.NonPublic | BindingFlags.Instance);
+
         // Main host of operations
+
         public static void BeEvil(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //Debug.Log("TACtical_AI: enemy AI active!");
@@ -100,6 +106,7 @@ namespace TAC_AI.AI.Enemy
         // AI SETUP
         public static void RandomizeBrain(AIECore.TankAIHelper thisInst, Tank tank)
         {
+            Debug.Log("TACtical_AI: offset " + tank.boundsCentreWorldNoCheck);
             if (!tank.gameObject.GetComponent<EnemyMind>())
                 tank.gameObject.AddComponent<EnemyMind>();
             thisInst.lastPlayer = null;
@@ -218,7 +225,7 @@ namespace TAC_AI.AI.Enemy
             }
             return fired;
         }
-        public static void BlockSetEnemyHandling(Tank tank, EnemyMind toSet)
+        public static void BlockSetEnemyHandling(Tank tank, EnemyMind toSet, bool ForceAllBubblesUp = false)
         {
             var BM = tank.blockman;
 
@@ -264,16 +271,62 @@ namespace TAC_AI.AI.Enemy
             Debug.Log("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
 
             int FoilCount = 0;
+            int MovingFoilCount = 0;
             foreach (ModuleWing module in BM.IterateBlockComponents<ModuleWing>())
             {
                 //Get teh slowest spooling one
                 List<ModuleWing.Aerofoil> foils = module.m_Aerofoils.ToList();
                 FoilCount += foils.Count();
+                foreach (ModuleWing.Aerofoil Afoil in foils)
+                {
+                    if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
+                        MovingFoilCount++;
+                }
             }
-
+            /*
             int modBoostCount = BM.IterateBlockComponents<ModuleBooster>().Count();
             int modHoverCount = BM.IterateBlockComponents<ModuleHover>().Count();
             int modGyroCount = BM.IterateBlockComponents<ModuleGyro>().Count();
+            */
+
+            // We have to do it this way since modded blocks don't work well with the above
+            List<TankBlock> blocs = BM.IterateBlocks().ToList();
+            int modBoostCount = 0;
+            int modHoverCount = 0;
+            int modGyroCount = 0;
+            int modWheelCount = 0;
+            int modAGCount = 0;
+            int modGunCount = 0;
+            int modDrillCount = 0;
+
+            foreach (TankBlock bloc in blocs)
+            {
+                if (bloc.GetComponent<ModuleBooster>())
+                    modBoostCount++;
+                if (bloc.GetComponent<ModuleHover>())
+                    modHoverCount++;
+                if (bloc.GetComponent<ModuleGyro>())
+                    modGyroCount++;
+                if (bloc.GetComponent<ModuleWheels>())
+                    modWheelCount++;
+                if (bloc.GetComponent<ModuleAntiGravityEngine>())
+                    modAGCount++;
+                if (bloc.GetComponent<ModuleWeaponGun>())
+                    modGunCount++;
+                if (bloc.GetComponent<ModuleDrill>())
+                    modDrillCount++;
+                var buubles = bloc.GetComponent<ModuleShieldGenerator>();
+                if (ForceAllBubblesUp && buubles)
+                {
+                    charge.SetValue(buubles, 0);
+                    charge2.SetValue(buubles, 2);
+                    BubbleShield shield = (BubbleShield)charge3.GetValue(buubles);
+                    shield.SetTargetScale(buubles.m_Radius);
+                }
+
+            }
+            Debug.Log("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
+
 
             if (tank.IsAnchored)
             {
@@ -281,11 +334,11 @@ namespace TAC_AI.AI.Enemy
                 toSet.EvilCommander = EnemyHandling.Stationary;
                 toSet.CommanderBolts = EnemyBolts.AtFull;
             }
-            else if (modBoostCount > 3 && (modHoverCount > 2 || BM.IterateBlockComponents<ModuleAntiGravityEngine>().Count() > 0))
+            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
             {
                 toSet.EvilCommander = EnemyHandling.Starship;
             }
-            else if (FoilCount > 4 && isFlying && isFlyingDirectionForwards)
+            else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
             {
                 toSet.EvilCommander = EnemyHandling.Airplane;
             }
@@ -293,17 +346,16 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.EvilCommander = EnemyHandling.Chopper;
             }
-            else if (KickStart.isWaterModPresent && modGyroCount > 0 && modBoostCount > 0 && (BM.IterateBlockComponents<ModuleWheels>().Count() < 4 || modHoverCount > 1))
+            else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
             {
                 toSet.EvilCommander = EnemyHandling.Naval;
             }
-            else if (BM.IterateBlockComponents<ModuleWeaponGun>().Count() < 2 && BM.IterateBlockComponents<ModuleDrill>().Count() < 2 && modBoostCount > 0)
+            else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
             {
                 toSet.EvilCommander = EnemyHandling.SuicideMissile;
             }
             else
                 toSet.EvilCommander = EnemyHandling.Wheeled;
-
         }
         public static void RandomSetMindAttack(EnemyMind toSet, Tank tank)
         {

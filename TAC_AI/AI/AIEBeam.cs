@@ -29,7 +29,7 @@ namespace TAC_AI.AI
             {   // Handoff all operations to AIEAirborne
                 if (!pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
                 {   //Become a ground vehicle for now
-                    if (tank.grounded && tank.AI.IsTankOverturned())
+                    if (tank.wheelGrounded && tank.AI.IsTankOverturned())
                     {
                         thisInst.beamClock = 1;
                     }
@@ -78,16 +78,6 @@ namespace TAC_AI.AI
 
             if (!thisInst.IsMultiTech && thisInst.forceBeam && thisInst.RequestBuildBeam)
             {
-                /*
-                if (thisInst.lastPlayer.IsNotNull())
-                {
-                    Vector3 aimTo = (thisInst.lastPlayer.rbody.position - tank.rbody.position).normalized;
-                    float driveAngle = Vector3.Angle(aimTo, tank.transform.forward);
-                    float turnDrive = Mathf.Clamp((driveAngle / thisInst.AnchorAimDampening) * 30, -30, 30);
-                    tank.beam.nudgeSpeedRotate = turnDrive;
-                    tank.beam.nudgeSpeedForward = 5;
-                }
-                */
                 thisInst.beamClock = 35;
             }
             else if (!thisInst.IsMultiTech && tank.AI.IsTankOverturned() && thisInst.RequestBuildBeam)
@@ -114,12 +104,11 @@ namespace TAC_AI.AI
             }
             else
             {
-
                 if (thisInst.DediAI == AIType.Astrotech)
                     thisInst.ActionPause = 0;
                 if (thisInst.MTLockedToTechBeam && thisInst.IsMultiTech)
                 {   //Override and disable most driving abilities - We are going to follow the host tech!
-                    if (thisInst.LastCloseAlly!= null)
+                    if (thisInst.LastCloseAlly != null)
                     {
                         if (thisInst.LastCloseAlly.beam.IsActive)
                         {

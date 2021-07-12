@@ -52,7 +52,9 @@ namespace TAC_AI
 
 
         internal static bool firedAfterBlockInjector = false;
-
+        public static bool SpecialAttract = false;
+        public static int SpecialAttractNum = 0;
+        public static Vector3 SpecialAttractPos;
 
         public static void Main()
         {

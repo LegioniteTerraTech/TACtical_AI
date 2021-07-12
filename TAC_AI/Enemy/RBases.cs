@@ -206,9 +206,9 @@ namespace TAC_AI.AI.Enemy
                     //Debug.Log("TACtical_AI: Tech " + tank.name + " set faction " + tank.GetMainCorp().ToString());
                 }
                 UnityEngine.Object.DestroyImmediate(builder);
-                AIERepair.Turboconstruct(tank, mind.TechMemor);
+                AIERepair.Turboconstruct(tank, mind.TechMemor, true);
 
-                RCore.BlockSetEnemyHandling(tank, mind);
+                RCore.BlockSetEnemyHandling(tank, mind, true);
                 RCore.RandomSetMindAttack(mind, tank);
 
                 DidFire = true;

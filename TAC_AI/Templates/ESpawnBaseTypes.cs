@@ -14,6 +14,7 @@ namespace TAC_AI.Templates
         // STATIONARY TECHS
         // error
         NotAvail,
+        // The Bases
         // GSO
         GSOSeller,
         GSOMidBase,
@@ -39,12 +40,47 @@ namespace TAC_AI.Templates
         HEMunitionsDepot,
         HEAircraftGarrison,
 
+        // The Defenses
+        GSOTowerDefense,
+        GSOMegaDefense,
+        GCMiningLaserLite,
+        VENDeputyTurret,
+        HEPerimeterDefense,
+        HEHeavyDefense,
+
+
+
         // MOBILE TECHS
         // Hybridz
         AttractServo,
         // TAC lol
         TACInvaderAttract,
         TACInvaderAttract2,
+        TACOutpostMissions,
+        TACSentinelTurret,
+
+        // World Gen (emergency)
+        // Aircraft - from slow to fast sorted by corp
+        GSOEpicTony,
+        GSOAirdropSquad,
+        GSOFightOrFlight,
+        VENZephr,
+        VENMachinator,
+        HEDropship,
+        HEBombsAway,
+        HECyclone,
+        // Choppers
+        GSOQuadGale,
+        HEPocketApache,
+        BFeClipse,
+        // Naval
+        GSOShallowWaterGuard,
+        GCBuoyMiner,
+        VENNautilus,
+        HESwaddleBoat,
+        BFLuxYacht,
+        // Space
+        GSOSpaceshipCompact
     }
 
 }

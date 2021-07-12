@@ -437,8 +437,8 @@ namespace TAC_AI.AI.Movement
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
             if (terrain)
             {
-                if (height > WaterMod.QPatch.WaterHeight - 20)// avoid high terrain pathing!
-                    final = thisInst.lastDestination;
+                if (height > WaterMod.QPatch.WaterHeight)// avoid high terrain pathing!
+                    final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
                 else
                     final.y = WaterMod.QPatch.WaterHeight;
             }

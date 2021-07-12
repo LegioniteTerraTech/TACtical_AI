@@ -124,12 +124,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
             }
             else
-            {
+            {   // Others
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = false;
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 if (dist < thisInst.lastTechExtents + enemyExt - 2)
-                {
+                {   // too close?
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                         thisInst.TryHandleObstruction(true, dist, true, true);
                     else
@@ -139,7 +139,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
-                {
+                {   // 
                     thisInst.PivotOnly = true;
                     thisInst.ProceedToObjective = true;
                 }

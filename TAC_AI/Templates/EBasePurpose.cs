@@ -19,10 +19,11 @@ namespace TAC_AI.Templates
     }
     public enum BaseTerrain
     {
-        Land,
-        Sea,
-        Air,
-        Space
+        Land,   // is anchored
+        Sea,    // floats on water
+        Air,    // doubles as airplane
+        Chopper,// relies on props to stay airborne
+        Space   // mobile base that flies beyond
     }
     public enum BasePurpose
     {
