@@ -31,9 +31,8 @@ namespace TAC_AI
 
         public static void Initiate()
         {
-            Singleton.Manager<ManTechs>.inst.TankDriverChangedEvent.Subscribe(OnPlayerSwap);
-
             Instantiate(new GameObject()).AddComponent<GUIAIManager>();
+            Singleton.Manager<ManTechs>.inst.TankDriverChangedEvent.Subscribe(OnPlayerSwap);
             GUIWindow = new GameObject();
             GUIWindow.AddComponent<GUIDisplay>();
             GUIWindow.SetActive(false);

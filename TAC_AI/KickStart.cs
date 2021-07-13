@@ -32,6 +32,7 @@ namespace TAC_AI
         internal static bool isTougherEnemiesPresent = false;
         internal static bool isWeaponAimModPresent = false;
         internal static bool isBlockInjectorPresent = false;
+        internal static bool isPopInjectorPresent = false;
 
         public static int Difficulty = 50;  
         // 50 means the full AI range is used
@@ -97,6 +98,11 @@ namespace TAC_AI
                 Debug.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
                 isBlockInjectorPresent = true;
             }
+            if (LookForMod("PopulationInjector"))
+            {
+                Debug.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
+                isBlockInjectorPresent = true;
+            }
 
             ModConfig thisModConfig = new ModConfig();
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
@@ -130,6 +136,10 @@ namespace TAC_AI
             // Now setup bases
             if (!isBlockInjectorPresent)
                 InstantBaseLoader();
+
+            // Setup aircraft if Population Injector is N/A
+            if (!isPopInjectorPresent)
+                Templates.SpecialAISpawner.Initiate();
         }
         public static void DelayedBaseLoader()
         {

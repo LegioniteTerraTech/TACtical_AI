@@ -241,6 +241,10 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.LowerEngines = true;
                 pilot.AirborneDest = this.pilot.Helper.lastDestination;
             }
+            else if (mind.CommanderMind == Enemy.EnemyAttitude.SubNeutral)
+            {   // Fly straight, above ground in player visual distance
+                pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod), pilot.Helper);
+            }
             else
             {
                 pilot.LowerEngines = false;

@@ -117,7 +117,7 @@ namespace TAC_AI.AI.Enemy
                 }
             }
             if (mind.EvilCommander == EnemyHandling.Naval)
-                thisInst.lastDestination = AIEPathing.OffsetToSea(thisInst.lastDestination, thisInst);
+                thisInst.lastDestination = AIEPathing.OffsetToSea(thisInst.lastDestination, tank, thisInst);
             else if (mind.EvilCommander == EnemyHandling.Starship)
                 thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst);
             else //Snap to ground

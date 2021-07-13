@@ -14,6 +14,7 @@ namespace TAC_AI.Templates
         public string blueprint;
         public bool infBlocks;
         public FactionSubTypes faction;
+        public bool unprovoked = false;
     }
 
     public static class RawTechLoader
@@ -147,17 +148,25 @@ namespace TAC_AI.Templates
 
 
         // Mobile Techs
-        public static void SpawnRandomTechAtPosition(Vector3 pos, int Team)
+        public static Tank SpawnRandomTechAtPosition(Vector3 pos, int Team, BaseTerrain type = BaseTerrain.Land)
         {
-            SpawnMobileTech(pos, Team, GetEnemyBaseType(FactionSubTypes.NULL, BasePurpose.NotABase, BaseTerrain.Land));
+            return SpawnMobileTech(pos, Vector3.forward, Team, GetEnemyBaseType(FactionSubTypes.NULL, BasePurpose.NotABase, type));
         }
-        public static void SpawnMobileTech(Vector3 pos, int Team, SpawnBaseTypes inputSpawn, bool silentFail = true)
+        public static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, BaseTerrain type = BaseTerrain.Land)
+        {
+            return SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(FactionSubTypes.NULL, BasePurpose.NotABase, type));
+        }
+        public static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, FactionSubTypes factionType, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false)
+        {
+            return SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, BasePurpose.NotABase, terrainType), false, unProvoked);
+        }
+        public static Tank SpawnMobileTech(Vector3 pos, Vector3 heading, int Team, SpawnBaseTypes inputSpawn, bool silentFail = true, bool unProvoked = false)
         {
             SpawnBaseTypes toSpawn = inputSpawn;
             if (!IsBaseTemplateAvailable(toSpawn))
             {
                 if (silentFail)
-                    return;
+                    return null;
                 else
                 { // try again with a different one 
                     int attempts;
@@ -170,7 +179,7 @@ namespace TAC_AI.Templates
                     if (attempts == 0)
                     {
                         Debug.Log("TACtical_AI: SpawnMobileTech - FAILIURE TO SPAWN ANY TECH!!!");
-                        return;
+                        return null;
                     }
                 }
             }
@@ -179,9 +188,9 @@ namespace TAC_AI.Templates
             string baseBlueprint = GetBlueprint(toSpawn);
             Vector3 position = pos;
             position.y = offset;
-            Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            Quaternion quat = Quaternion.LookRotation(heading, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AI.AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
 
             Tank theTech;
             theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
@@ -191,6 +200,8 @@ namespace TAC_AI.Templates
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
             namesav.faction = GetMainCorp(toSpawn);
+            namesav.unprovoked = unProvoked;
+            return theTech;
         }
         public static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotABase, bool silentFail = true)
         {
@@ -220,7 +231,7 @@ namespace TAC_AI.Templates
             Vector3 position = pos;
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AI.AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
 
             Tank theTech;
             theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
@@ -269,13 +280,14 @@ namespace TAC_AI.Templates
                 return baseT;
             return TempManager.techBases.ElementAtOrDefault(1).Value;
         }
-        public static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false)
+        public static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
         {
             if (ForceSpawn && !searchAttract)
                 return forcedBaseSpawn;
 
             try
             {
+                // Filters
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
                 if (faction == FactionSubTypes.NULL)
                 {
@@ -307,9 +319,18 @@ namespace TAC_AI.Templates
                 canidates = canidates.FindAll
                     (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.terrain == terra; });
 
+                if (maxGrade != 99)
+                {
+                    canidates = canidates.FindAll
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.IntendedGrade <= maxGrade; });
+                }
+
                 if (canidates.Count == 0)
-                    return forcedBaseSpawn;
+                    return SpawnBaseTypes.NotAvail;
+
+                // final list compiling
                 List<SpawnBaseTypes> final = new List<SpawnBaseTypes>();
+
                 foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in canidates)
                     final.Add(pair.Key);
 

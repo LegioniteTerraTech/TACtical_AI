@@ -205,12 +205,17 @@ namespace TAC_AI.AI.Enemy
                     mind.MainFaction = builder.faction;
                     //Debug.Log("TACtical_AI: Tech " + tank.name + " set faction " + tank.GetMainCorp().ToString());
                 }
-                UnityEngine.Object.DestroyImmediate(builder);
                 AIERepair.Turboconstruct(tank, mind.TechMemor, true);
 
                 RCore.BlockSetEnemyHandling(tank, mind, true);
                 RCore.RandomSetMindAttack(mind, tank);
 
+                if (builder.unprovoked)
+                {
+                    mind.CommanderMind = EnemyAttitude.SubNeutral;
+                }
+
+                UnityEngine.Object.DestroyImmediate(builder);
                 DidFire = true;
                 //Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + mind.EvilCommander.ToString() + " based enemy with attitude " + mind.CommanderAttack.ToString() + " | Mind " + mind.CommanderMind.ToString() + " | Smarts " + mind.CommanderSmarts.ToString() + " inbound!");
             }

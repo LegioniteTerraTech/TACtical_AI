@@ -6,6 +6,7 @@ using Harmony;
 using UnityEngine;
 using UnityEngine.UI;
 using TAC_AI.AI;
+using TAC_AI.Templates;
 
 namespace TAC_AI
 {
@@ -136,7 +137,10 @@ namespace TAC_AI
                             offset.x += 400;
                             offset.z -= 430;
                             KickStart.SpecialAttractPos = offset;
-                            Debug.Log("TACtical_AI: offset " + offset);
+                            Debug.Log("TACtical_AI: offset " + offset); 
+                            Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
+                            Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
+                            Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
                             BiomeMap edited = __instance.spawns[0].biomeMap;
                             Singleton.Manager<ManWorld>.inst.SeedString = "naval";
                             Singleton.Manager<ManGameMode>.inst.RegenerateWorld(edited, offset, Quaternion.LookRotation(__instance.spawns[0].cameraSpawn.forward, Vector3.up));
@@ -742,6 +746,64 @@ namespace TAC_AI
                         __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.MTTurret;
                     else
                         __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.MTSlave;
+                }
+            }
+        }
+
+
+        // CampaignAutohandling
+
+        [HarmonyPatch(typeof(ManPop))]
+        [HarmonyPatch("OnSpawned")]//On enemy base bomb landing
+        private static class EmergencyOverrideOnWaterLanding
+        {
+            private static void Prefix(ManPop __instance, ref TrackedVisible tva)
+            {
+                if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent)
+                {
+                    if (tva != null)
+                    {
+                        if (tva.visible != null)
+                        {
+                            if (tva.visible.tank != null)
+                            {
+                                if (!AI.Movement.AIEPathing.AboveTheSea(tva.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tva.visible.tank) != AI.Enemy.EnemyHandling.Naval && tva.visible.tank.IsEnemy())
+                                {
+                                    // OVERRIDE TO SHIP
+                                    try
+                                    {
+                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(tva.Position, tva.visible.tank.rootBlockTrans.forward, tva.TeamID, RawTechLoader.GetEnemyBaseType(tva.visible.tank.GetMainCorp(), BasePurpose.NotABase, BaseTerrain.Sea));
+                                        RadarTypes inherit = tva.RadarType;
+                                        string previousTechName = tva.visible.tank.name;
+                                        tva.visible.transform.Recycle();
+
+                                        Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
+                                        tva = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
+                                    }
+                                    catch
+                                    {
+                                        Debug.Log("TACtical_AI:  attempt to swap tech failed, blowing up tech due to water landing");
+
+                                        for (int fire = 0; fire < 25; fire++)
+                                        {
+                                            TankBlock boom = Singleton.Manager<ManSpawn>.inst.SpawnBlock(BlockTypes.VENFuelTank_212, tva.Position, Quaternion.LookRotation(Vector3.forward));
+                                            boom.visible.SetInteractionTimeout(20);
+                                            boom.damage.SelfDestruct(0.5f);
+                                        }
+                                        foreach (TankBlock block in tva.visible.tank.blockman.IterateBlocks())
+                                        {
+                                            block.visible.SetInteractionTimeout(20);
+                                            block.damage.SelfDestruct(0.5f);
+                                            block.damage.Explode(true);
+                                        }
+                                        tva.visible.tank.blockman.Disintegrate(true, false);
+                                        if (tva.visible.IsNotNull())
+                                            tva.visible.trans.Recycle();
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

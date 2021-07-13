@@ -51,6 +51,7 @@ namespace TAC_AI.Templates
 
 
         // MOBILE TECHS
+        GSOTonyTeam,
         // Hybridz
         AttractServo,
         // TAC lol

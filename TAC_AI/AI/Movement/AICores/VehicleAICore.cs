@@ -162,7 +162,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper);
             else if (help.DediAI == AIType.Buccaneer)
-                help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, this.controller.Helper);
+                help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, tank, this.controller.Helper);
 
             return true;
         }
@@ -235,7 +235,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             if (mind.EvilCommander == Enemy.EnemyHandling.Naval)
-                help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, this.controller.Helper);
+                help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, tank, this.controller.Helper);
             else if (mind.EvilCommander == Enemy.EnemyHandling.Starship)
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper);
             else

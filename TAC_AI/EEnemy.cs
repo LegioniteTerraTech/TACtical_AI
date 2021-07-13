@@ -28,6 +28,7 @@ namespace TAC_AI.AI.Enemy
         OnRails,    // Follow set destinations instead for MissionManager
         Boss,       // Build a big base and show off your power on the off-world
         Invader,    // One. job.   INVADE      end the player  REALLY PAINFULLY
+        SubNeutral, // Don't attack unless attacked
     }
     public enum EnemyAttack
     {

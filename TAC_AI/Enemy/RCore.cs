@@ -67,7 +67,23 @@ namespace TAC_AI.AI.Enemy
                 if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                 RRepair.EnemyRepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
             }
-            if (Mind.EvilCommander != EnemyHandling.Stationary && Mind.EvilCommander != EnemyHandling.Airplane)
+            if (Mind.CommanderMind == EnemyAttitude.SubNeutral)
+            {
+                if (Mind.CommanderAttack == EnemyAttack.Grudge)
+                {   // Cannot be grudge while SubNeutral aircraft 
+                    thisInst.lastEnemy = null;
+                    Mind.CommanderAttack = EnemyAttack.Bully;
+                }
+                if (Mind.Hurt && thisInst.lastEnemy.IsNotNull())
+                {   // If we were hit, then we fight back the attacker
+                    RandomSetMindAttack(Mind, tank);
+                    if (Mind.CommanderAttack == EnemyAttack.Circle)
+                    {   // Circle is not guarenteed to work on all aircraft
+                        Mind.CommanderAttack = EnemyAttack.Grudge;
+                    }
+                }
+            }
+            else if (Mind.EvilCommander != EnemyHandling.Stationary && Mind.EvilCommander != EnemyHandling.Airplane)
             {
                 switch (Mind.CommanderAttack)
                 {
@@ -496,6 +512,123 @@ namespace TAC_AI.AI.Enemy
                 }
             }
             catch { }//some population techs are devoid of schemes
+        }
+
+        // etc
+        public static EnemyHandling EnemyHandlingDetermine(Tank tank)
+        {
+            var BM = tank.blockman;
+
+            bool isFlying = false;
+            bool isFlyingDirectionForwards = true;
+            List<ModuleBooster> Engines = BM.IterateBlockComponents<ModuleBooster>().ToList();
+            Vector3 biasDirection = Vector3.zero;
+            Vector3 boostBiasDirection = Vector3.zero;
+
+            foreach (ModuleBooster module in Engines)
+            {
+                //Get the slowest spooling one
+                List<FanJet> jets = module.transform.GetComponentsInChildren<FanJet>().ToList();
+                foreach (FanJet jet in jets)
+                {
+                    if (jet.spinDelta <= 10)
+                    {
+                        biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                    }
+                }
+                List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
+                foreach (BoosterJet boost in boosts)
+                {
+                    //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
+                    boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection));
+                }
+            }
+            boostBiasDirection.Normalize();
+            biasDirection.Normalize();
+
+            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (boostBiasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+            else if (biasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (biasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+            Debug.Log("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
+
+            int FoilCount = 0;
+            int MovingFoilCount = 0;
+            foreach (ModuleWing module in BM.IterateBlockComponents<ModuleWing>())
+            {
+                //Get teh slowest spooling one
+                List<ModuleWing.Aerofoil> foils = module.m_Aerofoils.ToList();
+                FoilCount += foils.Count();
+                foreach (ModuleWing.Aerofoil Afoil in foils)
+                {
+                    if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
+                        MovingFoilCount++;
+                }
+            }
+
+            List<TankBlock> blocs = BM.IterateBlocks().ToList();
+            int modBoostCount = 0;
+            int modHoverCount = 0;
+            int modGyroCount = 0;
+            int modWheelCount = 0;
+            int modAGCount = 0;
+            int modGunCount = 0;
+            int modDrillCount = 0;
+
+            foreach (TankBlock bloc in blocs)
+            {
+                if (bloc.GetComponent<ModuleBooster>())
+                    modBoostCount++;
+                if (bloc.GetComponent<ModuleHover>())
+                    modHoverCount++;
+                if (bloc.GetComponent<ModuleGyro>())
+                    modGyroCount++;
+                if (bloc.GetComponent<ModuleWheels>())
+                    modWheelCount++;
+                if (bloc.GetComponent<ModuleAntiGravityEngine>())
+                    modAGCount++;
+                if (bloc.GetComponent<ModuleWeaponGun>())
+                    modGunCount++;
+                if (bloc.GetComponent<ModuleDrill>())
+                    modDrillCount++;
+            }
+            //Debug.Log("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
+
+
+            if (tank.IsAnchored)
+            {
+                return EnemyHandling.Stationary;
+            }
+            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
+            {
+                return EnemyHandling.Starship;
+            }
+            else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
+            {
+                return EnemyHandling.Airplane;
+            }
+            else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
+            {
+                return EnemyHandling.Chopper;
+            }
+            else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
+            {
+                return EnemyHandling.Naval;
+            }
+            else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
+            {
+                return EnemyHandling.SuicideMissile;
+            }
+            else
+                return EnemyHandling.Wheeled;
         }
     }
 }
