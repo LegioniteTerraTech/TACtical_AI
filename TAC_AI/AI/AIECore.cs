@@ -412,7 +412,7 @@ namespace TAC_AI.AI
             {
                 if (!(this.MovementController is AIControllerDefault))
                 {
-                    Debug.Log("TACtical_AI: Resetting Back to Default AI for " + tank.name);
+                    //Debug.Log("TACtical_AI: Resetting Back to Default AI for " + tank.name);
                     IMovementAIController controller = this.MovementController;
                     this.MovementController = null;
                     if (controller != null)
@@ -426,7 +426,7 @@ namespace TAC_AI.AI
 
             public void ResetAll(Tank tank)
             {
-                Debug.Log("TACtical_AI: Resetting all for " + tank.name);
+                //Debug.Log("TACtical_AI: Resetting all for " + tank.name);
                 this.Hibernate = false;
                 this.AIState = 0;
                 this.lastAIType = AITreeType.AITypes.Idle;

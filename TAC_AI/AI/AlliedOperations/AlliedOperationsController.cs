@@ -109,6 +109,15 @@ namespace TAC_AI.AI.AlliedOperations
                     BGeneral.AidDefend(this.helper, this.helper.tank);
                     break;
 
+                case AIType.Buccaneer:
+                    // Yarr
+                    this.helper.lastPlayer = this.helper.GetPlayerTech();
+                    this.helper.IsMultiTech = false;
+                    this.helper.Attempt3DNavi = true;
+                    BBuccaneer.MotivateBote(this.helper, this.helper.tank);
+                    BGeneral.AidDefend(this.helper, this.helper.tank);
+                    break;
+
                 case AIType.Aviator:
                     // Fly and doggyfight
                     this.helper.lastPlayer = this.helper.GetPlayerTech();

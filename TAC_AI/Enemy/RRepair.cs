@@ -49,7 +49,7 @@ namespace TAC_AI.AI.Enemy
                 if ((KickStart.EnemiesHaveCreativeInventory || (mind.AllowInvBlocks && mind.TechMemor.unlimitedParts)) && mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
                     //Debug.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
-                    if (AIERepair.TrySpawnAndAttachBlockFromList(tank, mind.TechMemor, typesMissing))
+                    if (AIERepair.TrySpawnAndAttachBlockFromList(tank, mind.TechMemor, typesMissing, false, true))
                         return true;
                 }
             }

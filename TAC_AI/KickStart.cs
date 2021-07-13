@@ -26,6 +26,7 @@ namespace TAC_AI
         public static bool enablePainMode = false;
         public static bool EnemiesHaveCreativeInventory = false;
         public static bool AllowEnemiesToStartBases = false;
+        public static bool AllowAirEnemiesToSpawn = false;
         public static bool DesignsToLog = false;
 
         internal static bool isWaterModPresent = false;
@@ -50,11 +51,13 @@ namespace TAC_AI
         public static OptionRange diff;
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
+        public static OptionToggle enemyAirSpawn;
 
 
         internal static bool firedAfterBlockInjector = false;
         public static bool SpecialAttract = false;
         public static int SpecialAttractNum = 0;
+        public static int retryForBote = 0;
         public static Vector3 SpecialAttractPos;
 
         public static void Main()
@@ -101,7 +104,7 @@ namespace TAC_AI
             if (LookForMod("PopulationInjector"))
             {
                 Debug.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
-                isBlockInjectorPresent = true;
+                isPopInjectorPresent = true;
             }
 
             ModConfig thisModConfig = new ModConfig();
@@ -112,6 +115,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "Difficulty");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
+            thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
 
             var TACAI = ModName;
@@ -129,6 +133,11 @@ namespace TAC_AI
                 diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAI, AllowEnemiesToStartBases);
                 enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                if (!isPopInjectorPresent)
+                {
+                    enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAI, AllowAirEnemiesToSpawn);
+                    enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                }
                 infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAI, EnemiesHaveCreativeInventory);
                 infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             }
@@ -136,10 +145,6 @@ namespace TAC_AI
             // Now setup bases
             if (!isBlockInjectorPresent)
                 InstantBaseLoader();
-
-            // Setup aircraft if Population Injector is N/A
-            if (!isPopInjectorPresent)
-                Templates.SpecialAISpawner.Initiate();
         }
         public static void DelayedBaseLoader()
         {

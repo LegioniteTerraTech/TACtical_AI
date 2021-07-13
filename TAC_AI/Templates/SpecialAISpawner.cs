@@ -7,6 +7,25 @@ using UnityEngine;
 
 namespace TAC_AI.Templates
 {
+    public class TrackedAircraft
+    {
+        public Tank aircraft;
+        public void Setup(Tank set)
+        {   // 
+            aircraft = set;
+            aircraft.SleepEvent.Subscribe(OnSleep);
+        }
+        public void OnSleep(bool yes)
+        {   // It crashed 
+            aircraft.SleepEvent.Unsubscribe(OnSleep);
+            foreach (TankBlock block in aircraft.blockman.IterateBlocks())
+            {
+                block.damage.SelfDestruct(0.5f);
+            }
+            aircraft.blockman.Disintegrate();
+            SpecialAISpawner.AirPool.Remove(this);
+        }
+    }
     public class SpecialAISpawner : MonoBehaviour
     {   //  We handle all the AI goodies here when Population Injector is N/A
         //      This module should ONLY be active (when initated) in Campaign mode!!!
@@ -19,21 +38,28 @@ namespace TAC_AI.Templates
         private static ManLicenses Licences;
 
         private static Tank playerTank;
-        private static List<Tank> AirPool = new List<Tank>();
+        internal static List<TrackedAircraft> AirPool = new List<TrackedAircraft>();
 
         private static bool thisActive = false;
         private float counter = 0;
+        private int updateTimer = 0;
 
-        const int MaxAircraftAllowed = 3;
-        const float AirSpawnDist = 600;
-        const float AirDespawnDist = 1000;
+        const int MaxAircraftAllowed = 4;
+        const int AircraftSpawnOdds = 100;    // Out of 100
+        const float AirSpawnDist = 425;
+        const float AirDespawnDist = 475;
+        const float AirSpawnInterval = 3;
+
+        private static bool forceOn = false;    // spawn in creative no matter what
 
         public static void Initiate()
         {   // 
-            inst = Instantiate(new GameObject("AISpawnerAux")).AddComponent<SpecialAISpawner>();
+            var startup = new GameObject("AISpawnerAux");
+            startup.AddComponent<SpecialAISpawner>();
+            inst = startup.GetComponent<SpecialAISpawner>();
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(DetermineActiveOnMode);
-            Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Subscribe(UpdatePlayerTank);
-            Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(PlayerTankDeathCheck);
+            Debug.Log("TACtical_AI: SpecialAISpawner - Initated!");
+            startup.SetActive(false);
         }
         public static void DetermineActiveOnMode(Mode mode)
         {   // 
@@ -53,11 +79,22 @@ namespace TAC_AI.Templates
                 playerTank = tank;
             }
         }
+        public static void UpdatePlayerTank()
+        {   // 
+            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.IteratePlayerTechsControllable())
+            {
+                if (tech.IsPlayer)
+                {
+                    playerTank = tech;
+                    break;
+                }
+            }
+        }
         public static void PlayerTankDeathCheck(Tank tank, ManDamage.DamageInfo oof)
         {   // 
-            if (tank == playerTank)
+            if (tank == playerTank && KickStart.Difficulty < 100)
             {   // Player could have been killed by aircraft - remove all enemies
-                DestroyAllAircraft();
+                DestroyAllPooledAircraft();
                 playerTank = null;
             }
         }
@@ -77,7 +114,9 @@ namespace TAC_AI.Templates
             else
                 pos = playerTank.boundsCentreWorldNoCheck;
 
-            Vector3 forwards = GetAirOffsetFromPosition(pos);
+            Vector3 forwards = GetAirAngleFromPosition(pos);
+
+            pos = GetAirOffsetFromPosition(pos, forwards);
 
             Tank newAircraft = SpawnPrefabAircraft(pos, forwards);
             if (newAircraft == null)
@@ -85,92 +124,127 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: SpecialAISpawner - Could not spawn aircraft - Player has no corps unlocked!?!");
                 return;
             }
-            AirPool.Add(newAircraft);
+            TrackedAircraft newAir = new TrackedAircraft();
+            newAir.Setup(newAircraft);
+            AirPool.Add(newAir);
         }
         private static Tank SpawnPrefabAircraft(Vector3 pos, Vector3 forwards)
         {   // 
-            List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
-            if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
-                factionsAvail.Add(FactionSubTypes.GSO);
-            // GC literally can't fly an aircraft
-            //if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 2)
-            //    factionsAvail.Add(FactionSubTypes.GC);
-            if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
-                factionsAvail.Add(FactionSubTypes.VEN);
-            if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
-                factionsAvail.Add(FactionSubTypes.HE);
-            if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
-                factionsAvail.Add(FactionSubTypes.BF);
-            if (factionsAvail.Count == 0)
-                return null;
-
-
-            // determine corp
-            factionsAvail.Shuffle();
-            FactionSubTypes finalFaction = factionsAvail.First();
-
-            bool unProvoked = true;
-            switch (finalFaction)
+            try
             {
-                case FactionSubTypes.GSO:
-                    if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
-                        unProvoked = false;
-                    break;
-                case FactionSubTypes.VEN:
-                    if (Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
-                        unProvoked = false;
-                    break;
-                case FactionSubTypes.HE:
-                    if (Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
-                        unProvoked = false;
-                    break;
-                case FactionSubTypes.BF:
-                        unProvoked = false;
-                    break;
-                default:
-                    if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel == 4)
-                        unProvoked = false;
-                    break;
-            }
+                List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
+                
+                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
+                    factionsAvail.Add(FactionSubTypes.GSO);
+                // GC literally can't fly an aircraft
+                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 2)
+                    factionsAvail.Add(FactionSubTypes.GC);
+                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
+                    factionsAvail.Add(FactionSubTypes.VEN);
+                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
+                    factionsAvail.Add(FactionSubTypes.HE);
+                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
+                    factionsAvail.Add(FactionSubTypes.BF);
+                if (factionsAvail.Count == 0)
+                    return null;
 
-            // spawn and return the aircraft
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked);
+                bool hasAllDone = true;
+                if (factionsAvail.Count > 5)
+                {
+                    foreach (FactionSubTypes faction in factionsAvail)
+                    {
+                        if (!Licences.GetLicense(faction).HasReachedMaxLevel)
+                            hasAllDone = false;
+                    }
+                }
+                else
+                    hasAllDone = false;
+                if (factionsAvail.Contains(FactionSubTypes.GC))
+                    factionsAvail.Remove(FactionSubTypes.GC);
+                if (factionsAvail.Contains(FactionSubTypes.EXP))
+                    factionsAvail.Remove(FactionSubTypes.EXP);
+
+                // spawn and return the aircraft
+                if (hasAllDone) // all corps unlocked by player
+                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air);
+
+                // if we don't have all corps possible maxed, we do the normal spawn
+
+                // determine corp
+                factionsAvail.Shuffle();
+                FactionSubTypes finalFaction = factionsAvail.First();
+
+                bool unProvoked = true;
+                switch (finalFaction)
+                {   // contains minimum grades (index) needed before flying parts become available
+                    case FactionSubTypes.GSO:
+                        if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
+                            unProvoked = false;
+                        break;
+                    case FactionSubTypes.VEN:
+                        if (Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
+                            unProvoked = false;
+                        break;
+                    case FactionSubTypes.HE:
+                        if (Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
+                            unProvoked = false;
+                        break;
+                    case FactionSubTypes.BF:
+                        unProvoked = false;
+                        break;
+                    default:
+                        if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel == 4)
+                            unProvoked = false;
+                        break;
+                }
+
+                return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel);
+            }
+            catch { }
+            Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air, AutoTerrain: false);
         }
-        private static void ManageAircraft()
+        private static void ManagePooledAircraft()
         {   // 
+            if (!KickStart.AllowAirEnemiesToSpawn)
+                DestroyAllPooledAircraft();
             int count = AirPool.Count();
             int deadAircraftCount = 0;
             for (int step = 0; count > step; step++)
             {
-                Tank aircraft = AirPool[step];
+                try
+                {
+                    Tank aircraft = AirPool[step].aircraft;
 
-                if (aircraft.IsNull() || !aircraft.visible.isActive)
-                {
-                    AirPool.Remove(aircraft);
-                    step--;
-                    count--;
-                    deadAircraftCount++;
+                    if (aircraft.IsNull() || !aircraft.visible.isActive)
+                    {
+                        AirPool.RemoveAt(step);
+                        step--;
+                        count--;
+                        deadAircraftCount++;
+                    }
+                    else if ((aircraft.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude > AirDespawnDist * AirDespawnDist)
+                    {
+                        AirPool.RemoveAt(step);
+                        Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + aircraft.name + " from AirPool as it left AirDespawnDist radius.");
+                        aircraft.visible.RemoveFromGame();
+                        step--;
+                        count--;
+                    }
                 }
-                else if ((aircraft.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude > AirDespawnDist * AirDespawnDist)
-                {
-                    AirPool.Remove(aircraft);
-                    Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + aircraft.name + " from AirPool as it left AirDespawnDist radius.");
-                    aircraft.visible.RemoveFromGame();
-                    step--;
-                    count--;
-                }
+                catch { }
             }
             if (deadAircraftCount > 0)
                 Debug.Log("TACtical_AI: SpecialAISpawner - Removed " + deadAircraftCount + " dead aircraft(s) from AirPool");
         }
-        private static void DestroyAllAircraft()
+        private static void DestroyAllPooledAircraft()
         {   // 
             if (AirPool.Count == 0)
                 return;
-            foreach (Tank aircraft in AirPool)
+            foreach (TrackedAircraft aircraft in AirPool)
             {
-                if (aircraft.IsNotNull())
-                    aircraft.visible.RemoveFromGame();
+                if (aircraft.aircraft.IsNotNull())
+                    aircraft.aircraft.visible.RemoveFromGame();
             }
             AirPool.Clear();
             Debug.Log("TACtical_AI: SpecialAISpawner - Destroyed all enemy pooled aircraft");
@@ -183,6 +257,9 @@ namespace TAC_AI.Templates
             {
                 Licences = Singleton.Manager<ManLicenses>.inst;
                 inst.counter = 0;
+                UpdatePlayerTank();
+                Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Subscribe(UpdatePlayerTank);
+                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(PlayerTankDeathCheck);
                 inst.gameObject.SetActive(true);
                 Debug.Log("TACtical_AI: SpecialAISpawner - Activated special enemy spawns");
             }
@@ -192,30 +269,49 @@ namespace TAC_AI.Templates
             if (thisActive)
             {
                 inst.gameObject.SetActive(false);
+                Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Unsubscribe(UpdatePlayerTank);
+                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Unsubscribe(PlayerTankDeathCheck);
                 inst.counter = 0;
                 Licences = null;
                 Debug.Log("TACtical_AI: SpecialAISpawner - Deactivated special enemy spawns");
             }
         }
-        private void Update()
+        public void Update()
         {   // 
-            if (counter > 120 && Singleton.Manager<ManPop>.inst.IsSpawningEnabled)
+            //Debug.Log("TACtical_AI: SpecialAISpawner - ACTIVE!!!  time" + counter);
+            if (counter > AirSpawnInterval && (Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn))
             {   // determine if we should spawn new one, also manage existing pooled aircrafts
-                TrySpawnAircraftInAir();
-                ManageAircraft();
+                Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
+                if (UnityEngine.Random.Range(-1, 101) < AircraftSpawnOdds && KickStart.AllowAirEnemiesToSpawn)
+                    TrySpawnAircraftInAir();
                 counter = 0;
             }
-            counter += Time.deltaTime;
+            if (updateTimer > 25)
+            {   // manager timer
+                ManagePooledAircraft();
+                updateTimer = 0;
+            }
+            if (!Singleton.Manager<ManPauseGame>.inst.IsPaused)
+            {
+                counter += Time.deltaTime;
+                updateTimer++;
+            }
+            else
+                updateTimer = 0;
         }
 
 
         // Utilities
-        private static Vector3 GetAirOffsetFromPosition(Vector3 pos)
+        private static Vector3 GetAirAngleFromPosition(Vector3 pos)
         {   // 
             float randAngle = UnityEngine.Random.Range(0, 360);
             Vector3 angleHeading = Quaternion.AngleAxis(randAngle, Vector3.up) * Vector3.forward;
             pos = pos + (angleHeading * AirSpawnDist);
             return angleHeading;
+        }
+        private static Vector3 GetAirOffsetFromPosition(Vector3 pos, Vector3 angleHeading)
+        {   // 
+            return AI.Movement.AIEPathing.ForceOffsetFromGroundA(pos + -(angleHeading * AirSpawnDist) + (Singleton.cameraTrans.forward * 25), 50);
         }
     }
 }

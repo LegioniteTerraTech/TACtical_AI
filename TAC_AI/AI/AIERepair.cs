@@ -54,6 +54,7 @@ namespace TAC_AI.AI
                     return;
                 List<TankBlock> ToSave = Tank.blockman.IterateBlocks().ToList();
                 SavedTech.Clear();
+
                 foreach (TankBlock bloc in ToSave)
                 {
                     BlockMemory mem = new BlockMemory();
@@ -104,20 +105,77 @@ namespace TAC_AI.AI
                 //if (SavedTech.Count() > 1)
                 //    SavedTech = new List<BlockMemory>(SavedTech).OrderBy((blok) => (blok.CachePos - Vector3.zero).sqrMagnitude).ToList();
             }
+            public TankBlock TryFindProperRootBlock(List<TankBlock> ToSearch)
+            {
+                bool IsAnchoredAnchorPresent = false;
+                float close = 64;
+                TankBlock newRoot = ToSearch.First();
+                foreach (TankBlock bloc in ToSearch)
+                {
+                    if (bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
+                    {
+                        IsAnchoredAnchorPresent = true;
+                        break;
+                    }
+                    if (bloc.cachedLocalPosition.sqrMagnitude < close * close && (bloc.GetComponent<ModuleTechController>() || bloc.GetComponent<ModuleAIBot>()))
+                    {
+                        close = bloc.cachedLocalPosition.magnitude;
+                        newRoot = bloc;
+                    }
+                }
+                if (IsAnchoredAnchorPresent)
+                {
+                    close = 64;
+                    foreach (TankBlock bloc in ToSearch)
+                    {
+                        if (bloc.cachedLocalPosition.sqrMagnitude < close * close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
+                        {
+                            close = bloc.cachedLocalPosition.magnitude;
+                            newRoot = bloc;
+                        }
+                    }
+                }
+                return newRoot;
+            }
+            public List<BlockMemory> TechToMemory()
+            {
+                List<BlockMemory> output = new List<BlockMemory>();
+                List<TankBlock> ToSave = Tank.blockman.IterateBlocks().ToList();
+                Vector3 coreOffset = Vector3.zero;
+                TankBlock rootBlock = TryFindProperRootBlock(ToSave);
+                if (rootBlock != ToSave.First())
+                {
+                    ToSave.Remove(rootBlock);
+                    ToSave.Insert(0, rootBlock);
+                    coreOffset = rootBlock.cachedLocalPosition;
+                    Tank.blockman.SetRootBlock(rootBlock);
+                }
 
+                foreach (TankBlock bloc in ToSave)
+                {
+                    BlockMemory mem = new BlockMemory();
+                    mem.blockType = bloc.BlockType;
+                    mem.CachePos = bloc.cachedLocalPosition - coreOffset;
+                    mem.CacheRot = bloc.cachedLocalRotation.rot;
+                    output.Add(mem);
+                }
+                Debug.Log("TACtical_AI:  DesignMemory - Saved (TechToMemory) " + Tank.name);
+
+                return output;
+            }
 
             // JSON
             public void TechToJSON()
             {   // Saving a Tech from the BlockMemory
-                //BlockMemory mem = new BlockMemory();
-                if (SavedTech.Count == 0)
+                List<BlockMemory> mem = TechToMemory();
+                if (mem.Count == 0)
                     return;
                 StringBuilder JSONTechRAW = new StringBuilder();
-                JSONTechRAW.Append(JsonUtility.ToJson(SavedTech.First()));
-                for (int step = 1; step < SavedTech.Count; step++)
+                JSONTechRAW.Append(JsonUtility.ToJson(mem.First()));
+                for (int step = 1; step < mem.Count; step++)
                 {
                     JSONTechRAW.Append("|");
-                    JSONTechRAW.Append(JsonUtility.ToJson(SavedTech.ElementAt(step)));
+                    JSONTechRAW.Append(JsonUtility.ToJson(mem.ElementAt(step)));
                 }
                 string JSONTechRAWout = JSONTechRAW.ToString();
                 StringBuilder JSONTech = new StringBuilder();
@@ -198,30 +256,21 @@ namespace TAC_AI.AI
                 else
                     blockCase.Append(ch);
             }
+
             return mem.blockType;
         }
 
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
         public static bool AttemptBlockAttach(Tank tank, BlockMemory template, TankBlock canidate, DesignMemory TechMemor, bool useLimitedSupplies = false)
         {
-            if (!TechMemor.unlimitedParts && useLimitedSupplies)
-            {
-                if (!Enemy.RBases.PurchasePossible(canidate.BlockType, tank.Team))
-                {
-                    //Debug.Log("TACtical_AI: AI " + tank.name + ":  depleted block reserves!!!");
-                    TechMemor.ranOutOfParts = true;
-                    TechMemor.thisInst.PendingSystemsCheck = false;
-                    return false;
-                }
-            }
             TechMemor.ranOutOfParts = false;
             bool success;
             //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
             success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.CachePos, new OrthoRotation(template.CacheRot));
             if (success)
-            { 
+            {
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
-                if (!TechMemor.unlimitedParts && useLimitedSupplies)
+                if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
                 {
                     if (Enemy.RBases.TryMakePurchase(canidate.BlockType, tank.Team))
                     {
@@ -404,23 +453,33 @@ namespace TAC_AI.AI
             }
             return false;
         }
-        public static bool TrySpawnAndAttachBlockFromList(Tank tank, DesignMemory TechMemor, List<BlockTypes> typesMissing, bool playerInventory = false)
+        public static bool TrySpawnAndAttachBlockFromList(Tank tank, DesignMemory TechMemor, List<BlockTypes> typesMissing, bool playerInventory = false, bool useLimitedSupplies = false)
         {
             int attachAttempts = typesMissing.Count();
             for (int step = 0; step < attachAttempts; step++)
             {
+                BlockTypes bType = typesMissing.ElementAt(step);
                 if (playerInventory)
-                    if (!IsBlockStoredInInventory(tank, typesMissing.ElementAt(step)))
+                    if (!IsBlockStoredInInventory(tank, bType))
                         continue;
-                TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(typesMissing.ElementAt(step), tank.boundsCentreWorldNoCheck + (Vector3.up * AIECore.Extremes(tank.blockBounds.extents)), Quaternion.identity);
+                if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
+                    if (!Enemy.RBases.PurchasePossible(bType, tank.Team))
+                    {
+                        TechMemor.ranOutOfParts = true;
+                        TechMemor.thisInst.PendingSystemsCheck = false;
+                        continue;
+                    }
+                TechMemor.ranOutOfParts = false;
+
+                TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
-                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.blockType == foundBlock.BlockType; });
-                //Debug.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.blockType == bType; });
+                //Debug.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
                     BlockMemory template = posBlocks.ElementAt(step2);
-                    attemptW = AttemptBlockAttach(tank, template, foundBlock, TechMemor);
+                    attemptW = AttemptBlockAttach(tank, template, foundBlock, TechMemor, useLimitedSupplies);
                     if (attemptW)
                     {
                         foundBlock.InitNew();
@@ -428,7 +487,7 @@ namespace TAC_AI.AI
                     }
                 }
                 if (playerInventory)
-                    IsBlockStoredInInventory(tank, typesMissing.ElementAt(step), true);
+                    IsBlockStoredInInventory(tank, bType, true);
                 //Debug.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
 
                 foundBlock.transform.Recycle();
@@ -627,7 +686,7 @@ namespace TAC_AI.AI
         {
             Debug.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
             int cBCount = tank.blockman.IterateBlocks().ToList().Count();
-            int RepairAttempts = TechMemor.ReturnContents().Count() - cBCount;
+            int RepairAttempts = TechMemor.ReturnContents().Count() - cBCount + 3;
             try
             {
                 while (RepairAttempts > 0)
@@ -664,7 +723,8 @@ namespace TAC_AI.AI
                 List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, cBlocks);
 
                 //Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
-                TrySpawnAndAttachBlockFromList(tank, TechMemor, typesMissing);
+                if (!TrySpawnAndAttachBlockFromList(tank, TechMemor, typesMissing, false, false))
+                    Debug.Log("TACtical AI: TurboRepair - attach attempt failed");
             }
             return;
         }

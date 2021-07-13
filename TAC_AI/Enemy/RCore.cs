@@ -185,7 +185,12 @@ namespace TAC_AI.AI.Enemy
             BlockSetEnemyHandling(tank, toSet);
 
             //Determine Attitude
-            if (BM.blockCount > 250 && KickStart.MaxEnemyHQLimit > RBases.GetEnemyHQCount())
+            if (BM.IterateBlockComponents<ModuleWeapon>().Count() + BM.IterateBlockComponents<ModuleDrill>().Count() <= BM.IterateBlockComponents<ModuleTechController>().Count())
+            {   // Unarmed - Runner
+                toSet.CommanderMind = EnemyAttitude.Homing;
+                toSet.CommanderAttack = EnemyAttack.Coward;
+            }
+            else if (BM.blockCount > 250 && KickStart.MaxEnemyHQLimit > RBases.GetEnemyHQCount())
             {   // Boss
                 toSet.InvertBullyPriority = true;
                 toSet.CommanderMind = EnemyAttitude.Boss;
@@ -450,7 +455,8 @@ namespace TAC_AI.AI.Enemy
                     toSet.CommanderAttack = EnemyAttack.Bully;
                 if (toSet.CommanderAttack == EnemyAttack.Spyper)
                     toSet.CommanderAttack = EnemyAttack.Grudge;
-                toSet.CommanderMind = EnemyAttitude.Homing;
+                if (toSet.CommanderMind == EnemyAttitude.Miner)
+                    toSet.CommanderMind = EnemyAttitude.Homing;
             }
 
             if (toSet.CommanderAttack == EnemyAttack.Grudge)

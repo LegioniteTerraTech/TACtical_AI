@@ -118,42 +118,92 @@ namespace TAC_AI
         [HarmonyPatch("SetupTerrain")]//lol
         private static class SetupTerrainCustom
         {
-            private static void Prefix(ModeAttract __instance)
+            private static bool Prefix(ModeAttract __instance)
             {
-                if (UnityEngine.Random.Range(1, 100) > 5)
+                if (UnityEngine.Random.Range(1, 100) > 5 || KickStart.retryForBote == 1)
                 {
                     Debug.Log("TACtical_AI: Ooop - the special threshold has been met");
                     KickStart.SpecialAttract = true;
-                    bool caseOverride = false;
-                    int outNum = 28;
-                    if (!caseOverride)
+                    bool caseOverride = true;
+                    int outNum = 45;//28;
+                    if (KickStart.retryForBote == 1)
+                        outNum = 45;
+                    else if (!caseOverride)
                         outNum = (int)(UnityEngine.Random.Range(1, 100) + 0.5f);
                     KickStart.SpecialAttractNum = outNum;
-                    if (KickStart.SpecialAttractNum < 32 && KickStart.SpecialAttractNum >= 24)
+                    if (KickStart.SpecialAttractNum < 48 && KickStart.SpecialAttractNum >= 36)
                     {   // Naval Brawl
                         if (KickStart.isWaterModPresent)
                         {
-                            Vector3 offset = __instance.spawns[0].cameraSpawn.position;
-                            offset.x += 400;
-                            offset.z -= 430;
-                            KickStart.SpecialAttractPos = offset;
-                            Debug.Log("TACtical_AI: offset " + offset); 
-                            Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
+                            KickStart.retryForBote++;
                             Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
                             Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
+                            Vector3 offset = Vector3.zero;
+                            offset.x = -50.0f;
+                            offset.z = 100.0f;
+                            //offset.x = -240.0f;
+                            //offset.z = 442.0f;
                             BiomeMap edited = __instance.spawns[0].biomeMap;
-                            Singleton.Manager<ManWorld>.inst.SeedString = "naval";
-                            Singleton.Manager<ManGameMode>.inst.RegenerateWorld(edited, offset, Quaternion.LookRotation(__instance.spawns[0].cameraSpawn.forward, Vector3.up));
+                            //Singleton.Manager<ManWorld>.inst.SeedString = "naval";
+                            Singleton.Manager<ManWorld>.inst.SeedString = "68unRTyXMrX93DH";
+                            Singleton.Manager<ManGameMode>.inst.RegenerateWorld(edited, __instance.spawns[1].cameraSpawn.forward, Quaternion.LookRotation(__instance.spawns[1].cameraSpawn.forward, Vector3.up));
                             Singleton.Manager<ManTimeOfDay>.inst.EnableSkyDome(enable: true);
                             Singleton.Manager<ManTimeOfDay>.inst.EnableTimeProgression(enable: false);
                             Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(6, 18), 0, 0);
+                            KickStart.SpecialAttractPos = offset;
+                            Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
+                            Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
 
-                            return;
+
+                            /*
+                            int step = 0;
+                            foreach (ModeAttract.Spawn spawn in __instance.spawns)
+                            {
+                                Debug.Log("TACtical_AI: spawn " + step + " | pos" + spawn.cameraSpawn.position + " | vehiclepos " + spawn.vehicleSpawnCentre.position);
+                                step++;
+                            }
+
+                            //Vector3 offset = __instance.spawns[0].cameraSpawn.position;
+                            offset.x += 400;
+                            offset.z -= 430;
+                            KickStart.SpecialAttractPos = offset;
+
+                            int stepxM = 100;
+                            int stepzM = 100;
+                            float lowestHeight = 100;
+                            Vector3 posBest = Vector3.zero;
+                            for (int stepz = 0; stepz < stepzM; stepz++)
+                            {
+                                for (int stepx = 0; stepx < stepxM; stepx++)
+                                {
+                                    Vector3 wow = KickStart.SpecialAttractPos;
+                                    wow.x -= stepx * 8;
+                                    wow.z += stepz * 8;
+                                    if (!Singleton.Manager<ManWorld>.inst.GetTerrainHeight(wow, out float heightC))
+                                        continue;
+                                    if (heightC < lowestHeight)
+                                    {
+                                        lowestHeight = heightC;
+                                        posBest = wow;
+                                    }
+                                }
+                            }
+                            Debug.Log("TACtical_AI: deepest terrain of depth " + lowestHeight + " found at " + posBest);
+                            KickStart.SpecialAttractPos = posBest;
+                            KickStart.SpecialAttractPos = offset;
+                            Debug.Log("TACtical_AI: offset " + offset);
+                            Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
+                            Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
+                            Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
+                            */
+
+                            return false;
                         }
                     }
                 }
                 else
                     KickStart.SpecialAttract = false;
+                return true;
             }
         }
 
@@ -228,35 +278,10 @@ namespace TAC_AI
                             if (KickStart.isWaterModPresent)
                             {
                                 Camera.main.transform.position = KickStart.SpecialAttractPos;
-
-                                int stepxM = 100;
-                                int stepzM = 100;
-                                float lowestHeight = 100;
-                                Vector3 posBest = Vector3.zero;
-                                for (int stepz = 0; stepz < stepzM; stepz++)
-                                {
-                                    for (int stepx = 0; stepx < stepxM; stepx++)
-                                    {
-                                        Vector3 wow = KickStart.SpecialAttractPos;
-                                        wow.x -= stepx * 8;
-                                        wow.z += stepz * 8;
-                                        if (!Singleton.Manager<ManWorld>.inst.GetTerrainHeight(wow, out float heightC))
-                                            continue;
-                                        if (heightC < lowestHeight)
-                                        {
-                                            lowestHeight = heightC;
-                                            posBest = wow;
-                                        }
-                                    }
-                                }
-                                Debug.Log("TACtical_AI: deepest terrain  of depth " + lowestHeight + " found at " + posBest);
-                                KickStart.SpecialAttractPos = posBest;
-
-                                Camera.main.transform.position = KickStart.SpecialAttractPos;
                                 int removed = 0;
                                 foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(KickStart.SpecialAttractPos, 2500, new Bitfield<ObjectTypes>()))
                                 {
-                                    if (vis.resdisp.IsNotNull() && vis.centrePosition.y < -20)
+                                    if (vis.resdisp.IsNotNull() && vis.centrePosition.y < -25)
                                     {
                                         vis.resdisp.RemoveFromWorld(false, true, true, true);
                                         removed++;
@@ -268,7 +293,7 @@ namespace TAC_AI
                                     Tank tech = tanksToConsider.ElementAt(step);
                                     tech.transform.position = KickStart.SpecialAttractPos;
                                     Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 20);
-                                    position.y = -20;
+                                    position = AI.Movement.AIEPathing.ForceOffsetToSea(position);
                                     tech.visible.RemoveFromGame();
 
                                     if (!Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Sea, silentFail: false))
@@ -757,28 +782,28 @@ namespace TAC_AI
         [HarmonyPatch("OnSpawned")]//On enemy base bomb landing
         private static class EmergencyOverrideOnWaterLanding
         {
-            private static void Prefix(ManPop __instance, ref TrackedVisible tva)
+            private static void Prefix(ManPop __instance, ref TrackedVisible tv)
             {
                 if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent)
                 {
-                    if (tva != null)
+                    if (tv != null)
                     {
-                        if (tva.visible != null)
+                        if (tv.visible != null)
                         {
-                            if (tva.visible.tank != null)
+                            if (tv.visible.tank != null)
                             {
-                                if (!AI.Movement.AIEPathing.AboveTheSea(tva.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tva.visible.tank) != AI.Enemy.EnemyHandling.Naval && tva.visible.tank.IsEnemy())
+                                if (AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tv.visible.tank) != AI.Enemy.EnemyHandling.Naval && tv.visible.tank.IsEnemy())
                                 {
                                     // OVERRIDE TO SHIP
                                     try
                                     {
-                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(tva.Position, tva.visible.tank.rootBlockTrans.forward, tva.TeamID, RawTechLoader.GetEnemyBaseType(tva.visible.tank.GetMainCorp(), BasePurpose.NotABase, BaseTerrain.Sea));
-                                        RadarTypes inherit = tva.RadarType;
-                                        string previousTechName = tva.visible.tank.name;
-                                        tva.visible.transform.Recycle();
+                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(tv.Position, tv.visible.tank.rootBlockTrans.forward, tv.TeamID, RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotABase, BaseTerrain.Sea));
+                                        RadarTypes inherit = tv.RadarType;
+                                        string previousTechName = tv.visible.tank.name;
+                                        tv.visible.transform.Recycle();
 
                                         Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
-                                        tva = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
+                                        tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
                                     }
                                     catch
                                     {
@@ -786,25 +811,37 @@ namespace TAC_AI
 
                                         for (int fire = 0; fire < 25; fire++)
                                         {
-                                            TankBlock boom = Singleton.Manager<ManSpawn>.inst.SpawnBlock(BlockTypes.VENFuelTank_212, tva.Position, Quaternion.LookRotation(Vector3.forward));
+                                            TankBlock boom = Singleton.Manager<ManSpawn>.inst.SpawnBlock(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward));
                                             boom.visible.SetInteractionTimeout(20);
                                             boom.damage.SelfDestruct(0.5f);
                                         }
-                                        foreach (TankBlock block in tva.visible.tank.blockman.IterateBlocks())
+                                        foreach (TankBlock block in tv.visible.tank.blockman.IterateBlocks())
                                         {
                                             block.visible.SetInteractionTimeout(20);
                                             block.damage.SelfDestruct(0.5f);
                                             block.damage.Explode(true);
                                         }
-                                        tva.visible.tank.blockman.Disintegrate(true, false);
-                                        if (tva.visible.IsNotNull())
-                                            tva.visible.trans.Recycle();
+                                        tv.visible.tank.blockman.Disintegrate(true, false);
+                                        if (tv.visible.IsNotNull())
+                                            tv.visible.trans.Recycle();
                                     }
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+
+        [HarmonyPatch(typeof(ManGameMode))]
+        [HarmonyPatch("Awake")]//On enemy base bomb landing
+        private static class StartupSpecialAISpawner
+        {
+            private static void Postfix(ManGameMode __instance)
+            {
+                // Setup aircraft if Population Injector is N/A
+                if (!KickStart.isPopInjectorPresent)
+                    SpecialAISpawner.Initiate();
             }
         }
     }

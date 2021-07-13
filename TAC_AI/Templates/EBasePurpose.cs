@@ -34,5 +34,6 @@ namespace TAC_AI.Templates
         Headquarters,
         NotABase,
         NoAutoSearch,
+        NoWeapons,
     }
 }

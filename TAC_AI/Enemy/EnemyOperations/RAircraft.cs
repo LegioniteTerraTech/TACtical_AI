@@ -62,7 +62,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.BOOST = true;
                     if (tank.wheelGrounded)
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -72,7 +72,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     if (tank.wheelGrounded)
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                             thisInst.TryHandleObstruction(true, dist, true, true);
                         else
                             thisInst.SettleDown();

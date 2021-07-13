@@ -13,7 +13,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);
-            thisInst.Attempt3DNavi = false;
+            thisInst.Attempt3DNavi = true;
 
             if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy.IsNotNull())
             {
@@ -24,7 +24,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         return;
                 }
             }
-            else if (thisInst.lastEnemy == null)
+            if (thisInst.lastEnemy == null)
             {
                 RGeneral.LollyGag(thisInst, tank, mind);
                 return;

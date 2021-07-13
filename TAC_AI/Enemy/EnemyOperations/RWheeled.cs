@@ -21,7 +21,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         return;
                 }
             }
-            else if (thisInst.lastEnemy == null)
+            if (thisInst.lastEnemy == null)
             {
                 RGeneral.LollyGag(thisInst, tank, mind);
                 return;

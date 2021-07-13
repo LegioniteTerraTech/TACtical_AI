@@ -449,6 +449,23 @@ namespace TAC_AI.AI.Movement
             final.y = final_y;
             return final;
         }
+        public static Vector3 ForceOffsetFromGroundA(Vector3 input, float groundOffset = 35)
+        {
+            float final_y;
+            Vector3 final = input;
+            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            if (terrain)
+                final_y = height + groundOffset;
+            else
+                final_y = 50 + groundOffset;
+            if (KickStart.isWaterModPresent)
+            {
+                if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
+                    final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+            }
+            final.y = final_y;
+            return final;
+        }
         public static Vector3 OffsetToSea(Vector3 input, Tank tank, AIECore.TankAIHelper thisInst)
         {
             Vector3 final = input;
@@ -493,6 +510,13 @@ namespace TAC_AI.AI.Movement
             }
             else
                 final.y = WaterMod.QPatch.WaterHeight;
+            return final;
+        }
+        public static Vector3 ForceOffsetToSea(Vector3 input)
+        {
+            Vector3 final = input;
+            final.y = WaterMod.QPatch.WaterHeight;
+
             return final;
         }
         public static Vector3 OffsetFromSea(Vector3 input, Tank tank, AIECore.TankAIHelper thisInst)

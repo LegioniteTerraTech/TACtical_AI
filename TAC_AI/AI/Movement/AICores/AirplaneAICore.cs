@@ -99,9 +99,9 @@ namespace TAC_AI.AI.Movement.AICores
                         Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
                         pilot.PerformDiveAttack = 1;
                     }
-                    else    // hold off on the U-Turn
+                    else
                     {
-                        pilot.PerformUTurn = 0;
+                        pilot.PerformUTurn = 0; // hold off on the U-Turn
                         if (Heading.z < 0)
                         {   // Moving away from target
                             Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
@@ -243,7 +243,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (mind.CommanderMind == Enemy.EnemyAttitude.SubNeutral)
             {   // Fly straight, above ground in player visual distance
-                pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod), pilot.Helper);
+                pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod) + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
             }
             else
             {
@@ -285,10 +285,15 @@ namespace TAC_AI.AI.Movement.AICores
                         pilot.AirborneDest.y = (this.pilot.Helper.lastPlayer.tank.boundsCentreWorldNoCheck + (Vector3.up * (this.pilot.Helper.GroundOffsetHeight / 5))).y;
                     }
                     else
-                    {   //Fly off the screen
-                        Vector3 fFlat = this.pilot.Tank.rootBlockTrans.forward;
-                        fFlat.y = 0.25f;
-                        pilot.AirborneDest = (fFlat.normalized * 1000) + this.pilot.Tank.boundsCentreWorldNoCheck;
+                    {   // Fly forwards until target is found
+                        pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod) + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
+
+                        /* - Old
+                        //Fly off the screen
+                        //Vector3 fFlat = this.pilot.Tank.rootBlockTrans.forward;
+                        //fFlat.y = 0.25f;
+                        //pilot.AirborneDest = (fFlat.normalized * 1000) + this.pilot.Tank.boundsCentreWorldNoCheck;
+                        */
                     }
                 }
             }

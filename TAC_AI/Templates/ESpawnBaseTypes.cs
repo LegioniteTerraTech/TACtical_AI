@@ -14,6 +14,7 @@ namespace TAC_AI.Templates
         // STATIONARY TECHS
         // error
         NotAvail,
+
         // The Bases
         // GSO
         GSOSeller,
@@ -22,16 +23,19 @@ namespace TAC_AI.Templates
         GSOAIMinerProduction,
         GSOTechFactory,
         GSOStarport,
+
         // GeoCorp
         GCMiningRig,
         GCProspectorHub,
         GCHeadquarters,
         GCMiningLaser,
+
         // Venture
         VENRallyHost,
         VENGasStation,
         VENTuningShop,
         VENGasSilo,
+
         // Hawkeye
         HECommandCentre,
         HECombatStation,
@@ -46,13 +50,13 @@ namespace TAC_AI.Templates
         GCMiningLaserLite,
         VENDeputyTurret,
         HEPerimeterDefense,
-        HEHeavyDefense,
+        HECapitalDefense,
 
 
 
         // MOBILE TECHS
         GSOTonyTeam,
-        // Hybridz
+        // Hybridz - will spawn if player is at every max grade corp and they are PAIN
         AttractServo,
         // TAC lol
         TACInvaderAttract,
@@ -62,26 +66,42 @@ namespace TAC_AI.Templates
 
         // World Gen (emergency)
         // Aircraft - from slow to fast sorted by corp
-        GSOEpicTony,
-        GSOAirdropSquad,
-        GSOFightOrFlight,
-        VENZephr,
-        VENMachinator,
-        HEDropship,
-        HEBombsAway,
-        HECyclone,
+        GSOLiftOff,         // Unarmed, early
+        GSOEpicTony,        // lotta lasers
+        GSOAirdropSquad,    // GSO Dropship
+        GSOFightOrFlight,   // Heavy GSO does-all
+
+        VENLiftOff,         // Unarmed, early
+        VENPuffPlane,       // Small Venture interceptor
+        VENDraftPlane,      // Medum Venture interceptor
+        VENZephrPlane,      // Heavy interceptor [missiles]
+        VENHotWings,        // Racer dropship
+        VENMachinator,      // gg toofast, tons of missiles
+
+        HEPeanutJet,        // Intro cutscene enemy, has cruise missiles very early
+        HEDropship,         // Wheeled Tank Dropship (Alien ref)
+        HEBombsAway,        // Anti-base bomber
+        HECyclone,          // Very fast and dangerous HE aircraft armed to the bone
+
+        BFEchoAir,          // Small laser interceptor
+        BFColossus,         // Large BF hover dropship
+        BFOblivion,         // lotta beam lasors
+
         // Choppers
         GSOQuadGale,
         HEPocketApache,
         BFeClipse,
+
         // Naval
         GSOShallowWaterGuard,
-        GCBuoyMiner,
+        GCPlasmaDredge,
+        GCYukonCharleyDredge,
         VENNautilus,
         HESwaddleBoat,
         BFLuxYacht,
+
         // Space
-        GSOSpaceshipCompact
+        GSOSpaceshipCompact,
     }
 
 }
