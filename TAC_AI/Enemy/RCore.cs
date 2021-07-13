@@ -122,7 +122,7 @@ namespace TAC_AI.AI.Enemy
         // AI SETUP
         public static void RandomizeBrain(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            Debug.Log("TACtical_AI: offset " + tank.boundsCentreWorldNoCheck);
+            //Debug.Log("TACtical_AI: offset " + tank.boundsCentreWorldNoCheck);
             if (!tank.gameObject.GetComponent<EnemyMind>())
                 tank.gameObject.AddComponent<EnemyMind>();
             thisInst.lastPlayer = null;

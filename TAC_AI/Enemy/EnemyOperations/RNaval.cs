@@ -35,13 +35,16 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
+            float spacer = thisInst.lastTechExtents + enemyExt;
+            if (mind.MainFaction == FactionSubTypes.GC && mind.CommanderAttack != EnemyAttack.Coward)
+                spacer = -32;// ram no matter what, or get close for snipers
 
             if (mind.CommanderAttack == EnemyAttack.Coward)
             {
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = true;
                 thisInst.MoveFromObjective = true;
-                if (dist < thisInst.lastTechExtents + enemyExt + (range / 4))
+                if (dist < spacer + (range / 4))
                 {
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     thisInst.BOOST = true;
@@ -50,7 +53,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                         thisInst.SettleDown();
                 }
-                else if (dist < thisInst.lastTechExtents + enemyExt + range)
+                else if (dist < spacer + range)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);
@@ -72,7 +75,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-                else if (mind.Range < thisInst.lastTechExtents + enemyExt + range)
+                else if (mind.Range < spacer + range)
                 {
                     thisInst.ProceedToObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -88,7 +91,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
-                if (dist < thisInst.lastTechExtents + enemyExt + (range / 2))
+                if (dist < spacer + (range / 2))
                 {
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -97,7 +100,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                         thisInst.SettleDown();
                 }
-                else if (dist < thisInst.lastTechExtents + enemyExt + range)
+                else if (dist < spacer + range)
                 {
                     thisInst.PivotOnly = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -126,7 +129,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = false;
-                if (dist < thisInst.lastTechExtents + enemyExt + 2)
+                if (dist < spacer + 2)
                 {
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -135,13 +138,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                         thisInst.SettleDown();
                 }
-                else if (dist < thisInst.lastTechExtents + enemyExt + range)
+                else if (dist < spacer + range)
                 {
                     thisInst.PivotOnly = true;
                     thisInst.ProceedToObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-                else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
+                else if (dist < spacer + (range * 1.25f))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(true, dist, true, true);

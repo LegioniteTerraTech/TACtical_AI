@@ -2,7 +2,7 @@
 using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
-using Harmony;
+using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using TAC_AI.AI;
@@ -254,7 +254,7 @@ namespace TAC_AI
                             for (int step = 0; TechCount > step; step++)
                             {
                                 Tank tech = tanksToConsider.ElementAt(step);
-                                Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 32);
+                                Vector3 position = tech.boundsCentreWorld;// - (tech.rootBlockTrans.forward * 32);
                                 position.y += 64;
 
                                 if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, Templates.BaseTerrain.Air, silentFail: false))
@@ -266,7 +266,7 @@ namespace TAC_AI
                             for (int step = 0; TechCount > step; step++)
                             {
                                 Tank tech = tanksToConsider.ElementAt(step);
-                                Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 48);
+                                Vector3 position = tech.boundsCentreWorld;// - (tech.rootBlockTrans.forward * 48);
                                 position.y += 64;
 
                                 if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Space, silentFail: false))
@@ -292,12 +292,13 @@ namespace TAC_AI
                                 {
                                     Tank tech = tanksToConsider.ElementAt(step);
                                     tech.transform.position = KickStart.SpecialAttractPos;
-                                    Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 20);
+                                    Vector3 forward = Quaternion.AngleAxis((360 / TechCount) * (step + 1), Vector3.up) * Vector3.forward;
+                                    Vector3 position = tech.boundsCentreWorld - (forward * 10);
                                     position = AI.Movement.AIEPathing.ForceOffsetToSea(position);
                                     tech.visible.RemoveFromGame();
 
-                                    if (!Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Sea, silentFail: false))
-                                        Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Space, silentFail: false);
+                                    if (!Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), forward, Templates.BaseTerrain.Sea, silentFail: false))
+                                        Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), forward, Templates.BaseTerrain.Space, silentFail: false);
                                 }
                                 //Debug.Log("TACtical_AI: cam is at " + Singleton.Manager<CameraManager>.inst.ca);
                                 Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
@@ -321,7 +322,7 @@ namespace TAC_AI
                             for (int step = 0; TechCount > step; step++)
                             {
                                 Tank tech = tanksToConsider.ElementAt(step);
-                                Vector3 position = tech.boundsCentreWorld - (tech.rootBlockTrans.forward * 10);
+                                Vector3 position = tech.boundsCentreWorld; //- (tech.rootBlockTrans.forward * 10);
                                 position.y += 10;
 
                                 if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Land))

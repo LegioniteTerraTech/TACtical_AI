@@ -469,15 +469,17 @@ namespace TAC_AI.AI.Movement
         public static Vector3 OffsetToSea(Vector3 input, Tank tank, AIECore.TankAIHelper thisInst)
         {
             Vector3 final = input;
+            Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float heightTank);
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
             if (terrain)
             {
-                if (height > WaterMod.QPatch.WaterHeight - 3)// avoid terrain pathing!
+                float operatingDepth = tank.blockman.GetLowestBlocks().First().trans.position.y - 1;
+                if (height > operatingDepth || heightTank > operatingDepth - 0.4)// avoid terrain pathing!
                 {
                     // Iterate lowest terrain spots
                     int stepxM = 5;
                     int stepzM = 5;
-                    float lowestHeight = WaterMod.QPatch.WaterHeight - 3;
+                    float lowestHeight = operatingDepth;//WaterMod.QPatch.WaterHeight - 3;
                     Vector3 posBest = Vector3.zero;
                     for (int stepz = 0; stepz < stepzM; stepz++)
                     {
@@ -497,7 +499,7 @@ namespace TAC_AI.AI.Movement
                             }
                         }
                     }
-                    if (lowestHeight < WaterMod.QPatch.WaterHeight - 3)
+                    if (lowestHeight < operatingDepth)
                     {
                         //Debug.Log("TACtical_AI: deepest terrain  of depth " + lowestHeight + " found at " + posBest);
                         final = posBest;

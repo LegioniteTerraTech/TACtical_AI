@@ -45,7 +45,7 @@ namespace TAC_AI.AI.Enemy
         {
             queueRemove = false;
             Tank = gameObject.GetComponent<Tank>();
-            Debug.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
+            //Debug.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
             AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
             EnemyOpsController = new EnemyOperationsController(this);
             Tank.DamageEvent.Subscribe(OnHit);
@@ -64,7 +64,7 @@ namespace TAC_AI.AI.Enemy
         {
             if (gameObject.GetComponent<EnemyMind>().IsNotNull())
             {
-                Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
+                //Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
                 queueRemove = true;
                 if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
                     gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
