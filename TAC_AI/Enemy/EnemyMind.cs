@@ -40,6 +40,8 @@ namespace TAC_AI.AI.Enemy
 
         internal bool queueRemove = false;
         internal const float SpyperMaxRange = 1000;
+        internal const float SpacingRange = 8;
+        internal const float SpacingRangeAir = 16;
 
         public void Initiate()
         {

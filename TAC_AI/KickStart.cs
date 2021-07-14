@@ -29,6 +29,9 @@ namespace TAC_AI
         public static bool AllowAirEnemiesToSpawn = false;
         public static bool DesignsToLog = false;
 
+        public static bool DestroyTreesInWater = false;
+
+
         internal static bool isWaterModPresent = false;
         internal static bool isTougherEnemiesPresent = false;
         internal static bool isWeaponAimModPresent = false;
@@ -52,6 +55,7 @@ namespace TAC_AI
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
         public static OptionToggle enemyAirSpawn;
+        public static OptionToggle noTreesInWater;
 
 
         internal static bool firedAfterBlockInjector = false;
@@ -77,6 +81,7 @@ namespace TAC_AI
             }
             AI.AIECore.TankAIManager.Initiate();
             GUIAIManager.Initiate();
+            ResSpawnOverride.Initiate();
 
             if (LookForMod("WaterMod"))
             {
@@ -127,18 +132,19 @@ namespace TAC_AI
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             if (isTougherEnemiesPresent || testEnemyAI)
             {
-                painfulEnemies = new OptionToggle("Painful Enemies", TACAI, enablePainMode);
+                var TACAIEnemies = ModName + " - Enemies";
+                painfulEnemies = new OptionToggle("Painful Enemies", TACAIEnemies, enablePainMode);
                 painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 diff = new OptionRange("AI Difficulty", TACAI, Difficulty, -50, 150, 25);
                 diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAI, AllowEnemiesToStartBases);
+                enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
                 enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 if (!isPopInjectorPresent)
                 {
-                    enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAI, AllowAirEnemiesToSpawn);
+                    enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemies, AllowAirEnemiesToSpawn);
                     enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 }
-                infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAI, EnemiesHaveCreativeInventory);
+                infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
                 infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             }
 

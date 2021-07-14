@@ -474,7 +474,7 @@ namespace TAC_AI.AI.Movement
             if (terrain)
             {
                 float operatingDepth = tank.blockman.GetLowestBlocks().First().trans.position.y - 1;
-                if (height > operatingDepth || heightTank > operatingDepth - 0.4)// avoid terrain pathing!
+                if (height > operatingDepth || heightTank > operatingDepth - 1)// avoid terrain pathing!
                 {
                     // Iterate lowest terrain spots
                     int stepxM = 5;
@@ -505,7 +505,11 @@ namespace TAC_AI.AI.Movement
                         final = posBest;
                     }
                     else
+                    {
+                        //thisInst.Yield = true;
+                        Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " pathfinding failiure");
                         final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                    }
                 }
                 else
                     final.y = WaterMod.QPatch.WaterHeight;

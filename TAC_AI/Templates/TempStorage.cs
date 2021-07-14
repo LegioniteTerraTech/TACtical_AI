@@ -146,8 +146,8 @@ namespace TAC_AI.Templates
                 techName = "GSO Lift Off",
                 faction = FactionSubTypes.GSO,
                 terrain = BaseTerrain.Air,
-                purposes = new List<BasePurpose>{ BasePurpose.NotABase, BasePurpose.NoWeapons},
-                IntendedGrade = 2,
+                purposes = new List<BasePurpose>{ BasePurpose.NotABase, BasePurpose.NoWeapons },
+                IntendedGrade = 0, // unarmed
                 startingFunds = -1,
                 savedTech = "{\"blockType\":8,\"CachePos\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"CacheRot\":0}|{\"blockType\":3,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":0.0},\"CacheRot\":0}|{\"blockType\":3,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":1.0},\"CacheRot\":0}|{\"blockType\":3,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":-1.0},\"CacheRot\":0}|{\"blockType\":3,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":-2.0},\"CacheRot\":0}|{\"blockType\":63,\"CachePos\":{\"x\":1.0,\"y\":-1.0,\"z\":0.0},\"CacheRot\":0}|{\"blockType\":61,\"CachePos\":{\"x\":-1.0,\"y\":-1.0,\"z\":0.0},\"CacheRot\":0}|{\"blockType\":89,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":2.0},\"CacheRot\":0}|{\"blockType\":1,\"CachePos\":{\"x\":1.0,\"y\":-1.0,\"z\":1.0},\"CacheRot\":12}|{\"blockType\":1,\"CachePos\":{\"x\":-1.0,\"y\":-1.0,\"z\":1.0},\"CacheRot\":8}|{\"blockType\":64,\"CachePos\":{\"x\":1.0,\"y\":-1.0,\"z\":-2.0},\"CacheRot\":12}|{\"blockType\":64,\"CachePos\":{\"x\":-1.0,\"y\":-1.0,\"z\":-2.0},\"CacheRot\":8}|{\"blockType\":21,\"CachePos\":{\"x\":0.0,\"y\":0.0,\"z\":-1.0},\"CacheRot\":0}|{\"blockType\":64,\"CachePos\":{\"x\":0.0,\"y\":0.0,\"z\":-2.0},\"CacheRot\":0}|{\"blockType\":88,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":-3.0},\"CacheRot\":0}|{\"blockType\":88,\"CachePos\":{\"x\":-1.0,\"y\":-2.0,\"z\":0.0},\"CacheRot\":20}|{\"blockType\":88,\"CachePos\":{\"x\":1.0,\"y\":-2.0,\"z\":0.0},\"CacheRot\":20}|{\"blockType\":93,\"CachePos\":{\"x\":0.0,\"y\":0.0,\"z\":1.0},\"CacheRot\":4}"
             } },
@@ -156,7 +156,7 @@ namespace TAC_AI.Templates
                 faction = FactionSubTypes.VEN,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotABase, BasePurpose.NoWeapons },
-                IntendedGrade = 1,
+                IntendedGrade = 0, // unarmed
                 startingFunds = -1,
                 savedTech = "{\"blockType\":1121,\"CachePos\":{\"x\":0.0,\"y\":0.0,\"z\":-1.0},\"CacheRot\":0}|{\"blockType\":66,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":-1.0},\"CacheRot\":0}|{\"blockType\":66,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":-3.0},\"CacheRot\":0}|{\"blockType\":89,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":1.0},\"CacheRot\":0}|{\"blockType\":379,\"CachePos\":{\"x\":1.0,\"y\":-1.0,\"z\":0.0},\"CacheRot\":0}|{\"blockType\":338,\"CachePos\":{\"x\":-1.0,\"y\":-1.0,\"z\":0.0},\"CacheRot\":0}|{\"blockType\":339,\"CachePos\":{\"x\":-1.0,\"y\":-1.0,\"z\":-3.0},\"CacheRot\":8}|{\"blockType\":339,\"CachePos\":{\"x\":1.0,\"y\":-1.0,\"z\":-3.0},\"CacheRot\":12}|{\"blockType\":92,\"CachePos\":{\"x\":0.0,\"y\":-2.0,\"z\":0.0},\"CacheRot\":4}|{\"blockType\":76,\"CachePos\":{\"x\":1.0,\"y\":-2.0,\"z\":0.0},\"CacheRot\":0}|{\"blockType\":76,\"CachePos\":{\"x\":-1.0,\"y\":-2.0,\"z\":0.0},\"CacheRot\":2}|{\"blockType\":339,\"CachePos\":{\"x\":0.0,\"y\":0.0,\"z\":-3.0},\"CacheRot\":0}|{\"blockType\":54,\"CachePos\":{\"x\":0.0,\"y\":-1.0,\"z\":-4.0},\"CacheRot\":0}|{\"blockType\":82,\"CachePos\":{\"x\":0.0,\"y\":-2.0,\"z\":-1.0},\"CacheRot\":4}"
             } },

@@ -45,10 +45,10 @@ namespace TAC_AI.Templates
         private int updateTimer = 0;
 
         const int MaxAircraftAllowed = 4;
-        const int AircraftSpawnOdds = 100;    // Out of 100
+        const int AircraftSpawnOdds = 15;    // Out of 100
         const float AirSpawnDist = 425;
         const float AirDespawnDist = 475;
-        const float AirSpawnInterval = 3;
+        const float AirSpawnInterval = 30;
 
         private static bool forceOn = false;    // spawn in creative no matter what
 

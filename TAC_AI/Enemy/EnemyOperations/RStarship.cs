@@ -33,7 +33,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
-            float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
+            float range = EnemyMind.SpacingRange + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
 
             thisInst.forceDrive = true;

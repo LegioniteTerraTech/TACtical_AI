@@ -863,7 +863,15 @@ namespace TAC_AI.AI
                 this.UrgencyOverload += KickStart.AIClockPeriod / 2;
                 if (this.Urgency > 0)
                     this.Urgency += KickStart.AIClockPeriod / 5;
-                if (useRush && dist > this.RangeToStopRush * 2)
+                if (this.UrgencyOverload > 50)
+                {
+                    //Are we just randomly angry for too long? let's fix that
+                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Overloaded urgency!  ReCalcing top speed!");
+                    this.EstTopSped = 1;
+                    this.AvoidStuff = true;
+                    this.UrgencyOverload = 0;
+                }
+                else if (useRush && dist > this.RangeToStopRush * 2)
                 {
                     //SCREW IT - GO FULL SPEED WE ARE TOO FAR BEHIND!
                     if (useGun)

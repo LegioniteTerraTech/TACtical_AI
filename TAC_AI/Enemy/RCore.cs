@@ -187,7 +187,7 @@ namespace TAC_AI.AI.Enemy
             //Determine Attitude
             if (BM.IterateBlockComponents<ModuleWeapon>().Count() + BM.IterateBlockComponents<ModuleDrill>().Count() <= BM.IterateBlockComponents<ModuleTechController>().Count())
             {   // Unarmed - Runner
-                toSet.CommanderMind = EnemyAttitude.Homing;
+                toSet.CommanderMind = EnemyAttitude.SubNeutral;
                 toSet.CommanderAttack = EnemyAttack.Coward;
             }
             else if (BM.blockCount > 250 && KickStart.MaxEnemyHQLimit > RBases.GetEnemyHQCount())
