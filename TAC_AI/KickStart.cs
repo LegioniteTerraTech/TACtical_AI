@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
-using HarmonyLib;
+using Harmony;
+//using HarmonyLib;
 using UnityEngine;
 using ModHelper.Config;
 using Nuterra.NativeOptions;
@@ -78,7 +79,8 @@ namespace TAC_AI
             //Where the fun begins
 
             //Initiate the madness
-            Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
+            HarmonyInstance harmonyInstance = HarmonyInstance.Create("legionite.tactical_ai");
+            //Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
             try
             {
                 harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
