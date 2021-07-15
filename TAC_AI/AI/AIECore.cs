@@ -359,6 +359,8 @@ namespace TAC_AI.AI
             internal bool Retreat = false;
 
             internal bool JustUnanchored = false;
+            internal bool PendingHeightCheck = false;
+            internal float LowestPointOnTech = 0;
 
             // AI Core
             public IMovementAIController MovementController;
@@ -380,11 +382,13 @@ namespace TAC_AI.AI
             {
                 this.EstTopSped = 1;
                 //this.LastBuildClock = 0;
+                this.PendingHeightCheck = true;
             }
             public void OnDetach(TankBlock newBlock, Tank tank)
             {
                 this.EstTopSped = 1;
                 this.recentSpeed = 1;
+                this.PendingHeightCheck = true;
             }
 
             public void OnSpawn(Tank tankInfo)
@@ -851,7 +855,7 @@ namespace TAC_AI.AI
             public void TryHandleObstruction(bool hasMessaged, float dist, bool useRush, bool useGun)
             {
                 //Something is in the way - try fetch the scenery to shoot at
-                Debug.Log("TACtical_AI: AI " + tank.name + ":  Obstructed");
+                //Debug.Log("TACtical_AI: AI " + tank.name + ":  Obstructed");
                 if (!hasMessaged)
                 {
                     Debug.Log("TACtical_AI: AI " + tank.name + ":  Can't move there - something's in the way!");
@@ -943,7 +947,7 @@ namespace TAC_AI.AI
                 int steps = ObstList.Count;
                 if (steps <= 0)
                 {
-                    Debug.Log("TACtical_AI: GetObstruction - DID NOT HIT ANYTHING");
+                    //Debug.Log("TACtical_AI: GetObstruction - DID NOT HIT ANYTHING");
                     return null;
                 }
                 for (int stepper = 0; steps > stepper; stepper++)
@@ -955,7 +959,7 @@ namespace TAC_AI.AI
                         bestValue = temp;
                     }
                 }
-                Debug.Log("TACtical_AI: GetObstruction - found " + ObstList.ElementAt(bestStep).name);
+                //Debug.Log("TACtical_AI: GetObstruction - found " + ObstList.ElementAt(bestStep).name);
                 return ObstList.ElementAt(bestStep).trans;
             }
             public void RemoveObstruction()
@@ -991,6 +995,54 @@ namespace TAC_AI.AI
                 }
                 return lastPlayer;
             }
+            public void GetLowestPointOnTech()
+            {
+                float lowest = 0;
+                List<TankBlock> lowBlocks = tank.blockman.GetLowestBlocks();
+                Quaternion forward = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.up);
+                for (int step = 0; step < lowBlocks.Count; step++)
+                {
+                    TankBlock block = lowBlocks[step];
+                    IntVector3[] filledCells = block.filledCells;
+                    foreach (IntVector3 intVector in filledCells)
+                    {
+                        Vector3 Locvec = block.cachedLocalPosition + block.cachedLocalRotation * intVector;
+                        Vector3 cellPosLocal = (forward * Locvec) - tank.rootBlockTrans.InverseTransformPoint(tank.boundsCentreWorldNoCheck);
+                        if (cellPosLocal.y < lowest)
+                        {
+                            lowest = cellPosLocal.y;
+                        }
+                    }
+                }
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  lowest point set " + lowest);
+                LowestPointOnTech = lowest;
+            }
+            public bool TestIsLowestPointOnTech(TankBlock block)
+            {
+                bool isTrue = false;
+                if (block == null)
+                    return false;
+                Quaternion forward = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.up);
+                IntVector3[] filledCells = block.filledCells;
+                foreach (IntVector3 intVector in filledCells)
+                {
+                    Vector3 Locvec = block.cachedLocalPosition + block.cachedLocalRotation * intVector;
+                    Vector3 cellPosLocal = (forward * Locvec) - tank.rootBlockTrans.InverseTransformPoint(tank.boundsCentreWorldNoCheck);
+                    if (cellPosLocal.y < LowestPointOnTech)
+                    {
+                        LowestPointOnTech = cellPosLocal.y;
+                        isTrue = true;
+                    }
+                }
+                if (isTrue)
+                {
+                    Debug.Log("TACtical_AI: AI " + tank.name + ":  lowest point set " + LowestPointOnTech);
+                }
+                return isTrue;
+            }
+
+
+
 
             public void RunAlliedOperations()
             {

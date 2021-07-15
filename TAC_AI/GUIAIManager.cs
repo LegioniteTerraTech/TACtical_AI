@@ -18,7 +18,7 @@ namespace TAC_AI
         public static bool isCurrentlyOpen = false;
         private static AIType fetchAI = AIType.Escort;
         private static AIType changeAI = AIType.Escort;
-        private static AI.AIECore.TankAIHelper lastTank;
+        private static AIECore.TankAIHelper lastTank;
 
         private static GameObject GUIWindow;
         private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
@@ -47,7 +47,7 @@ namespace TAC_AI
         }
         public static void GetTank(Tank tank)
         {
-            lastTank = tank.trans.GetComponent<AI.AIECore.TankAIHelper>();
+            lastTank = tank.trans.GetComponent<AIECore.TankAIHelper>();
             Vector3 Mous = Input.mousePosition;
             xMenu = Mous.x - 225;
             yMenu = Display.main.renderingHeight - Mous.y + 25;

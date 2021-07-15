@@ -240,6 +240,8 @@ namespace TAC_AI.AI.Movement.AICores
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper);
             else
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper, this.controller.Tank.blockBounds.size.y);
+            if (mind.EvilCommander == EnemyHandling.Wheeled)
+                help.lastDestination = AIEPathing.OffsetFromSea(help.lastDestination, tank, controller.Helper);
             return true;
         }
 
@@ -888,14 +890,14 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
-                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity), direction);
+                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity), direction);
                 }
             }
             else
             {
                 if (controller.Helper.AdvancedAI)
                 {
-                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity), direction);
+                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity), direction);
                 }
             }
             return direction;

@@ -55,7 +55,6 @@ namespace TAC_AI
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
         public static OptionToggle enemyAirSpawn;
-        public static OptionToggle noTreesInWater;
 
 
         internal static bool firedAfterBlockInjector = false;
@@ -63,6 +62,16 @@ namespace TAC_AI
         public static int SpecialAttractNum = 0;
         public static int retryForBote = 0;
         public static Vector3 SpecialAttractPos;
+
+        public static float WaterHeight 
+        { 
+            get 
+            {
+                float outValue = -25;
+                    try { outValue = WaterMod.QPatch.WaterHeight; } catch { }
+                return outValue;
+            }
+        }
 
         public static void Main()
         {
@@ -81,7 +90,6 @@ namespace TAC_AI
             }
             AI.AIECore.TankAIManager.Initiate();
             GUIAIManager.Initiate();
-            ResSpawnOverride.Initiate();
 
             if (LookForMod("WaterMod"))
             {

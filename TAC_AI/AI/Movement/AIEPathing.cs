@@ -16,6 +16,8 @@ namespace TAC_AI.AI.Movement
             }
         }
 
+        public const float ShipDepth = -3;
+
         //The default steering handles the ground steering
 
         //3-axis steering is handled in AIEDrive
@@ -332,8 +334,8 @@ namespace TAC_AI.AI.Movement
                 final_y = 50 + groundOffset;
             if (KickStart.isWaterModPresent)
             {
-                if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                    final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+                if (KickStart.WaterHeight > height)
+                    final_y = KickStart.WaterHeight + groundOffset;
             }
             return (input.y > final_y);
         }
@@ -342,11 +344,11 @@ namespace TAC_AI.AI.Movement
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
             if (terrain)
             {
-                if (height < WaterMod.QPatch.WaterHeight)
+                if (height < KickStart.WaterHeight)
                     return true;
             }
             else
-                if (50 < WaterMod.QPatch.WaterHeight)
+                if (50 < KickStart.WaterHeight)
                     return true;
             return false;
         }
@@ -371,29 +373,33 @@ namespace TAC_AI.AI.Movement
                 final_y = 50 + groundOffset;
             if (thisInst.AdviseAway)// && thisInst.lastEnemy.IsNull()
             {
-                //Still keep dist from ground
-                if (KickStart.isWaterModPresent)
+                try
                 {
-                    if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                        final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+                    //Still keep dist from ground
+                    if (KickStart.isWaterModPresent)
+                    {
+                        if (KickStart.WaterHeight > height)
+                            final_y = KickStart.WaterHeight + groundOffset;
+                    }
+                    if (input.y < final_y)
+                    {
+                        final.x = thisInst.tank.boundsCentreWorldNoCheck.x;
+                        final.z = thisInst.tank.boundsCentreWorldNoCheck.z;
+                        final.y = height;
+                    }
+                    else
+                    {
+                        final.y = thisInst.tank.boundsCentreWorldNoCheck.y;
+                    }
                 }
-                if (input.y < final_y)
-                {
-                    final.x = thisInst.tank.boundsCentreWorldNoCheck.x;
-                    final.z = thisInst.tank.boundsCentreWorldNoCheck.z;
-                    final.y = height;
-                }
-                else
-                {
-                    final.y = thisInst.tank.boundsCentreWorldNoCheck.y;
-                }
+                catch { }
             }
             else
             {
                 if (KickStart.isWaterModPresent)
                 {
-                    if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                        final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+                    if (KickStart.WaterHeight > height)
+                        final_y = KickStart.WaterHeight + groundOffset;
                 }
                 if (input.y < final_y)
                 {
@@ -422,8 +428,8 @@ namespace TAC_AI.AI.Movement
                 final_y = 50 + groundOffset;
             if (KickStart.isWaterModPresent)
             {
-                if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                    final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+                if (KickStart.WaterHeight > height)
+                    final_y = KickStart.WaterHeight + groundOffset;
             }
             if (input.y < final_y)
             {
@@ -443,8 +449,8 @@ namespace TAC_AI.AI.Movement
                 final_y = 50 + groundOffset;
             if (KickStart.isWaterModPresent)
             {
-                if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                    final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+                if (KickStart.WaterHeight > height)
+                    final_y = KickStart.WaterHeight + groundOffset;
             }
             final.y = final_y;
             return final;
@@ -460,8 +466,8 @@ namespace TAC_AI.AI.Movement
                 final_y = 50 + groundOffset;
             if (KickStart.isWaterModPresent)
             {
-                if (WaterMod.QPatch.IsWaterActive.SavedValue && WaterMod.QPatch.WaterHeight > height)
-                    final_y = WaterMod.QPatch.WaterHeight + groundOffset;
+                if (KickStart.WaterHeight > height)
+                    final_y = KickStart.WaterHeight + groundOffset;
             }
             final.y = final_y;
             return final;
@@ -469,74 +475,94 @@ namespace TAC_AI.AI.Movement
         public static Vector3 OffsetToSea(Vector3 input, Tank tank, AIECore.TankAIHelper thisInst)
         {
             Vector3 final = input;
-            Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float heightTank);
+            float heightTank;
+            if (tank.rbody != null)
+                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.rbody.velocity, out heightTank);
+            else
+                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out heightTank);
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
             if (terrain)
             {
-                float operatingDepth = tank.blockman.GetLowestBlocks().First().trans.position.y - 1;
-                if (height > operatingDepth || heightTank > operatingDepth - 1)// avoid terrain pathing!
+                /*
+                float estHeight;
+                if (Mathf.Abs(tank.transform.InverseTransformDirection(tank.rootBlockTrans.up).z) > 0.8f)
+                    estHeight = tank.blockman.blockCentreBounds.extents.z;
+                else if (Mathf.Abs(tank.transform.InverseTransformDirection(tank.rootBlockTrans.up).x) > 0.8f)
+                    estHeight = tank.blockman.blockCentreBounds.extents.x;
+                else
+                    estHeight = tank.blockman.blockCentreBounds.extents.y;
+                */
+                if (thisInst.PendingHeightCheck)
                 {
-                    // Iterate lowest terrain spots
+                    thisInst.GetLowestPointOnTech();
+                    thisInst.PendingHeightCheck = false;
+                }
+                float operatingDepth = tank.boundsCentreWorldNoCheck.y + thisInst.LowestPointOnTech;
+                if (height > operatingDepth || heightTank > operatingDepth)// avoid terrain pathing!
+                {
+                    // Iterate highest terrain spots to build up a bias to avoid
                     int stepxM = 5;
                     int stepzM = 5;
-                    float lowestHeight = operatingDepth;//WaterMod.QPatch.WaterHeight - 3;
-                    Vector3 posBest = Vector3.zero;
+                    int vecCount = 0;
+                    Vector3 posAll = Vector3.zero;
                     for (int stepz = 0; stepz < stepzM; stepz++)
                     {
                         for (int stepx = 0; stepx < stepxM; stepx++)
                         {
                             Vector3 wow = tank.boundsCentreWorldNoCheck;
-                            wow.x -= 50;
-                            wow.z -= 50;
-                            wow.x += stepx * 20;
-                            wow.z += stepz * 20;
+                            wow.x += (stepx * 20) - 50;
+                            wow.z += (stepz * 20) - 50;
                             if (!Singleton.Manager<ManWorld>.inst.GetTerrainHeight(wow, out float heightC))
                                 continue;
-                            if (heightC < lowestHeight)
+                            if (heightC < heightTank)
                             {
-                                lowestHeight = heightC;
-                                posBest = wow;
+                                posAll += wow;
+                                vecCount++;
                             }
                         }
                     }
-                    if (lowestHeight < operatingDepth)
-                    {
-                        //Debug.Log("TACtical_AI: deepest terrain  of depth " + lowestHeight + " found at " + posBest);
-                        final = posBest;
-                    }
-                    else
+                    if (vecCount == 25)
                     {
                         //thisInst.Yield = true;
-                        Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " pathfinding failiure");
+                        Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is jammed on land!");
                         final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
                     }
+                    else if (vecCount > 0)
+                    {
+                        Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is trying to avoid terrain");
+                        final = thisInst.tank.boundsCentreWorldNoCheck + ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * AIECore.TankAIHelper.DodgeStrength);
+                    }
                 }
-                else
-                    final.y = WaterMod.QPatch.WaterHeight;
             }
-            else
-                final.y = WaterMod.QPatch.WaterHeight;
+            final.y = KickStart.WaterHeight;
             return final;
         }
         public static Vector3 ForceOffsetToSea(Vector3 input)
         {
             Vector3 final = input;
-            final.y = WaterMod.QPatch.WaterHeight;
+            final.y = KickStart.WaterHeight;
 
             return final;
         }
         public static Vector3 OffsetFromSea(Vector3 input, Tank tank, AIECore.TankAIHelper thisInst)
         {
+            if (!KickStart.isWaterModPresent)
+                return input;
+            float heightTank;
+            if (tank.rbody != null)
+                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.rbody.velocity, out heightTank);
+            else
+                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out heightTank);
             Vector3 final = input;
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
             if (terrain)
             {
-                if (height < WaterMod.QPatch.WaterHeight)// avoid sea pathing!
+                if (height < KickStart.WaterHeight || heightTank < KickStart.WaterHeight)// avoid sea pathing!
                 {
                     // Iterate closest terrain spots
                     int stepxM = 3;
                     int stepzM = 3;
-                    float highestHeight = WaterMod.QPatch.WaterHeight;
+                    float highestHeight = KickStart.WaterHeight;
                     Vector3 posBest = Vector3.zero;
                     for (int stepz = 0; stepz < stepzM; stepz++)
                     {
@@ -556,7 +582,7 @@ namespace TAC_AI.AI.Movement
                             }
                         }
                     }
-                    if (highestHeight > WaterMod.QPatch.WaterHeight)
+                    if (highestHeight > KickStart.WaterHeight)
                     {
                         //Debug.Log("TACtical_AI: highest terrain  of depth " + highestHeight + " found at " + posBest);
                         final = posBest;

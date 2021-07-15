@@ -440,6 +440,11 @@ namespace TAC_AI.AI.Enemy
             }
             thisInst.TestForFlyingAIRequirement();
 
+            if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeSumo>())
+            {   
+                toSet.CommanderSmarts = EnemySmarts.Default;
+                toSet.EvilCommander = EnemyHandling.Wheeled;
+            }
             if (toSet.CommanderSmarts == EnemySmarts.Default && toSet.EvilCommander == EnemyHandling.Wheeled)
             {
                 thisInst.Hibernate = true;// enable the default AI

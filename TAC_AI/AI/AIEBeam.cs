@@ -29,7 +29,7 @@ namespace TAC_AI.AI
             {   // Handoff all operations to AIEAirborne
                 if (!pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
                 {   //Become a ground vehicle for now
-                    if (tank.wheelGrounded && tank.AI.IsTankOverturned())
+                    if (tank.grounded && tank.AI.IsTankOverturned())
                     {
                         thisInst.beamClock = 1;
                     }

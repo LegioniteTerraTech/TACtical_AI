@@ -101,6 +101,14 @@ namespace TAC_AI
                                     restart = false;
                             }
                         }
+                        if (tonk.IsSleeping)
+                        {
+                            foreach (TankBlock block in tonk.blockman.IterateBlocks())
+                            {
+                                block.damage.SelfDestruct(0.5f);
+                            }
+                            tonk.blockman.Disintegrate(true, false);
+                        }
                     }
                     if (restart == true)
                     {
@@ -120,11 +128,11 @@ namespace TAC_AI
         {
             private static bool Prefix(ModeAttract __instance)
             {
-                if (UnityEngine.Random.Range(1, 100) > 5 || KickStart.retryForBote == 1)
+                if (UnityEngine.Random.Range(1, 100) > 35 || KickStart.retryForBote == 1)
                 {
                     Debug.Log("TACtical_AI: Ooop - the special threshold has been met");
                     KickStart.SpecialAttract = true;
-                    bool caseOverride = true;
+                    bool caseOverride = false;
                     int outNum = 45;//28;
                     if (KickStart.retryForBote == 1)
                         outNum = 45;
@@ -149,7 +157,7 @@ namespace TAC_AI
                             Singleton.Manager<ManGameMode>.inst.RegenerateWorld(edited, __instance.spawns[1].cameraSpawn.forward, Quaternion.LookRotation(__instance.spawns[1].cameraSpawn.forward, Vector3.up));
                             Singleton.Manager<ManTimeOfDay>.inst.EnableSkyDome(enable: true);
                             Singleton.Manager<ManTimeOfDay>.inst.EnableTimeProgression(enable: false);
-                            Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(6, 18), 0, 0);
+                            Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(8, 18), 0, 0);
                             KickStart.SpecialAttractPos = offset;
                             Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
                             Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
@@ -785,7 +793,7 @@ namespace TAC_AI
         {
             private static void Prefix(ManPop __instance, ref TrackedVisible tv)
             {
-                if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent)
+                if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                 {
                     if (tv != null)
                     {
@@ -835,7 +843,7 @@ namespace TAC_AI
         }
 
         [HarmonyPatch(typeof(ManGameMode))]
-        [HarmonyPatch("Awake")]//On enemy base bomb landing
+        [HarmonyPatch("Awake")]//On Game start
         private static class StartupSpecialAISpawner
         {
             private static void Postfix(ManGameMode __instance)

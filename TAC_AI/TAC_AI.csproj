@@ -169,7 +169,6 @@
     <Compile Include="Templates\EBasePurpose.cs" />
     <Compile Include="Templates\ESpawnBaseTypes.cs" />
     <Compile Include="Templates\RawTechLoader.cs" />
-    <Compile Include="ResSpawnOverride.cs" />
     <Compile Include="Templates\SpecialAISpawner.cs" />
     <Compile Include="Templates\TempManager.cs" />
     <Compile Include="Templates\TempStorage.cs" />
