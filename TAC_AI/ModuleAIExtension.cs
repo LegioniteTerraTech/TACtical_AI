@@ -33,7 +33,7 @@ namespace TAC_AI
         MTMimic,    // Copies the actions of the closest non-MT Tech in relation     
 
         // ADVANCED    (REQUIRES TOUGHER ENEMIES TO USE!)           (can't just do the same without the enemies attacking these ways as well...)
-        >Aviator,    // Flies aircraft, death from above, nuff said  (Flies above ground, by the player and keeps distance) [unload distance will break!]
+        Aviator,    // Flies aircraft, death from above, nuff said  (Flies above ground, by the player and keeps distance) [unload distance will break!]
         Buccaneer,  // Sails ships amongst ye seas~                 (Avoids terrain above water level)
         Astrotech,  // Flies hoverships and kicks Tech              (Follows player a certain distance above ground level and can follow into the sky)
 
@@ -62,6 +62,7 @@ namespace TAC_AI
             "AdvancedAI": false,    // Should the AI take combat calculations and retreat if nesseary? (N/A atm)
             "MTForAll": false,      // Should the AI listen to other Tech MT commands?
             "AidAI": false,         // Should the AI be willing to sacrifice themselves for their owner's safety?
+            "SelfRepairAI": false,  // Can the AI self-repair?
             "AnimeAI": false,       // Work with the AnimeAI mod and display a character for this AI? (And also allow interaction with other characters?)
 
             "MinCombatRange": 50,   // Min range the AI will keep from an enemy
@@ -91,7 +92,7 @@ namespace TAC_AI
         public bool SidePreferred = false;  // Should the AI orbit the enemy?
         public bool AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
         public bool AdvAvoidence = false;   // Should the AI avoid two allied techs at once?
-        public bool MTForAll = true;        // Should the AI only follow player BuildBeam Movements?
+        public bool MTForAll = true;        // Should the AI listen to other Tech MT commands?
         public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's safety?
         public bool SelfRepairAI = false;   // Can the AI self-repair?
         //public bool AnimeAI = false;      // Do we attempt a hookup to the AnimeAI mod and display a character for this AI?

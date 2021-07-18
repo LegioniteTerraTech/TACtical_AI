@@ -122,7 +122,7 @@ namespace TAC_AI
                 }
                 if (lastTank.isAegisAvail)
                 {
-                    if (GUI.Button(new Rect(20, 100, 80, 30), fetchAI == AIType.Aegis ? "<color=#f23d3dff>COLLECT</color>" : "Aegis"))
+                    if (GUI.Button(new Rect(20, 100, 80, 30), fetchAI == AIType.Aegis ? "<color=#f23d3dff>PROTECT</color>" : "Protect"))
                     {
                         changeAI = AIType.Aegis;
                         clicked = true;
@@ -168,17 +168,14 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                /*
-                // N/A!
                 if (lastTank.isEnergizerAvail)
                 {
-                    if (GUI.Button(new Rect(20, 190, 80, 30), fetchAI == AI.AIEnhancedCore.DediAIType.Energizer ? "<color=#f23d3dff>POWER</color>" : "Power"))
+                    if (GUI.Button(new Rect(20, 190, 80, 30), fetchAI == AIType.Energizer ? "<color=#f23d3dff>POWER</color>" : "Power"))
                     {
-                        changeAI = AI.AIEnhancedCore.DediAIType.Energizer;
+                        changeAI = AIType.Energizer;
                         clicked = true;
                     }
                 }
-                */
                 if (lastTank.isAstrotechAvail)
                 {
                     if (GUI.Button(new Rect(100, 190, 80, 30), fetchAI == AIType.Astrotech ? "<color=#f23d3dff>SPACE</color>" : "Space"))

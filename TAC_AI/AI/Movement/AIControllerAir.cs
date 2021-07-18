@@ -47,38 +47,39 @@ namespace TAC_AI.AI
             internal set => _mind = value;
         }
 
-        public FlightType FlyStyle;
-        public List<ModuleBooster> Engines;
-        public List<ModuleAirBrake> Brakes;
-        public List<ModuleWing> Wings;
+        public FlightType FlyStyle;             // Dictates the way the AI should fly the Tech
+        public List<ModuleBooster> Engines;     // keep track of aircraft propultion
+        public List<ModuleAirBrake> Brakes;     // keep tracck of airbrakes
+        public List<ModuleWing> Wings;          // keep track of the wings
         public bool NoProps = false;            // Do we have to rely on fuel only?
         public bool SkewedFlightCenter = false; // Are we going to struggle when turning?
 
-        public Vector3 PropBias = Vector3.zero;
-        public Vector3 BoostBias = Vector3.zero;
+        public Vector3 PropBias = Vector3.zero; // Center of thrust (RAW) of all forwards props
+        public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
 
         //Manuvering
-        public Vector3 AirborneDest = Vector3.zero;
+        public Vector3 AirborneDest = Vector3.zero; // Aircraft-specific destination handling
         public float DestSuccessRad // When we have reached our airborne destination
         {
             get { try { return Helper.MinimumRad; } catch { return 10; } }
         }
 
-        public float AdvisedThrottle = 0;               // Forward for aircraft, Upwards for helicopters
-        public float MainThrottle = 0;                  // Forward for aircraft, Upwards for helicopters
-        public float CurrentThrottle = 0;               // 
+        // Forward for aircraft, Upwards for helicopters
+        public float AdvisedThrottle = 0;               // Throttle to use when chasing or cruising
+        public float MainThrottle = 0;                  // Ideal Throttle to chase after
+        public float CurrentThrottle = 0;               // Throttle the craft knows it's going at
 
         /// <summary> IN m/s !!!</summary>
-        public const float Stallspeed = 25;
-        public const float GroundAttackStagingDist = 250;
+        public const float Stallspeed = 25;             // The speed of which most wings begin to stall at
+        public const float GroundAttackStagingDist = 250;   // Distance to fly (in meters!) before turning back
 
         //Data Gathering
-        public float SlowestPropLerpSpeed = 1;
-        public float PropLerpValue = 10;
-        public float AerofoilSluggishness = 1;
-        public float RollStrength = 1;
-        public int PerformDiveAttack = 0;       //set this to one to launch dive bombing
-        public int PerformUTurn = 0;            //set this to one to ignite the multi-stage process
+        public float SlowestPropLerpSpeed = 1;  // Slow action demand based on propeller responsiveness
+        public float PropLerpValue = 10;        // aux value used for some engine calculations
+        public float AerofoilSluggishness = 1;  // Slow action demand based on aerofoil responsiveness
+        public float RollStrength = 1;          // How far to roll 90 degrees
+        public int PerformDiveAttack = 0;       // set this to one to launch dive bombing
+        public int PerformUTurn = 0;            // set this to one to ignite the multi-stage process
         public Vector3 FlyingChillFactor = Vector3.one * 30; //The higher the values, the less stiff the controls will be
 
         //Error-Checking
@@ -89,11 +90,11 @@ namespace TAC_AI.AI
         public bool BankOnly = false;
         public float BoosterThrustBias = 0.5f;
         public float NoStallThreshold = 1.5f;
-        public bool ForcePitchUp = false;
-        public bool TakeOff = false;
-        public bool Grounded = false;
+        public bool ForcePitchUp = false;       // Emergency nose up
+        public bool TakeOff = false;            // taking off from ground
+        public bool Grounded = false;           // aircraft deemed too damaged to fly
         public bool TargetGrounded = false;     // Are we dealing with a target that is on the ground?
-        public bool LowerEngines = false;       // Choppers: Too high! Too high!  Airplanes: conserve booster fuel
+        public bool LowerEngines = false;       // Choppers: Too high! Too high!  Airplanes: Conserve booster fuel
 
         public void Initiate(Tank tank, AIECore.TankAIHelper thisInst, Enemy.EnemyMind mind = null)
         {
@@ -288,8 +289,10 @@ namespace TAC_AI.AI
             if (Mathf.Abs(Vector3.Dot(biasDirection, Vector3.right)) > 0.2f)
             {   //CENTER OF THRUST MAY BE OFF!!!
                 SkewedFlightCenter = true;
-                Debug.Log("TACtical AI: Tech " + Tank.name + " reported to have off-centered thrust of a factor of " + Mathf.Abs(Vector3.Dot(biasDirection.normalized, Vector3.right)) + ".  \nAs all props don't have uniform thrust backwards and forwards (in relation to the root cab), the AI may not be able to fly correctly!!!");
+                //Debug.Log("TACtical AI: Tech " + Tank.name + " reported to have off-centered thrust of a factor of " + Mathf.Abs(Vector3.Dot(biasDirection.normalized, Vector3.right)) + ".  \nAs all props don't have uniform thrust backwards and forwards (in relation to the root cab), the AI may not be able to fly correctly!!!");
             }
+            else
+                SkewedFlightCenter = false;
             SlowestPropLerpSpeed = lowestDelta;
             PropLerpValue = 10f / SlowestPropLerpSpeed;
         }

@@ -441,7 +441,8 @@ namespace TAC_AI.AI.Enemy
             thisInst.TestForFlyingAIRequirement();
 
             if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeSumo>())
-            {   
+            {
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is a sumo brawler");
                 toSet.CommanderSmarts = EnemySmarts.Default;
                 toSet.EvilCommander = EnemyHandling.Wheeled;
             }
@@ -457,7 +458,7 @@ namespace TAC_AI.AI.Enemy
                 if (toSet.EvilCommander != EnemyHandling.Wheeled)
                     toSet.CommanderAttack = EnemyAttack.Grudge;
                 if (toSet.CommanderAttack == EnemyAttack.Coward)
-                    toSet.CommanderAttack = EnemyAttack.Bully;
+                    toSet.CommanderAttack = EnemyAttack.Circle;
                 if (toSet.CommanderAttack == EnemyAttack.Spyper)
                     toSet.CommanderAttack = EnemyAttack.Grudge;
                 if (toSet.CommanderMind == EnemyAttitude.Miner)

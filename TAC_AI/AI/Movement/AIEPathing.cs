@@ -268,6 +268,34 @@ namespace TAC_AI.AI.Movement
             secondTank = null;
             return null;
         }
+        
+        public static Tank ClosestUnanchoredAlly(Vector3 tankPos, out float bestValue)
+        {
+            // Finds the closest ally and outputs their respective distance as well as their being
+            bestValue = 500;
+            int bestStep = 0;
+            Tank closestTank = null;
+            try
+            {
+                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                {
+                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                    if (bestValue > temp && temp != 0 && !Allies.ElementAt(stepper).IsAnchored)
+                    {
+                        bestValue = temp;
+                        bestStep = stepper;
+                    }
+                }
+                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                closestTank = Allies.ElementAt(bestStep);
+                //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+            }
+            catch //(Exception e)
+            {
+                //Debug.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+            }
+            return closestTank;
+        }
 
 
         // Other navigation utilities

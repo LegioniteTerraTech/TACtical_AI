@@ -7,7 +7,8 @@ using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAstrotech {
+    public static class BAstrotech 
+    {
         //Same a escort code, because the BEscort code supports 3D!
         // we just need to re-define how far above ground we should be
         public static void MotivateSpace(AIECore.TankAIHelper thisInst, Tank tank)
@@ -19,7 +20,7 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
-            bool hasMessaged = thisInst.Feedback;// set this to false to get AI feedback testing
+            bool hasMessaged = false;
             thisInst.lastRange = dist;
 
             float playerExt = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
@@ -27,7 +28,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (dist < thisInst.lastTechExtents + playerExt + 2)
             {
                 thisInst.DelayedAnchorClock = 0;
-                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
+                hasMessaged = AIECore.AIMessage(tank, hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
                 thisInst.MoveFromObjective = true;
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
@@ -45,7 +46,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist < range + playerExt && dist > (range / 2) + playerExt)
             {
                 // Time to go!
-                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Departing!");
+                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ": Departing!");
                 thisInst.ProceedToObjective = true;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
@@ -71,7 +72,7 @@ namespace TAC_AI.AI.AlliedOperations
                 //DISTANCE WARNINGS
                 if (dist > range * 2)
                 {
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Oh Crafty they are too far!");
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Oh Crafty they are too far!");
                     thisInst.Urgency += KickStart.AIClockPeriod / 2;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1f;
@@ -82,7 +83,7 @@ namespace TAC_AI.AI.AlliedOperations
                 if (thisInst.UrgencyOverload > 50)
                 {
                     //Are we just randomly angry for too long? let's fix that
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Overloaded urgency!  ReCalcing top speed!");
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
                     thisInst.EstTopSped = 1;
                     thisInst.AvoidStuff = true;
                     thisInst.UrgencyOverload = 0;
@@ -91,7 +92,7 @@ namespace TAC_AI.AI.AlliedOperations
                 if (thisInst.Urgency > 20)
                 {
                     //FARRR behind! BOOSTERS NOW!
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": I AM SUPER FAR BEHIND!");
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
                     thisInst.AvoidStuff = false;
                     thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
@@ -99,7 +100,7 @@ namespace TAC_AI.AI.AlliedOperations
                 else if (thisInst.Urgency > 2)
                 {
                     //Behind and we must catch up
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Wait for meeeeeeeeeee!");
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ": Wait for meeeeeeeeeee!");
                     thisInst.AvoidStuff = false;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1;
@@ -109,7 +110,7 @@ namespace TAC_AI.AI.AlliedOperations
                 else if (thisInst.Urgency > 1 && thisInst.recentSpeed < 10)
                 {
                     //bloody tree moment
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": GET OUT OF THE WAY NUMBNUT!");
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
                     thisInst.AvoidStuff = false;
                     thisInst.FIRE_NOW = true;
                     thisInst.forceDrive = true;
@@ -124,7 +125,7 @@ namespace TAC_AI.AI.AlliedOperations
                 else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 2))
                 {
                     // Moving a bit too slow for what we can do
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Trying to catch up!");
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ": Trying to catch up!");
                     thisInst.Urgency += KickStart.AIClockPeriod / 5;
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = 1;
@@ -140,7 +141,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist < (range / 4) + playerExt)
             {
                 //Likely stationary
-                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  Settling");
+                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Settling");
                 thisInst.AvoidStuff = true;
                 thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
@@ -159,7 +160,7 @@ namespace TAC_AI.AI.AlliedOperations
             else
             {
                 //Likely idle
-                hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ":  in resting state");
+                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  in resting state");
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 thisInst.lastMoveAction = 0;

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
-using Harmony;
-//using HarmonyLib;
+//using Harmony;
+using HarmonyLib;
 using UnityEngine;
 using ModHelper.Config;
 using Nuterra.NativeOptions;
@@ -38,6 +38,7 @@ namespace TAC_AI
         internal static bool isWeaponAimModPresent = false;
         internal static bool isBlockInjectorPresent = false;
         internal static bool isPopInjectorPresent = false;
+        internal static bool isAnimeAIPresent = false;
 
         public static int Difficulty = 50;  
         // 50 means the full AI range is used
@@ -79,8 +80,8 @@ namespace TAC_AI
             //Where the fun begins
 
             //Initiate the madness
-            HarmonyInstance harmonyInstance = HarmonyInstance.Create("legionite.tactical_ai");
-            //Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
+            //HarmonyInstance harmonyInstance = HarmonyInstance.Create("legionite.tactical_ai");
+            Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
             try
             {
                 harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
@@ -120,6 +121,11 @@ namespace TAC_AI
             {
                 Debug.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
                 isPopInjectorPresent = true;
+            }
+            if (LookForMod("AnimeAI"))
+            {
+                Debug.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
+                isAnimeAIPresent = true;
             }
 
             ModConfig thisModConfig = new ModConfig();

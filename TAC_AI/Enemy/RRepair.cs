@@ -95,21 +95,21 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                if (thisInst.repairClock == 1)
+                if (thisInst.repairStepperClock == 1)
                 {
                     thisInst.AttemptedRepairs = 0;
-                    thisInst.repairClock = 0;
+                    thisInst.repairStepperClock = 0;
                 }
-                else if (thisInst.repairClock == 0)
+                else if (thisInst.repairStepperClock == 0)
                 {
                     if (!Super)
-                        thisInst.repairClock = Delay / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                        thisInst.repairStepperClock = Delay / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                     else
-                        thisInst.repairClock = (Delay / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                        thisInst.repairStepperClock = (Delay / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
 
                 }
                 else
-                    thisInst.repairClock--;
+                    thisInst.repairStepperClock--;
             }
             return thisInst.PendingSystemsCheck;
         }
@@ -125,15 +125,15 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                if (thisInst.repairClock == 1)
+                if (thisInst.repairStepperClock == 1)
                 {
                     thisInst.AttemptedRepairs = 0;
-                    thisInst.repairClock = 0;
+                    thisInst.repairStepperClock = 0;
                 }
-                else if (thisInst.repairClock == 0)
-                    thisInst.repairClock = 20;
+                else if (thisInst.repairStepperClock == 0)
+                    thisInst.repairStepperClock = 20;
                 else
-                    thisInst.repairClock--;
+                    thisInst.repairStepperClock--;
             }
             return thisInst.PendingSystemsCheck;
         }

@@ -32,20 +32,18 @@ namespace TAC_AI.AI.AlliedOperations
                 case AIType.Assault:
                     // Up your arsenal
                     this.helper.IsMultiTech = false;
-                    this.helper.foundGoal = false;
-                    //EAssassin.MotivateKill(this.helper, this.helper.tank);
-                    //EAssassin.ShootToDestroy(this.helper, this.helper.tank);
-                    Debug.Log("TACtical_AI: AI NOT READY YET!");
+                    BAssassin.MotivateKill(this.helper, this.helper.tank);
+                    //BAssassin.ShootToDestroy(this.helper, this.helper.tank);
+                    BGeneral.AimDefend(this.helper, this.helper.tank);
                     break;
 
                 case AIType.Aegis:
-                    // I fight for my friends (priority resource techs)
+                    // I fight for my friends (priority resource techs pending)
                     this.helper.lastPlayer = this.helper.GetPlayerTech();
                     this.helper.foundGoal = false;
                     this.helper.IsMultiTech = false;
-                    //EAegis.MotivateProtect(this.helper, this.helper.tank);
+                    BAegis.MotivateProtect(this.helper, this.helper.tank);
                     BGeneral.AidDefend(this.helper, this.helper.tank);
-                    Debug.Log("TACtical_AI: AI NOT READY YET!");
                     break;
 
                 case AIType.Prospector:
@@ -59,7 +57,7 @@ namespace TAC_AI.AI.AlliedOperations
                     // Grab Scrape and sell
                     this.helper.IsMultiTech = false;
                     this.helper.foundGoal = false;
-                    //EScrapper.MotivateFind(this.helper, this.helper.tank);
+                    //BScrapper.MotivateFind(this.helper, this.helper.tank);
                     BGeneral.SelfDefend(this.helper, this.helper.tank);
                     Debug.Log("TACtical_AI: AI NOT READY YET!");
                     break;
@@ -67,9 +65,8 @@ namespace TAC_AI.AI.AlliedOperations
                 case AIType.Energizer:
                     // The thing that keeps going
                     this.helper.IsMultiTech = false;
-                    //EEnergizer.MotivateCharge(this.helper, this.helper.tank);
+                    BEnergizer.MotivateCharge(this.helper, this.helper.tank);
                     BGeneral.SelfDefend(this.helper, this.helper.tank);
-                    Debug.Log("TACtical_AI: AI NOT READY YET!");
                     break;
 
                 case AIType.MTTurret:

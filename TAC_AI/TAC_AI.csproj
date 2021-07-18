@@ -43,6 +43,10 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\ModHelper.Config\AcModHelper.Config.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="AnimeAI">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\AnimeAI\AnimeAI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
@@ -114,6 +118,9 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AI\AlliedOperations\BAssassin.cs" />
+    <Compile Include="AI\AlliedOperations\BEnergizer.cs" />
+    <Compile Include="AI\AlliedOperations\BScrapper.cs" />
     <Compile Include="AI\Movement\AIControllerAir.cs" />
     <Compile Include="AI\Movement\AIControllerDefault.cs" />
     <Compile Include="AI\Movement\AIEPathing.cs" />
@@ -161,6 +168,7 @@
     <Compile Include="Enemy\RCore.cs" />
     <Compile Include="GUIAIManager.cs" />
     <Compile Include="ModuleAIExtension.cs" />
+    <Compile Include="ModuleChargerTracker.cs" />
     <Compile Include="ModuleHarvestReciever.cs" />
     <Compile Include="KickStart.cs" />
     <Compile Include="PatchBatch.cs" />

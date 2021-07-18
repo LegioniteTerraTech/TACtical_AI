@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI;
 
 namespace TAC_AI.Templates
 {
@@ -36,23 +37,23 @@ namespace TAC_AI.Templates
                     RAW.Append(ch);
                 }
             }
-            List<AI.BlockMemory> mem = new List<AI.BlockMemory>();
+            List<BlockMemory> mem = new List<BlockMemory>();
             StringBuilder blockCase = new StringBuilder();
             string RAWout = RAW.ToString();
             foreach (char ch in RAWout)
             {
                 if (ch == '|')//new block
                 {
-                    mem.Add(JsonUtility.FromJson<AI.BlockMemory>(blockCase.ToString()));
+                    mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
                     blockCase.Clear();
                 }
                 else
                     blockCase.Append(ch);
             }
             bool valid = true;
-            foreach (AI.BlockMemory bloc in mem)
+            foreach (BlockMemory bloc in mem)
             {
-                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bloc.blockType))
+                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bloc.t))
                     valid = false;
             }
             return valid;

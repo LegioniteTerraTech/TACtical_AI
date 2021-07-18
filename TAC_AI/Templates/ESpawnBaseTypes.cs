@@ -90,6 +90,7 @@ namespace TAC_AI.Templates
         // Choppers
         GSOQuadGale,
         HEPocketApache,
+        HESmashApache,
         BFeClipse,
 
         // Naval
@@ -101,6 +102,7 @@ namespace TAC_AI.Templates
         BFLuxYacht,
 
         // Space
+        GSOSpaceshipMini,
         GSOSpaceshipCompact,
     }
 

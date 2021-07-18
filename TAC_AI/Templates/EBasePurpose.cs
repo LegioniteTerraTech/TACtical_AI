@@ -19,6 +19,7 @@ namespace TAC_AI.Templates
     }
     public enum BaseTerrain
     {
+        AnyNonSea,
         Land,   // is anchored
         Sea,    // floats on water
         Air,    // doubles as airplane

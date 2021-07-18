@@ -311,10 +311,18 @@ namespace TAC_AI.Templates
                     if (cand.Value.purposes.Count == 0)
                         return false;
                     return cand.Value.purposes.Contains(purpose);
-                }); 
-                
-                canidates = canidates.FindAll
-                    (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.terrain == terra; });
+                });
+
+                if (terra == BaseTerrain.AnyNonSea)
+                {
+                    canidates = canidates.FindAll
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.terrain != BaseTerrain.Sea; });
+                }
+                else
+                {
+                    canidates = canidates.FindAll
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.terrain == terra; });
+                }
 
                 if (maxGrade != 99)
                 {
@@ -333,7 +341,7 @@ namespace TAC_AI.Templates
 
                 final.Shuffle();
 
-                return final.First();
+                return final.GetRandomEntry();
             }
             catch { } // we resort to legacy
 

@@ -45,16 +45,19 @@ namespace TAC_AI.AI
         public static List<Tank> Allies;
         //public static List<ResourceDispenser> Minables;
         public static List<Visible> Minables;
-        public static List<Transform> Depots;
+        public static List<ModuleHarvestReciever> Depots;
+        public static List<ModuleHarvestReciever> BlockHandlers;
+        public static List<ModuleChargerTracker> Chargers;
         public static bool moreThan2Allies;
         private static int lastTechCount = 0;
 
-        public static float Extremes(Vector3 input)
-        {
-            return Mathf.Max(Mathf.Max(input.x, input.y), input.z);
-        }
+        public const float minimumChargeFractionToConsider = 0.75f;
+        // legdev
+        internal const bool Feedback = false;// set this to true to get AI feedback testing
 
-        public static bool FetchClosestHarvestReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team = -2)
+
+        // Mining
+        public static bool FetchClosestChunkReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team = -2)
         {
             if (team == -2)
                 team = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
@@ -62,20 +65,20 @@ namespace TAC_AI.AI
             theBase = null;
             finalPos = null;
             float bestValue = Mathf.Pow(MaxScanRange, 2);// MAX SCAN RANGE
-            foreach (Transform trans in Depots)
+            foreach (ModuleHarvestReciever trans in Depots)
             {
-                float temp = (trans.position - tankPos).sqrMagnitude;
-                if (bestValue > temp && temp != 0 && trans.root.GetComponent<Tank>().Team == team)
+                float temp = (trans.trans.position - tankPos).sqrMagnitude;
+                bool takesChunks = trans.holder.Acceptance == ModuleItemHolder.AcceptFlags.Chunks;
+                if (bestValue > temp && temp != 0 && trans.trans.root.GetComponent<Tank>().Team == team && takesChunks)
                 {
                     fired = true;
-                    theBase = trans.root.GetComponent<Tank>();
+                    theBase = trans.trans.root.GetComponent<Tank>();
                     bestValue = temp;
                     finalPos = trans;
                 }
             }
             return fired;
         }
-
         public static bool FetchClosestResource(Vector3 tankPos, float MaxScanRange, out Visible theResource)
         {
             bool fired = false;
@@ -108,33 +111,153 @@ namespace TAC_AI.AI
             return fired;
         }
 
-        /*
-        // Under Construction!
-        public bool FetchLooseBlocks(Vector3 tankPos, float MaxScanRange, out Vector3 finalPos)
+        // Scavenging - Under Construction!
+        public static bool FetchClosestBlockReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team = -2)
         {
+            if (team == -2)
+                team = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
             bool fired = false;
-            finalPos = Vector3.zero;
-            float bestValue = MaxScanRange;// MAX SCAN RANGE
-            foreach (Transform trans in Visible.)
+            theBase = null;
+            finalPos = null;
+            float bestValue = Mathf.Pow(MaxScanRange, 2);// MAX SCAN RANGE
+            foreach (ModuleHarvestReciever trans in Depots)
             {
-                float temp = (trans.position - tankPos).sqrMagnitude;
-                if (bestValue > temp && temp != 0)
+                float temp = (trans.trans.position - tankPos).sqrMagnitude;
+                bool takesBlocks = trans.holder.Acceptance == ModuleItemHolder.AcceptFlags.Blocks;
+                if (bestValue > temp && temp != 0 && trans.trans.root.GetComponent<Tank>().Team == team && takesBlocks)
                 {
                     fired = true;
+                    theBase = trans.trans.root.GetComponent<Tank>();
                     bestValue = temp;
-                    finalPos = trans.position;
+                    finalPos = trans;
                 }
             }
             return fired;
         }
-        */
-
-        public static bool AIMessage(bool hasMessaged, string message)
+        public static bool FetchLooseBlocks(Vector3 tankPos, float MaxScanRange, out Visible theResource)
         {
-            if (!hasMessaged)
+            bool fired = false;
+            theResource = null;
+            float bestValue = MaxScanRange;// MAX SCAN RANGE
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tankPos, MaxScanRange, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Block })))
+            {
+                if (vis.block.IsAttached || vis.InBeam)
+                    continue;   // no grab aquired blocks
+                float temp = (vis.centrePosition - tankPos).sqrMagnitude;
+                if (bestValue > temp && temp != 0)
+                {
+                    fired = true;
+                    bestValue = temp;
+                    theResource = vis;
+                }
+            }
+            return fired;
+        }
+       
+        // Charging
+        public static bool FetchChargedChargers(Tank tank, float MaxScanRange, out Transform finalPos, out Tank theBase, int team = -2)
+        {
+            if (team == -2)
+                team = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
+            Vector3 tankPos = tank.boundsCentreWorldNoCheck;
+
+            bool fired = false;
+            theBase = null;
+            finalPos = null;
+            float bestValue = Mathf.Pow(MaxScanRange, 2);// MAX SCAN RANGE
+            foreach (Transform trans in Chargers)
+            {
+                float temp = (trans.position - tankPos).sqrMagnitude;
+                if (bestValue > temp && temp != 0 && trans.root.GetComponent<Tank>().Team == team && trans.GetComponent<ModuleChargerTracker>().CanTransferCharge(tank))
+                {
+                    fired = true;
+                    theBase = trans.root.GetComponent<Tank>();
+                    bestValue = temp;
+                    finalPos = trans;
+                }
+            }
+            return fired;
+        }
+        public static bool FetchLowestChargeAlly(Vector3 tankPos, TankAIHelper helper, out Visible toCharge)
+        {
+            // Finds the closest ally and outputs their respective distance as well as their being
+            float Range = 62500;
+            int bestStep = 0;
+            bool fired = false;
+            toCharge = null;
+            try
+            {
+                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                {
+                    Tank ally = Allies.ElementAt(stepper);
+                    float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                    EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+                    bool hasCapacity = eState.storageTotal > 200;
+                    bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
+                    if (Range > temp && temp != 0 && hasCapacity && needsCharge)
+                    {
+                        Range = temp;
+                        bestStep = stepper;
+                        fired = true;
+                    }
+                }
+                toCharge = Allies.ElementAt(bestStep).visible;
+                //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+            }
+            catch //(Exception e)
+            {
+                //Debug.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+            }
+            return fired;
+        }
+
+        // Assassin
+        public static bool FindTarget(Tank tank, TankAIHelper helper, Visible targetIn,  out Visible target)
+        {   // Grants a much larger target search range
+
+            float TargetRange = helper.RangeToChase * 2;
+            Vector3 scanCenter = tank.boundsCentreWorldNoCheck;
+            target = targetIn;
+            if (target != null)
+            {
+                if ((target.tank.boundsCentreWorldNoCheck - scanCenter).magnitude > TargetRange)
+                    target = null;
+            }
+
+            List<Tank> techs = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
+            int launchCount = techs.Count();
+            for (int step = 0; step < launchCount; step++)
+            {
+                Tank cTank = techs.ElementAt(step);
+                if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                {
+                    float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).magnitude;
+                    if (dist < TargetRange)
+                    {
+                        TargetRange = dist;
+                        target = cTank.visible;
+                    }
+                }
+            }
+
+            return target;
+        }
+
+        // Universal
+        public static float Extremes(Vector3 input)
+        {
+            return Mathf.Max(Mathf.Max(input.x, input.y), input.z);
+        }
+        public static bool AIMessage(Tank tech, bool hasMessaged, string message)
+        {
+            if (KickStart.isAnimeAIPresent)
+            {   // we send the action commentary to Anime AI mod
+                AnimeAI.TransmitStatus(tech, message);
+            }
+            if (!hasMessaged && Feedback)
             {
                 hasMessaged = true;
-                Debug.Log(message);
+                Debug.Log("TACtical_AI: AI " + message);
             }
             return hasMessaged;
         }
@@ -146,7 +269,8 @@ namespace TAC_AI.AI
                 new GameObject("AIManager").AddComponent<TankAIManager>();
                 Allies = new List<Tank>();
                 Minables = new List<Visible>();
-                Depots = new List<Transform>();
+                Depots = new List<ModuleHarvestReciever>();
+                Chargers = new List<ModuleChargerTracker>();
                 Debug.Log("TACtical_AI: Created AIECore Manager.");
             }
 
@@ -222,11 +346,13 @@ namespace TAC_AI.AI
             public List<ModuleAIExtension> AIList;
             public AIERepair.DesignMemory TechMemor;
 
+            // Constants
             internal const int DodgeStrength = 60;  //The motivation in trying to move away from a tech in the way
                                                    //250
-            
-            public bool Hibernate = false;      // Disable the AI to make way for Default AI
 
+
+            // Settables in ModuleAIExtension
+            //   "turns on" functionality on the host Tech, none of these force it off
             public bool IsMultiTech = false;    // Should the other AIs ignore collision with this Tech?
             public bool PursueThreat = true;    // Should the AI chase the enemy?
             public bool RequestBuildBeam = true;// Should the AI Auto-BuildBeam on flip?
@@ -242,50 +368,55 @@ namespace TAC_AI.AI
             public float IdealRangeCombat = 25; // The range the AI will linger from the enemy if PursueThreat is true
             public int AnchorAimDampening = 45; // How much do we dampen anchor movements by?
 
+            //BROKEN - cannot set AI types!
+            public bool AutoAnchor = false;      // Should the AI toggle the anchor when it is still?
 
-            //AI Allowed types (self-filling)
+            // Repair Auxilliaries
+            public bool allowAutoRepair = false;// Allied auto-repair
+            public bool useInventory = false;   // Draw from player inventory reserves
+
+            // Allied AI Operating Allowed types (self-filling)
             //   I'll convert these to flags later
-            public bool isProspectorAvail = false;  //Is there a Prospector-enabled AI on this tech?
-            public bool isScrapperAvail = false;    //Is there a Scrapper-enabled AI on this tech?
             public bool isAssassinAvail = false;    //Is there an Assassin-enabled AI on this tech?
             public bool isAegisAvail = false;       //Is there an Aegis-enabled AI on this tech?
+
+            public bool isProspectorAvail = false;  //Is there a Prospector-enabled AI on this tech?
+            public bool isScrapperAvail = false;    //Is there a Scrapper-enabled AI on this tech?
+            public bool isEnergizerAvail = false;   //Is there a Energizer-enabled AI on this tech?
 
             public bool isAviatorAvail = false;
             public bool isAstrotechAvail = false;
             public bool isBuccaneerAvail = false;
 
-            //BROKEN - cannot set AI types!
-            public bool AutoAnchor = false;      // Should the AI toggle the anchor when it is still?
-
-            // legdev
-            internal bool Feedback = true;      // set this to false to get AI feedback testing
+            
+            // Action Handlers
 
 
             // General AI Handling
+            public bool Hibernate = false;      // Disable the AI to make way for Default AI
+
             public int OverrideAim = 0; // 0 is off, 1 is enemy, 2 is obsticle
 
-            public int AIState = 0;
-            public bool updateCA = false; //Collision avoidence
-            public bool allowAutoRepair = false;
-            public bool useInventory = false;
-            public bool useAirControls = false;
-            public int lastMoveAction = 0;
-            public int lastWeaponAction = 0;
-            internal int FrustrationMeter = 0;
-            internal float Urgency = 0;
-            internal float UrgencyOverload = 0;
+            public int AIState = 0;             // 0 is static, 1 is ally, 2 is enemy
+            public int lastMoveAction = 0;      // [pending update]
+            public int lastWeaponAction = 0;    // 0 is sleep, 1 is target, 2 is obsticle, 3 is mimic
+            public bool updateCA = false;       // Collision avoidence active this FixedUpdate frame?
+            public bool useAirControls = false; // Use the not-VehicleAICore cores
+            internal int FrustrationMeter = 0;  // tardiness buildup before we use our guns to remove obsticles
+            internal float Urgency = 0;         // tardiness buildup before we just ignore obstructions
+            internal float UrgencyOverload = 0; // builds up too much if our max speed was set too high
             public bool PendingSystemsCheck;    // Is this tech damaged?
             public int AttemptedRepairs = 0;    // How many times have we tried fix
             public float DamageThreshold = 0;   // How much damage have we taken? (100 is total destruction)
             //internal float Oops = 0;
-            internal Vector3 lastDestination = Vector3.zero;
+            internal Vector3 lastDestination = Vector3.zero;    // Where we drive to in the world
 
             //AutoCollection
+            internal float EstTopSped = 0;
+            internal float recentSpeed = 1;
             internal int anchorAttempts = 0;
             internal float lastTechExtents = 0;
             internal float lastRange = 0;
-            internal float EstTopSped = 0;
-            internal float recentSpeed = 1;
             internal float lastAuxVal = 0;
 
             internal Visible lastPlayer;
@@ -294,41 +425,55 @@ namespace TAC_AI.AI
 
             internal Tank LastCloseAlly;
 
-            // Resource AI Handling
+            // Non-Tech specific objective AI Handling
+            /// <summary>
+            /// Counts also as [recharge home, block rally]
+            /// </summary>
             internal bool ProceedToBase = false;
+            /// <summary>
+            /// Counts also as [loose block, target enemy, target to charge]
+            /// </summary>
             internal bool ProceedToMine = false;
             internal float lastBaseExtremes = 10;
+
+            /// <summary>
+            /// Counts also as [recharge home, block rally]
+            /// </summary>
             internal Tank theBase = null;
-            internal Visible theResource = null;
+            /// <summary>
+            /// Counts also as [loose block, target enemy, target to charge]
+            /// </summary>
+            internal Visible theResource = null;  
 
             internal Transform lastBasePos;
             internal bool foundBase = false;
             internal bool foundGoal = false;
 
             // MultiTech AI Handling
-            internal bool MTLockedToTechBeam = false;
             internal bool MTMimicHostAvail = false;
+            internal bool MTLockedToTechBeam = false;
             internal Vector3 MTOffsetPos = Vector3.zero;
             internal Vector3 MTOffsetRot = Vector3.forward;
             internal Vector3 MTOffsetRotUp = Vector3.up;
 
             //  !!ADVANCED!!
-            internal bool Attempt3DNavi = false;
-            internal Vector3 Navi3DDirect = Vector3.zero;
-            internal Vector3 Navi3DUp = Vector3.zero;
-            public float GroundOffsetHeight = 35;    // flote above ground this dist
+            internal bool Attempt3DNavi = false;            // Use 3D navigation  (VehicleAICore)
+            internal Vector3 Navi3DDirect = Vector3.zero;   // Forwards facing for 3D
+            internal Vector3 Navi3DUp = Vector3.zero;       // Upwards direction for 3D
+            public float GroundOffsetHeight = 35;           // flote above ground this dist
 
             //Timestep
-            internal int FixedDelayedUpdateClock = 0;
+            internal int DirectorUpdateClock = 0;
+            internal int OperationsUpdateClock = 500;
+            //internal int DelayedUpdateClock = 500;
             internal int DirectionalHandoffDelay = 0;
-            internal int DelayedUpdateClock = 500;
             internal int DelayedAnchorClock = 0;
-            internal int featherClock = 50;
-            internal int repairClock = 0;
-            internal int beamClock = 0;
-            //internal int LastBuildClock = 0;
-            internal int ActionPause = 0;
-            internal int unanchorCountdown = 0;
+            internal int featherBoostersClock = 50;
+            internal int repairStepperClock = 0;    
+            internal int beamTimeoutClock = 0;
+            //internal int LastBuildClock = 0;  
+            internal int ActionPause = 0;               // when [val > 0], used to halt other actions 
+            internal int unanchorCountdown = 0;         // aux warning for unanchor
 
             //Drive Direction Handlers
             /// <summary> Do we steer to target destination? </summary>
@@ -341,26 +486,27 @@ namespace TAC_AI.AI
             internal bool AdviseAway = false;
 
             //Finals
-            internal float MinimumRad = 0;
-            internal float DriveVar = 0;
+            internal float MinimumRad = 0;              // Minimum radial spacing distance from destination
+            internal float DriveVar = 0;                // Forwards drive (-1, 1)
             //internal bool IsLikelyJammed = false;
-            internal bool Yield = false;
-            internal bool PivotOnly = false;
-            internal bool ProceedToObjective = false;
-            internal bool MoveFromObjective = false;
-            internal bool DANGER = false;
-            internal bool AvoidStuff = true;
-            internal bool FIRE_NOW = false;
-            internal bool BOOST = false;
-            internal bool featherBoost = false;
-            internal bool forceBeam = false;
-            internal bool forceDrive = false;
-            internal bool areWeFull = false;
-            internal bool Retreat = false;
+            internal bool Yield = false;                // Slow down and moderate top speed
+            internal bool PivotOnly = false;            // Only aim at target
+            internal bool ProceedToObjective = false;   // Drive to target
+            internal bool MoveFromObjective = false;    // Drive from target POINTING AT TARGET [in relation to DriveDir]
+            internal bool DANGER = false;               // Enemy nearby?
+            internal bool AvoidStuff = true;            // Try avoiding allies and obsticles
+            internal bool FIRE_NOW = false;             // hold down tech's spacebar
+            internal bool BOOST = false;                // hold down boost button
+            internal bool featherBoost = false;         // moderated booster pressing
+            internal bool forceBeam = false;            // activate build beam
+            internal bool forceDrive = false;           // Force the drive (cab forwards!) to a specific set value
+            internal bool areWeFull = false;            // this Tech's storage objective status (resources, blocks, energy)
+            internal bool Retreat = false;              // ignore enemy position and follow intended destination (but still return fire)
 
-            internal bool JustUnanchored = false;
-            internal bool PendingHeightCheck = false;
-            internal float LowestPointOnTech = 0;
+            internal bool JustUnanchored = false;       // flag to switch the AI back to enabled on unanchor
+            internal bool PendingHeightCheck = false;   // queue a driving depth check for a naval tech
+            internal float LowestPointOnTech = 0;       // the lowest point in relation to the tech's block-based center
+
 
             // AI Core
             public IMovementAIController MovementController;
@@ -524,8 +670,12 @@ namespace TAC_AI.AI
                 SideToThreat = false;
                 useInventory = false;
 
+                isAegisAvail = false;
+                isAssassinAvail = false;
+
                 isProspectorAvail = false;
                 isScrapperAvail = false;
+                isEnergizerAvail = false;
 
                 isAstrotechAvail = false;
                 isAviatorAvail = false;
@@ -552,53 +702,82 @@ namespace TAC_AI.AI
 
                 foreach (ModuleAIExtension AIEx in AIList)
                 {
+                    // Combat
+                    if (AIEx.Aegis)
+                        isAegisAvail = true;
+                    if (AIEx.Assault)
+                        isAssassinAvail = true;
+
+                    // Collectors
                     if (AIEx.Prospector)
                         isProspectorAvail = true;
-
                     if (AIEx.Scrapper)
                         isScrapperAvail = true;
+                    if (AIEx.Energizer)
+                        isEnergizerAvail = true;
 
+                    // Pilots
+                    if (AIEx.Aviator)
+                        isAviatorAvail = true;
+                    if (AIEx.Buccaneer)
+                        isBuccaneerAvail = true;
                     if (AIEx.Astrotech)
                         isAstrotechAvail = true;
 
-                    if (AIEx.Aviator)
-                        isAviatorAvail = true;
-
-                    if (AIEx.Buccaneer)
-                        isBuccaneerAvail = true;
-
+                    // Auxillary Functions
                     if (AIEx.MeleePreferred)
                         FullMelee = true;
-
                     if (AIEx.AdvAvoidence)
                         SecondAvoidence = true;
-
                     if (AIEx.MTForAll)
                         OnlyPlayerMT = false;
-
                     if (AIEx.SidePreferred)
                         SideToThreat = true;
-
-                    if (AIEx.MinCombatRange > IdealRangeCombat)
-                        IdealRangeCombat = AIEx.MinCombatRange;
-
-                    if (AIEx.MaxCombatRange > RangeToChase)
-                        RangeToChase = AIEx.MaxCombatRange;
-
                     if (AIEx.SelfRepairAI)
                         allowAutoRepair = true;
+
+                    // Engadgement Ranges
+                    if (AIEx.MinCombatRange > IdealRangeCombat)
+                        IdealRangeCombat = AIEx.MinCombatRange;
+                    if (AIEx.MaxCombatRange > RangeToChase)
+                        RangeToChase = AIEx.MaxCombatRange;
                 }
                 // REMOVE any AI states that have been removed!!!
-                if (!isAegisAvail && DediAI == AIType.Aegis)
-                    DediAI = AIType.Escort;
-                if (!isAssassinAvail && DediAI == AIType.Assault)
-                    DediAI = AIType.Escort;
-                if (!isProspectorAvail && DediAI == AIType.Prospector)
-                    DediAI = AIType.Escort;
-                if (!isScrapperAvail && DediAI == AIType.Scrapper)
-                    DediAI = AIType.Escort;
-                if (!isAstrotechAvail && DediAI == AIType.Astrotech)
-                    DediAI = AIType.Escort;
+                switch (DediAI)
+                {
+                    case AIType.Aegis:
+                        if (isAegisAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                    case AIType.Assault:
+                        if (isAssassinAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                    case AIType.Prospector:
+                        if (isProspectorAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                    case AIType.Scrapper:
+                        if (isScrapperAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                    case AIType.Energizer:
+                        if (isEnergizerAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                    case AIType.Aviator:
+                        if (isAviatorAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                    case AIType.Buccaneer:
+                        if (isBuccaneerAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                    case AIType.Astrotech:
+                        if (isAstrotechAvail) break;
+                        DediAI = AIType.Escort;
+                        break;
+                }
 
                 this.MovementController = null;
                 Enemy.EnemyMind enemy = gameObject.GetComponent<Enemy.EnemyMind>();
@@ -691,7 +870,7 @@ namespace TAC_AI.AI
                     Debug.Log("NULL MOVEMENT CONTROLLER");
                 }
 
-                AIEBeam.BeamDirector(thisControl, this, this.tank);
+                AIEBeam.BeamMaintainer(thisControl, this, this.tank);
                 if (this.updateCA)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired CollisionAvoidUpdate!");
@@ -870,7 +1049,7 @@ namespace TAC_AI.AI
                 if (this.UrgencyOverload > 50)
                 {
                     //Are we just randomly angry for too long? let's fix that
-                    hasMessaged = AIECore.AIMessage(hasMessaged, "TACtical_AI: AI " + tank.name + ": Overloaded urgency!  ReCalcing top speed!");
+                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
                     this.EstTopSped = 1;
                     this.AvoidStuff = true;
                     this.UrgencyOverload = 0;
@@ -1041,7 +1220,25 @@ namespace TAC_AI.AI
                 return isTrue;
             }
 
-
+            public void TryRepairAllied()
+            {
+                if (allowAutoRepair)
+                {
+                    if (lastEnemy != null)
+                    {   // Combat repairs (combat mechanic)
+                        if (AdvancedAI) // must be smrt
+                            AIERepair.RepairStepper(this, tank, TechMemor, 50);
+                        // otherwise we don't have enough processing power to perform repairs in combat
+                    }
+                    else
+                    {   // Repairs in peacetime
+                        if (AdvancedAI) // faster for smrt
+                            AIERepair.InstaRepair(tank, TechMemor, KickStart.AIClockPeriod);
+                        else
+                            AIERepair.RepairStepper(this, tank, TechMemor, 25);
+                    } 
+                }
+            }
 
 
             public void RunAlliedOperations()
@@ -1053,6 +1250,7 @@ namespace TAC_AI.AI
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired DelayedUpdate!");
                     this.Attempt3DNavi = false;
+                    TryRepairAllied();
 
                     //this.updateCA = true;
                     if (this.ActionPause > 0)
@@ -1067,7 +1265,7 @@ namespace TAC_AI.AI
             /// <summary>
             /// Extension for TougherEnemies to toggle
             /// </summary>
-            public void TryRunEnemyOperations()
+            public void RunEnemyOperations()
             {
                 //BEGIN THE PAIN!
                 //this.updateCA = true;
@@ -1076,7 +1274,7 @@ namespace TAC_AI.AI
                 Enemy.RCore.BeEvil(this, tank);
             }
 
-            public void DelayedUpdate()
+            public void DelayedRepairUpdate()
             {   //OBSOLETE until further notice
                 // Dynamic timescaled update that fires when needed, less for slow techs, fast for large techs
             }
@@ -1100,23 +1298,23 @@ namespace TAC_AI.AI
                             Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
                         }
 
-                        this.FixedDelayedUpdateClock++;
-                        if (this.FixedDelayedUpdateClock > KickStart.AIDodgeCheapness)
+                        this.DirectorUpdateClock++;
+                        if (this.DirectorUpdateClock > KickStart.AIDodgeCheapness)
                         {
                             this.updateCA = true;
-                            this.FixedDelayedUpdateClock = 0;
+                            this.DirectorUpdateClock = 0;
                         }
                         else
                             this.updateCA = false;
 
                         if (this.recentSpeed < 1)
                             this.recentSpeed = 1;
-                        this.DelayedUpdateClock++;
-                        if (this.DelayedUpdateClock > KickStart.AIClockPeriod)//Mathf.Max(25 / this.recentSpeed, 5)
+                        this.OperationsUpdateClock++;
+                        if (this.OperationsUpdateClock > KickStart.AIClockPeriod)//Mathf.Max(25 / this.recentSpeed, 5)
                         {
                             this.recentSpeed = tank.GetForwardSpeed();
                             RunAlliedOperations();
-                            this.DelayedUpdateClock = 0;
+                            this.OperationsUpdateClock = 0;
                             if (this.EstTopSped < this.recentSpeed)
                                 this.EstTopSped = this.recentSpeed;
                         }
@@ -1133,23 +1331,23 @@ namespace TAC_AI.AI
                         }
                         if (!this.Hibernate)
                         {
-                            this.FixedDelayedUpdateClock++;
-                            if (this.FixedDelayedUpdateClock > KickStart.AIDodgeCheapness)
+                            this.DirectorUpdateClock++;
+                            if (this.DirectorUpdateClock > KickStart.AIDodgeCheapness)
                             {
                                 this.updateCA = true;
-                                this.FixedDelayedUpdateClock = 0;
+                                this.DirectorUpdateClock = 0;
                             }
                             else
                                 this.updateCA = false;
 
                             if (this.recentSpeed < 1)
                                 this.recentSpeed = 1;
-                            this.DelayedUpdateClock++;
-                            if (this.DelayedUpdateClock > KickStart.AIClockPeriod)
+                            this.OperationsUpdateClock++;
+                            if (this.OperationsUpdateClock > KickStart.AIClockPeriod)
                             {
                                 this.recentSpeed = tank.GetForwardSpeed();
-                                TryRunEnemyOperations();
-                                this.DelayedUpdateClock = 0;
+                                RunEnemyOperations();
+                                this.OperationsUpdateClock = 0;
                                 if (this.EstTopSped < this.recentSpeed)
                                     this.EstTopSped = this.recentSpeed;
                             }

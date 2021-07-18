@@ -153,6 +153,8 @@ namespace TAC_AI.AI.Enemy
             try
             {
                 thisInst.lastEnemy = mind.FindEnemy(inRange: 500);
+                if (thisInst.lastEnemy == null)
+                    DefaultIdle(thisInst, tank, mind);
             }
             catch { }//No tanks available
         }

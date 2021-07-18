@@ -1,13 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BProspector
+    public static class BScrapper
     {
-        public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MotivateFind(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
@@ -20,7 +21,7 @@ namespace TAC_AI.AI.AlliedOperations
             {   //RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out Tank theBase);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out Tank theBase);
                     hasMessaged = AIECore.AIMessage(tank, hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (theBase == null)
@@ -29,7 +30,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (thisInst.theBase == null)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
                     thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     return;
@@ -84,7 +85,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (thisInst.areWeFull || thisInst.ActionPause > 10)
             {
-                thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
+                thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Searching for nearest base!");
@@ -93,15 +94,6 @@ namespace TAC_AI.AI.AlliedOperations
                         return; // There's no base!
                     thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
                 }
-                /*
-                else if (thisInst.lastBasePos.IsNull())
-                {
-                    thisInst.foundBase = AIEnhancedCore.FetchClosestHarvestReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
-                    thisInst.lastBaseExtremes = AIEnhancedCore.Extremes(thisInst.theBase.blockBounds.extents); 
-                    thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    return;
-                }
-                */
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
 
@@ -181,11 +173,11 @@ namespace TAC_AI.AI.AlliedOperations
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Scanning for resources...");
+                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Scanning for loose blocks...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
+                        thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
@@ -195,9 +187,8 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (thisInst.theResource != null)
                 {
-                    if (thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated || thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
+                    if (thisInst.theResource.block.IsAttached || thisInst.theResource.InBeam)
                     {
-                        AIECore.Minables.Remove(thisInst.theResource);
                         thisInst.theResource = null;
                         thisInst.foundGoal = false;
                         return;
@@ -208,7 +199,7 @@ namespace TAC_AI.AI.AlliedOperations
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ": Grabbing block at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     if (!thisInst.FullMelee)
@@ -223,13 +214,13 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (dist < thisInst.lastTechExtents + 12)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arriving at loose block at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                     thisInst.RemoveObstruction();
                 }
-                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
+                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Moving out to scavenge at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
             }

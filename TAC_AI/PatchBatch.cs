@@ -2,8 +2,8 @@
 using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
-using Harmony;
-//using HarmonyLib;
+//using Harmony;
+using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using TAC_AI.AI;
@@ -69,6 +69,7 @@ namespace TAC_AI
         }
 
         // this is a VERY big mod
+        //   we must make it look big like it is
         [HarmonyPatch(typeof(Mode))]
         [HarmonyPatch("EnterPreMode")]//On very late update
         private static class Startup
@@ -124,12 +125,12 @@ namespace TAC_AI
         }
 
         [HarmonyPatch(typeof(ModeAttract))]
-        [HarmonyPatch("SetupTerrain")]//lol
+        [HarmonyPatch("SetupTerrain")]// Setup main menu scene
         private static class SetupTerrainCustom
         {
             private static bool Prefix(ModeAttract __instance)
             {
-                if (UnityEngine.Random.Range(1, 100) > 35 || KickStart.retryForBote == 1)
+                if (UnityEngine.Random.Range(1, 100) > 20 || KickStart.retryForBote == 1)
                 {
                     Debug.Log("TACtical_AI: Ooop - the special threshold has been met");
                     KickStart.SpecialAttract = true;
@@ -217,7 +218,7 @@ namespace TAC_AI
         }
 
         [HarmonyPatch(typeof(ModeAttract))]
-        [HarmonyPatch("SetupTerrain")]//lol
+        [HarmonyPatch("SetupTerrain")]// Setup main menu scene
         private static class RandomTime
         {
             private static void Postfix(ModeAttract __instance)
@@ -234,7 +235,7 @@ namespace TAC_AI
         }
 
         [HarmonyPatch(typeof(ModeAttract))]
-        [HarmonyPatch("SetupTechs")]//lol
+        [HarmonyPatch("SetupTechs")]// Setup main menu techs
         private static class ThrowCoolAIInAttract
         {
             private static void Postfix(ModeAttract __instance)
@@ -334,14 +335,14 @@ namespace TAC_AI
                                 Vector3 position = tech.boundsCentreWorld; //- (tech.rootBlockTrans.forward * 10);
                                 position.y += 10;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Land))
+                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, BaseTerrain.AnyNonSea))
                                     tech.visible.RemoveFromGame();
                             }
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Space);
+                            RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Air);
                         }
                         else
                         {   // Land battle invoker
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
+                            RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Land);
                         }
                     }
                 }
@@ -403,26 +404,27 @@ namespace TAC_AI
                         if (name == "GSO_AI_Module_Guard_111")
                         {
                             ModuleAdd.Aegis = true;
+                            ModuleAdd.Prospector = true;
+                            ModuleAdd.Buccaneer = true;
                             ModuleAdd.AidAI = true;
-                            ModuleAdd.Prospector = true;//Temp until main intended function arrives
                         }
                         if (name == "GSO_AIAnchor_121")
                         {
                             ModuleAdd.Aegis = true;
                             ModuleAdd.AidAI = true;
-                            ModuleAdd.Prospector = true;//Temp until main intended function arrives
                             ModuleAdd.MaxCombatRange = 150;
                         }
                         else if (name == "GC_AI_Module_Guard_222")
                         {
                             ModuleAdd.Prospector = true;
+                            ModuleAdd.Energizer = true;
                             ModuleAdd.MTForAll = true;
                             ModuleAdd.MeleePreferred = true;
                         }
                         else if (name == "VEN_AI_Module_Guard_111")
                         {
                             ModuleAdd.Aviator = true;
-                            ModuleAdd.Prospector = true;//Temp until main intended function arrives
+                            ModuleAdd.Buccaneer = true;
                             ModuleAdd.SidePreferred = true;
                             ModuleAdd.MaxCombatRange = 300;
                         }
@@ -430,7 +432,6 @@ namespace TAC_AI
                         {
                             ModuleAdd.Assault = true;
                             ModuleAdd.Aviator = true;
-                            ModuleAdd.Prospector = true;//Temp until main intended function arrives
                             ModuleAdd.AdvancedAI = true;
                             ModuleAdd.MinCombatRange = 50;
                             ModuleAdd.MaxCombatRange = 200;
@@ -438,15 +439,13 @@ namespace TAC_AI
                         else if (name == "HE_AI_Turret_111")
                         {
                             ModuleAdd.Assault = true;
-                            ModuleAdd.Prospector = true;//Temp until main intended function arrives
                             ModuleAdd.AdvancedAI = true;
                             ModuleAdd.MinCombatRange = 50;
                             ModuleAdd.MaxCombatRange = 150;
                         }
                         else if (name == "BF_AI_Module_Guard_212")
                         {
-                            ModuleAdd.Astrotech = true;
-                            //ModuleAdd.Prospector = true;//Temp until main intended function arrives
+                            ModuleAdd.Astrotech = true; // Piloting spaceship is VERY powerful
                             ModuleAdd.AdvAvoidence = true;
                             ModuleAdd.MinCombatRange = 60;
                             ModuleAdd.MaxCombatRange = 180;
@@ -461,6 +460,7 @@ namespace TAC_AI
                         }
                         else if (name == "SJ_AI_Module_Guard_122")
                         {
+                            ModuleAdd.Prospector = true;
                             ModuleAdd.Scrapper = true;
                             ModuleAdd.MTForAll = true;
                             ModuleAdd.MinCombatRange = 60;
@@ -514,7 +514,7 @@ namespace TAC_AI
             }
         }
 
-        [HarmonyPatch(typeof(TargetAimer))]// cannot override
+        [HarmonyPatch(typeof(TargetAimer))]//
         [HarmonyPatch("UpdateTarget")]//On targeting
         private static class PatchAimingToHelpAI
         {
@@ -673,6 +673,20 @@ namespace TAC_AI
                         var ModuleAdd = __instance.gameObject.AddComponent<ModuleHarvestReciever>();
                         ModuleAdd.OnPool();
                     }
+                }
+            }
+        }
+        [HarmonyPatch(typeof(ModuleRemoteCharger))]
+        [HarmonyPatch("OnPool")]//On Creation
+        private static class MarkChargers
+        {
+            private static void Postfix(ModuleRemoteCharger __instance)
+            {
+                var valid = __instance.GetComponent<ModuleChargerTracker>();
+                if (valid)
+                {
+                    var ModuleAdd = __instance.gameObject.AddComponent<ModuleHarvestReciever>();
+                    ModuleAdd.OnPool();
                 }
             }
         }

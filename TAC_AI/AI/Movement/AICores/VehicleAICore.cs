@@ -81,51 +81,81 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (help.ProceedToMine)
             {
-                if (help.PivotOnly)
+                if (help.theResource.tank != null)
                 {
-                    help.Steer = true;
-                    help.DriveDir = EDriveType.Forwards;
-                    help.lastDestination = help.theResource.centrePosition;
-                    help.MinimumRad = 0;
-                }
-                else
-                {
-                    if (help.FullMelee)
+                    if (help.PivotOnly)
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
+                        help.lastDestination = help.theResource.tank.boundsCentreWorldNoCheck;
                         help.MinimumRad = 0;
                     }
                     else
                     {
+                        if (help.FullMelee)
+                        {
+                            help.Steer = true;
+                            help.DriveDir = EDriveType.Forwards;
+                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
+                            help.MinimumRad = 0;
+                        }
+                        else
+                        {
+                            help.Steer = true;
+                            help.DriveDir = EDriveType.Forwards;
+                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
+                            help.MinimumRad = help.lastTechExtents + 2;
+                        }
+                    }
+                }
+                else
+                {
+                    if (help.PivotOnly)
+                    {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
-                        help.MinimumRad = help.lastTechExtents + 2;
+                        help.lastDestination = help.theResource.centrePosition;
+                        help.MinimumRad = 0;
+                    }
+                    else
+                    {
+                        if (help.FullMelee)
+                        {
+                            help.Steer = true;
+                            help.DriveDir = EDriveType.Forwards;
+                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
+                            help.MinimumRad = 0;
+                        }
+                        else
+                        {
+                            help.Steer = true;
+                            help.DriveDir = EDriveType.Forwards;
+                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
+                            help.MinimumRad = help.lastTechExtents + 2;
+                        }
                     }
                 }
             }
             else if (help.DediAI == AIType.Aegis)
             {
-                help.LastCloseAlly = AIEPathing.ClosestAlly(this.controller.Tank.boundsCentreWorldNoCheck, out float bestval);
+                help.theResource = AIEPathing.ClosestUnanchoredAlly(this.controller.Tank.boundsCentreWorldNoCheck, out float bestval).visible;
                 bool Combat = this.TryAdjustForCombat();
                 if (!Combat)
                 {
-                    if (help.MoveFromObjective && help.LastCloseAlly.IsNotNull())
+                    if (help.MoveFromObjective && help.theResource.IsNotNull())
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
                         help.AdviseAway = true;
-                        help.lastDestination = help.LastCloseAlly.transform.position;
+                        help.lastDestination = help.theResource.transform.position;
                         help.MinimumRad = 0.5f;
                     }
-                    else if (help.ProceedToObjective && help.LastCloseAlly.IsNotNull())
+                    else if (help.ProceedToObjective && help.theResource.IsNotNull())
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = help.AvoidAssist(help.LastCloseAlly.transform.position);
-                        help.MinimumRad = help.lastTechExtents + AIECore.Extremes(help.LastCloseAlly.blockBounds.extents) + 5;
+                        help.lastDestination = help.AvoidAssist(help.theResource.tank.transform.position);
+                        help.MinimumRad = help.lastTechExtents + AIECore.Extremes(help.theResource.tank.blockBounds.extents) + 5;
                     }
                     else
                     {
@@ -374,13 +404,13 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (thisInst.featherBoost)
                     {
-                        if (thisInst.featherClock >= 25)
+                        if (thisInst.featherBoostersClock >= 25)
                         {
                             if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.75f)
                                 thisControl.m_Movement.FireBoosters(tank);
-                            thisInst.featherClock = 0;
+                            thisInst.featherBoostersClock = 0;
                         }
-                        thisInst.featherClock++;
+                        thisInst.featherBoostersClock++;
                     }
                 }
                 else if (thisInst.BOOST)
@@ -391,13 +421,13 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else if (thisInst.featherBoost)
                 {
-                    if (thisInst.featherClock >= 25)
+                    if (thisInst.featherBoostersClock >= 25)
                     {
                         if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.75f)
                             thisControl.m_Movement.FireBoosters(tank);
-                        thisInst.featherClock = 0;
+                        thisInst.featherBoostersClock = 0;
                     }
-                    thisInst.featherClock++;
+                    thisInst.featherBoostersClock++;
                 }
             }
             return true;
@@ -473,11 +503,11 @@ namespace TAC_AI.AI.Movement.AICores
                             turnVal.z = -((turnVal.z - 360) / 180);
                         else
                             turnVal.z = -(turnVal.z / 180);
-                        Debug.Log("TACtical_AI: Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
+                        //Debug.Log("TACtical_AI: Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
                     }
                     else
                     {
-                        Debug.Log("TACtical_AI: Broadside Z-tilt active");
+                        //Debug.Log("TACtical_AI: Broadside Z-tilt active");
                         if (turnVal.z > 180)
                             turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / 60), -1, 1);
                         else
@@ -696,13 +726,13 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (thisInst.featherBoost)
             {
-                if (thisInst.featherClock >= 25)
+                if (thisInst.featherBoostersClock >= 25)
                 {
                     if (Vector3.Dot(driveVal, tank.rootBlockTrans.forward) > 0.75f)
                         thisControl.m_Movement.FireBoosters(tank);
-                    thisInst.featherClock = 0;
+                    thisInst.featherBoostersClock = 0;
                 }
-                thisInst.featherClock++;
+                thisInst.featherBoostersClock++;
             }
             else if (thisInst.forceDrive)
             {
@@ -890,14 +920,14 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
-                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity), direction);
+                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity * Time.deltaTime), direction);
                 }
             }
             else
             {
                 if (controller.Helper.AdvancedAI)
                 {
-                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity), direction);
+                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity * Time.deltaTime), direction);
                 }
             }
             return direction;

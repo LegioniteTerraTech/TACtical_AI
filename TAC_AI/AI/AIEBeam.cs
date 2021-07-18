@@ -5,22 +5,22 @@ namespace TAC_AI.AI
 {
     public static class AIEBeam
     {
-        public static void BeamDirector(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public static void BeamMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            if (thisInst.beamClock > 0)
+            if (thisInst.beamTimeoutClock > 0)
             {
                 tank.beam.EnableBeam(true);
                 thisInst.BOOST = false;
                 thisInst.featherBoost = false;
                 thisControl.BoostControlJets = false;
                 if (tank.rootBlockTrans.up.y > 0.95f)
-                    thisInst.beamClock = 0;
-                else if (thisInst.beamClock > 40)
+                    thisInst.beamTimeoutClock = 0;
+                else if (thisInst.beamTimeoutClock > 40)
                 {
-                    thisInst.beamClock = 0;
+                    thisInst.beamTimeoutClock = 0;
                 }
                 else
-                    thisInst.beamClock++;
+                    thisInst.beamTimeoutClock++;
             }
             else
                 tank.beam.EnableBeam(false);
@@ -31,7 +31,7 @@ namespace TAC_AI.AI
                 {   //Become a ground vehicle for now
                     if (tank.grounded && tank.AI.IsTankOverturned())
                     {
-                        thisInst.beamClock = 1;
+                        thisInst.beamTimeoutClock = 1;
                     }
                     return;
                 }
@@ -78,7 +78,7 @@ namespace TAC_AI.AI
 
             if (!thisInst.IsMultiTech && thisInst.forceBeam && thisInst.RequestBuildBeam)
             {
-                thisInst.beamClock = 35;
+                thisInst.beamTimeoutClock = 35;
             }
             else if (!thisInst.IsMultiTech && tank.AI.IsTankOverturned() && thisInst.RequestBuildBeam)
             {
@@ -91,7 +91,7 @@ namespace TAC_AI.AI
                         thisInst.ActionPause = 100;
                     else if (thisInst.ActionPause > 80)
                     {
-                        thisInst.beamClock = 1;
+                        thisInst.beamTimeoutClock = 1;
                         thisInst.ActionPause--;
                     }
                     else if (thisInst.ActionPause == 80)
@@ -99,7 +99,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    thisInst.beamClock = 1;
+                    thisInst.beamTimeoutClock = 1;
                 }
             }
             else

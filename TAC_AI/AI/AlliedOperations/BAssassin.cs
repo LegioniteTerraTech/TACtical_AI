@@ -1,107 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BProspector
+    public static class BAssassin
     {
-        public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MotivateKill(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //The Handler that tells the Tank (Prospector) what to do movement-wise
+            //The Handler that tells the Tank (Energizer) what to do movement-wise
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
 
             BGeneral.ResetValues(thisInst);
 
-            if (thisInst.lastEnemy != null)
-            {   //RUN!!!!!!!!
-                if (!thisInst.foundBase)
-                {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out Tank theBase);
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
-                    thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    if (theBase == null)
-                        return; // There's no base!
-                    thisInst.lastBaseExtremes = AIECore.Extremes(theBase.blockBounds.extents);
-                }
-                else if (thisInst.theBase == null)
-                {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
-                    thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
-                    thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    return;
-                }
 
-                thisInst.forceDrive = true;
-                thisInst.DriveVar = 1;
-
-                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
-                {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arrived in safety of the base.");
-                    thisInst.AvoidStuff = false;
-                    thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
-                }
-                else if (thisInst.recentSpeed < 3)
-                {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  GET OUT OF THE WAY!  (dest base)");
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
-                }
-                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Aaaah enemy!  Running back to base!");
-                thisInst.ProceedToBase = true;
-                return;
-            }
-
+            EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
             if (thisInst.areWeFull)
             {
                 thisInst.areWeFull = false;
-                foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
-                {
-                    ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
-                    if (!hold.IsEmpty && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
-                    {
-                        thisInst.areWeFull = true;
-                        break;//Checking if tech is empty when unloading at base
-                    }
-                }
+                if (state.currentAmount / state.storageTotal > 0.95f)
+                    thisInst.areWeFull = true;
+
                 thisInst.ActionPause = 20;
             }
             else
             {
                 thisInst.areWeFull = true;
-                foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
-                {
-                    ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
-                    if (!hold.IsFull && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
-                    {
-                        thisInst.areWeFull = false;
-                        break;//Checking if tech is full after destroying a node
-                    }
-                }
+                if (state.currentAmount / state.storageTotal < 0.4f)
+                    thisInst.areWeFull = false;
             }
 
             if (thisInst.areWeFull || thisInst.ActionPause > 10)
             {
-                thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
+                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
                 if (!thisInst.foundBase)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Searching for nearest base!");
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Searching for nearest charger!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
                         return; // There's no base!
                     thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
                 }
-                /*
-                else if (thisInst.lastBasePos.IsNull())
-                {
-                    thisInst.foundBase = AIEnhancedCore.FetchClosestHarvestReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
-                    thisInst.lastBaseExtremes = AIEnhancedCore.Extremes(thisInst.theBase.blockBounds.extents); 
-                    thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    return;
-                }
-                */
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
 
@@ -116,7 +59,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     else
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arrived at base and unloading!");
+                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arrived at nearest charger and recharging!");
                         thisInst.AvoidStuff = false;
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
@@ -181,11 +124,11 @@ namespace TAC_AI.AI.AlliedOperations
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Scanning for resources...");
+                    thisInst.foundGoal = AIECore.FindTarget(tank, thisInst, thisInst.theResource, out thisInst.theResource);
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Scanning for enemies...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
+                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
@@ -193,28 +136,16 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.ProceedToBase = true;
                     return; // There's no resources left!
                 }
-                else if (thisInst.theResource != null)
-                {
-                    if (thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated || thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
-                    {
-                        AIECore.Minables.Remove(thisInst.theResource);
-                        thisInst.theResource = null;
-                        thisInst.foundGoal = false;
-                        return;
-                    }
-                }
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.centrePosition);
-                    thisInst.AvoidStuff = false;
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Engadging the enemy at " + thisInst.theResource.centrePosition);
                     thisInst.Yield = true;
                     if (!thisInst.FullMelee)
                         thisInst.PivotOnly = true;
                     thisInst.SettleDown();
-                    thisInst.RemoveObstruction();
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
@@ -223,13 +154,10 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (dist < thisInst.lastTechExtents + 12)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.centrePosition);
-                    thisInst.AvoidStuff = false;
-                    thisInst.Yield = true;
+                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  In combat at " + thisInst.theResource.centrePosition);
                     thisInst.SettleDown();
-                    thisInst.RemoveObstruction();
                 }
-                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
+                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Moving out to fight at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
             }
