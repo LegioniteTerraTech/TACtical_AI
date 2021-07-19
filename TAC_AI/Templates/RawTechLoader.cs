@@ -19,6 +19,8 @@ namespace TAC_AI.Templates
 
     public static class RawTechLoader
     {
+        const float MinimumBaseSpacing = 350;
+
         static bool ForceSpawn = false;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
 
@@ -27,12 +29,12 @@ namespace TAC_AI.Templates
         {
             if (!KickStart.AllowEnemiesToStartBases)
                 return;
+            if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && !Singleton.Manager<ManNetwork>.inst.IsServer)
+                return; // no want each client to have enemies spawn in new bases - stacked base incident!
 
             MakeSureCanExistWithBase(tank);
-            if (GetEnemyBaseCountForTeam(tank.Team) > 0)
-                return; // want no base spam on world load
 
-            if (GetEnemyBaseCount() >= KickStart.MaxEnemyBaseLimit)
+            if (GetEnemyBaseCountSearchRadius(tank.boundsCentreWorldNoCheck, MinimumBaseSpacing) >= KickStart.MaxEnemyBaseLimit)
             {
                 int teamswatch = ReassignToRandomEnemyBaseTeam();
                 if (teamswatch == -1)
@@ -41,19 +43,18 @@ namespace TAC_AI.Templates
                 return;
             }
 
+            if (GetEnemyBaseCountForTeam(tank.Team) > 0)
+                return; // want no base spam on world load
+
             Vector3 pos = (tank.rootBlockTrans.forward * (thisInst.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
 
-            bool validLocation = true;
-            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, thisInst.lastTechExtents, new Bitfield<ObjectTypes>()))
-            {
-                if (vis.tank.IsNotNull())
-                {
-                    if (vis.tank != tank)
-                        validLocation = false;
-                }
+            if (!IsRadiusClearOfTechObst(tank, pos, thisInst.lastTechExtents))
+            {   // try behind
+                pos = (-tank.rootBlockTrans.forward * (thisInst.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
+
+                if (!IsRadiusClearOfTechObst(tank, pos, thisInst.lastTechExtents))
+                    return;
             }
-            if (!validLocation)
-                return;
 
 
             // We validated?  
@@ -73,13 +74,26 @@ namespace TAC_AI.Templates
         {
             TryClearAreaForBase(pos);
 
+            // this shouldn't be able to happen without being the server or being in single player
             bool haveBB;
             switch (purpose)
             {
                 case BasePurpose.Headquarters:
+                    haveBB = true;
+                    WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
+                    Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Enemy HQ Spotted!", pos2);
+
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Enemy HQ Spotted!");
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                    break;
                 case BasePurpose.Harvesting:
                 case BasePurpose.TechProduction:
                     haveBB = true;
+                    WorldPosition pos3 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
+                    Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Rival Prospector Spotted!", pos3);
+
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
                     break;
                 default:
                     haveBB = false;
@@ -88,7 +102,7 @@ namespace TAC_AI.Templates
 
             // Are we a defended HQ?
             if (purpose == BasePurpose.Headquarters)
-            {   // Summon additional defenses
+            {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
                 SpawnBaseAtPosition(spawnerTank, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
                 SpawnBaseAtPosition(spawnerTank, pos - (Vector3.forward * 64), Team, BasePurpose.Defense);
                 SpawnBaseAtPosition(spawnerTank, pos + (Vector3.right * 64), Team, BasePurpose.Defense);
@@ -141,10 +155,12 @@ namespace TAC_AI.Templates
         public static void SpawnSeaBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function");
+            //throw new NotImplementedException();
         }
         public static void SpawnAirBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function");
+            //throw new NotImplementedException();
         }
 
 
@@ -241,7 +257,16 @@ namespace TAC_AI.Templates
 
         public static void TryClearAreaForBase(Vector3 vector3)
         {   //N/A
-
+            int removeCount = 0;
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(vector3, 32, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })))
+            {   // Does not compensate for bases that are 64x64 diagonally!
+                if (vis.resdisp.IsNotNull())
+                {
+                    vis.resdisp.RemoveFromWorld(false);
+                    removeCount++;
+                }
+            }
+            Debug.Log("TACtical_AI: removed " + removeCount + " trees around new enemy base setup");
         }
         public static bool GetEnemyBaseSupplies(SpawnBaseTypes toSpawn)
         {
@@ -399,13 +424,26 @@ namespace TAC_AI.Templates
         {
             return GetBaseTemplate(toSpawn).startingFunds;
         }
+
         public static bool IsHQ(SpawnBaseTypes toSpawn)
         {
             if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
                 return baseT.purposes.Contains(BasePurpose.Headquarters);
             return false;
         }
-
+        public static bool IsRadiusClearOfTechObst(Tank tank, Vector3 pos, float radius)
+        {
+            bool validLocation = true;
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle })))
+            {
+                if (vis.tank.IsNotNull())
+                {
+                    if (vis.tank != tank)
+                        validLocation = false;
+                }
+            }
+            return validLocation;
+        }
 
         public static int GetEnemyBaseCount()
         {
@@ -415,6 +453,19 @@ namespace TAC_AI.Templates
             {
                 if (tanks.ElementAt(step).IsEnemy() && tanks.ElementAt(step).IsAnchored)
                     baseCount++;
+            }
+            return baseCount;
+        }
+        public static int GetEnemyBaseCountSearchRadius(Vector3 pos, float radius)
+        {
+            int baseCount = 0;
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle })))
+            {
+                if (vis.tank.IsNotNull())
+                {
+                    if (vis.tank.IsEnemy() && vis.tank.IsAnchored)
+                        baseCount++;
+                }
             }
             return baseCount;
         }

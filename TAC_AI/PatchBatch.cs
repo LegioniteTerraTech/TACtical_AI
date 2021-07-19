@@ -7,6 +7,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.UI;
 using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 
 namespace TAC_AI
@@ -74,7 +75,7 @@ namespace TAC_AI
         [HarmonyPatch("EnterPreMode")]//On very late update
         private static class Startup
         {
-            private static void Prefix(Mode __instance)
+            private static void Prefix()
             {
                 if (KickStart.isBlockInjectorPresent && !KickStart.firedAfterBlockInjector)
                     KickStart.DelayedBaseLoader();
@@ -221,7 +222,7 @@ namespace TAC_AI
         [HarmonyPatch("SetupTerrain")]// Setup main menu scene
         private static class RandomTime
         {
-            private static void Postfix(ModeAttract __instance)
+            private static void Postfix()
             {
                 try
                 {
@@ -238,7 +239,7 @@ namespace TAC_AI
         [HarmonyPatch("SetupTechs")]// Setup main menu techs
         private static class ThrowCoolAIInAttract
         {
-            private static void Postfix(ModeAttract __instance)
+            private static void Postfix()
             {
                 try
                 {
@@ -289,7 +290,7 @@ namespace TAC_AI
                             {
                                 Camera.main.transform.position = KickStart.SpecialAttractPos;
                                 int removed = 0;
-                                foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(KickStart.SpecialAttractPos, 2500, new Bitfield<ObjectTypes>()))
+                                foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(KickStart.SpecialAttractPos, 2500, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })))
                                 {
                                     if (vis.resdisp.IsNotNull() && vis.centrePosition.y < -25)
                                     {
@@ -381,7 +382,7 @@ namespace TAC_AI
         }
         */
 
-
+        // Enemy AI's ability to "Lock On"
         [HarmonyPatch(typeof(ModuleAIBot))]
         [HarmonyPatch("OnPool")]//On Creation
         private static class ImproveAI
@@ -598,6 +599,7 @@ namespace TAC_AI
         }
 
 
+        // Resources/Collection
         [HarmonyPatch(typeof(ResourceDispenser))]
         [HarmonyPatch("OnSpawn")]//On World Spawn
         private static class PatchResourcesToHelpAI
@@ -676,6 +678,7 @@ namespace TAC_AI
                 }
             }
         }
+
         [HarmonyPatch(typeof(ModuleRemoteCharger))]
         [HarmonyPatch("OnPool")]//On Creation
         private static class MarkChargers
@@ -691,7 +694,43 @@ namespace TAC_AI
             }
         }
 
+        [HarmonyPatch(typeof(ModuleItemConsume))]
+        [HarmonyPatch("InitRecipeOutput")]//On Creation
+        private static class LetEnemiesSellStuff
+        {
+            static readonly FieldInfo progress = typeof(ModuleItemConsume).GetField("m_ConsumeProgress", BindingFlags.NonPublic | BindingFlags.Instance);
+            static readonly FieldInfo sellStolen = typeof(ModuleItemConsume).GetField("m_OperateItemInterceptedBy", BindingFlags.NonPublic | BindingFlags.Instance);
+            
+            private static void Prefix(ModuleItemConsume __instance)
+            {
+                var valid = __instance.transform.root.GetComponent<RBases.EnemyBaseFunder>();
+                if ((bool)valid)
+                {
+                    ModuleItemConsume.Progress pog = (ModuleItemConsume.Progress)progress.GetValue(__instance);
+                    if (pog.currentRecipe.m_OutputType == RecipeTable.Recipe.OutputType.Money && sellStolen.GetValue(__instance) == null)
+                    {
+                        int sellGain = pog.currentRecipe.m_MoneyOutput;
 
+                        WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
+                        Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
+                        if (Singleton.Manager<ManNetwork>.inst.IsServer)
+                        {
+                            PopupNumberMessage message = new PopupNumberMessage
+                            {
+                                m_Type = PopupNumberMessage.Type.Money,
+                                m_Number = sellGain,
+                                m_Position = pos
+                            };
+                            Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
+                        }
+                        valid.AddBuildBucks(sellGain);
+                    }
+                }
+            }
+        }
+
+
+        // Allied AI state changing remotes
         /*
         [HarmonyPatch(typeof(TechAI))]
         [HarmonyPatch("SetCurrentTree")]//On SettingTechAI
@@ -737,7 +776,7 @@ namespace TAC_AI
         [HarmonyPatch("Show")]//On popup
         private static class DetectAIRadialAction
         {
-            private static void Prefix(UIRadialTechControlMenu __instance, ref object context)
+            private static void Prefix(ref object context)
             {
                 OpenMenuEventData nabData = (OpenMenuEventData)context;
                 TankBlock thisBlock = nabData.m_TargetTankBlock;
@@ -753,8 +792,7 @@ namespace TAC_AI
             }
         }
 
-
-        [HarmonyPatch(typeof(UIRadialTechControlMenu))]//UIRadialMenuOptionWithWarning
+        [HarmonyPatch(typeof(UIRadialTechControlMenu))]
         [HarmonyPatch("OnAIOptionSelected")]//On AI option
         private static class DetectAIRadialMenuAction
         {
@@ -801,12 +839,11 @@ namespace TAC_AI
 
 
         // CampaignAutohandling
-
         [HarmonyPatch(typeof(ManPop))]
         [HarmonyPatch("OnSpawned")]//On enemy base bomb landing
         private static class EmergencyOverrideOnWaterLanding
         {
-            private static void Prefix(ManPop __instance, ref TrackedVisible tv)
+            private static void Prefix(ref TrackedVisible tv)
             {
                 if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                 {
@@ -861,7 +898,7 @@ namespace TAC_AI
         [HarmonyPatch("Awake")]//On Game start
         private static class StartupSpecialAISpawner
         {
-            private static void Postfix(ManGameMode __instance)
+            private static void Postfix()
             {
                 // Setup aircraft if Population Injector is N/A
                 if (!KickStart.isPopInjectorPresent)

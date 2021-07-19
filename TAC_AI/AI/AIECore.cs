@@ -248,7 +248,7 @@ namespace TAC_AI.AI
         {
             return Mathf.Max(Mathf.Max(input.x, input.y), input.z);
         }
-        public static bool AIMessage(Tank tech, bool hasMessaged, string message)
+        public static bool AIMessage(Tank tech, ref bool hasMessaged, string message)
         {
             if (KickStart.isAnimeAIPresent)
             {   // we send the action commentary to Anime AI mod
@@ -617,7 +617,7 @@ namespace TAC_AI.AI
                 var enemy = gameObject.GetComponent<Enemy.EnemyMind>();
                 if (AIState == 1 && DediAI == AIType.Aviator)
                 {
-                    if (!(this.MovementController is AIControllerAir pilot))
+                    if (!(this.MovementController is AIControllerAir))
                     {
                         IMovementAIController controller = this.MovementController;
                         this.MovementController = null;
@@ -634,7 +634,7 @@ namespace TAC_AI.AI
                 {
                     if (enemy && enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
                     {
-                        if (!(this.MovementController is AIControllerAir pilot))
+                        if (!(this.MovementController is AIControllerAir))
                         {
                             IMovementAIController controller = this.MovementController;
                             this.MovementController = null;
@@ -1049,7 +1049,7 @@ namespace TAC_AI.AI
                 if (this.UrgencyOverload > 50)
                 {
                     //Are we just randomly angry for too long? let's fix that
-                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
+                    AIMessage(tech: tank, ref hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
                     this.EstTopSped = 1;
                     this.AvoidStuff = true;
                     this.UrgencyOverload = 0;

@@ -187,7 +187,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {   // Orbit last position
                     if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                     {   //We are at target
-                        pilot.AirborneDest = pilot.AirborneDest + (-this.pilot.Tank.rootBlockTrans.right * 50);
+                        pilot.AirborneDest += (-this.pilot.Tank.rootBlockTrans.right * 50);
                     }
                     else
                     {
@@ -258,7 +258,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else
                         lFlat = this.pilot.Tank.rootBlockTrans.right + (this.pilot.Tank.rootBlockTrans.forward * 2);
                     lFlat.y = 0.1f;
-                    pilot.AirborneDest = pilot.AirborneDest + (lFlat * 50);
+                    pilot.AirborneDest += (lFlat * 50);
                 }
                 else if (this.pilot.Helper.ProceedToObjective)
                 {   // Fly to target

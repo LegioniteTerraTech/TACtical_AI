@@ -114,7 +114,7 @@ namespace TAC_AI.Templates
             else
                 pos = playerTank.boundsCentreWorldNoCheck;
 
-            Vector3 forwards = GetAirAngleFromPosition(pos);
+            Vector3 forwards = GetRandAirAngle();
 
             pos = GetAirOffsetFromPosition(pos, forwards);
 
@@ -302,11 +302,10 @@ namespace TAC_AI.Templates
 
 
         // Utilities
-        private static Vector3 GetAirAngleFromPosition(Vector3 pos)
+        private static Vector3 GetRandAirAngle()
         {   // 
             float randAngle = UnityEngine.Random.Range(0, 360);
             Vector3 angleHeading = Quaternion.AngleAxis(randAngle, Vector3.up) * Vector3.forward;
-            pos = pos + (angleHeading * AirSpawnDist);
             return angleHeading;
         }
         private static Vector3 GetAirOffsetFromPosition(Vector3 pos, Vector3 angleHeading)

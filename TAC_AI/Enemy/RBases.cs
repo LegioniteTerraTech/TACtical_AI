@@ -86,6 +86,10 @@ namespace TAC_AI.AI.Enemy
                 EnemyBases.Remove(this);
                 Destroy(this);
             }
+            public void AddBuildBucks(int toAdd)
+            {
+                SetBuildBucks(buildBucks + toAdd);
+            }
             public void SetBuildBucks(int newVal, bool noNameChange = false)
             {
                 if (!noNameChange)

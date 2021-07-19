@@ -365,9 +365,6 @@ namespace TAC_AI.AI
 
             BlockManager.TableCache techCache = tank.blockman.GetTableCacheForPlacementCollection();
             List<TankBlock> cBlocks = techCache.blockTable.Cast<TankBlock>().ToList();
-            int savedBCount = TechMemor.ReturnContents().Count;
-            int cBCount = cBlocks.Count;
-            int rBCount = savedBCount - cBCount;
             if (RepairAttempts == 0)
                 RepairAttempts = TechMemor.ReturnContents().Count();
 

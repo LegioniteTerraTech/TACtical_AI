@@ -51,7 +51,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Searching for nearest base!");
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
                         return; // There's no base!
@@ -64,13 +64,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     if (thisInst.recentSpeed == 1)
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Trying to unjam...");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
                         thisInst.AvoidStuff = false;
                         thisInst.DriveVar = -1;
                     }
                     else
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arrived at base and unloading!");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and unloading!");
                         thisInst.AvoidStuff = false;
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
@@ -81,19 +81,19 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     if (thisInst.recentSpeed == 1)
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Trying to unjam...");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
                         thisInst.AvoidStuff = false;
                         thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
                     }
                     else if (thisInst.recentSpeed < 3)
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Rattling off resources...");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
                         thisInst.AvoidStuff = false;
                         thisInst.Yield = true;
                     }
                     else
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Yielding base approach...");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
                         thisInst.AvoidStuff = false;
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
@@ -104,12 +104,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     if (thisInst.recentSpeed < 2)
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  unjamming from base...");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
                         thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                     }
                     else
                     {
-                        hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arrived at base!");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base!");
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         //thisInst.Yield = true;
                         thisInst.SettleDown();
@@ -117,16 +117,16 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Removing obstruction on way to base...");
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
-                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Heading back to base!");
+                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
                 thisInst.ProceedToBase = true;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
             {
-                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Reversing from base...");
+                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = -1;
             }
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Scanning for resources...");
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");
                     if (!thisInst.foundGoal)
                     {
                         thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
@@ -162,7 +162,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     if (!thisInst.FullMelee)
@@ -172,18 +172,18 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
                 else if (dist < thisInst.lastTechExtents + 12)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                     thisInst.RemoveObstruction();
                 }
-                hasMessaged = AIECore.AIMessage(tank, hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition);
+                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
             }

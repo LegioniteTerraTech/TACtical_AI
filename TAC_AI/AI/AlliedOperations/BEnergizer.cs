@@ -39,7 +39,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
                 if (!thisInst.foundBase)
                 {
-                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Searching for nearest charger!");
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Searching for nearest charger!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
                         return; // There's no base!
@@ -52,14 +52,14 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (thisInst.recentSpeed == 1)
                     {
-                        hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Trying to unjam...");
+                        hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
                         thisInst.AvoidStuff = false;
                         thisInst.DriveVar = -1;
                         //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
                     }
                     else
                     {
-                        hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Arrived at nearest charger and recharging!");
+                        hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arrived at nearest charger and recharging!");
                         thisInst.AvoidStuff = false;
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
@@ -70,19 +70,19 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (thisInst.recentSpeed < 3)
                     {
-                        hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Trying to unjam...");
+                        hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
                         thisInst.AvoidStuff = false;
                         thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
                     }
                     else if (thisInst.recentSpeed < 8)
                     {
-                        hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Rattling off resources...");
+                        hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
                         thisInst.AvoidStuff = false;
                         thisInst.Yield = true;
                     }
                     else
                     {
-                        hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Yielding base approach...");
+                        hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
                         thisInst.AvoidStuff = false;
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
@@ -93,12 +93,12 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (thisInst.recentSpeed < 3)
                     {
-                        hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  unjamming from base...");
+                        hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  unjamming from base...");
                         thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                     }
                     else
                     {
-                        hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Arrived at base!");
+                        hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arrived at base!");
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         //thisInst.Yield = true;
                         thisInst.SettleDown();
@@ -106,16 +106,16 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Removing obstruction on way to base...");
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
-                hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Heading back to base!");
+                hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Heading back to base!");
                 thisInst.ProceedToBase = true;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
             {
-                hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Reversing from base...");
+                hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Reversing from base...");
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = -1;
             }
@@ -125,7 +125,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     thisInst.foundGoal = AIECore.FetchLowestChargeAlly(tank.boundsCentreWorldNoCheck, thisInst, out thisInst.theResource);
-                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Scanning for low batteries...");
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Scanning for low batteries...");
                     if (!thisInst.foundGoal)
                     {
                         thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase);
@@ -141,24 +141,24 @@ namespace TAC_AI.AI.AlliedOperations
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Charging ally at " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Charging ally at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
                 else if (dist < thisInst.lastTechExtents + 12)
                 {
-                    hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Arriving at low battery position " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arriving at low battery position " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                 }
-                hasMessaged = AIECore.AIMessage(tech: tank, hasMessaged, tank.name + ":  Moving out to charge ally at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
+                hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Moving out to charge ally at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
             }
