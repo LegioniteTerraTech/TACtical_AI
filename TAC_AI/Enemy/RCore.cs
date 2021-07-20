@@ -94,7 +94,8 @@ namespace TAC_AI.AI.Enemy
                         RGeneral.AimAttack(thisInst, tank, Mind);
                         break;
                     case EnemyAttack.Grudge:
-                        RGeneral.HoldGrudge(thisInst, tank, Mind);
+                        RGeneral.AidAttack(thisInst, tank, Mind);
+                        //RGeneral.HoldGrudge(thisInst, tank, Mind); - now handled within FindEnemy
                         break;
                     default:
                         RGeneral.AidAttack(thisInst, tank, Mind);

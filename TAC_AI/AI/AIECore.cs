@@ -49,7 +49,7 @@ namespace TAC_AI.AI
         public static List<ModuleHarvestReciever> BlockHandlers;
         public static List<ModuleChargerTracker> Chargers;
         public static bool moreThan2Allies;
-        private static int lastTechCount = 0;
+        //private static int lastTechCount = 0;
 
         public const float minimumChargeFractionToConsider = 0.75f;
         // legdev
@@ -264,6 +264,7 @@ namespace TAC_AI.AI
 
         public class TankAIManager : MonoBehaviour
         {
+            public static EventNoParams QueueUpdater = new EventNoParams();
             public static void Initiate()
             {
                 new GameObject("AIManager").AddComponent<TankAIManager>();
@@ -271,7 +272,23 @@ namespace TAC_AI.AI
                 Minables = new List<Visible>();
                 Depots = new List<ModuleHarvestReciever>();
                 Chargers = new List<ModuleChargerTracker>();
+                Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Subscribe(OnTankAddition);
+                Singleton.Manager<ManTechs>.inst.TankTeamChangedEvent.Subscribe(OnTankChange);
+                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnTankRemoval);
+                QueueUpdater.Subscribe(FetchAllAllies);
                 Debug.Log("TACtical_AI: Created AIECore Manager.");
+            }
+            public static void OnTankAddition(Tank tonk)
+            {
+                QueueUpdater.Send();
+            }
+            public static void OnTankChange(Tank tonk, ManTechs.TeamChangeInfo info)
+            {
+                QueueUpdater.Send();
+            }
+            public static void OnTankRemoval(Tank tonk, ManDamage.DamageInfo info)
+            {
+                QueueUpdater.Send();
             }
 
             public static void FetchAllAllies()
@@ -308,7 +325,7 @@ namespace TAC_AI.AI
                     moreThan2Allies = false;
             }
 
-
+            /*
             private void Update()
             {
                 if (Singleton.Manager<ManTechs>.inst.Count != lastTechCount)
@@ -317,6 +334,7 @@ namespace TAC_AI.AI
                     FetchAllAllies();
                 }
             }
+            */
         }
 
 
@@ -471,6 +489,7 @@ namespace TAC_AI.AI
             internal int featherBoostersClock = 50;
             internal int repairStepperClock = 0;    
             internal int beamTimeoutClock = 0;
+            internal int WeaponDelayClock = 0;
             //internal int LastBuildClock = 0;  
             internal int ActionPause = 0;               // when [val > 0], used to halt other actions 
             internal int unanchorCountdown = 0;         // aux warning for unanchor

@@ -485,12 +485,14 @@ namespace TAC_AI.AI
                     if (!IsBlockStoredInInventory(tank, bType))
                         continue;
                 if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
+                {
                     if (!Enemy.RBases.PurchasePossible(bType, tank.Team))
                     {
                         TechMemor.ranOutOfParts = true;
                         TechMemor.thisInst.PendingSystemsCheck = false;
                         continue;
                     }
+                }
                 TechMemor.ranOutOfParts = false;
 
                 TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);

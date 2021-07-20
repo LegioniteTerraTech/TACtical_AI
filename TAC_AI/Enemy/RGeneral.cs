@@ -202,27 +202,27 @@ namespace TAC_AI.AI.Enemy
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
-                thisInst.Urgency += KickStart.AIClockPeriod / 5;
+                thisInst.WeaponDelayClock += KickStart.AIClockPeriod / 5;
                 if (thisInst.SideToThreat)
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.Urgency >= 30)
+                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.WeaponDelayClock >= 30)
                     {
                         thisInst.DANGER = true;
-                        thisInst.Urgency = 30;
+                        thisInst.WeaponDelayClock = 30;
                     }
                 }
                 else
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.Urgency >= 30)
+                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.WeaponDelayClock >= 30)
                     {
                         thisInst.DANGER = true;
-                        thisInst.Urgency = 30;
+                        thisInst.WeaponDelayClock = 30;
                     }
                 }
             }
             else
             {
-                thisInst.Urgency = 0;
+                thisInst.WeaponDelayClock = 0;
                 thisInst.DANGER = false;
             }
         }
@@ -242,10 +242,11 @@ namespace TAC_AI.AI.Enemy
         }
 
         /// <summary>
-        /// Find enemy and then chase the enemy until lost
+        /// (OBSOLETE!!! Handled by FindEnemy) Find enemy and then chase the enemy until lost
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
+        /*
         public static void HoldGrudge(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (thisInst.lastEnemy != null)
@@ -259,6 +260,6 @@ namespace TAC_AI.AI.Enemy
             }
             thisInst.DANGER = false;
             thisInst.lastEnemy = mind.FindEnemy();
-        }
+        }*/
     }
 }

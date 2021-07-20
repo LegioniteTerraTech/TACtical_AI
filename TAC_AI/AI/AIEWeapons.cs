@@ -85,7 +85,7 @@ namespace TAC_AI.AI
                 }
                 else if (thisInst.lastWeaponAction == 1)
                 {
-                    if (thisInst.lastEnemy.IsNotNull())
+                    if (thisInst.lastEnemy != null)
                     {
                         thisInst.OverrideAim = 1;
                         var targetTank = thisInst.lastEnemy.tank;

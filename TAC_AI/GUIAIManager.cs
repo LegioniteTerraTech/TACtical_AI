@@ -217,7 +217,7 @@ namespace TAC_AI
                 return;
             }
             lastTank.RefreshAI();
-            Debug.Log("TACtical_AI: Launched AI menu!");
+            Debug.Log("TACtical_AI: Opened AI menu!");
             fetchAI = lastTank.DediAI;
             isCurrentlyOpen = true;
             HotWindow = new Rect(xMenu, yMenu, 200, 230);

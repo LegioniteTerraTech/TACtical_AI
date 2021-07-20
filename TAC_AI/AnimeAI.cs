@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
+using AnimeAI;
 
 namespace TAC_AI
 {
@@ -32,7 +33,7 @@ namespace TAC_AI
 
         private static void LatchEnemyToSpeechSystem(Tank tech)
         {
-
+            //ManCharacterFetcher.che
         }
         private static void LatchEnemyCEOToSpeechSystem(Tank tech)
         {
