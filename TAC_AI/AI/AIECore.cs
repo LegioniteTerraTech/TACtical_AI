@@ -306,11 +306,11 @@ namespace TAC_AI.AI
                         if (techs.ElementAt(stepper).IsFriendly() && !techs.ElementAt(stepper).gameObject.GetComponent<TankAIHelper>().IsMultiTech)
                         {   //Exclude MTs from this event
                             Allies.Add(techs.ElementAt(stepper));
-                            Debug.Log("TACtical_AI: Added " + Allies.ElementAt(AllyCount));
+                            //Debug.Log("TACtical_AI: Added " + Allies.ElementAt(AllyCount));
                             AllyCount++;
                         }
                     }
-                    Debug.Log("TACtical_AI: Fetched allied tech list for AIs...");
+                    //Debug.Log("TACtical_AI: Fetched allied tech list for AIs...");
                     if (AllyCount > 2)
                         moreThan2Allies = true;
                 }
