@@ -52,7 +52,7 @@ namespace TAC_AI.AI.Movement.AICores
                     {   // target is in the air but grounded!?!?
                         pilot.PerformDiveAttack = 0; // abort
 
-                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborting attack! Target too close!");
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborting attack! Target too close!");
                         // AND PITCH UP NOW
                         pilot.MainThrottle = 1;
                         this.pilot.UpdateThrottle(thisInst, thisControl);
@@ -60,7 +60,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (pilot.PerformDiveAttack == 1)
                     {
-                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Aiming at target!");
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  Aiming at target!");
                         if (Heading.z > 0.25f)
                             pilot.PerformDiveAttack = 1; // too low and we break off from the attack
                         if (pilot.PerformUTurn > 0)
@@ -76,7 +76,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (pilot.PerformDiveAttack == 2)
                     {
-                        Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
                         if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
                             pilot.AdvisedThrottle = 1;
                         else
@@ -96,7 +96,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (dist > AIControllerAir.GroundAttackStagingDist && Heading.z < 0)
                     {   // Launch teh attack run
-                        Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
                         pilot.PerformDiveAttack = 1;
                     }
                     else
@@ -104,7 +104,7 @@ namespace TAC_AI.AI.Movement.AICores
                         pilot.PerformUTurn = 0; // hold off on the U-Turn
                         if (Heading.z < 0)
                         {   // Moving away from target
-                            Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
+                            //Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
                             pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
                             Vector3 AwayFlat = -Heading;
@@ -115,7 +115,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {   // Moving to target
-                            Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
+                            //Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
                             if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
                                 pilot.AdvisedThrottle = 1;
                             else
@@ -250,7 +250,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.LowerEngines = false;
                 if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                 {   //We are at target
-                    Debug.Log("TACtical_AI: Tech " + this.pilot.Tank.name + " Arrived at destination");
+                    //Debug.Log("TACtical_AI: Tech " + this.pilot.Tank.name + " Arrived at destination");
 
                     Vector3 lFlat;
                     if (this.pilot.Tank.rootBlockTrans.up.y > 0)
