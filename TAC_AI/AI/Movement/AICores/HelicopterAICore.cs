@@ -73,7 +73,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else if (this.pilot.Helper.MoveFromObjective)
                 {   // Fly away from target
-                    this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper);
+                    //this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper, 44);
                     pilot.AirborneDest = ((this.pilot.Tank.trans.position - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
                 }
                 else
@@ -90,7 +90,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
 
-            pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 44);
+            pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 32);
             pilot.AirborneDest = this.AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
 
             if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
