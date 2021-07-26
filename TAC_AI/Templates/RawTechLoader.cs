@@ -414,6 +414,11 @@ namespace TAC_AI.Templates
         // Use this for external cases
         public static Tank SpawnTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BuilderExternal Blueprint, bool AutoTerrain = false)
         {
+            if (Blueprint == null)
+            {
+                Debug.Log("TACtical_AI: SpawnTechExternal - Was handed a NULL Blueprint! \n" + StackTraceUtility.ExtractStackTrace());
+                return null;
+            }
             string baseBlueprint = Blueprint.Blueprint;
             Vector3 position = pos;
             if (AutoTerrain)
@@ -429,7 +434,7 @@ namespace TAC_AI.Templates
             Tank theTech;
             theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, Blueprint.Name);
 
-            Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name);
+            Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + AutoTerrain);
             var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = Blueprint.InfBlocks;

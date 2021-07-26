@@ -380,7 +380,7 @@ namespace TAC_AI.Templates
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveTechToFile(tank.name, builderJSON);
         }
-        public static BuilderExternal LoadTechFromRawJSON(string TechName, string altFolderName = null)
+        public static BuilderExternal LoadTechFromRawJSON(string TechName, string altFolderName = "")
         {
             string loaded = LoadTechFromFile(TechName, altFolderName);
             return JsonUtility.FromJson<BuilderExternal>(loaded);
@@ -424,7 +424,7 @@ namespace TAC_AI.Templates
         private static string LoadTechFromFile(string TechName, string altFolderName)
         {
             string destination;
-            if (altFolderName == null)
+            if (altFolderName == "")
                 destination = RawTechsDirectory;
             else
                 destination = BaseDirectory + "\\" + altFolderName;
@@ -437,6 +437,8 @@ namespace TAC_AI.Templates
             catch
             {
                 Debug.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+
+                Debug.Log("TACtical_AI: Attempted directory - |" + destination + "\\" + TechName + ".JSON");
                 return null;
             }
         }
