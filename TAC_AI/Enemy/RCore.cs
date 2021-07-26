@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Reflection;
 using UnityEngine;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -468,22 +469,23 @@ namespace TAC_AI.AI.Enemy
 
             if (toSet.CommanderAttack == EnemyAttack.Grudge)
                 toSet.FindEnemy();
+            // now handle base spawning
             if (toSet.CommanderMind == EnemyAttitude.Miner)
             {
                 thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst);
+                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
             }
             else if (toSet.CommanderMind == EnemyAttitude.Boss)
             {
                 thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, Templates.BasePurpose.Headquarters);
+                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.Headquarters);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
             }
             else if (toSet.CommanderMind == EnemyAttitude.Invader)
             {
                 thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, Templates.BasePurpose.AnyNonHQ);
+                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.AnyNonHQ);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
             }
             else

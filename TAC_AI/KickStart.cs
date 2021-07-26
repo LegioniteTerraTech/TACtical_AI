@@ -5,6 +5,8 @@ using HarmonyLib;
 using UnityEngine;
 using ModHelper.Config;
 using Nuterra.NativeOptions;
+using TAC_AI.AI;
+using TAC_AI.Templates;
 
 
 namespace TAC_AI
@@ -91,8 +93,10 @@ namespace TAC_AI
                 Debug.Log("TACtical_AI: Error on patch");
                 Debug.Log(e);
             }
-            AI.AIECore.TankAIManager.Initiate();
+
+            AIECore.TankAIManager.Initiate();
             GUIAIManager.Initiate();
+            RawTechExporter.Initiate();
 
             if (LookForMod("WaterMod"))
             {

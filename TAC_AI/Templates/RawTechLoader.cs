@@ -9,7 +9,15 @@ using TAC_AI.AI.Movement;
 
 namespace TAC_AI.Templates
 {
-    public class BookmarkBuilder : MonoBehaviour
+    public class BuilderExternal
+    {   // External builder interface - use to save Techs externally
+        public string Name = "unset";
+        public string Blueprint;
+        public bool InfBlocks;
+        public FactionSubTypes Faction;
+        public bool NonAggressive = false;
+    }
+    internal class BookmarkBuilder : MonoBehaviour
     {
         public string blueprint;
         public bool infBlocks;
@@ -20,12 +28,13 @@ namespace TAC_AI.Templates
     public static class RawTechLoader
     {
         const float MinimumBaseSpacing = 350;
+        const int MaxBlockLimitAttract = 32;
 
         static bool ForceSpawn = false;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
 
         // Main initiation function
-        public static void TrySpawnBase(Tank tank, AI.AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
+        internal static void TrySpawnBase(Tank tank, AI.AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
         {
             if (!KickStart.AllowEnemiesToStartBases)
                 return;
@@ -70,7 +79,7 @@ namespace TAC_AI.Templates
         /// <param name="pos"></param>
         /// <param name="Team"></param>
         /// <param name="toSpawn"></param>
-        public static void SpawnBaseAtPosition(Tank spawnerTank, Vector3 pos, int Team, BasePurpose purpose)
+        internal static void SpawnBaseAtPosition(Tank spawnerTank, Vector3 pos, int Team, BasePurpose purpose)
         {
             TryClearAreaForBase(pos);
 
@@ -80,21 +89,30 @@ namespace TAC_AI.Templates
             {
                 case BasePurpose.Headquarters:
                     haveBB = true;
-                    WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
-                    Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Enemy HQ Spotted!", pos2);
+                    try
+                    {
+                        WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
+                        Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Enemy HQ!", pos2);
 
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Enemy HQ Spotted!");
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Enemy HQ Spotted!");
+                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                    }
+                    catch { }
                     break;
                 case BasePurpose.Harvesting:
                 case BasePurpose.TechProduction:
                     haveBB = true;
-                    WorldPosition pos3 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
-                    Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Rival Prospector Spotted!", pos3);
 
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
-                    break;
+                    try
+                    {
+                        WorldPosition pos3 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
+                        Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Rival!", pos3);
+
+                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
+                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                    }
+                    catch { }
+            break;
                 default:
                     haveBB = false;
                     break;
@@ -126,7 +144,7 @@ namespace TAC_AI.Templates
             }
             SpawnLandBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Land), haveBB);
         }
-        public static void SpawnLandBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
+        internal static void SpawnLandBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
         {
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             string baseBlueprint = GetBlueprint(toSpawn);
@@ -152,12 +170,12 @@ namespace TAC_AI.Templates
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
             */
         }
-        public static void SpawnSeaBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
+        internal static void SpawnSeaBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function");
             //throw new NotImplementedException();
         }
-        public static void SpawnAirBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
+        internal static void SpawnAirBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function");
             //throw new NotImplementedException();
@@ -165,19 +183,22 @@ namespace TAC_AI.Templates
 
 
         // Mobile Techs
-        public static Tank SpawnRandomTechAtPosition(Vector3 pos, int Team, BaseTerrain type = BaseTerrain.Land)
-        {
-            return SpawnMobileTech(pos, Vector3.forward, Team, GetEnemyBaseType(FactionSubTypes.NULL, BasePurpose.NotABase, type));
+        internal static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99)
+        {   // This will try to spawn player-made enemy techs as well
+
+            Tank outTank;
+            if (ShouldUseCustomTechs(factionType, BasePurpose.NotABase, terrainType, false, maxGrade))
+            {
+                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotABase, terrainType, maxGrade: maxGrade)], unProvoked, AutoTerrain);
+            }
+            else
+            {
+                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, BasePurpose.NotABase, terrainType, maxGrade: maxGrade), false, unProvoked, AutoTerrain);
+            }
+
+            return outTank; 
         }
-        public static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, BaseTerrain type = BaseTerrain.Land)
-        {
-            return SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(FactionSubTypes.NULL, BasePurpose.NotABase, type));
-        }
-        public static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, FactionSubTypes factionType, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99)
-        {
-            return SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, BasePurpose.NotABase, terrainType, maxGrade: maxGrade), false, unProvoked, AutoTerrain);
-        }
-        public static Tank SpawnMobileTech(Vector3 pos, Vector3 heading, int Team, SpawnBaseTypes inputSpawn, bool silentFail = true, bool unProvoked = false, bool AutoTerrain = true)
+        internal static Tank SpawnMobileTech(Vector3 pos, Vector3 heading, int Team, SpawnBaseTypes inputSpawn, bool silentFail = true, bool unProvoked = false, bool AutoTerrain = true)
         {
             SpawnBaseTypes toSpawn = inputSpawn;
             if (!IsBaseTemplateAvailable(toSpawn))
@@ -213,48 +234,214 @@ namespace TAC_AI.Templates
             namesav.unprovoked = unProvoked;
             return theTech;
         }
-        public static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotABase, bool silentFail = true)
+        internal static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotABase, bool silentFail = true)
         {
-            SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, purpose, terrainType, true);
-            if (!IsBaseTemplateAvailable(toSpawn))
+            if (ShouldUseCustomTechs(faction, BasePurpose.NotABase, terrainType, true))
             {
-                if (silentFail)
-                    return false;
-                else
-                { // try again with a different one 
-                    int attempts;
-                    for (attempts = 6; attempts > 0; attempts--)
-                    {
-                        toSpawn = GetEnemyBaseType(faction, purpose, terrainType, true);
-                        if (IsBaseTemplateAvailable(toSpawn))
-                            break;
-                    }
-                    if (attempts == 0)
-                    {
-                        Debug.Log("TACtical_AI: SpawnAttractTech - FAILIURE TO SPAWN ANY TECH!!!");
+                return SpawnEnemyTechExternal(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotABase, terrainType, true)]);
+            }
+            else
+            {
+                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, purpose, terrainType, true);
+                if (!IsBaseTemplateAvailable(toSpawn))
+                {
+                    if (silentFail)
                         return false;
+                    else
+                    { // try again with a different one 
+                        int attempts;
+                        for (attempts = 6; attempts > 0; attempts--)
+                        {
+                            toSpawn = GetEnemyBaseType(faction, purpose, terrainType, true);
+                            if (IsBaseTemplateAvailable(toSpawn))
+                                break;
+                        }
+                        if (attempts == 0)
+                        {
+                            Debug.Log("TACtical_AI: SpawnAttractTech - FAILIURE TO SPAWN ANY TECH!!!");
+                            return false;
+                        }
                     }
                 }
-            }
 
-            string baseBlueprint = GetBlueprint(toSpawn);
+                string baseBlueprint = GetBlueprint(toSpawn);
+                Vector3 position = pos;
+                Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
+
+                TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+                block.InitNew();
+
+                Tank theTech;
+                theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
+
+                Debug.Log("TACtical_AI: SpawnAttractTech - Spawned " + GetEnglishName(toSpawn));
+                var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
+                namesav.blueprint = baseBlueprint;
+                namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+                namesav.faction = GetMainCorp(toSpawn);
+                return true;
+            }
+        }
+
+
+        // imported ENEMY cases
+        internal static Tank SpawnEnemyTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BaseTemplate Blueprint, bool unProvoked = false, bool AutoTerrain = true)
+        {
+            string baseBlueprint = Blueprint.savedTech;
             Vector3 position = pos;
+            if (AutoTerrain)
+            {
+                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
+                position.y = offset;
+            }
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
             TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
             block.InitNew();
 
             Tank theTech;
-            theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
-            
-            Debug.Log("TACtical_AI: SpawnAttractTech - Spawned " + GetEnglishName(toSpawn));
+            theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, Blueprint.techName);
+
+            Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.techName);
             var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
-            namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-            namesav.faction = GetMainCorp(toSpawn);
-            return true;
+            namesav.infBlocks = false;
+            namesav.faction = Blueprint.faction;
+            namesav.unprovoked = unProvoked;
+            return theTech;
+        }
+        internal static List<int> GetExternalIndexes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        {
+            try
+            {
+                // Filters
+                List<BaseTemplate> canidates;
+                if (faction == FactionSubTypes.NULL)
+                {
+                    canidates = TempManager.ExternalEnemyTechs;
+                }
+                else
+                {
+                    canidates = TempManager.ExternalEnemyTechs.FindAll
+                        (delegate (BaseTemplate cand) { return cand.faction == faction; });
+                }
+
+                canidates = canidates.FindAll(delegate (BaseTemplate cand)
+                {
+                    if (purpose == BasePurpose.AnyNonHQ)
+                    {
+                        if (cand.purposes.Contains(BasePurpose.Headquarters))
+                            return false;
+                        return true;
+                    }
+                    if (purpose != BasePurpose.NotABase && cand.purposes.Contains(BasePurpose.NotABase))
+                        return false;
+                    if (!searchAttract && cand.purposes.Contains(BasePurpose.NoAutoSearch))
+                        return false;
+                    if (searchAttract && cand.purposes.Contains(BasePurpose.NoWeapons))
+                        return false;
+                    if (cand.purposes.Count == 0)
+                        return false;
+                    return cand.purposes.Contains(purpose);
+                });
+
+                if (terra == BaseTerrain.AnyNonSea)
+                {
+                    canidates = canidates.FindAll
+                        (delegate (BaseTemplate cand) { return cand.terrain != BaseTerrain.Sea; });
+                }
+                else
+                {
+                    canidates = canidates.FindAll
+                        (delegate (BaseTemplate cand) { return cand.terrain == terra; });
+                }
+
+                if (maxGrade != 99)
+                {
+                    canidates = canidates.FindAll
+                        (delegate (BaseTemplate cand) { return cand.IntendedGrade <= maxGrade; });
+                }
+                if (searchAttract)
+                {   // prevent laggy techs from entering
+                    canidates = canidates.FindAll
+                        (delegate (BaseTemplate cand) { return AIERepair.DesignMemory.JSONToTechExternal(cand.savedTech).Count <= MaxBlockLimitAttract; });
+                }
+
+                if (canidates.Count == 0)
+                    return new List<int> { -1 };
+
+                // final list compiling
+                List<int> final = new List<int>();
+                foreach (BaseTemplate temp in canidates)
+                    final.Add(TempManager.ExternalEnemyTechs.IndexOf(temp));
+
+                final.Shuffle();
+
+                return final;
+            }
+            catch { }
+
+            return new List<int> { -1 };
+        }
+        internal static int GetExternalIndex(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        {
+            try
+            {
+                return GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade).GetRandomEntry();
+            }
+            catch { }
+
+            return -1;
+        }
+        internal static bool ShouldUseCustomTechs(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        {
+            int CustomTechs = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade).Count;
+            int PrefabTechs = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade).Count;
+
+            int CombinedVal = CustomTechs + PrefabTechs;
+
+            float RAND = UnityEngine.Random.Range(0, CombinedVal);
+            if (RAND > PrefabTechs)
+            {
+                return true;
+            }
+            return false;
         }
 
+
+
+
+        // Use this for external cases
+        public static Tank SpawnTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BuilderExternal Blueprint, bool AutoTerrain = false)
+        {
+            string baseBlueprint = Blueprint.Blueprint;
+            Vector3 position = pos;
+            if (AutoTerrain)
+            {
+                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
+                position.y = offset;
+            }
+            Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
+
+            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            block.InitNew();
+
+            Tank theTech;
+            theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, Blueprint.Name);
+
+            Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name);
+            var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
+            namesav.blueprint = baseBlueprint;
+            namesav.infBlocks = Blueprint.InfBlocks;
+            namesav.faction = Blueprint.Faction;
+            namesav.unprovoked = Blueprint.NonAggressive;
+            return theTech;
+        }
+
+
+
+
+        // Determination
         public static void TryClearAreaForBase(Vector3 vector3)
         {   //N/A
             int removeCount = 0;
@@ -268,7 +455,7 @@ namespace TAC_AI.Templates
             }
             Debug.Log("TACtical_AI: removed " + removeCount + " trees around new enemy base setup");
         }
-        public static bool GetEnemyBaseSupplies(SpawnBaseTypes toSpawn)
+        internal static bool GetEnemyBaseSupplies(SpawnBaseTypes toSpawn)
         {
             switch (toSpawn)
             {
@@ -290,21 +477,18 @@ namespace TAC_AI.Templates
                     return false;
             }
         }
-        public static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
+        internal static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
         {
             return TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT);
         }
-        public static BaseTemplate GetBaseTemplate(SpawnBaseTypes toSpawn)
+        internal static BaseTemplate GetBaseTemplate(SpawnBaseTypes toSpawn)
         {
             if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
                 return baseT;
             return TempManager.techBases.ElementAtOrDefault(1).Value;
         }
-        public static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
         {
-            if (ForceSpawn && !searchAttract)
-                return forcedBaseSpawn;
-
             try
             {
                 // Filters
@@ -321,10 +505,15 @@ namespace TAC_AI.Templates
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (purpose == BasePurpose.AnyNonHQ)
+                    if (purpose == BasePurpose.AnyNonHQ || purpose == BasePurpose.HarvestingNoHQ)
                     {
                         if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
                             return false;
+                        if (purpose == BasePurpose.HarvestingNoHQ)
+                        {
+                            if (!cand.Value.purposes.Contains(BasePurpose.Harvesting))
+                                return false;
+                        }
                         return true;
                     }
                     if (purpose != BasePurpose.NotABase && cand.Value.purposes.Contains(BasePurpose.NotABase))
@@ -356,7 +545,7 @@ namespace TAC_AI.Templates
                 }
 
                 if (canidates.Count == 0)
-                    return SpawnBaseTypes.NotAvail;
+                    return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
 
                 // final list compiling
                 List<SpawnBaseTypes> final = new List<SpawnBaseTypes>();
@@ -366,7 +555,19 @@ namespace TAC_AI.Templates
 
                 final.Shuffle();
 
-                return final.GetRandomEntry();
+                return final;
+            }
+            catch { } // we resort to legacy
+            return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
+        }
+        internal static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        {
+            if (ForceSpawn && !searchAttract)
+                return forcedBaseSpawn;
+
+            try
+            {
+                return GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade).GetRandomEntry();
             }
             catch { } // we resort to legacy
 
@@ -395,7 +596,7 @@ namespace TAC_AI.Templates
 
             return (SpawnBaseTypes)UnityEngine.Random.Range(lowerRANDRange, higherRANDRange);
         }
-        public static SpawnBaseTypes GetEnemyBaseTypeFromName(string Name)
+        internal static SpawnBaseTypes GetEnemyBaseTypeFromName(string Name)
         {
             try
             {
@@ -408,30 +609,30 @@ namespace TAC_AI.Templates
                 return SpawnBaseTypes.NotAvail;
             }
         }
-        public static string GetBlueprint(SpawnBaseTypes toSpawn)
+        internal static string GetBlueprint(SpawnBaseTypes toSpawn)
         {
             return GetBaseTemplate(toSpawn).savedTech;
         }
-        public static string GetEnglishName(SpawnBaseTypes toSpawn)
+        internal static string GetEnglishName(SpawnBaseTypes toSpawn)
         {
             return GetBaseTemplate(toSpawn).techName;
         }
-        public static FactionSubTypes GetMainCorp(SpawnBaseTypes toSpawn)
+        internal static FactionSubTypes GetMainCorp(SpawnBaseTypes toSpawn)
         {
             return GetBaseTemplate(toSpawn).faction;
         }
-        public static int GetBaseStartingFunds(SpawnBaseTypes toSpawn)
+        internal static int GetBaseStartingFunds(SpawnBaseTypes toSpawn)
         {
             return GetBaseTemplate(toSpawn).startingFunds;
         }
 
-        public static bool IsHQ(SpawnBaseTypes toSpawn)
+        internal static bool IsHQ(SpawnBaseTypes toSpawn)
         {
             if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
                 return baseT.purposes.Contains(BasePurpose.Headquarters);
             return false;
         }
-        public static bool IsRadiusClearOfTechObst(Tank tank, Vector3 pos, float radius)
+        internal static bool IsRadiusClearOfTechObst(Tank tank, Vector3 pos, float radius)
         {
             bool validLocation = true;
             foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle })))
@@ -445,7 +646,7 @@ namespace TAC_AI.Templates
             return validLocation;
         }
 
-        public static int GetEnemyBaseCount()
+        internal static int GetEnemyBaseCount()
         {
             int baseCount = 0;
             List<Tank> tanks = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
@@ -456,7 +657,7 @@ namespace TAC_AI.Templates
             }
             return baseCount;
         }
-        public static int GetEnemyBaseCountSearchRadius(Vector3 pos, float radius)
+        internal static int GetEnemyBaseCountSearchRadius(Vector3 pos, float radius)
         {
             int baseCount = 0;
             foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle })))
@@ -469,7 +670,7 @@ namespace TAC_AI.Templates
             }
             return baseCount;
         }
-        public static int GetEnemyBaseCountForTeam(int Team)
+        internal static int GetEnemyBaseCountForTeam(int Team)
         {
             int baseCount = 0;
             List<Tank> tanks = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
@@ -481,7 +682,7 @@ namespace TAC_AI.Templates
             return baseCount;
         }
 
-        public static void MakeSureCanExistWithBase(Tank tank)
+        internal static void MakeSureCanExistWithBase(Tank tank)
         {
             if (!tank.IsFriendly(tank.Team))
             {
@@ -490,7 +691,7 @@ namespace TAC_AI.Templates
                 tank.SetTeam(set);
             }
         }
-        public static int ReassignToRandomEnemyBaseTeam()
+        internal static int ReassignToRandomEnemyBaseTeam()
         {
             List<Tank> tanks = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
             List<Tank> enemyBases = new List<Tank>();

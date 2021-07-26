@@ -273,12 +273,12 @@ namespace TAC_AI.AI
 
             if (lowestDelta > 10 && boostBiasDirection == Vector3.zero)
             {   //IT HAS NO VALID PROPS OR BOOSTERS!!!!
-                Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS OR BOOSTERS TO FLY USING!!");
+                //Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS OR BOOSTERS TO FLY USING!!");
                 return;
             }
             if (lowestDelta > 10 && consumeBoosters > 0)
             {
-                Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS TO FLY USING!!");
+                //Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS TO FLY USING!!");
                 NoProps = true;
             }
             BoostBias = boostBiasDirection;

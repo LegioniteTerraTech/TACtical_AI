@@ -29,6 +29,7 @@ namespace TAC_AI.Templates
     public enum BasePurpose
     {
         AnyNonHQ,
+        HarvestingNoHQ,
         Defense,
         Harvesting,
         TechProduction,

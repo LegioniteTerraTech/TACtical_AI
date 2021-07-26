@@ -25,6 +25,23 @@ namespace TAC_AI.Templates
                 }
             }
             TempStorage.techBasesAll.Clear(); // GC, do your duty
+            ValidateAndAddAllExternalTechs();
+        }
+        public static void ValidateAndAddAllExternalTechs()
+        {
+            ExternalEnemyTechs = new List<BaseTemplate>();
+            List<BaseTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
+            foreach (BaseTemplate raw in ExternalTechsRaw)
+            {
+                if (ValidateBlocksInTech(raw.savedTech))
+                {
+                    ExternalEnemyTechs.Add(raw);
+                }
+                else
+                {
+                    Debug.Log("TACtical AIs: Could not load " + raw.techName + " as it contained missing blocks");
+                }
+            }
         }
 
         public static bool ValidateBlocksInTech(string toLoad)
@@ -53,12 +70,13 @@ namespace TAC_AI.Templates
             bool valid = true;
             foreach (BlockMemory bloc in mem)
             {
-                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bloc.t))
+                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn((BlockTypes)Enum.Parse(typeof(BlockTypes), bloc.t)))
                     valid = false;
             }
             return valid;
         }
 
         public static Dictionary<SpawnBaseTypes, BaseTemplate> techBases;
+        public static List<BaseTemplate> ExternalEnemyTechs;
     }
 }

@@ -11,7 +11,7 @@ namespace TAC_AI.AI
     [Serializable]
     public class BlockMemory
     {   // Save the blocks!
-        public BlockTypes t = BlockTypes.GSOAIController_111; //blocktype
+        public string t = BlockTypes.GSOAIController_111.ToString(); //blocktype
         public Vector3 p = Vector3.zero;
         public OrthoRotation.r r = OrthoRotation.r.u000;
     }
@@ -73,7 +73,7 @@ namespace TAC_AI.AI
                 foreach (TankBlock bloc in ToSave)
                 {
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.BlockType;
+                    mem.t = bloc.BlockType.ToString();
                     mem.p = bloc.cachedLocalPosition;
                     mem.r = bloc.cachedLocalRotation.rot;
                     SavedTech.Add(mem);
@@ -94,7 +94,7 @@ namespace TAC_AI.AI
                 foreach (TankBlock bloc in overwrite)
                 {
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.BlockType;
+                    mem.t = bloc.BlockType.ToString();
                     mem.p = bloc.cachedLocalPosition;
                     mem.r = bloc.cachedLocalRotation.rot;
                     SavedTech.Add(mem);
@@ -108,7 +108,17 @@ namespace TAC_AI.AI
             {   // Loading a Tech from the BlockMemory
                 rejectSaveAttempts = true;
                 SavedTech.Clear();
-                SavedTech = overwrite;
+                List<BlockMemory> clean = new List<BlockMemory>();
+                foreach (BlockMemory mem in overwrite)
+                {
+                    if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)))
+                    {
+                        Debug.Log("TACtical_AI:  DesignMemory - " + Tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
+                        continue;
+                    }
+                    clean.Add(mem);
+                }
+                SavedTech = clean;
                 Debug.Log("TACtical_AI:  DesignMemory - Overwrote " + Tank.name);
                 //build AROUND the cab pls
                 //if (SavedTech.Count() > 1)
@@ -155,7 +165,10 @@ namespace TAC_AI.AI
                 List<BlockMemory> output = new List<BlockMemory>();
                 List<TankBlock> ToSave = Tank.blockman.IterateBlocks().ToList();
                 Vector3 coreOffset = Vector3.zero;
-                OrthoRotation coreRot;
+                Quaternion coreRot;
+                if (ToSave == null || ToSave.Count == 0)
+                    return new List<BlockMemory>();
+
                 TankBlock rootBlock = TryFindProperRootBlock(ToSave);
                 if (rootBlock != ToSave.First())
                 {
@@ -171,9 +184,9 @@ namespace TAC_AI.AI
                 foreach (TankBlock bloc in ToSave)
                 {
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.BlockType;
-                    mem.p = (bloc.cachedLocalPosition - coreOffset) * coreRot;
-                    Quaternion outr = bloc.cachedLocalRotation * Quaternion.Inverse(coreRot);
+                    mem.t = bloc.BlockType.ToString();
+                    mem.p = coreRot * (bloc.cachedLocalPosition - coreOffset);
+                    Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
                     mem.r = new OrthoRotation(outr).rot;
                     if (!Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(bloc).Contains(mem.r))
                     {   // block cannot be saved - illegal rotation.
@@ -242,6 +255,8 @@ namespace TAC_AI.AI
                 Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
                 MemoryToTech(mem);
             }
+
+            // CONSTRUCTION
             public void SetupForNewTechConstruction(AIECore.TankAIHelper thisInst, string JSON)
             {
                 JSONToTech(JSON);
@@ -254,8 +269,139 @@ namespace TAC_AI.AI
                 if (SavedTech.Count() == 0)
                 {
                     Debug.Log("TACtical_AI: INVALID TECH DATA STORED FOR TANK " + Tank.name);
+                    Debug.Log("TACtical_AI: " + StackTraceUtility.ExtractStackTrace());
                 }
                 return new List<BlockMemory>(SavedTech);
+            }
+
+
+            //External
+            public static TankBlock FindProperRootBlockExternal(List<TankBlock> ToSearch)
+            {
+                bool IsAnchoredAnchorPresent = false;
+                float close = 128;
+                TankBlock newRoot = ToSearch.First();
+                foreach (TankBlock bloc in ToSearch)
+                {
+                    if (bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
+                    {
+                        IsAnchoredAnchorPresent = true;
+                        break;
+                    }
+                    if (bloc.cachedLocalPosition.sqrMagnitude < close * close && (bloc.GetComponent<ModuleTechController>() || bloc.GetComponent<ModuleAIBot>()))
+                    {
+                        close = bloc.cachedLocalPosition.magnitude;
+                        newRoot = bloc;
+                    }
+                }
+                if (IsAnchoredAnchorPresent)
+                {
+                    close = 128;
+                    foreach (TankBlock bloc in ToSearch)
+                    {
+                        if (bloc.cachedLocalPosition.sqrMagnitude < close * close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
+                        {
+                            close = bloc.cachedLocalPosition.magnitude;
+                            newRoot = bloc;
+                        }
+                    }
+                }
+                return newRoot;
+            }
+            public static List<BlockMemory> TechToMemoryExternal(Tank tank)
+            {
+                // This resaves the whole tech cab-forwards regardless of original rotation
+                //   It's because any solutions that involve the cab in a funny direction will demand unholy workarounds.
+                //   I seriously don't know why the devs didn't try it this way, perhaps due to lag reasons.
+                //   or the blocks that don't allow upright placement (just detach those lmao)
+                List<BlockMemory> output = new List<BlockMemory>();
+                List<TankBlock> ToSave = tank.blockman.IterateBlocks().ToList();
+                Vector3 coreOffset = Vector3.zero;
+                Quaternion coreRot;
+                TankBlock rootBlock = FindProperRootBlockExternal(ToSave);
+                if (rootBlock != ToSave.First())
+                {
+                    ToSave.Remove(rootBlock);
+                    ToSave.Insert(0, rootBlock);
+                    coreOffset = rootBlock.cachedLocalPosition;
+                    coreRot = rootBlock.cachedLocalRotation;
+                    tank.blockman.SetRootBlock(rootBlock);
+                }
+                else
+                    coreRot = new OrthoRotation(OrthoRotation.r.u000);
+
+                foreach (TankBlock bloc in ToSave)
+                {
+                    if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bloc.BlockType))
+                        continue;
+                    BlockMemory mem = new BlockMemory();
+                    mem.t = bloc.BlockType.ToString();
+                    mem.p = coreRot * (bloc.cachedLocalPosition - coreOffset);
+                    Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
+                    mem.r = new OrthoRotation(outr).rot;
+                    if (!Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(bloc).Contains(mem.r))
+                    {   // block cannot be saved - illegal rotation.
+                        Debug.Log("TACtical_AI:  DesignMemory - " + tank.name + ": could not save " + bloc.name + " in blueprint due to illegal rotation.");
+                        continue;
+                    }
+                    output.Add(mem);
+                }
+                Debug.Log("TACtical_AI:  DesignMemory - Saved " + tank.name + " to memory format");
+
+                return output;
+            }
+            public static string TechToJSONExternal(Tank tank)
+            {   // Saving a Tech from the BlockMemory
+                List<BlockMemory> mem = TechToMemoryExternal(tank);
+                if (mem.Count == 0)
+                    return null;
+                StringBuilder JSONTechRAW = new StringBuilder();
+                JSONTechRAW.Append(JsonUtility.ToJson(mem.First()));
+                for (int step = 1; step < mem.Count; step++)
+                {
+                    JSONTechRAW.Append("|");
+                    JSONTechRAW.Append(JsonUtility.ToJson(mem.ElementAt(step)));
+                }
+                string JSONTechRAWout = JSONTechRAW.ToString();
+                StringBuilder JSONTech = new StringBuilder();
+                foreach (char ch in JSONTechRAWout)
+                {
+                    if (ch == '"')
+                    {
+                        //JSONTech.Append("\\");
+                        JSONTech.Append(ch);
+                    }
+                    else
+                        JSONTech.Append(ch);
+                }
+                //Debug.Log("TACtical_AI: " + JSONTech.ToString());
+                return JSONTech.ToString();
+            }
+            public static List<BlockMemory> JSONToTechExternal(string toLoad)
+            {   // Loading a Tech from the BlockMemory
+                StringBuilder RAW = new StringBuilder();
+                foreach (char ch in toLoad)
+                {
+                    if (ch != '\\')
+                    {
+                        RAW.Append(ch);
+                    }
+                }
+                List<BlockMemory> mem = new List<BlockMemory>();
+                StringBuilder blockCase = new StringBuilder();
+                string RAWout = RAW.ToString();
+                foreach (char ch in RAWout)
+                {
+                    if (ch == '|')//new block
+                    {
+                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                        blockCase.Clear();
+                    }
+                    else
+                        blockCase.Append(ch);
+                }
+                Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
+                return mem;
             }
         }
         public static BlockTypes JSONToFirstBlock(string toLoad)
@@ -282,7 +428,7 @@ namespace TAC_AI.AI
                     blockCase.Append(ch);
             }
 
-            return mem.t;
+            return (BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t);
         }
 
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
@@ -419,7 +565,7 @@ namespace TAC_AI.AI
             int toFilter = TechMemor.ReturnContents().Count();
             for (int step = 0; step < toFilter; step++)
             {
-                typesToRepair.Add(TechMemor.ReturnContents().ElementAt(step).t);
+                typesToRepair.Add((BlockTypes)Enum.Parse(typeof(BlockTypes),TechMemor.ReturnContents().ElementAt(step).t));
             }
             typesToRepair = typesToRepair.Distinct().ToList();
 
@@ -428,7 +574,7 @@ namespace TAC_AI.AI
             for (int step = 0; step < toFilter2; step++)
             {
                 int present = cBlocks.FindAll(delegate (TankBlock cand) { return typesToRepair[step] == cand.BlockType; }).Count;
-                int mem = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return typesToRepair[step] == cand.t; }).Count;
+                int mem = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return typesToRepair[step].ToString() == cand.t; }).Count;
                 if (mem > present)// are some blocks not accounted for?
                     typesMissing.Add(typesToRepair[step]);
             }
@@ -461,7 +607,7 @@ namespace TAC_AI.AI
                 TankBlock foundBlock = foundBlocks[step];
                 bool attemptW = false;
                 // if we are smrt, run heavier operation
-                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.BlockType; });
+                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.BlockType.ToString(); });
                 //Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
@@ -498,7 +644,7 @@ namespace TAC_AI.AI
                 TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
-                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == bType; });
+                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });
                 //Debug.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
@@ -546,7 +692,7 @@ namespace TAC_AI.AI
                         if (foundBlock.block.PreExplodePulse)
                             continue; //explode? no thanks
                                       //Debug.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
-                        if (TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.block.BlockType; }).Count() > 0)
+                        if (TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.block.BlockType.ToString(); }).Count() > 0)
                         {
                             blocksNearby = true;
                             break;

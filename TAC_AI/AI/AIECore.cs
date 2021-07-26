@@ -437,9 +437,9 @@ namespace TAC_AI.AI
             internal float lastRange = 0;
             internal float lastAuxVal = 0;
 
-            internal Visible lastPlayer;
-            internal Visible lastEnemy;
-            internal Transform Obst;
+            public Visible lastPlayer;
+            public Visible lastEnemy;
+            public Transform Obst;
 
             internal Tank LastCloseAlly;
 

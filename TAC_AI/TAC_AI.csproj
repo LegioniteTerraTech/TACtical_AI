@@ -176,6 +176,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Templates\EBasePurpose.cs" />
     <Compile Include="Templates\ESpawnBaseTypes.cs" />
+    <Compile Include="Templates\RawTechExporter.cs" />
     <Compile Include="Templates\RawTechLoader.cs" />
     <Compile Include="Templates\SpecialAISpawner.cs" />
     <Compile Include="Templates\TempManager.cs" />
