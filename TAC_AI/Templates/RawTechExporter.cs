@@ -374,9 +374,10 @@ namespace TAC_AI.Templates
             BuilderExternal builder = new BuilderExternal();
             builder.Name = tank.name;
             builder.Faction = tank.GetMainCorp();
-            builder.Blueprint = AI.AIERepair.DesignMemory.TechToJSONExternal(tank);
+            builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
             builder.InfBlocks = false;
             builder.NonAggressive = false;
+            builder.Cost = GetBBCost(tank);
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveTechToFile(tank.name, builderJSON);
         }
@@ -389,6 +390,15 @@ namespace TAC_AI.Templates
         {
             string loaded = LoadEnemyTechFromFile(TechName);
             return JsonUtility.FromJson<BuilderExternal>(loaded);
+        }
+        internal static int GetBBCost(Tank tank)
+        {
+            int output = 0;
+            foreach (TankBlock block in tank.blockman.IterateBlocks())
+            {
+                output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(block.BlockType);
+            }
+            return output;
         }
 
 

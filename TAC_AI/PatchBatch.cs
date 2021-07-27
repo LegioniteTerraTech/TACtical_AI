@@ -34,11 +34,11 @@ namespace TAC_AI
                         var tank = __instance.transform.root.GetComponent<Tank>();
                         if (!tank.PlayerFocused && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                         {
+                            var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
                             if (aI.CheckAIAvailable() && tank.IsFriendly())
                             {
                                 //Debug.Log("TACtical_AI: AI Valid!");
                                 //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
-                                var tankAIHelp = tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
                                 //tankAIHelp.AIState && 
                                 if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
                                 {
@@ -48,9 +48,15 @@ namespace TAC_AI
                                     return false;
                                 }
                             }
+                            else if (tankAIHelp.OverrideAllControls)
+                            {   // override EVERYTHING
+                                if (__instance.block.tank.Anchors.NumIsAnchored > 0)
+                                    __instance.block.tank.Anchors.UnanchorAll(true);
+                                __instance.block.tank.control.BoostControlJets = true;
+                                return false;
+                            }
                             else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy())
                             {
-                                var tankAIHelp = tank.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
                                 if (!tankAIHelp.Hibernate)
                                 {
                                     tankAIHelp.BetterAI(__instance.block.tank.control);

@@ -62,6 +62,30 @@ namespace TAC_AI.Templates
                 startingFunds = 125000,
                 savedTech = NotAvailableTech
             } },
+            { SpawnBaseTypes.GCTerraBore, new BaseTemplate {  //WIP
+                techName = "GeoCorp Bore Base",
+                faction = FactionSubTypes.GC,
+                purposes = new List<BasePurpose>
+                {
+                    BasePurpose.Harvesting
+                },
+                IntendedGrade = 1,
+                startingFunds = 175000,
+                savedTech = NotAvailableTech
+            } },
+            { SpawnBaseTypes.GCMiningRig, new BaseTemplate {  //WIP
+                techName = "GeoCorp Mining Rig",
+                faction = FactionSubTypes.GC,
+                terrain = BaseTerrain.Sea,
+                purposes = new List<BasePurpose>
+                {
+                    BasePurpose.Harvesting
+                },
+                IntendedGrade = 2,
+                startingFunds = 175000,
+                savedTech = NotAvailableTech
+            } },
+            // -- Headquarters!
             { SpawnBaseTypes.GSOMilitaryBase, new BaseTemplate {  //WIP
                 techName = "GSO Diplomacy Outpost",
                 faction = FactionSubTypes.GSO,
@@ -102,7 +126,9 @@ namespace TAC_AI.Templates
             } },
 
 
-
+            //----------------------------------------------------------------------------------------
+            //                                  MOBILIUS TECHS!!!
+            //----------------------------------------------------------------------------------------
             // BEGIN Attract Techs
             { SpawnBaseTypes.TACInvaderAttract, new BaseTemplate {
                 techName = "TAC InvaderAttract",

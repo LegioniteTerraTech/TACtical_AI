@@ -526,6 +526,7 @@ namespace TAC_AI.AI
             internal bool PendingHeightCheck = false;   // queue a driving depth check for a naval tech
             internal float LowestPointOnTech = 0;       // the lowest point in relation to the tech's block-based center
 
+            public bool OverrideAllControls = false;    // force the tech to be controlled by external means
 
             // AI Core
             public IMovementAIController MovementController;
@@ -539,7 +540,7 @@ namespace TAC_AI.AI
                 tank.DetachEvent.Subscribe(OnDetach);
                 //tank.TankRecycledEvent.Subscribe(OnRecycle);
                 this.AIList = new List<ModuleAIExtension>();
-                //Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnDeathOrRemoval);
+                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnDeathOrRemoval);
                 Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Subscribe(OnSpawn);
             }
 
@@ -562,13 +563,14 @@ namespace TAC_AI.AI
                 if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
                 this.ResetAll(tankInfo);
             }
-            /*
             public void OnDeathOrRemoval(Tank tankInfo, ManDamage.DamageInfo damage)
             {
                 //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnDeathOrRemoval");
-                tankInfo.gameObject.GetComponent<TankAIHelper>().DediAI = AIType.Escort;
-                this.ResetAll(tankInfo);
+                //tankInfo.gameObject.GetComponent<TankAIHelper>().DediAI = AIType.Escort;
+                //this.ResetAll(tankInfo);
+                this.OverrideAllControls = false;
             }
+            /*
             public void OnRecycle(Tank tank)
             {
                 //Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Called OnRecycle");
@@ -883,6 +885,9 @@ namespace TAC_AI.AI
             {
                 // The interface method for actually handling the tank - note that this fires at a different rate
                 this.lastTechExtents = Extremes(this.tank.blockBounds.extents);
+
+                if (OverrideAllControls)
+                    return; 
 
                 if (this.MovementController is null)
                 {
@@ -1305,7 +1310,8 @@ namespace TAC_AI.AI
                 {
                     var aI = tank.AI;
 
-
+                    if (OverrideAllControls)
+                        return;
                     if (tank.IsFriendly() && aI.CheckAIAvailable())
                     {   //MP is NOT supported!
                         //Player-Allied AI

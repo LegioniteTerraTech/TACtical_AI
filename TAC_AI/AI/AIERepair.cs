@@ -842,17 +842,11 @@ namespace TAC_AI.AI
 
 
         // EXPERIMENTAL - AI-Based new Tech building
-        public static void SetupForNewTechConstruction(DesignMemory TechMemor, List<TankBlock> tankTemplate)
+        internal static void SetupForNewTechConstruction(DesignMemory TechMemor, List<TankBlock> tankTemplate)
         {
             TechMemor.SaveTech(tankTemplate.FindAll(delegate (TankBlock cand) { return cand != null; }));
         }
-        
-        /// <summary>
-        /// Builds a Tech instantly, no requirements
-        /// </summary>
-        /// <param name="tank"></param>
-        /// <param name="TechMemor"></param>
-        public static void Turboconstruct(Tank tank, DesignMemory TechMemor, bool fullyCharge = true)
+        internal static void Turboconstruct(Tank tank, DesignMemory TechMemor, bool fullyCharge = true)
         {
             Debug.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
             int cBCount = tank.blockman.IterateBlocks().ToList().Count();
@@ -869,7 +863,7 @@ namespace TAC_AI.AI
             if (fullyCharge)
                 tank.EnergyRegulator.SetAllStoresAmount(1);
         }
-        public static void TurboRepair(Tank tank, DesignMemory TechMemor)
+        internal static void TurboRepair(Tank tank, DesignMemory TechMemor)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             if (TechMemor.IsNull())
@@ -898,6 +892,104 @@ namespace TAC_AI.AI
             }
             return;
         }
+
+
+        // External major operations
+        /// <summary>
+        /// Builds a Tech instantly, no requirements
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <param name="TechMemor"></param>
+        public static void TurboconstructExt(Tank tank, List<BlockMemory> Mem, bool fullyCharge = true)
+        {
+            Debug.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
+            int cBCount = tank.blockman.IterateBlocks().ToList().Count();
+            int RepairAttempts = Mem.Count() - cBCount + 3;
+            try
+            {
+                while (RepairAttempts > 0)
+                {
+                    TurboRepairExt(tank, Mem);
+                    RepairAttempts--;
+                }
+            }
+            catch { return; }
+            if (fullyCharge)
+                tank.EnergyRegulator.SetAllStoresAmount(1);
+        }
+        public static void TurboRepairExt(Tank tank, List<BlockMemory> Mem)
+        {
+            List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+            int savedBCount = Mem.Count;
+            int cBCount = cBlocks.Count;
+            if (savedBCount != cBCount)
+            {
+                //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
+                List<BlockTypes> typesMissing = GetMissingBlockTypesExt(Mem, cBlocks);
+
+                //Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
+                if (!TrySpawnAndAttachBlockFromListExt(tank, Mem, typesMissing))
+                    Debug.Log("TACtical AI: TurboRepair - attach attempt failed");
+            }
+            return;
+        }
+        public static List<BlockTypes> GetMissingBlockTypesExt(List<BlockMemory> Mem, List<TankBlock> cBlocks)
+        {
+            List<BlockTypes> typesToRepair = new List<BlockTypes>();
+            int toFilter = Mem.Count();
+            for (int step = 0; step < toFilter; step++)
+            {
+                typesToRepair.Add((BlockTypes)Enum.Parse(typeof(BlockTypes), Mem.ElementAt(step).t));
+            }
+            typesToRepair = typesToRepair.Distinct().ToList();
+
+            List<BlockTypes> typesMissing = new List<BlockTypes>();
+            int toFilter2 = typesToRepair.Count();
+            for (int step = 0; step < toFilter2; step++)
+            {
+                int present = cBlocks.FindAll(delegate (TankBlock cand) { return typesToRepair[step] == cand.BlockType; }).Count;
+                int mem = Mem.FindAll(delegate (BlockMemory cand) { return typesToRepair[step].ToString() == cand.t; }).Count;
+                if (mem > present)// are some blocks not accounted for?
+                    typesMissing.Add(typesToRepair[step]);
+            }
+            return typesMissing;
+        }
+        public static bool TrySpawnAndAttachBlockFromListExt(Tank tank, List<BlockMemory> Mem, List<BlockTypes> typesMissing)
+        {
+            int attachAttempts = typesMissing.Count();
+            for (int step = 0; step < attachAttempts; step++)
+            {
+                BlockTypes bType = typesMissing.ElementAt(step);
+
+                TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
+                bool attemptW = false;
+
+                List<BlockMemory> posBlocks = Mem.FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });
+                //Debug.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
+                for (int step2 = 0; step2 < posBlocks.Count; step2++)
+                {
+                    BlockMemory template = posBlocks.ElementAt(step2);
+                    attemptW = AttemptBlockAttachExt(tank, template, foundBlock);
+                    if (attemptW)
+                    {
+                        foundBlock.InitNew();
+                        return true;
+                    }
+                }
+                foundBlock.transform.Recycle();
+            }
+            return false;
+        }
+        public static bool AttemptBlockAttachExt(Tank tank, BlockMemory template, TankBlock canidate)
+        {
+            bool success;
+            //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
+            success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.p, new OrthoRotation(template.r));
+            
+            return success;
+        }
+
+
 
     }
 }

@@ -26,6 +26,7 @@ namespace TAC_AI.Templates
 
         // GeoCorp
         GCMiningRig,
+        GCTerraBore,
         GCProspectorHub,
         GCHeadquarters,
         GCMiningLaser,

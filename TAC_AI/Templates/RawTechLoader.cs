@@ -16,6 +16,7 @@ namespace TAC_AI.Templates
         public bool InfBlocks;
         public FactionSubTypes Faction;
         public bool NonAggressive = false;
+        public int Cost = 0;
     }
     internal class BookmarkBuilder : MonoBehaviour
     {
@@ -99,8 +100,10 @@ namespace TAC_AI.Templates
                     }
                     catch { }
                     break;
+                case BasePurpose.HarvestingNoHQ:
                 case BasePurpose.Harvesting:
                 case BasePurpose.TechProduction:
+                case BasePurpose.AnyNonHQ:
                     haveBB = true;
 
                     try
@@ -152,7 +155,7 @@ namespace TAC_AI.Templates
             position.y = offset;
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AI.AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
             block.InitNew();
 
             Tank theBase;
@@ -412,7 +415,7 @@ namespace TAC_AI.Templates
 
 
         // Use this for external cases
-        public static Tank SpawnTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BuilderExternal Blueprint, bool AutoTerrain = false)
+        public static Tank SpawnTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BuilderExternal Blueprint, bool AutoTerrain = false, bool Charged = false)
         {
             if (Blueprint == null)
             {
@@ -440,6 +443,13 @@ namespace TAC_AI.Templates
             namesav.infBlocks = Blueprint.InfBlocks;
             namesav.faction = Blueprint.Faction;
             namesav.unprovoked = Blueprint.NonAggressive;
+            AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToTechExternal(baseBlueprint), Charged);
+
+            if (Team == -2)//neutral
+            {   // be crafty mike and face the player
+                theTech.AI.SetBehaviorType(AITreeType.AITypes.FacePlayer);
+            }
+
             return theTech;
         }
 
@@ -510,15 +520,18 @@ namespace TAC_AI.Templates
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (purpose == BasePurpose.AnyNonHQ || purpose == BasePurpose.HarvestingNoHQ)
+                    if (purpose == BasePurpose.HarvestingNoHQ)
                     {
                         if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
                             return false;
-                        if (purpose == BasePurpose.HarvestingNoHQ)
-                        {
-                            if (!cand.Value.purposes.Contains(BasePurpose.Harvesting))
-                                return false;
-                        }
+                        if (cand.Value.purposes.Contains(BasePurpose.Harvesting))
+                            return true;
+                        return false;
+                    }
+                    if (purpose == BasePurpose.AnyNonHQ)
+                    {
+                        if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
+                            return false;
                         return true;
                     }
                     if (purpose != BasePurpose.NotABase && cand.Value.purposes.Contains(BasePurpose.NotABase))

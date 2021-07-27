@@ -262,6 +262,7 @@ namespace TAC_AI.AI.Enemy
                     mind.TechMemor.SetupForNewTechConstruction(thisInst, Templates.RawTechLoader.GetBlueprint(type));
                     mind.TechMemor.unlimitedParts = Templates.RawTechLoader.GetEnemyBaseSupplies(type);
                     tank.MainCorps.Add(Templates.RawTechLoader.GetMainCorp(type));
+                    tank.Anchors.TryAnchorAll(true);
                     DidFire = true;
                 }
             }
