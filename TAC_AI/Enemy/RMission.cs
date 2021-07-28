@@ -62,6 +62,7 @@ namespace TAC_AI.AI.Enemy
         public static bool SetupMissionAI(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             string name = tank.name;
+            // Don't worry the bases are sorted based on if they are valid or not
             bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
             if (!DidFire)
             {

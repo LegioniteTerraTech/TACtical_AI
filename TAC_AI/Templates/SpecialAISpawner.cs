@@ -63,7 +63,7 @@ namespace TAC_AI.Templates
         }
         public static void DetermineActiveOnMode(Mode mode)
         {   // 
-            if (mode is ModeMain || mode is ModeMisc)
+            if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign) && (ManNetwork.inst.IsServer || !ManNetwork.inst.IsMultiplayer()))
             {
                 Resume();
             }
@@ -279,7 +279,7 @@ namespace TAC_AI.Templates
         public void Update()
         {   // 
             //Debug.Log("TACtical_AI: SpecialAISpawner - ACTIVE!!!  time" + counter);
-            if (counter > AirSpawnInterval && (Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn))
+            if (counter > AirSpawnInterval / ((KickStart.Difficulty / 100) + 1.5f) && (Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn))
             {   // determine if we should spawn new one, also manage existing pooled aircrafts
                 Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
                 if (UnityEngine.Random.Range(-1, 101) < AircraftSpawnOdds && KickStart.AllowAirEnemiesToSpawn)

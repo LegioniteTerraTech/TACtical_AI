@@ -641,7 +641,13 @@ namespace TAC_AI.AI
                 }
                 TechMemor.ranOutOfParts = false;
 
-                TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
+                TankBlock foundBlock = null;
+                if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
+                {
+                    continue;
+                }
+                else
+                    foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
                 List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });
@@ -961,7 +967,14 @@ namespace TAC_AI.AI
             {
                 BlockTypes bType = typesMissing.ElementAt(step);
 
-                TankBlock foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
+                TankBlock foundBlock = null;
+
+                if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
+                {
+                    continue;
+                }
+                else
+                    foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
                 List<BlockMemory> posBlocks = Mem.FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });

@@ -552,12 +552,12 @@ namespace TAC_AI.AI.Movement
                     if (vecCount == 25)
                     {
                         //thisInst.Yield = true;
-                        Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is jammed on land!");
+                        //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is jammed on land!");
                         final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
                     }
                     else if (vecCount > 0)
                     {
-                        Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is trying to avoid terrain");
+                        //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is trying to avoid terrain");
                         final = thisInst.tank.boundsCentreWorldNoCheck + ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * AIECore.TankAIHelper.DodgeStrength);
                     }
                 }

@@ -1306,7 +1306,7 @@ namespace TAC_AI.AI
             public void FixedUpdate()
             {
                 //Handler for the improved AI, messy but gets the job done.
-                if (KickStart.EnableBetterAI && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                if (KickStart.EnableBetterAI) //&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                 {
                     var aI = tank.AI;
 

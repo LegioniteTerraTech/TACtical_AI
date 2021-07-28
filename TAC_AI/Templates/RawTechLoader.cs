@@ -35,7 +35,7 @@ namespace TAC_AI.Templates
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
 
         // Main initiation function
-        internal static void TrySpawnBase(Tank tank, AI.AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
+        internal static void TrySpawnBase(Tank tank, AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
         {
             if (!KickStart.AllowEnemiesToStartBases)
                 return;
@@ -438,16 +438,20 @@ namespace TAC_AI.Templates
             theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, Blueprint.Name);
 
             Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + AutoTerrain);
-            var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
-            namesav.blueprint = baseBlueprint;
-            namesav.infBlocks = Blueprint.InfBlocks;
-            namesav.faction = Blueprint.Faction;
-            namesav.unprovoked = Blueprint.NonAggressive;
+
             AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToTechExternal(baseBlueprint), Charged);
 
             if (Team == -2)//neutral
             {   // be crafty mike and face the player
                 theTech.AI.SetBehaviorType(AITreeType.AITypes.FacePlayer);
+            }
+            if (theTech.IsEnemy())//enemy
+            {
+                var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
+                namesav.blueprint = baseBlueprint;
+                namesav.infBlocks = Blueprint.InfBlocks;
+                namesav.faction = Blueprint.Faction;
+                namesav.unprovoked = Blueprint.NonAggressive;
             }
 
             return theTech;
@@ -460,7 +464,7 @@ namespace TAC_AI.Templates
         public static void TryClearAreaForBase(Vector3 vector3)
         {   //N/A
             int removeCount = 0;
-            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(vector3, 32, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })))
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(vector3, 8, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })))
             {   // Does not compensate for bases that are 64x64 diagonally!
                 if (vis.resdisp.IsNotNull())
                 {
@@ -520,6 +524,10 @@ namespace TAC_AI.Templates
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !cand.Value.purposes.Contains(BasePurpose.MPSafe))
+                    {   // no illegal base in MP
+                        return false;
+                    }
                     if (purpose == BasePurpose.HarvestingNoHQ)
                     {
                         if (cand.Value.purposes.Contains(BasePurpose.Headquarters))

@@ -32,7 +32,7 @@ namespace TAC_AI
                     {
                         var aI = __instance.transform.root.GetComponent<Tank>().AI;
                         var tank = __instance.transform.root.GetComponent<Tank>();
-                        if (!tank.PlayerFocused && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                        if (!tank.PlayerFocused)//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                         {
                             var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
                             if (aI.CheckAIAvailable() && tank.IsFriendly())
@@ -909,6 +909,24 @@ namespace TAC_AI
                 // Setup aircraft if Population Injector is N/A
                 if (!KickStart.isPopInjectorPresent)
                     SpecialAISpawner.Initiate();
+            }
+        }
+
+
+        // Multi-Player
+        [HarmonyPatch(typeof(ModeCoOp<>))]
+        [HarmonyPatch("JoinInProgress")]//On Game start
+        private static class WarnJoiningPlayersOfScaryAI
+        {
+            private static void Postfix()
+            {
+                // Setup aircraft if Population Injector is N/A
+                try
+                {
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Warning: This server is using advanced AI!</b>");
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>  If you are inexperienced, I would suggest you play safe.</b>");
+                }
+                catch{ }
             }
         }
     }

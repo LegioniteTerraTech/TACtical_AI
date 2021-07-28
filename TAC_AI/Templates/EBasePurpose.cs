@@ -34,6 +34,7 @@ namespace TAC_AI.Templates
         Harvesting,
         TechProduction,
         Headquarters,
+        MPSafe,
         NotABase,
         NoAutoSearch,
         NoWeapons,

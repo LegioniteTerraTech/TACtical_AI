@@ -33,7 +33,7 @@ namespace TAC_AI.Templates
             { SpawnBaseTypes.GSOSeller, new BaseTemplate {
                 techName = "GSO Seller",
                 faction = FactionSubTypes.GSO,
-                purposes = new List<BasePurpose>{BasePurpose.Harvesting},
+                purposes = new List<BasePurpose>{BasePurpose.Harvesting, BasePurpose.MPSafe},
                 IntendedGrade = 1,
                 startingFunds = 10000,
                 savedTech = "{\"t\":\"GSOAnchorFixed_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSOCockpit_111\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSODeliCannon_222\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-1.0},\"r\":0}|{\"t\":\"GSODeliCannon_222\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSODeliCannon_222\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":1.0},\"r\":0}|{\"t\":\"GSODeliCannon_222\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":2.0},\"r\":0}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":-1.0},\"r\":3}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-2.0},\"r\":0}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":1.0},\"r\":1}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":2.0},\"r\":2}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":3.0,\"y\":0.0,\"z\":0.0},\"r\":3}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":3.0},\"r\":2}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":-3.0,\"y\":0.0,\"z\":0.0},\"r\":1}|{\"t\":\"GSOReceiver_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-3.0},\"r\":0}",
