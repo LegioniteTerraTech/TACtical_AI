@@ -716,7 +716,7 @@ namespace TAC_AI
             private static void Prefix(ModuleItemConsume __instance)
             {
                 var valid = __instance.transform.root.GetComponent<RBases.EnemyBaseFunder>();
-                if ((bool)valid)
+                if ((bool)valid && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
                 {
                     ModuleItemConsume.Progress pog = (ModuleItemConsume.Progress)progress.GetValue(__instance);
                     if (pog.currentRecipe.m_OutputType == RecipeTable.Recipe.OutputType.Money && sellStolen.GetValue(__instance) == null)
@@ -858,7 +858,7 @@ namespace TAC_AI
             private static void Postfix()
             {
                 Debug.Log("TACtical_AI: Player respawned");
-                if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent)
                 {
                     Debug.Log("TACtical_AI: Precheck validated");
                     if (AI.Movement.AIEPathing.AboveTheSea(Singleton.playerTank.boundsCentreWorld))
@@ -876,7 +876,7 @@ namespace TAC_AI
         {
             private static void Prefix(ref TrackedVisible tv)
             {
-                if (!KickStart.isPopInjectorPresent && KickStart.EnableBetterAI && KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                if (!KickStart.isPopInjectorPresent && KickStart.EnableBetterAI && KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
                 {
                     if (tv != null)
                     {
@@ -884,7 +884,7 @@ namespace TAC_AI
                         {
                             if (tv.visible.tank != null)
                             {
-                                if (AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tv.visible.tank) != AI.Enemy.EnemyHandling.Naval && tv.visible.tank.IsEnemy())
+                                if (AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval && tv.visible.tank.IsEnemy())
                                 {
                                     // OVERRIDE TO SHIP
                                     try
