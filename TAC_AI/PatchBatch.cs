@@ -32,7 +32,13 @@ namespace TAC_AI
                     {
                         var aI = __instance.transform.root.GetComponent<Tank>().AI;
                         var tank = __instance.transform.root.GetComponent<Tank>();
-                        if (!tank.PlayerFocused)//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                        bool IsPlayerRemoteControlled = false;
+                        try
+                        {
+                            IsPlayerRemoteControlled = (bool)tank.netTech.NetPlayer;
+                        }
+                        catch { }
+                        if (!tank.PlayerFocused && !IsPlayerRemoteControlled)//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                         {
                             var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
                             if (aI.CheckAIAvailable() && tank.IsFriendly())
@@ -55,7 +61,7 @@ namespace TAC_AI
                                 __instance.block.tank.control.BoostControlJets = true;
                                 return false;
                             }
-                            else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy())
+                            else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy() && !ManSpawn.IsPlayerTeam(tank.Team))
                             {
                                 if (!tankAIHelp.Hibernate)
                                 {
@@ -845,13 +851,32 @@ namespace TAC_AI
 
 
         // CampaignAutohandling
+        [HarmonyPatch(typeof(ModeMain))]
+        [HarmonyPatch("PlayerRespawned")]//On player base bomb landing
+        private static class OverridePlayerTechOnWaterLanding
+        {
+            private static void Postfix()
+            {
+                Debug.Log("TACtical_AI: Player respawned");
+                if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                {
+                    Debug.Log("TACtical_AI: Precheck validated");
+                    if (AI.Movement.AIEPathing.AboveTheSea(Singleton.playerTank.boundsCentreWorld))
+                    {
+                        Debug.Log("TACtical_AI: Attempting retrofit");
+                        PlayerSpawnAid.TryBotePlayerSpawn();
+                    }
+                }
+            }
+        }
+
         [HarmonyPatch(typeof(ManPop))]
         [HarmonyPatch("OnSpawned")]//On enemy base bomb landing
         private static class EmergencyOverrideOnWaterLanding
         {
             private static void Prefix(ref TrackedVisible tv)
             {
-                if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                if (!KickStart.isPopInjectorPresent && KickStart.EnableBetterAI && KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                 {
                     if (tv != null)
                     {
@@ -864,7 +889,7 @@ namespace TAC_AI
                                     // OVERRIDE TO SHIP
                                     try
                                     {
-                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(tv.Position, tv.visible.tank.rootBlockTrans.forward, tv.TeamID, RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotABase, BaseTerrain.Sea));
+                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(tv.Position, tv.visible.tank.rootBlockTrans.forward, tv.TeamID, RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp())));
                                         RadarTypes inherit = tv.RadarType;
                                         string previousTechName = tv.visible.tank.name;
                                         tv.visible.transform.Recycle();
@@ -878,7 +903,7 @@ namespace TAC_AI
 
                                         for (int fire = 0; fire < 25; fire++)
                                         {
-                                            TankBlock boom = Singleton.Manager<ManSpawn>.inst.SpawnBlock(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward));
+                                            TankBlock boom = Templates.RawTechLoader.SpawnBlockS(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward));
                                             boom.visible.SetInteractionTimeout(20);
                                             boom.damage.SelfDestruct(0.5f);
                                         }
@@ -914,17 +939,17 @@ namespace TAC_AI
 
 
         // Multi-Player
-        [HarmonyPatch(typeof(ModeCoOp<>))]
-        [HarmonyPatch("JoinInProgress")]//On Game start
+        [HarmonyPatch(typeof(ManNetwork))]
+        [HarmonyPatch("AddPlayer")]//On Game start
         private static class WarnJoiningPlayersOfScaryAI
         {
-            private static void Postfix()
+            private static void Postfix(ManNetwork __instance)
             {
                 // Setup aircraft if Population Injector is N/A
                 try
                 {
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Warning: This server is using advanced AI!</b>");
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>  If you are inexperienced, I would suggest you play safe.</b>");
+                    if (ManNetwork.IsHost && KickStart.EnableBetterAI)
+                        AIECore.TankAIManager.inst.Invoke("WarnPlayers", 2);
                 }
                 catch{ }
             }

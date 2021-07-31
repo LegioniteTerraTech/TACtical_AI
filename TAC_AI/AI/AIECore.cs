@@ -5,6 +5,7 @@ using System.Reflection;
 using UnityEngine;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.AlliedOperations;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI
 {
@@ -42,7 +43,7 @@ namespace TAC_AI.AI
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        public static List<Tank> Allies;
+        public static List<Tank> Allies;    //Single-player only
         //public static List<ResourceDispenser> Minables;
         public static List<Visible> Minables;
         public static List<ModuleHarvestReciever> Depots;
@@ -57,10 +58,8 @@ namespace TAC_AI.AI
 
 
         // Mining
-        public static bool FetchClosestChunkReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team = -2)
+        public static bool FetchClosestChunkReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team)
         {
-            if (team == -2)
-                team = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
             bool fired = false;
             theBase = null;
             finalPos = null;
@@ -112,10 +111,8 @@ namespace TAC_AI.AI
         }
 
         // Scavenging - Under Construction!
-        public static bool FetchClosestBlockReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team = -2)
+        public static bool FetchClosestBlockReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team)
         {
-            if (team == -2)
-                team = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
             bool fired = false;
             theBase = null;
             finalPos = null;
@@ -155,7 +152,7 @@ namespace TAC_AI.AI
         }
        
         // Charging
-        public static bool FetchChargedChargers(Tank tank, float MaxScanRange, out Transform finalPos, out Tank theBase, int team = -2)
+        public static bool FetchChargedChargers(Tank tank, float MaxScanRange, out Transform finalPos, out Tank theBase, int team)
         {
             if (team == -2)
                 team = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
@@ -187,21 +184,43 @@ namespace TAC_AI.AI
             toCharge = null;
             try
             {
-                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                if (ManNetwork.inst.IsMultiplayer())
                 {
-                    Tank ally = Allies.ElementAt(stepper);
-                    float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                    EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
-                    bool hasCapacity = eState.storageTotal > 200;
-                    bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
-                    if (Range > temp && temp != 0 && hasCapacity && needsCharge)
+                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(helper.tank);
+                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        Range = temp;
-                        bestStep = stepper;
-                        fired = true;
+                        Tank ally = AlliesAlt.ElementAt(stepper);
+                        float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+                        bool hasCapacity = eState.storageTotal > 200;
+                        bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
+                        if (Range > temp && temp != 0 && hasCapacity && needsCharge)
+                        {
+                            Range = temp;
+                            bestStep = stepper;
+                            fired = true;
+                        }
                     }
+                    toCharge = AlliesAlt.ElementAt(bestStep).visible;
                 }
-                toCharge = Allies.ElementAt(bestStep).visible;
+                else
+                {
+                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    {
+                        Tank ally = Allies.ElementAt(stepper);
+                        float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+                        bool hasCapacity = eState.storageTotal > 200;
+                        bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
+                        if (Range > temp && temp != 0 && hasCapacity && needsCharge)
+                        {
+                            Range = temp;
+                            bestStep = stepper;
+                            fired = true;
+                        }
+                    }
+                    toCharge = Allies.ElementAt(bestStep).visible;
+                }
                 //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
@@ -264,10 +283,12 @@ namespace TAC_AI.AI
 
         public class TankAIManager : MonoBehaviour
         {
+            public static TankAIManager inst;
+
             public static EventNoParams QueueUpdater = new EventNoParams();
             public static void Initiate()
             {
-                new GameObject("AIManager").AddComponent<TankAIManager>();
+                inst = new GameObject("AIManager").AddComponent<TankAIManager>();
                 Allies = new List<Tank>();
                 Minables = new List<Visible>();
                 Depots = new List<ModuleHarvestReciever>();
@@ -293,6 +314,8 @@ namespace TAC_AI.AI
 
             public static void FetchAllAllies()
             {
+                if (ManNetwork.inst.IsMultiplayer())
+                    return; // Doesn't work in MP, cannot use opimised searcher.
                 Allies = new List<Tank>();
                 int AllyCount = 0;
                 var allTechs = Singleton.Manager<ManTechs>.inst;
@@ -325,6 +348,15 @@ namespace TAC_AI.AI
                     moreThan2Allies = false;
             }
 
+            public void WarnPlayers()
+            {
+                try
+                {
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Warning: This server is using advanced AI!</b>");
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>  If you are inexperienced, I would suggest you play safe.</b>");
+                }
+                catch { }
+            }
             /*
             private void Update()
             {
@@ -614,6 +646,7 @@ namespace TAC_AI.AI
                 this.LastCloseAlly = null;
                 this.theBase = null;
                 this.JustUnanchored = false;
+                this.OverrideAllControls = false;
                 var Mind = tank.gameObject.GetComponent<Enemy.EnemyMind>();
                 if (Mind.IsNotNull())
                     Mind.SetForRemoval();
@@ -1061,7 +1094,7 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  Obstructed");
                 if (!hasMessaged)
                 {
-                    Debug.Log("TACtical_AI: AI " + tank.name + ":  Can't move there - something's in the way!");
+                    //Debug.Log("TACtical_AI: AI " + tank.name + ":  Can't move there - something's in the way!");
                 }
 
                 this.forceDrive = true;
@@ -1191,10 +1224,25 @@ namespace TAC_AI.AI
             }
             public Visible GetPlayerTech()
             {
-                foreach (Visible thatTech in tank.Vision.IterateVisibles(ObjectTypes.Vehicle))
+                if (ManNetwork.IsNetworked)
                 {
-                    if (thatTech.tank.PlayerFocused)
-                        return thatTech;
+                    foreach (Visible thatTech in tank.Vision.IterateVisibles(ObjectTypes.Vehicle))
+                    {
+                        try
+                        {
+                            if ((bool)thatTech.tank.netTech.NetPlayer.CurTech == thatTech)
+                                return thatTech;
+                        }
+                        catch { }
+                    }
+                }
+                else
+                {
+                    foreach (Visible thatTech in tank.Vision.IterateVisibles(ObjectTypes.Vehicle))
+                    {
+                        if (thatTech.tank.PlayerFocused)
+                            return thatTech;
+                    }
                 }
                 return lastPlayer;
             }
@@ -1302,6 +1350,16 @@ namespace TAC_AI.AI
             {   //OBSOLETE until further notice
                 // Dynamic timescaled update that fires when needed, less for slow techs, fast for large techs
             }
+            public void RemoveEnemyMatters()
+            {
+                var AISettings = tank.GetComponent<AIBookmarker>();
+                if (AISettings.IsNotNull())
+                    DestroyImmediate(AISettings);
+                var Builder = tank.GetComponent<BookmarkBuilder>();
+                if (Builder.IsNotNull())
+                    DestroyImmediate(Builder);
+            }
+
 
             public void FixedUpdate()
             {
@@ -1310,18 +1368,19 @@ namespace TAC_AI.AI
                 {
                     var aI = tank.AI;
 
-                    if (OverrideAllControls)
-                        return;
                     if (tank.IsFriendly() && aI.CheckAIAvailable())
                     {   //MP is NOT supported!
                         //Player-Allied AI
                         if (this.AIState != 1)
                         {
                             ResetAll(this.tank);
+                            RemoveEnemyMatters();
                             this.AIState = 1;
                             this.RefreshAI();
                             Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
                         }
+                        if (OverrideAllControls)
+                            return;
 
                         this.DirectorUpdateClock++;
                         if (this.DirectorUpdateClock > KickStart.AIDodgeCheapness)
@@ -1344,7 +1403,7 @@ namespace TAC_AI.AI
                                 this.EstTopSped = this.recentSpeed;
                         }
                     }
-                    else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy())
+                    else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy() && !ManSpawn.IsPlayerTeam(tank.Team))
                     {   //MP is NOT supported!
                         //Enemy AI
                         if (this.AIState != 2)
@@ -1354,6 +1413,8 @@ namespace TAC_AI.AI
                             Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Ready to kick some Tech!");
                             Enemy.RCore.RandomizeBrain(this, tank);
                         }
+                        if (OverrideAllControls)
+                            return;
                         if (!this.Hibernate)
                         {
                             this.DirectorUpdateClock++;
@@ -1385,6 +1446,7 @@ namespace TAC_AI.AI
                         {   // Reset and ready for static tech
                             Debug.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
                             ResetAll(this.tank);
+                            RemoveEnemyMatters();
                             this.AIState = 0;
                         }
                     }
@@ -1392,6 +1454,7 @@ namespace TAC_AI.AI
                 //else
                 //    this.Recycle();//Remove big ram consuming module from Techs that don't need it!
             }
+
         }
     }
 }

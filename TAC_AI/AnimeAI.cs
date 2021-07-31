@@ -12,6 +12,7 @@ namespace TAC_AI
 {
     public static class AnimeAI
     {   //Attempt hook with the AnimeAI sub-mod
+        //  WIP
         public static void TransmitStatus(Tank tech, string message)
         {
             if (!AnimeAIBackupValidation())

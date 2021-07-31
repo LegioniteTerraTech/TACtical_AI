@@ -81,7 +81,7 @@ namespace TAC_AI.AI.Enemy
                             thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, 6, Super: venPower);
                             thisInst.AttemptedRepairs++;
                         }
-                        Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else

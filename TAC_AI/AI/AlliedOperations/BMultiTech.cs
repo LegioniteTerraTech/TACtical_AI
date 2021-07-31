@@ -41,6 +41,8 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     hostTech = AIEPathing.ClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out dist);
                     if (hostTech == null)
+                        hostTech = thisInst.GetPlayerTech().tank;
+                    if (hostTech == null)
                     {
                         thisInst.MTLockedToTechBeam = false;
                         thisInst.MTMimicHostAvail = false;

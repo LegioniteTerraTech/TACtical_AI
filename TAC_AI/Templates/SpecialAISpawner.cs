@@ -45,12 +45,13 @@ namespace TAC_AI.Templates
         private int updateTimer = 0;
 
         const int MaxAircraftAllowed = 4;
-        const int AircraftSpawnOdds = 15;    // Out of 100
-        const float AirSpawnDist = 425;
+        const int AircraftSpawnOdds = 37;//15    // Out of 100
+        const float AirSpawnDist = 400;
         const float AirDespawnDist = 475;
         const float AirSpawnInterval = 30;
+        const float AirMaxHeightOffset = 175;
 
-        private static bool forceOn = false;    // spawn in creative no matter what
+        private static bool forceOn = true;    // spawn in creative no matter what
 
         public static void Initiate()
         {   // 
@@ -63,7 +64,7 @@ namespace TAC_AI.Templates
         }
         public static void DetermineActiveOnMode(Mode mode)
         {   // 
-            if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign) && (ManNetwork.inst.IsServer || !ManNetwork.inst.IsMultiplayer()))
+            if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign || mode is ModeCoOpCreative) && (ManNetwork.inst.IsServer || !ManNetwork.inst.IsMultiplayer()))
             {
                 Resume();
             }
@@ -198,6 +199,12 @@ namespace TAC_AI.Templates
                         break;
                 }
 
+                try
+                {
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Unidentified flying object spotted!</b>");
+                }
+                catch { }
+                Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " aircraft present on-scene");
                 return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel);
             }
             catch { }
@@ -215,13 +222,21 @@ namespace TAC_AI.Templates
                 try
                 {
                     Tank aircraft = AirPool[step].aircraft;
-
+                    float sqrMag = (aircraft.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude;
                     if (aircraft.IsNull() || !aircraft.visible.isActive)
                     {
                         AirPool.RemoveAt(step);
                         step--;
                         count--;
                         deadAircraftCount++;
+                    }
+                    else if (aircraft.trans.position.y > AirMaxHeightOffset + Singleton.playerPos.y)
+                    {
+                        AirPool.RemoveAt(step);
+                        Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + aircraft.name + " from AirPool as it flew above player distance.");
+                        aircraft.visible.RemoveFromGame();
+                        step--;
+                        count--;
                     }
                     else if ((aircraft.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude > AirDespawnDist * AirDespawnDist)
                     {

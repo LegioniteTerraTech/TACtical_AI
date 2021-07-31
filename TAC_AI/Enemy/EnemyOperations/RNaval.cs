@@ -48,7 +48,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (dist < spacer + (range / 4))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.SettleDown();
@@ -58,7 +58,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (dist < spacer + range)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                 }
@@ -68,7 +68,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                    thisInst.TryHandleObstruction(true, dist, true, true);
+                    thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                 {
                     thisInst.SettleDown();
@@ -96,7 +96,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (dist < spacer + (range / 2))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.SettleDown();
@@ -110,7 +110,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.SettleDown();
@@ -120,7 +120,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.SettleDown();
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (dist < spacer + 2)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.MoveFromObjective = true;
@@ -151,7 +151,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (dist < spacer + (range * 1.25f))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.SettleDown();
@@ -161,7 +161,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.SettleDown();

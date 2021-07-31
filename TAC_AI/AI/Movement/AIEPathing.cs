@@ -280,7 +280,7 @@ namespace TAC_AI.AI.Movement
                 for (int stepper = 0; Allies.Count > stepper; stepper++)
                 {
                     float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                    if (bestValue > temp && temp != 0 && !Allies.ElementAt(stepper).IsAnchored)
+                    if (bestValue > temp && temp >= 10 && !Allies.ElementAt(stepper).IsAnchored)
                     {
                         bestValue = temp;
                         bestStep = stepper;

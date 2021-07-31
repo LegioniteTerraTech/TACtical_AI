@@ -32,20 +32,20 @@ namespace TAC_AI.AI.Enemy
     }
     public enum EnemyAttack
     {
-        Circle,     // Chase player on provoke, circle on hurt
+        Circle,     // Circle the enemy while shooting at them
         Grudge,     // Chase last assailant head-on until death regardless of range [default for SuicideMissile]
         Coward,     // Avoid danger
         Bully,      // Attack the weakest tech in range
-        Pesterer,   // Attack random techs and back off when hit
+        Pesterer,   // Attack random techs
         Spyper,     // Attack player from afar because we are a F^bro-fracker
     }
     public enum EnemySmarts
     {               // retroactive for each step lower on this, also meaning more lag lol
-        Default,    // dumb as all heck
+        Default,    // literally default AI
         Mild,       // can at least deal with obstructions
         Meh,        // pathfinds two objects at once
         Smrt,       // anchors when left alone
-        IntAIligent // enemies nearby this ai ALLY with this AI!
+        IntAIligent // enemies nearby this ai ALLY with this AI! - (still planned but not functional yet)
     }
     public enum EnemyBolts
     {                   // Handler for how you want your bolts used

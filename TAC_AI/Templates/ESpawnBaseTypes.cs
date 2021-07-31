@@ -90,6 +90,7 @@ namespace TAC_AI.Templates
 
         // Choppers
         GSOQuadGale,
+        HESheertail,
         HEPocketApache,
         HESmashApache,
         BFeClipse,
@@ -101,6 +102,18 @@ namespace TAC_AI.Templates
         VENNautilus,
         HESwaddleBoat,
         BFLuxYacht,
+
+        //Player-helping naval crafts
+        FTUEGSOGrade1Bote,
+        FTUEGSOGrade2Bote,
+        FTUEGSOGrade3Bote,
+        FTUEGSOGrade4Bote,
+        FTUEGSOGrade5Bote,
+        FTUEGSOGrade1BoteFallBack,
+        FTUEGSOGrade2BoteFallBack,
+        FTUEGSOGrade3BoteFallBack,
+        FTUEGSOGrade4BoteFallBack,
+        FTUEGSOGrade5BoteFallBack,
 
         // Space
         GSOSpaceshipMini,

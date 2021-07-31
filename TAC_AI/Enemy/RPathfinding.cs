@@ -177,7 +177,7 @@ namespace TAC_AI.AI.Enemy
                 for (int stepper = 0; Allies.Count > stepper; stepper++)
                 {
                     float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                    if (bestValue > temp && temp != 0)
+                    if (bestValue > temp && temp >= 10)
                     {
                         bestValue = temp;
                         bestStep = stepper;
@@ -206,14 +206,14 @@ namespace TAC_AI.AI.Enemy
                 for (int stepper = 0; Allies.Count > stepper; stepper++)
                 {
                     float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                    if (bestValue > temp && temp != 0)
+                    if (bestValue > temp && temp >= 10)
                     {
                         auxStep = bestStep;
                         bestStep = stepper;
                         auxBestValue = bestValue;
                         bestValue = temp;
                     }
-                    else if (bestValue < temp && auxBestValue > temp && temp != 0)
+                    else if (bestValue < temp && auxBestValue > temp && temp >= 10)
                     {
                         auxStep = stepper;
                         auxBestValue = temp;

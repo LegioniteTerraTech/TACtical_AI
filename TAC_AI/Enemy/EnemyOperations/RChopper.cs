@@ -54,14 +54,14 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -72,7 +72,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                    thisInst.TryHandleObstruction(true, dist, true, true);
+                    thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                     thisInst.SettleDown();
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
@@ -105,7 +105,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                 }
@@ -113,7 +113,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                 }
@@ -127,7 +127,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     thisInst.MoveFromObjective = true;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                 }
@@ -141,7 +141,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.ProceedToObjective = true;
@@ -150,7 +150,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.BOOST = true;

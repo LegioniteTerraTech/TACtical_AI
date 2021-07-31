@@ -63,7 +63,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
@@ -73,7 +73,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
@@ -86,7 +86,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (tank.wheelGrounded)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                 }
@@ -118,7 +118,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
@@ -132,7 +132,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
@@ -144,7 +144,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
@@ -166,7 +166,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
@@ -179,7 +179,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
@@ -189,7 +189,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (tank.wheelGrounded)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
-                            thisInst.TryHandleObstruction(true, dist, true, true);
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }

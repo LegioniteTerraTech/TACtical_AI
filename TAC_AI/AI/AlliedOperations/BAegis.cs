@@ -27,7 +27,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (dist < thisInst.lastTechExtents + AllyExt + 2)
             {
                 thisInst.DelayedAnchorClock = 0;
-                AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving " + thisInst.LastCloseAlly.name + " some room...");
+                AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving " + thisInst.theResource.tank.name + " some room...");
                 thisInst.MoveFromObjective = true;
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = -1;

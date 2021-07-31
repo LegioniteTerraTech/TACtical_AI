@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -162,7 +163,7 @@ namespace TAC_AI.AI.Enemy
                             RCore.AutoSetIntelligence(mind, tank);
                             DidFire = true;
                         }
-                        else if (tree == AITreeType.AITypes.Specific)
+                        else if (tree == AITreeType.AITypes.Specific || tree == AITreeType.AITypes.FacePlayer)
                         {   // setup for idk
                             thisInst.Hibernate = true;
                             DidFire = true;
@@ -193,7 +194,21 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static bool MissionHandler(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void MissionHandler(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {
+            var AISettings = tank.GetComponent<AIBookmarker>();
+            if (AISettings.IsNotNull())
+            {
+                mind.EvilCommander = AISettings.commander;
+                mind.CommanderAttack = AISettings.attack;
+                mind.CommanderBolts = AISettings.bolts;
+                mind.CommanderMind = AISettings.attitude;
+                mind.CommanderSmarts = AISettings.smarts;
+                UnityEngine.Object.DestroyImmediate(AISettings);
+            }
+            return;
+        }
+        public static bool ADVMissionHandler(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             return true;
         }

@@ -46,7 +46,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 4))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -55,7 +55,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (dist < thisInst.lastTechExtents + enemyExt + range)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -66,7 +66,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                    thisInst.TryHandleObstruction(true, dist, true, true);
+                    thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                     thisInst.SettleDown();
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
@@ -93,7 +93,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 2))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.MoveFromObjective = true;
@@ -107,7 +107,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.ProceedToObjective = true;
@@ -116,7 +116,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.BOOST = true;
@@ -131,7 +131,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.MoveFromObjective = true;
@@ -146,7 +146,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.ProceedToObjective = true;
@@ -155,7 +155,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(true, dist, true, true);
+                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
                     thisInst.BOOST = true;

@@ -301,35 +301,35 @@ namespace TAC_AI.Templates
             else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
             {   //Starship
                 terra = BaseTerrain.Space;
-                purposes.Add(BasePurpose.NotABase);
+                purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
             {   // Airplane
                 terra = BaseTerrain.Air;
-                purposes.Add(BasePurpose.NotABase);
+                purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
             {   // Chopper
                 terra = BaseTerrain.Air;
-                purposes.Add(BasePurpose.NotABase);
+                purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
             {   // Naval
                 terra = BaseTerrain.Sea;
-                purposes.Add(BasePurpose.NotABase);
+                purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
             {   // Melee
                 terra = BaseTerrain.AnyNonSea;
-                purposes.Add(BasePurpose.NotABase);
+                purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             terra = BaseTerrain.Land;
-            purposes.Add(BasePurpose.NotABase);
+            purposes.Add(BasePurpose.NotStationary);
             return purposes;
         }
         private static void ValidateEnemyFolder()

@@ -6,9 +6,22 @@ using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
 using TAC_AI.AI.Movement;
+using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.Templates
 {
+    public class AIBookmarker : MonoBehaviour
+    {   // External AI-setting interface - used to set Tech AI state externally
+        public EnemyHandling commander = EnemyHandling.Wheeled;
+        public EnemyAttack attack = EnemyAttack.Circle;
+        public EnemyAttitude attitude = EnemyAttitude.Default;
+        public EnemySmarts smarts = EnemySmarts.Default;
+        public EnemyBolts bolts = EnemyBolts.Default;
+    }
+
+    /// <summary>
+    /// Don't try bothering with anything sneaky with this - it's built against illegal blocks and block rotations.
+    /// </summary>
     public class BuilderExternal
     {   // External builder interface - use to save Techs externally
         public string Name = "unset";
@@ -29,7 +42,7 @@ namespace TAC_AI.Templates
     public static class RawTechLoader
     {
         const float MinimumBaseSpacing = 350;
-        const int MaxBlockLimitAttract = 32;
+        const int MaxBlockLimitAttract = 64;
 
         static bool ForceSpawn = false;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
@@ -155,14 +168,14 @@ namespace TAC_AI.Templates
             position.y = offset;
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
             block.InitNew();
 
             Tank theBase;
             if (storeBB)
-                theBase = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn) + " ¥¥" + GetBaseStartingFunds(toSpawn));
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + GetBaseStartingFunds(toSpawn));
             else
-                theBase = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn));
             
             
             theBase.FixupAnchors(true);
@@ -190,13 +203,13 @@ namespace TAC_AI.Templates
         {   // This will try to spawn player-made enemy techs as well
 
             Tank outTank;
-            if (ShouldUseCustomTechs(factionType, BasePurpose.NotABase, terrainType, false, maxGrade))
+            if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade))
             {
-                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotABase, terrainType, maxGrade: maxGrade)], unProvoked, AutoTerrain);
+                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade)], unProvoked, AutoTerrain);
             }
             else
             {
-                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, BasePurpose.NotABase, terrainType, maxGrade: maxGrade), false, unProvoked, AutoTerrain);
+                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade), false, unProvoked, AutoTerrain);
             }
 
             return outTank; 
@@ -223,11 +236,11 @@ namespace TAC_AI.Templates
             }
             Quaternion quat = Quaternion.LookRotation(heading, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
             block.InitNew();
 
             Tank theTech;
-            theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
+            theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
 
             theTech.FixupAnchors(true);
             var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
@@ -237,11 +250,11 @@ namespace TAC_AI.Templates
             namesav.unprovoked = unProvoked;
             return theTech;
         }
-        internal static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotABase, bool silentFail = true)
+        internal static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotStationary, bool silentFail = true)
         {
-            if (ShouldUseCustomTechs(faction, BasePurpose.NotABase, terrainType, true))
+            if (ShouldUseCustomTechs(faction, BasePurpose.NotStationary, terrainType, true))
             {
-                return SpawnEnemyTechExternal(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotABase, terrainType, true)]);
+                return SpawnEnemyTechExternal(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, true)]);
             }
             else
             {
@@ -271,11 +284,11 @@ namespace TAC_AI.Templates
                 Vector3 position = pos;
                 Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-                TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
                 block.InitNew();
 
                 Tank theTech;
-                theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, GetEnglishName(toSpawn));
+                theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
 
                 Debug.Log("TACtical_AI: SpawnAttractTech - Spawned " + GetEnglishName(toSpawn));
                 var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
@@ -299,11 +312,11 @@ namespace TAC_AI.Templates
             }
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
             block.InitNew();
 
             Tank theTech;
-            theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, Blueprint.techName);
+            theTech = TechFromBlock(block, Team, Blueprint.techName);
 
             Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.techName);
             var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
@@ -337,7 +350,7 @@ namespace TAC_AI.Templates
                             return false;
                         return true;
                     }
-                    if (purpose != BasePurpose.NotABase && cand.purposes.Contains(BasePurpose.NotABase))
+                    if (purpose != BasePurpose.NotStationary && cand.purposes.Contains(BasePurpose.NotStationary))
                         return false;
                     if (!searchAttract && cand.purposes.Contains(BasePurpose.NoAutoSearch))
                         return false;
@@ -411,6 +424,66 @@ namespace TAC_AI.Templates
             return false;
         }
 
+        // player cases - rebuild for bote
+        internal static void StripPlayerTechOfBlocks(SpawnBaseTypes techType)
+        {
+            Tank tech = Singleton.playerTank;
+            int playerTeam = tech.Team;
+            Vector3 playerPos = tech.transform.position;
+            Quaternion playerFacing = tech.transform.rotation;
+            tech.visible.RemoveFromGame();
+            /*
+            List<TankBlock> toRemove = new List<TankBlock>();
+            foreach (TankBlock block in tech.blockman.IterateBlocks())
+            { 
+                if (block != tech.blockman.GetRootBlock())
+                {
+                    toRemove.Add(block);
+                }
+            }
+            int fireTimes = toRemove.Count;
+            for (int step = 0; step < fireTimes; step++)
+            {
+                try
+                {
+                    toRemove.First().Separate();
+                    toRemove.First().visible.RemoveFromGame();
+                }
+                catch { }
+            }*/
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(GetBlueprint(techType)), playerPos, playerFacing);
+            block.InitNew();
+
+            Tank theTech;
+            theTech = TechFromBlock(block, playerTeam, GetEnglishName(techType));
+
+            Singleton.Manager<ManTechs>.inst.RequestSetPlayerTank(theTech);
+        }
+        internal static void ReconstructPlayerTech(SpawnBaseTypes techType, SpawnBaseTypes fallbackTechType)
+        {
+            SpawnBaseTypes toSpawn;
+            if (IsBaseTemplateAvailable(techType))
+            {
+                toSpawn = techType;
+            }
+            else if (IsBaseTemplateAvailable(fallbackTechType))
+            {
+                toSpawn = fallbackTechType;
+            }
+            else
+            {
+                Debug.Log("TACtical_AI: ReconstructPlayerTech - Failed, could not find main or fallback!");
+                return; // compromised - cannot load anything!
+            }
+            StripPlayerTechOfBlocks(toSpawn);
+
+            string baseBlueprint = GetBlueprint(techType);
+
+            Tank theTech = Singleton.playerTank;
+
+            AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToTechExternal(baseBlueprint), false);
+            Debug.Log("TACtical_AI: ReconstructPlayerTech - Retrofitted player FTUE tech to " + GetEnglishName(toSpawn));
+        }
 
 
 
@@ -431,12 +504,11 @@ namespace TAC_AI.Templates
             }
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-            TankBlock block = Singleton.Manager<ManSpawn>.inst.SpawnBlock(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
             block.InitNew();
 
             Tank theTech;
-            theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, Blueprint.Name);
-
+            theTech = TechFromBlock(block, Team, Blueprint.Name);
             Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + AutoTerrain);
 
             AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToTechExternal(baseBlueprint), Charged);
@@ -458,6 +530,17 @@ namespace TAC_AI.Templates
         }
 
 
+        // Override
+        internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat)
+        {
+            return Singleton.Manager<ManLooseBlocks>.inst.HostSpawnBlock(type, position, quat, true);
+        }
+        internal static Tank TechFromBlock(TankBlock block, int Team, string name)
+        {
+            //if (ManNetwork.inst.IsMultiplayer)
+            //    Team = ManSpawn.inst.gette
+            return Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, name);
+        }
 
 
         // Determination
@@ -542,7 +625,7 @@ namespace TAC_AI.Templates
                             return false;
                         return true;
                     }
-                    if (purpose != BasePurpose.NotABase && cand.Value.purposes.Contains(BasePurpose.NotABase))
+                    if (purpose != BasePurpose.NotStationary && cand.Value.purposes.Contains(BasePurpose.NotStationary))
                         return false;
                     if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.NoAutoSearch))
                         return false;
@@ -568,6 +651,12 @@ namespace TAC_AI.Templates
                 {
                     canidates = canidates.FindAll
                         (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.IntendedGrade <= maxGrade; });
+                }
+
+                if (searchAttract)
+                {   // prevent laggy techs from entering
+                    canidates = canidates.FindAll
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return AIERepair.DesignMemory.JSONToTechExternal(cand.Value.savedTech).Count <= MaxBlockLimitAttract; });
                 }
 
                 if (canidates.Count == 0)

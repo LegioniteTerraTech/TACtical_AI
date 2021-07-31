@@ -532,6 +532,14 @@ namespace TAC_AI.AI
                     this.CurrentThrottle = this.MainThrottle;
                 }
                 this.CurrentThrottle = Mathf.Clamp(this.CurrentThrottle, -1, 1);
+                if (this.FlyStyle == FlightType.Aircraft && this.PropBias.z > 0.8f && CurrentThrottle > 0.8f)
+                {   // Some aircraft stall when pitching up - this should help avoid that
+                    control.BoostControlProps = true;
+                }
+                else
+                {
+                    control.BoostControlProps = false;
+                }
             }
         }
     }

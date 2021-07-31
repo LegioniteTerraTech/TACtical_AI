@@ -18,7 +18,7 @@ namespace TAC_AI
         const string ModName = "TACtical AIs";
 
         internal static bool testEnemyAI = true;
-        internal static int MaxEnemySplitLimit = 20;
+        internal static int MaxEnemySplitLimit = 20;// How many techs that can exist for each team before giving up on splitting?
         internal static int MaxEnemyBaseLimit = 3;  // How many bases are allowed to exist in one instance
         internal static int MaxEnemyHQLimit = 1;    // How many HQs are allowed to exist in one instance
         public static int AIClockPeriod = 5;        // How frequently we update
@@ -26,13 +26,14 @@ namespace TAC_AI
         public static bool EnableBetterAI = true;
         public static int AIDodgeCheapness = 30;
         public static bool MuteNonPlayerRacket = true;
-        public static bool enablePainMode = false;
+        public static bool enablePainMode = true;
         public static bool EnemiesHaveCreativeInventory = false;
-        public static bool AllowEnemiesToStartBases = false;
-        public static bool AllowAirEnemiesToSpawn = false;
+        public static bool AllowEnemiesToStartBases = true;
+        public static bool AllowAirEnemiesToSpawn = true;
+        public static bool AllowSeaEnemiesToSpawn = true;
         public static bool DesignsToLog = false;
 
-        public static bool DestroyTreesInWater = false;
+        //public static bool DestroyTreesInWater = false;
 
 
         internal static bool isWaterModPresent = false;
@@ -59,6 +60,7 @@ namespace TAC_AI
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
         public static OptionToggle enemyAirSpawn;
+        public static OptionToggle enemySeaSpawn;
 
 
         internal static bool firedAfterBlockInjector = false;
@@ -141,32 +143,35 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
             thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
+            thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
 
-            var TACAI = ModName;
-            betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
+            var TACAI = ModName + " - General";
+            betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF to uninstall and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, MuteNonPlayerRacket);
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            if (isTougherEnemiesPresent || testEnemyAI)
+
+            var TACAIEnemies = ModName + " - Enemies";
+            painfulEnemies = new OptionToggle("<b>Rebuilt Enemies</b>", TACAIEnemies, enablePainMode);
+            painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            diff = new OptionRange("AI Difficulty", TACAI, Difficulty, -50, 150, 25);
+            diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
+            enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
+            infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+
+            if (!isPopInjectorPresent)
             {
-                var TACAIEnemies = ModName + " - Enemies";
-                painfulEnemies = new OptionToggle("Painful Enemies", TACAIEnemies, enablePainMode);
-                painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                diff = new OptionRange("AI Difficulty", TACAI, Difficulty, -50, 150, 25);
-                diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
-                enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                if (!isPopInjectorPresent)
-                {
-                    enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemies, AllowAirEnemiesToSpawn);
-                    enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                }
-                infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
-                infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemies, AllowAirEnemiesToSpawn);
+                enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemies, AllowSeaEnemiesToSpawn);
+                enemySeaSpawn.onValueSaved.AddListener(() => { AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             }
+
 
             // Now setup bases
             if (!isBlockInjectorPresent)

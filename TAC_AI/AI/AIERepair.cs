@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using UnityEngine.Serialization;
+using UnityEngine.Networking;
 using UnityEngine;
 
 namespace TAC_AI.AI
@@ -437,7 +438,10 @@ namespace TAC_AI.AI
             TechMemor.ranOutOfParts = false;
             bool success;
             //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
-            success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.p, new OrthoRotation(template.r));
+            if (!ManNetwork.inst.IsMultiplayer())
+                success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.p, new OrthoRotation(template.r));
+            else
+                success = BlockAttachNetworkOverride(tank, template, canidate);
             if (success)
             {
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
@@ -462,6 +466,49 @@ namespace TAC_AI.AI
                 }
             }
             return success;
+        }
+        public static bool BlockAttachNetworkOverride(Tank tank, BlockMemory template, TankBlock canidate)
+        {
+            if (!ManNetwork.IsHost)
+                return false;// CANNOT DO THIS WHEN NOT HOST OR CRASH
+            bool attached = false;
+            NetTech NetT = NetworkServer.FindLocalObject(tank.netTech.netId).GetComponent<NetTech>();
+            if (NetT != null && canidate != null)
+            {
+                Tank tech = NetT.tech;
+                NetBlock netBlock = canidate.netBlock;
+                if (netBlock.IsNull())
+                {
+                    Debug.Log("TACtical_AI: BlockAttachNetworkOverride - NetBlock could not be found on AI block attach attempt!");
+                }
+                else
+                {
+                    attached = tech.blockman.AddBlockToTech(canidate, template.p, new OrthoRotation(template.r));
+                    if (attached)
+                    {
+                        Singleton.Manager<ManNetwork>.inst.ServerNetBlockAttachedToTech.Send(tech, netBlock, canidate);
+                        Singleton.Manager<ManBlockLimiter>.inst.TagAsInteresting(tech);
+                        tech.netTech.SaveTechData();
+                        BlockAttachedMessage message = new BlockAttachedMessage
+                        {
+                            m_TechNetId = tech.netTech.netId,
+                            m_BlockPosition = template.p,
+                            m_BlockOrthoRotation = (int)template.r,
+                            m_BlockPoolID = canidate.blockPoolID
+                        };
+                        Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.BlockAttach, message);
+                        if (netBlock.block != null)
+                        {
+                            netBlock.Disconnect();
+                        }
+                        netBlock.RemoveClientAuthority();
+                        NetworkServer.UnSpawn(netBlock.gameObject);
+                        //m_PendingAttach.Remove(netBlock);
+                        netBlock.transform.Recycle(worldPosStays: false);
+                    }
+                }
+            }
+            return attached;
         }
 
 
@@ -642,12 +689,12 @@ namespace TAC_AI.AI
                 TechMemor.ranOutOfParts = false;
 
                 TankBlock foundBlock = null;
-                if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
+                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
                 {
                     continue;
                 }
                 else
-                    foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
+                    foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
                 List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });
@@ -969,12 +1016,12 @@ namespace TAC_AI.AI
 
                 TankBlock foundBlock = null;
 
-                if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
+                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
                 {
                     continue;
                 }
                 else
-                    foundBlock = Singleton.Manager<ManSpawn>.inst.SpawnBlock(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
+                    foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
                 List<BlockMemory> posBlocks = Mem.FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });
@@ -997,8 +1044,11 @@ namespace TAC_AI.AI
         {
             bool success;
             //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
-            success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.p, new OrthoRotation(template.r));
-            
+            if (!ManNetwork.inst.IsMultiplayer())
+                success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.p, new OrthoRotation(template.r));
+            else
+                success = BlockAttachNetworkOverride(tank, template, canidate);
+
             return success;
         }
 
