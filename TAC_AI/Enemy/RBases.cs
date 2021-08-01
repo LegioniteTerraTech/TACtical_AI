@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -70,7 +71,7 @@ namespace TAC_AI.AI.Enemy
         {
             public Tank Tank;
             public int Team { get { return Tank.Team; } }
-            public int BuildBucks => buildBucks;
+            public int BuildBucks { get { return buildBucks; } }
             private int buildBucks = 5000;
             public bool isHQ = false;
 
@@ -270,45 +271,41 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static void SetupBaseType(Templates.SpawnBaseTypes type, EnemyMind mind)
+        public static void SetupBaseType(SpawnBaseTypes type, EnemyMind mind)
         {   // iterate through EVERY BASE dammit
-            switch (type)
+            if (RawTechLoader.IsHQ(type))
             {
-                case Templates.SpawnBaseTypes.GSOSeller:
-                case Templates.SpawnBaseTypes.GSOMidBase:
-                case Templates.SpawnBaseTypes.GSOAIMinerProduction:
-                    mind.StartedAnchored = true;
-                    mind.AllowInvBlocks = true;
-                    mind.AllowRepairsOnFly = true;
-                    mind.EvilCommander = EnemyHandling.Stationary;
-                    mind.CommanderMind = EnemyAttitude.Default;
-                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                    mind.CommanderAttack = EnemyAttack.Grudge;
-                    mind.CommanderBolts = EnemyBolts.AtFull;
-                    break;
-                case Templates.SpawnBaseTypes.GSOMilitaryBase:
-                case Templates.SpawnBaseTypes.GCHeadquarters:
-                case Templates.SpawnBaseTypes.HECommandCentre:
-                    mind.StartedAnchored = true;
-                    mind.AllowInvBlocks = true;
-                    mind.AllowRepairsOnFly = true;
-                    mind.InvertBullyPriority = true;
-                    mind.EvilCommander = EnemyHandling.Stationary;
-                    mind.CommanderAttack = EnemyAttack.Bully;
-                    mind.CommanderMind = EnemyAttitude.Homing;
-                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                    mind.CommanderBolts = EnemyBolts.AtFull;
-                    break;
-                default:
-                    mind.StartedAnchored = true;
-                    mind.AllowInvBlocks = true;
-                    mind.AllowRepairsOnFly = true;
-                    mind.EvilCommander = EnemyHandling.Stationary;
-                    mind.CommanderMind = EnemyAttitude.Default;
-                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                    mind.CommanderAttack = EnemyAttack.Spyper;
-                    mind.CommanderBolts = EnemyBolts.AtFull;
-                    break;
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.AtFull;
+            }
+            else if (RawTechLoader.ContainsPurpose(type, BasePurpose.Harvesting))
+            {
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderMind = EnemyAttitude.Default;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderBolts = EnemyBolts.AtFull;
+            }
+            else
+            {
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderMind = EnemyAttitude.Default;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderAttack = EnemyAttack.Spyper;
+                mind.CommanderBolts = EnemyBolts.AtFull;
             }
         }
     }

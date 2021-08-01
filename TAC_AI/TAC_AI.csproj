@@ -171,6 +171,7 @@
     <Compile Include="ModuleChargerTracker.cs" />
     <Compile Include="ModuleHarvestReciever.cs" />
     <Compile Include="KickStart.cs" />
+    <Compile Include="NetworkHandler.cs" />
     <Compile Include="PatchBatch.cs" />
     <Compile Include="AnimeAI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

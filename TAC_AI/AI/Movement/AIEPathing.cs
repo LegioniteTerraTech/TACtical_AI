@@ -109,7 +109,7 @@ namespace TAC_AI.AI.Movement
 
 
         // ALLY COLLISION AVOIDENCE
-        public static Tank ClosestAlly(Vector3 tankPos, out float bestValue)
+        public static Tank ClosestAlly(Vector3 tankPos, out float bestValue, Tank thisTank)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             bestValue = 500;
@@ -117,17 +117,35 @@ namespace TAC_AI.AI.Movement
             Tank closestTank = null;
             try
             {
-                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                if (ManNetwork.IsNetworked)
                 {
-                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                    if (bestValue > temp && temp != 0)
+                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
+                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        bestValue = temp;
-                        bestStep = stepper;
+                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        if (bestValue > temp && temp != 0)
+                        {
+                            bestValue = temp;
+                            bestStep = stepper;
+                        }
                     }
+                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    closestTank = AlliesAlt.ElementAt(bestStep);
                 }
-                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                closestTank = Allies.ElementAt(bestStep);
+                else
+                {
+                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    {
+                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        if (bestValue > temp && temp != 0)
+                        {
+                            bestValue = temp;
+                            bestStep = stepper;
+                        }
+                    }
+                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    closestTank = Allies.ElementAt(bestStep);
+                }
                 //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
@@ -136,7 +154,7 @@ namespace TAC_AI.AI.Movement
             }
             return closestTank;
         }
-        public static Tank ClosestAllyPrecision(Vector3 tankPos, out float bestValue)
+        public static Tank ClosestAllyPrecision(Vector3 tankPos, out float bestValue, Tank thisTank)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             //  For when the size matters of the object to dodge
@@ -146,17 +164,35 @@ namespace TAC_AI.AI.Movement
             Tank closestTank = null;
             try
             {
-                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                if (ManNetwork.IsNetworked)
                 {
-                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
-                    if (bestValue > temp && temp != 0)
+                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
+                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        bestValue = temp;
-                        bestStep = stepper;
+                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(AlliesAlt.ElementAt(stepper).blockBounds.extents);
+                        if (bestValue > temp && temp != 0)
+                        {
+                            bestValue = temp;
+                            bestStep = stepper;
+                        }
                     }
+                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    closestTank = AlliesAlt.ElementAt(bestStep);
                 }
-                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                closestTank = Allies.ElementAt(bestStep);
+                else
+                {
+                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    {
+                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
+                        if (bestValue > temp && temp != 0)
+                        {
+                            bestValue = temp;
+                            bestStep = stepper;
+                        }
+                    }
+                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    closestTank = Allies.ElementAt(bestStep);
+                }
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
@@ -166,7 +202,7 @@ namespace TAC_AI.AI.Movement
             return closestTank;
         }
 
-        public static Tank SecondClosestAlly(Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue)
+        public static Tank SecondClosestAlly(Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue, Tank thisTank)
         {
             // Finds the two closest allies and outputs their respective distances as well as their beings
             bestValue = 500;
@@ -176,26 +212,53 @@ namespace TAC_AI.AI.Movement
             Tank closestTank;
             try
             {
-                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                if (ManNetwork.IsNetworked)
                 {
-                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                    if (bestValue > temp && temp != 0)
+                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
+                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        auxStep = bestStep;
-                        bestStep = stepper;
-                        auxBestValue = bestValue;
-                        bestValue = temp;
+                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        if (bestValue > temp && temp != 0)
+                        {
+                            auxStep = bestStep;
+                            bestStep = stepper;
+                            auxBestValue = bestValue;
+                            bestValue = temp;
+                        }
+                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
+                        {
+                            auxStep = stepper;
+                            auxBestValue = temp;
+                        }
                     }
-                    else if (bestValue < temp && auxBestValue > temp && temp != 0)
-                    {
-                        auxStep = stepper;
-                        auxBestValue = temp;
-                    }
+                    secondTank = AlliesAlt.ElementAt(auxStep);
+                    closestTank = AlliesAlt.ElementAt(bestStep);
+                    auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 }
-                secondTank = Allies.ElementAt(auxStep);
-                closestTank = Allies.ElementAt(bestStep);
-                auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                else
+                {
+                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    {
+                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        if (bestValue > temp && temp != 0)
+                        {
+                            auxStep = bestStep;
+                            bestStep = stepper;
+                            auxBestValue = bestValue;
+                            bestValue = temp;
+                        }
+                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
+                        {
+                            auxStep = stepper;
+                            auxBestValue = temp;
+                        }
+                    }
+                    secondTank = Allies.ElementAt(auxStep);
+                    closestTank = Allies.ElementAt(bestStep);
+                    auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                }
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
@@ -207,7 +270,7 @@ namespace TAC_AI.AI.Movement
             secondTank = null;
             return null;
         }
-        public static Tank SecondClosestAllyPrecision(Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue)
+        public static Tank SecondClosestAllyPrecision(Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue, Tank thisTank)
         {
             // Finds the two closest allies and outputs their respective distances as well as their beings
             //  For when the size matters of the object to dodge
@@ -219,28 +282,12 @@ namespace TAC_AI.AI.Movement
             Tank closestTank;
             try
             {
-                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                if (ManNetwork.IsNetworked)
                 {
-                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
-                    if (bestValue > temp && temp != 0)
+                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
+                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        auxStep = bestStep;
-                        bestStep = stepper;
-                        auxBestValue = bestValue;
-                        bestValue = temp;
-                    }
-                    else if (bestValue < temp && auxBestValue > temp && temp != 0)
-                    {
-                        auxStep = stepper;
-                        auxBestValue = temp;
-                    }
-                }
-                /*
-                if (auxBestValue == 500 && Allies.Count > 2)
-                { //TRY AGAIN
-                    for (int stepper = Allies.Count; 0 < stepper; stepper--)
-                    {
-                        float temp = (Allies.ElementAt(stepper).rbody.position - tankPos).sqrMagnitude - AIEnhancedCore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
+                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(AlliesAlt.ElementAt(stepper).blockBounds.extents);
                         if (bestValue > temp && temp != 0)
                         {
                             auxStep = bestStep;
@@ -248,15 +295,40 @@ namespace TAC_AI.AI.Movement
                             auxBestValue = bestValue;
                             bestValue = temp;
                         }
+                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
+                        {
+                            auxStep = stepper;
+                            auxBestValue = temp;
+                        }
                     }
+                    secondTank = AlliesAlt.ElementAt(auxStep);
+                    closestTank = AlliesAlt.ElementAt(bestStep);
+                    auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 }
-                if (auxBestValue == 500)
-                    Debug.Log("TACtical_AI: SecondClosestAllyPrecisionProcess EPIC FAIL!");
-                */
-                secondTank = Allies.ElementAt(auxStep);
-                closestTank = Allies.ElementAt(bestStep);
-                auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                else
+                {
+                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    {
+                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
+                        if (bestValue > temp && temp != 0)
+                        {
+                            auxStep = bestStep;
+                            bestStep = stepper;
+                            auxBestValue = bestValue;
+                            bestValue = temp;
+                        }
+                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
+                        {
+                            auxStep = stepper;
+                            auxBestValue = temp;
+                        }
+                    }
+                    secondTank = Allies.ElementAt(auxStep);
+                    closestTank = Allies.ElementAt(bestStep);
+                    auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                }
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
@@ -269,7 +341,7 @@ namespace TAC_AI.AI.Movement
             return null;
         }
         
-        public static Tank ClosestUnanchoredAlly(Vector3 tankPos, out float bestValue)
+        public static Tank ClosestUnanchoredAlly(Vector3 tankPos, out float bestValue, Tank thisTank)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             bestValue = 500;
@@ -277,17 +349,35 @@ namespace TAC_AI.AI.Movement
             Tank closestTank = null;
             try
             {
-                for (int stepper = 0; Allies.Count > stepper; stepper++)
+                if (ManNetwork.IsNetworked)
                 {
-                    float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                    if (bestValue > temp && temp >= 10 && !Allies.ElementAt(stepper).IsAnchored)
+                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
+                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        bestValue = temp;
-                        bestStep = stepper;
+                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        if (bestValue > temp && temp >= 10 && !AlliesAlt.ElementAt(stepper).IsAnchored)
+                        {
+                            bestValue = temp;
+                            bestStep = stepper;
+                        }
                     }
+                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    closestTank = AlliesAlt.ElementAt(bestStep);
                 }
-                bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                closestTank = Allies.ElementAt(bestStep);
+                else
+                {
+                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    {
+                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        if (bestValue > temp && temp >= 10 && !Allies.ElementAt(stepper).IsAnchored)
+                        {
+                            bestValue = temp;
+                            bestStep = stepper;
+                        }
+                    }
+                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                    closestTank = Allies.ElementAt(bestStep);
+                }
                 //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
@@ -500,6 +590,8 @@ namespace TAC_AI.AI.Movement
             final.y = final_y;
             return final;
         }
+
+        // Sea
         public static Vector3 OffsetToSea(Vector3 input, Tank tank, AIECore.TankAIHelper thisInst)
         {
             Vector3 final = input;

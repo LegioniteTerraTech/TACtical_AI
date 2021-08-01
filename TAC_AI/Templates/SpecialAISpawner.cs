@@ -296,7 +296,7 @@ namespace TAC_AI.Templates
             //Debug.Log("TACtical_AI: SpecialAISpawner - ACTIVE!!!  time" + counter);
             if (counter > AirSpawnInterval / ((KickStart.Difficulty / 100) + 1.5f) && (Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn))
             {   // determine if we should spawn new one, also manage existing pooled aircrafts
-                Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
+                //Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
                 if (UnityEngine.Random.Range(-1, 101) < AircraftSpawnOdds && KickStart.AllowAirEnemiesToSpawn)
                     TrySpawnAircraftInAir();
                 counter = 0;

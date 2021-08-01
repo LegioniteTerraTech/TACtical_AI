@@ -200,9 +200,23 @@ namespace TAC_AI
 
         public static void SetOption(AIType dediAI)
         {
-            lastTank.DediAI = dediAI;
-            fetchAI = dediAI;
-            lastTank.TestForFlyingAIRequirement();
+            if (ManNetwork.IsNetworked)
+            {
+                try
+                {
+                    NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, dediAI);
+                }
+                catch (Exception e)
+                {
+                    Debug.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                }
+            }
+            else
+            {
+                lastTank.DediAI = dediAI;
+                fetchAI = dediAI;
+                lastTank.TestForFlyingAIRequirement();
+            }
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
             CloseSubMenuClickable();

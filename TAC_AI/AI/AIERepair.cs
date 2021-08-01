@@ -470,7 +470,7 @@ namespace TAC_AI.AI
         public static bool BlockAttachNetworkOverride(Tank tank, BlockMemory template, TankBlock canidate)
         {
             if (!ManNetwork.IsHost)
-                return false;// CANNOT DO THIS WHEN NOT HOST OR CRASH
+                return false;// CANNOT DO THIS WHEN NOT HOST OR ERROR
             bool attached = false;
             NetTech NetT = NetworkServer.FindLocalObject(tank.netTech.netId).GetComponent<NetTech>();
             if (NetT != null && canidate != null)

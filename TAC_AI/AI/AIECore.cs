@@ -581,12 +581,49 @@ namespace TAC_AI.AI
                 this.EstTopSped = 1;
                 //this.LastBuildClock = 0;
                 this.PendingHeightCheck = true;
+                if (AIState == 1)
+                {
+                    try
+                    {
+                        if ((bool)TechMemor)
+                        {
+                            TechMemor.SaveTech();
+                        }
+                    }
+                    catch { }
+                }
             }
             public void OnDetach(TankBlock newBlock, Tank tank)
             {
                 this.EstTopSped = 1;
                 this.recentSpeed = 1;
                 this.PendingHeightCheck = true;
+                if (AIState == 1)
+                {
+                    try
+                    {
+                        if (!ManNetwork.IsNetworked)
+                        {
+                            if ((bool)TechMemor)
+                            {
+                                PendingSystemsCheck = true;
+                                if (tank.blockman.LastRemovedBlocks.Contains(ManPointer.inst.targetVisible.block))
+                                    TechMemor.SaveTech();
+                            }
+                        }
+                        else if (ManNetwork.IsHost)
+                        {
+                            if ((bool)TechMemor)
+                            {
+                                PendingSystemsCheck = true;
+                                if ((bool)lastPlayer)
+                                    if (lastEnemy != null)// only save when not in combat
+                                        TechMemor.SaveTech();
+                            }
+                        }
+                    }
+                    catch { }
+                }
             }
 
             public void OnSpawn(Tank tankInfo)
@@ -610,6 +647,24 @@ namespace TAC_AI.AI
                 this.ResetAll(tank);
             }
             */
+            public void TrySetAITypeRemote(NetPlayer sender, AIType type)
+            {
+                if (ManNetwork.IsNetworked)
+                {
+                    if (sender == null)
+                    {
+                        Debug.Log("TACtical_AI: Anonymous sender error");
+                        return;
+                    }
+                    if (sender.TechTeamID == this.tank.Team)
+                        DediAI = type;
+                    else
+                        Debug.Log("TACtical_AI: TrySetAITypeRemote - Invalid request received - player tried to change AI of Tech that wasn't theirs");
+                }
+                else
+                    Debug.Log("TACtical_AI: TrySetAITypeRemote - Invalid request received - Tried to change AI type when not connected to a server!? \n  The UI handles this automatically!!!\n" + StackTraceUtility.ExtractStackTrace());
+            }
+
 
             public void ResetToDefaultAIController()
             {
@@ -970,7 +1025,7 @@ namespace TAC_AI.AI
                         float lastAllyDist;
                         if (thisInst.SecondAvoidence && moreThan2Allies)// MORE processing power
                         {
-                            lastCloseAlly = AIEPathing.SecondClosestAlly(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal);
+                            lastCloseAlly = AIEPathing.SecondClosestAlly(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
                             if (lastAllyDist < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
                             {
                                 if (lastAuxVal < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
@@ -994,7 +1049,7 @@ namespace TAC_AI.AI
                             }
 
                         }
-                        lastCloseAlly = AIEPathing.ClosestAlly(tank.boundsCentreWorldNoCheck, out lastAllyDist);
+                        lastCloseAlly = AIEPathing.ClosestAlly(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
                         //Debug.Log("TACtical_AI: Ally is " + thisInst.lastAllyDist + " dist away");
                         //Debug.Log("TACtical_AI: Trigger threshold is " + (thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
                         if (lastCloseAlly == null)
@@ -1036,7 +1091,7 @@ namespace TAC_AI.AI
                         float lastAllyDist;
                         if (thisInst.SecondAvoidence && moreThan2Allies)// MORE processing power
                         {
-                            lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal);
+                            lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
                             if (lastAllyDist < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
                             {
                                 if (lastAuxVal < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
@@ -1058,7 +1113,7 @@ namespace TAC_AI.AI
                             }
 
                         }
-                        lastCloseAlly = AIEPathing.ClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out lastAllyDist);
+                        lastCloseAlly = AIEPathing.ClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
                         //Debug.Log("TACtical_AI: Ally is " + thisInst.lastAllyDist + " dist away");
                         //Debug.Log("TACtical_AI: Trigger threshold is " + (thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
                         if (lastCloseAlly == null)
@@ -1377,6 +1432,8 @@ namespace TAC_AI.AI
                             RemoveEnemyMatters();
                             this.AIState = 1;
                             this.RefreshAI();
+                            if ((bool)TechMemor)
+                                TechMemor.SaveTech();
                             Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
                         }
                         if (OverrideAllControls)

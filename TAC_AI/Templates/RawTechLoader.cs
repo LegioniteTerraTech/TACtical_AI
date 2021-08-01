@@ -529,6 +529,22 @@ namespace TAC_AI.Templates
             return theTech;
         }
 
+        public static Tank TechTransformer(Tank tech, string JSONTechBlueprint)
+        {
+            int playerTeam = tech.Team;
+            string OGName = tech.name;
+            Vector3 techPos = tech.transform.position;
+            Quaternion techFacing = tech.transform.rotation;
+            tech.visible.RemoveFromGame();
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(JSONTechBlueprint), techPos, techFacing);
+            block.InitNew();
+
+            Tank theTech;
+            theTech = TechFromBlock(block, playerTeam, OGName);
+            return theTech;
+        }
+
+
 
         // Override
         internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat)
@@ -745,6 +761,12 @@ namespace TAC_AI.Templates
         {
             if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
                 return baseT.purposes.Contains(BasePurpose.Headquarters);
+            return false;
+        }
+        internal static bool ContainsPurpose(SpawnBaseTypes toSpawn, BasePurpose purpose)
+        {
+            if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
+                return baseT.purposes.Contains(purpose);
             return false;
         }
         internal static bool IsRadiusClearOfTechObst(Tank tank, Vector3 pos, float radius)

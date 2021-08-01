@@ -420,6 +420,7 @@ namespace TAC_AI
                             ModuleAdd.Prospector = true;
                             ModuleAdd.Buccaneer = true;
                             ModuleAdd.AidAI = true;
+                            ModuleAdd.SelfRepairAI = true;
                         }
                         if (name == "GSO_AIAnchor_121")
                         {

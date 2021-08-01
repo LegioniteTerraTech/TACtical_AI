@@ -57,11 +57,11 @@ namespace TAC_AI
 
             // ----EXTRAS----
             "MeleePreferred": false,// Should the AI ram the enemy?
-            "SidePreferred": false, // Should the AI orbit the enemy? (overrides melee) (N/A atm)
+            "SidePreferred": false, // Should the AI orbit the enemy? (Partially overrides melee)
             "AdvAvoidence": false,  // Should the AI avoid two allied techs at once?
             "AdvancedAI": false,    // Should the AI take combat calculations and retreat if nesseary? (N/A atm)
             "MTForAll": false,      // Should the AI listen to other Tech MT commands?
-            "AidAI": false,         // Should the AI be willing to sacrifice themselves for their owner's safety?
+            "AidAI": false,         // Should the AI be willing to sacrifice themselves for their owner's safety? - (N/A)
             "SelfRepairAI": false,  // Can the AI self-repair?
             "AnimeAI": false,       // Work with the AnimeAI mod and display a character for this AI? (And also allow interaction with other characters?)
 

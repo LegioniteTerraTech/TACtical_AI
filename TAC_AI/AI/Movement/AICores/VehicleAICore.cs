@@ -138,7 +138,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (help.DediAI == AIType.Aegis)
             {
-                help.theResource = AIEPathing.ClosestUnanchoredAlly(this.controller.Tank.boundsCentreWorldNoCheck, out float bestval).visible;
+                help.theResource = AIEPathing.ClosestUnanchoredAlly(this.controller.Tank.boundsCentreWorldNoCheck, out float bestval, tank).visible;
                 bool Combat = this.TryAdjustForCombat();
                 if (!Combat)
                 {
