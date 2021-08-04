@@ -36,7 +36,6 @@ namespace TAC_AI.AI
             private Tank Tank;
             public AIECore.TankAIHelper thisInst;
             public bool rejectSaveAttempts = false;
-            public bool unlimitedParts = false;
             public bool ranOutOfParts = false;
 
             public List<BlockMemory> SavedTech = new List<BlockMemory>();
@@ -444,6 +443,10 @@ namespace TAC_AI.AI
                 success = BlockAttachNetworkOverride(tank, template, canidate);
             if (success)
             {
+                if (canidate.GetComponent<ModuleItemProducer>() && tank.IsEnemy())
+                {
+                    canidate.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
+                }
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
                 if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
                 {

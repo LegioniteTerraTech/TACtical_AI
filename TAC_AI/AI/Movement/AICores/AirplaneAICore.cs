@@ -33,7 +33,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             //Debug.Log("TACtical_AI: Tech " + tank.name + " plane drive was called");
 
-            if (tank.wheelGrounded || pilot.ForcePitchUp)
+            if (tank.grounded || pilot.ForcePitchUp)
             {   // Try and takeoff
                 pilot.MainThrottle = 1;
                 pilot.PerformUTurn = 0;
@@ -42,7 +42,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                if (pilot.TargetGrounded) // Divebombing mode
+                if (pilot.TargetGrounded && (bool)thisInst.lastEnemy) // Divebombing mode
                 {  // We previously disabled the ground offset terrain avoider and aim directly at the enemy
                     float dist = (thisInst.lastDestination - (tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime))).magnitude;
                     Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(thisInst.lastDestination - tank.boundsCentreWorldNoCheck);
@@ -61,11 +61,24 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (pilot.PerformDiveAttack == 1)
                     {
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  Aiming at target!");
-                        if (Heading.z > 0.25f)
-                            pilot.PerformDiveAttack = 1; // too low and we break off from the attack
+                        if (Heading.x > 0.3f && Heading.x < -0.3f && Heading.z > 0)
+                            pilot.PerformDiveAttack = 2; 
                         if (pilot.PerformUTurn > 0)
                         {   //The Immelmann Turn
                             AircraftUtils.UTurn(thisControl, thisInst, tank, pilot);
+                            return true;
+                        }
+                        else if (pilot.PerformUTurn == -1)
+                        {
+                            pilot.MainThrottle = 1;
+                            this.pilot.UpdateThrottle(thisInst, thisControl);
+                            AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                            if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
+                            {
+                                pilot.PerformUTurn = 0;
+                                if (pilot.PerformDiveAttack == 1)
+                                    pilot.PerformDiveAttack = 2;
+                            }
                             return true;
                         }
                         else
@@ -88,6 +101,19 @@ namespace TAC_AI.AI.Movement.AICores
                             AircraftUtils.UTurn(thisControl, thisInst, tank, pilot);
                             return true;
                         }
+                        else if (pilot.PerformUTurn == -1)
+                        {
+                            pilot.MainThrottle = 1;
+                            this.pilot.UpdateThrottle(thisInst, thisControl);
+                            AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                            if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
+                            {
+                                pilot.PerformUTurn = 0;
+                                if (pilot.PerformDiveAttack == 1)
+                                    pilot.PerformDiveAttack = 2;
+                            }
+                            return true;
+                        }
                         else
                         {
                             this.pilot.UpdateThrottle(thisInst, thisControl);
@@ -102,15 +128,15 @@ namespace TAC_AI.AI.Movement.AICores
                     else
                     {
                         pilot.PerformUTurn = 0; // hold off on the U-Turn
-                        if (Heading.z < 0)
+                        if (Heading.z < 0.25f)
                         {   // Moving away from target
                             //Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
                             pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
-                            Vector3 AwayFlat = -Heading;
+                            Vector3 AwayFlat = -(pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized;
                             AwayFlat.y = 0;
                             AwayFlat.Normalize();
-                            AwayFlat.y = 0.05f;
+                            AwayFlat.y = 0.25f;
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (AwayFlat.normalized * 300));
                         }
                         else

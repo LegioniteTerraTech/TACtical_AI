@@ -15,10 +15,20 @@ namespace TAC_AI.Templates
         // error
         NotAvail,
 
+        // fallbacks
+        GSO0Base,
+        GCTotum,
+        VENPipperoni,
+        HERelay,
+        BFCyberFlote,
+        RRSideswipe,
+
+
         // The Bases
         // GSO
         GSOSeller,
         GSOMidBase,
+        GSOMinerCluster,
         GSOMilitaryBase,
         GSOAIMinerProduction,
         GSOTechFactory,
@@ -42,10 +52,12 @@ namespace TAC_AI.Templates
         HECombatStation,
         HEComsat,
         HETankFactory,
+        HEXLTankFactory,
         HEMunitionsDepot,
         HEAircraftGarrison,
 
         // The Defenses
+        GSOLightDefense,
         GSOTowerDefense,
         GSOMegaDefense,
         GCMiningLaserLite,
@@ -70,6 +82,7 @@ namespace TAC_AI.Templates
         GSOLiftOff,         // Unarmed, early
         GSOEpicTony,        // lotta lasers
         GSOAirdropSquad,    // GSO Dropship
+        GSOHammer,   // GSO Missile aircraft
         GSOFightOrFlight,   // Heavy GSO does-all
 
         VENLiftOff,         // Unarmed, early
@@ -80,6 +93,7 @@ namespace TAC_AI.Templates
         VENMachinator,      // gg toofast, tons of missiles
 
         HEPeanutJet,        // Intro cutscene enemy, has cruise missiles very early
+        HEVengence,         // Railgun fighter
         HEDropship,         // Wheeled Tank Dropship (Alien ref)
         HEBombsAway,        // Anti-base bomber
         HECyclone,          // Very fast and dangerous HE aircraft armed to the bone

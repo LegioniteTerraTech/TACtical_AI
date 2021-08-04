@@ -12,8 +12,8 @@ namespace TAC_AI.AI
     class AIControllerAir : MonoBehaviour, IMovementAIController
     {
         internal static FieldInfo boostGet = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
-        internal static FieldInfo boostDir = typeof(BoosterJet).GetField("m_LocalBoostDirection", BindingFlags.NonPublic | BindingFlags.Instance);
-        internal static FieldInfo fanDir = typeof(FanJet).GetField("m_LocalBoostDirection", BindingFlags.NonPublic | BindingFlags.Instance);
+        //internal static FieldInfo boostDir = typeof(BoosterJet).GetField("m_LocalBoostDirection", BindingFlags.NonPublic | BindingFlags.Instance);
+        //internal static FieldInfo fanDir = typeof(FanJet).GetField("m_LocalBoostDirection", BindingFlags.NonPublic | BindingFlags.Instance);
 
         public enum FlightType
         {
@@ -109,19 +109,21 @@ namespace TAC_AI.AI
             this.CheckAllFlightBlocks();
             this.CurrentThrottle = 0;
 
+
             //Now determine type of craft
+            Debug.Log("TACtical AI: (2) Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
             if (mind.IsNull())
             {
                 //if (thisInst.isAstrotechAvail && thisInst.DediAI == AIECore.DediAIType.Aviator)
                 //    InitiateForVTOL(tank, this);
                 if (!this.NoProps)
                 {
-                    if (Vector3.Dot(this.PropBias, Vector3.up) > 0.6f)
+                    if (this.PropBias.y > 0.6f)
                     {   // Likely a helicopter
                         this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                     }
-                    else if (Vector3.Dot(this.PropBias, Vector3.up) > 0.3f)
+                    else if (this.PropBias.y > 0.3f)
                     {   // Likely a VTOL
                         this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
@@ -134,12 +136,12 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.6f)
+                    if (this.BoostBias.y > 0.6f)
                     {   // Likely a helicopter
                         this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                     }
-                    else if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.3f)
+                    else if (this.BoostBias.y > 0.3f)
                     {   // Likely a VTOL
                         this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
@@ -150,19 +152,19 @@ namespace TAC_AI.AI
                         this.AICore.Initiate(tank, this);
                     }
                 }
-                Debug.Log("TACtical_AI: Tech " + tank.name + " has been assigned Allied aircraft AI with flight mentality " + this.FlyStyle.ToString() + " and flying chill of " + this.FlyingChillFactor);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " has been assigned Allied aircraft AI with flight mentality " + this.FlyStyle.ToString() + ", Roll intensity of " + this.RollStrength + " and flying chill of " + this.FlyingChillFactor);
             }
             else
             {
                 if (!this.NoProps)
                 {
-                    if (Vector3.Dot(this.PropBias, Vector3.up) > 0.6f)
+                    if (this.PropBias.y > 0.6f)
                     {   // Likely a helicopter
                         this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Chopper;
                     }
-                    else if (Vector3.Dot(this.PropBias, Vector3.up) > 0.3f)
+                    else if (this.PropBias.y > 0.3f)
                     {   // Likely a VTOL
                         this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
@@ -177,13 +179,13 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.6f)
+                    if (this.BoostBias.y > 0.6f)
                     {   // Likely a helicopter
                         this.AICore = new HelicopterAICore();
                         this.AICore.Initiate(tank, this);
                         mind.EvilCommander = Enemy.EnemyHandling.Chopper;
                     }
-                    else if (Vector3.Dot(this.BoostBias, Vector3.up) > 0.3f)
+                    else if (this.BoostBias.y > 0.3f)
                     {   // Likely a VTOL
                         this.AICore = new VtolAICore();
                         this.AICore.Initiate(tank, this);
@@ -196,7 +198,7 @@ namespace TAC_AI.AI
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }
                 }
-                Debug.Log("TACtical_AI: Tech " + tank.name + " has been assigned aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + this.FlyStyle.ToString() + " and flying chill of " + this.FlyingChillFactor);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " has been assigned aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + this.FlyStyle.ToString() + ", Roll intensity of " + this.RollStrength + " and flying chill of " + this.FlyingChillFactor);
             }
         }
         public void UpdateEnemyMind(Enemy.EnemyMind mind)
@@ -210,7 +212,7 @@ namespace TAC_AI.AI
             {
                 Tank.AttachEvent.Unsubscribe(OnAttach);
                 Tank.DetachEvent.Unsubscribe(OnDetach);
-                Debug.Log("TACtical_AI: Removed aircraft AI from " + Tank.name);
+                //Debug.Log("TACtical_AI: Removed aircraft AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }
@@ -237,12 +239,13 @@ namespace TAC_AI.AI
                 {
                     if (jet.spinDelta <= 10)
                     {
-                        biasDirection -= Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards);
+                        biasDirection -= Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
                         if (jet.spinDelta < lowestDelta)
                             lowestDelta = jet.spinDelta;
                     }
-                    Vector3 fanDirection = (Vector3) fanDir.GetValue(jet);
-                    if (fanDirection.y < -0.5)
+                    //Vector3 fanDirection = (Vector3) fanDir.GetValue(jet);
+                    //if (fanDirection.x < -0.5)
+                    if (Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards).z < -0.5)
                     {
                         fanThrust += jet.force;
                     }
@@ -257,8 +260,9 @@ namespace TAC_AI.AI
                     }
 
                     float force = (float)boostGet.GetValue(boost);
-                    Vector3 jetDirection = (Vector3) boostDir.GetValue(boost);
-                    if (jetDirection.y < -0.5)
+                    //Vector3 jetDirection = (Vector3) boostDir.GetValue(boost);
+                    //if (jetDirection.x < -0.5)
+                    if (Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection)).z < -0.5)
                     {
                         boosterThrust += force;
                     }
@@ -268,25 +272,28 @@ namespace TAC_AI.AI
                 }
             }
 
+
             float totalThrust = (fanThrust + boosterThrust * this.BoosterThrustBias);
             this.BankOnly = totalThrust * totalThrust < (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).sqrMagnitude;
 
+            if (this.BankOnly)
+            {  
+                Debug.Log("TACtical AI: Tech " + Tank.name + " does not apply enough forwards thrust " + totalThrust + " vs " + (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).magnitude + " to perform an immelmann.");
+            }
             if (lowestDelta > 10 && boostBiasDirection == Vector3.zero)
             {   //IT HAS NO VALID PROPS OR BOOSTERS!!!!
                 //Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS OR BOOSTERS TO FLY USING!!");
-                return;
             }
             if (lowestDelta > 10 && consumeBoosters > 0)
             {
                 //Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS TO FLY USING!!");
                 NoProps = true;
             }
-            BoostBias = boostBiasDirection;
+            BoostBias = boostBiasDirection.normalized;
 
-            boostBiasDirection.Normalize();
-            biasDirection.Normalize();
-            PropBias = biasDirection;
-            if (Mathf.Abs(Vector3.Dot(biasDirection, Vector3.right)) > 0.2f)
+            PropBias = biasDirection.normalized;
+            Debug.Log("TACtical AI: Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
+            if (Mathf.Abs(Vector3.Dot(PropBias, Vector3.right)) > 0.2f)
             {   //CENTER OF THRUST MAY BE OFF!!!
                 SkewedFlightCenter = true;
                 //Debug.Log("TACtical AI: Tech " + Tank.name + " reported to have off-centered thrust of a factor of " + Mathf.Abs(Vector3.Dot(biasDirection.normalized, Vector3.right)) + ".  \nAs all props don't have uniform thrust backwards and forwards (in relation to the root cab), the AI may not be able to fly correctly!!!");
@@ -484,23 +491,25 @@ namespace TAC_AI.AI
         }
         public void UpdateThrottle(AIECore.TankAIHelper thisInst, TankControl control)
         {
+            TankControl.ControlState control3D = (TankControl.ControlState)AircraftUtils.controlGet.GetValue(control);
+
             if (this.NoProps)
             {
                 if (this.FlyStyle == FlightType.Aircraft)
                 {
                     if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(this.Tank.rbody.velocity).z < AIControllerAir.Stallspeed + 5 && !this.Tank.beam.IsActive)
-                        control.BoostControlJets = true;
+                        control3D.m_State.m_BoostJets = true;
                     else
-                        control.BoostControlJets = thisInst.BOOST;
+                        control3D.m_State.m_BoostJets = thisInst.BOOST;
                 }
                 else // VTOL
                 {
                     if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(this.Tank.rbody.velocity).z < AIControllerAir.Stallspeed + 5 && !this.Tank.beam.IsActive)
-                        control.BoostControlJets = true;
+                        control3D.m_State.m_BoostJets = true;
                     else if (this.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(this.Tank.boundsCentreWorldNoCheck, AIECore.Extremes(this.Tank.blockBounds.extents) * 2) && !this.Tank.beam.IsActive)
-                        control.BoostControlJets = true;
+                        control3D.m_State.m_BoostJets = true;
                     else
-                        control.BoostControlJets = thisInst.BOOST;
+                        control3D.m_State.m_BoostJets = thisInst.BOOST;
                 }
 
                 // Still try to move wheels and other things
@@ -532,15 +541,19 @@ namespace TAC_AI.AI
                     this.CurrentThrottle = this.MainThrottle;
                 }
                 this.CurrentThrottle = Mathf.Clamp(this.CurrentThrottle, -1, 1);
-                if (this.FlyStyle == FlightType.Aircraft && this.PropBias.z > 0.8f && CurrentThrottle > 0.8f)
+                if (this.FlyStyle == FlightType.Aircraft)
                 {   // Some aircraft stall when pitching up - this should help avoid that
-                    control.BoostControlProps = true;
-                }
-                else
-                {
-                    control.BoostControlProps = false;
+                    if (CurrentThrottle > 0.5)
+                    {  
+                        control3D.m_State.m_BoostProps = true;
+                    }
+                    else
+                    {
+                        control3D.m_State.m_BoostProps = false;
+                    }
                 }
             }
+            AircraftUtils.controlGet.SetValue(control, control3D);
         }
     }
 }

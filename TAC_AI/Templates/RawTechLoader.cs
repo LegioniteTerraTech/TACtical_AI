@@ -42,7 +42,7 @@ namespace TAC_AI.Templates
     public static class RawTechLoader
     {
         const float MinimumBaseSpacing = 350;
-        const int MaxBlockLimitAttract = 64;
+        const int MaxBlockLimitAttract = 128;
 
         static bool ForceSpawn = false;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
@@ -575,25 +575,15 @@ namespace TAC_AI.Templates
         }
         internal static bool GetEnemyBaseSupplies(SpawnBaseTypes toSpawn)
         {
-            switch (toSpawn)
+            if (IsHQ(toSpawn))
             {
-                // GSO
-                case SpawnBaseTypes.GSOMilitaryBase:
-                case SpawnBaseTypes.GSOStarport:
-                case SpawnBaseTypes.GSOTechFactory:
-                // GC
-                case SpawnBaseTypes.GCHeadquarters:
-                case SpawnBaseTypes.GCProspectorHub:
-                // VEN
-                case SpawnBaseTypes.VENTuningShop:
-                // HE
-                case SpawnBaseTypes.HETankFactory:
-                case SpawnBaseTypes.HECombatStation:
-                case SpawnBaseTypes.HEAircraftGarrison:
-                    return true;
-                default:
-                    return false;
+                return true;
             }
+            else if (ContainsPurpose(toSpawn, BasePurpose.Harvesting))
+            {
+                return true;
+            }
+            return false;
         }
         internal static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
         {

@@ -46,7 +46,7 @@ namespace TAC_AI.AI.Enemy
                 if (AIERepair.TryAttachExistingBlockFromList(tank, mind.TechMemor, fBlocks))
                     return true;
 
-                if ((KickStart.EnemiesHaveCreativeInventory || (mind.AllowInvBlocks && mind.TechMemor.unlimitedParts)) && mind.CommanderSmarts >= EnemySmarts.Smrt)
+                if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks) && mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
                     //Debug.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
                     if (AIERepair.TrySpawnAndAttachBlockFromList(tank, mind.TechMemor, typesMissing, false, true))
@@ -87,6 +87,8 @@ namespace TAC_AI.AI.Enemy
                     EnemyRepairLerp(tank, mind);
                     thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
                     thisInst.AttemptedRepairs = 1;
+                    if (mind.StartedAnchored && !(bool)thisInst.lastEnemy)   // Keep those anchors updating!
+                        tank.Anchors.TryAnchorAll(true);
                 }
                 catch { }
             }

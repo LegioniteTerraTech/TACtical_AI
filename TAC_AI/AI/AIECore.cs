@@ -1508,8 +1508,6 @@ namespace TAC_AI.AI
                         }
                     }
                 }
-                //else
-                //    this.Recycle();//Remove big ram consuming module from Techs that don't need it!
             }
 
         }

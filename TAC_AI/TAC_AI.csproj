@@ -167,6 +167,7 @@
     <Compile Include="Enemy\RMission.cs" />
     <Compile Include="Enemy\RCore.cs" />
     <Compile Include="GUIAIManager.cs" />
+    <Compile Include="ReverseCache.cs" />
     <Compile Include="ModuleAIExtension.cs" />
     <Compile Include="ModuleChargerTracker.cs" />
     <Compile Include="ModuleHarvestReciever.cs" />

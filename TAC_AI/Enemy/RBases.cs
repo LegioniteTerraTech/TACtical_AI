@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.Templates;
@@ -180,12 +181,13 @@ namespace TAC_AI.AI.Enemy
         {   // iterate through EVERY BASE dammit
             string name = tank.name;
             bool DidFire = false;
-            if (name == "INSTANTIATED_BASE")
+            if (name == "TEST_BASE")
             {   //It's a base spawned by this mod
                 tank.Anchors.TryAnchorAll(true);
+                MakeMinersMineUnlimited(tank);
                 DidFire = true;
             }
-            if (tank.GetComponent<Templates.BookmarkBuilder>())
+            if (tank.GetComponent<BookmarkBuilder>())
             {
                 mind.AllowInvBlocks = true;
                 mind.AllowRepairsOnFly = true;
@@ -257,12 +259,16 @@ namespace TAC_AI.AI.Enemy
                         mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                         mind.TechMemor.Initiate();
                     }
-                    Templates.SpawnBaseTypes type = Templates.RawTechLoader.GetEnemyBaseTypeFromName(funds.GetActualName(name));
-                    Debug.Log("TACtical_AI: " + funds.GetActualName(name) + " |type " + type.ToString());
-                    SetupBaseType(type, mind);
-                    mind.TechMemor.SetupForNewTechConstruction(thisInst, Templates.RawTechLoader.GetBlueprint(type));
-                    mind.TechMemor.unlimitedParts = Templates.RawTechLoader.GetEnemyBaseSupplies(type);
-                    tank.MainCorps.Add(Templates.RawTechLoader.GetMainCorp(type));
+                    try
+                    {
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(funds.GetActualName(name));
+                        Debug.Log("TACtical_AI: " + funds.GetActualName(name) + " |type " + type.ToString());
+                        SetupBaseType(type, mind);
+                        mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
+                        tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
+                    }
+                    catch { }
+                    MakeMinersMineUnlimited(tank);
                     tank.Anchors.TryAnchorAll(true);
                     DidFire = true;
                 }
@@ -306,6 +312,41 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderAttack = EnemyAttack.Spyper;
                 mind.CommanderBolts = EnemyBolts.AtFull;
+            }
+        }
+
+
+        // inf money for enemy autominer bases - make sure that no mess
+        public static void MakeMinersMineUnlimited(Tank tank)
+        {   // make autominers mine deep based on biome
+            try
+            {
+                foreach (ModuleItemProducer module in tank.blockman.IterateBlockComponents<ModuleItemProducer>())
+                {
+                    module.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
+                }
+            }
+            catch { }
+        }
+        public static ChunkTypes[] TryGetBiomeResource(Vector3 pos)
+        {   // make autominers mine deep based on biome
+            switch (ManWorld.inst.GetBiomeWeightsAtScenePosition(pos).Biome(0).BiomeType)
+            {
+                case BiomeTypes.Grassland:
+                    return new ChunkTypes[1] { ChunkTypes.EruditeShard };
+                case BiomeTypes.Desert:
+                    return new ChunkTypes[4] { ChunkTypes.OleiteJelly, ChunkTypes.OleiteJelly, ChunkTypes.OleiteJelly, ChunkTypes.IgniteShard };
+                case BiomeTypes.Mountains:
+                    return new ChunkTypes[1] { ChunkTypes.RoditeOre, };
+                case BiomeTypes.SaltFlats:
+                case BiomeTypes.Ice:
+                    return new ChunkTypes[4] { ChunkTypes.CarbiteOre, ChunkTypes.CarbiteOre, ChunkTypes.CarbiteOre, ChunkTypes.CelestiteShard };
+
+                case BiomeTypes.Pillars:
+                    return new ChunkTypes[1] { ChunkTypes.RubberJelly };
+
+                default:
+                    return new ChunkTypes[2] { ChunkTypes.PlumbiteOre, ChunkTypes.TitaniteOre };
             }
         }
     }

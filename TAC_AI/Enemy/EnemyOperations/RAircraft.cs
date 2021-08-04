@@ -199,7 +199,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         }
 
         public static void EnemyDogfighting(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
-        {   // Only accounts for airplanes
+        {   // Only accounts for forward weapons
 
             thisInst.DANGER = false;
             thisInst.lastEnemy = mind.FindEnemyAir();
@@ -208,24 +208,24 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                if (KickStart.isWeaponAimModPresent && mind.CommanderAttack == EnemyAttack.Circle && ((AIControllerAir) thisInst.MovementController).LargeAircraft)
-                {   // AC-130 broadside attack
-                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
+                //if (KickStart.isWeaponAimModPresent && mind.CommanderAttack == EnemyAttack.Circle && ((AIControllerAir) thisInst.MovementController).LargeAircraft)
+                //{   // AC-130 broadside attack
+                //    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
+                //    {
+                //        thisInst.DANGER = true;
+                //        //thisInst.Urgency = 50;
+                //        thisInst.SettleDown();
+                //    }
+                //}
+                //else
+                //{   // Normal Dogfighting
+                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.4f || thisInst.Urgency >= 30)
                     {
                         thisInst.DANGER = true;
                         //thisInst.Urgency = 50;
                         thisInst.SettleDown();
                     }
-                }
-                else
-                {   // Normal Dogfighting
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.25f || thisInst.Urgency >= 30)
-                    {
-                        thisInst.DANGER = true;
-                        //thisInst.Urgency = 50;
-                        thisInst.SettleDown();
-                    }
-                }
+                //}
             }
             else
             {

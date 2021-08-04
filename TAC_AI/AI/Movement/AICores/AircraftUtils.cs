@@ -61,14 +61,20 @@ namespace TAC_AI.AI.Movement.AICores
         {
             //Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
 
-            if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+            if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 1.25f))
                 return Vector3.up;
             Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(Navi3DDirect);
 
             Vector3 direct = Vector3.up;
             if (pilot.PerformUTurn == 3)
             {
+                //Debug.Log("TACtical_AI: Tech " + tank.name + "  Stage 3 Immelmann");
                 direct = Vector3.down;
+            }
+            else if (tank.rootBlockTrans.up.y < -0.2f)
+            {   // handle invalid request to go upside down
+                //Debug.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
+                // Stay upright
             }
             else if ((pilot.PerformUTurn > 0 && !pilot.LargeAircraft && !pilot.BankOnly) || pilot.ForcePitchUp)
             {
@@ -88,23 +94,27 @@ namespace TAC_AI.AI.Movement.AICores
                 // Because we likely yaw slower, we should bank as much as possible
                 if (Heading.x > 0f && Heading.z < 0.925f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
-                  //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Right");
+                    //Debug.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Right");
                     Vector3 rFlat;
                     if (tank.rootBlockTrans.up.y > 0)
                         rFlat = tank.rootBlockTrans.right;
                     else
                         rFlat = -tank.rootBlockTrans.right;
+                    rFlat.y = 0;
+                    rFlat.Normalize();
                     rFlat.y = -pilot.RollStrength;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
                 else if (Heading.x < 0f && Heading.z < 0.925f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
-                  //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Left");
+                    //Debug.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Left");
                     Vector3 rFlat;
                     if (tank.rootBlockTrans.up.y > 0)
                         rFlat = tank.rootBlockTrans.right;
                     else
                         rFlat = -tank.rootBlockTrans.right;
+                    rFlat.y = 0;
+                    rFlat.Normalize();
                     rFlat.y = pilot.RollStrength;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
@@ -113,27 +123,32 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (Heading.x > 0f && Heading.z < 0.85f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
-                  //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Right");
+                    //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Right");
                     Vector3 rFlat;
                     if (tank.rootBlockTrans.up.y > 0)
                         rFlat = tank.rootBlockTrans.right;
                     else
                         rFlat = -tank.rootBlockTrans.right;
+                    rFlat.y = 0;
+                    rFlat.Normalize();
                     rFlat.y = -pilot.RollStrength;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
                 else if (Heading.x < 0f && Heading.z < 0.85f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
-                  //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Left");
+                    //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Left");
                     Vector3 rFlat;
                     if (tank.rootBlockTrans.up.y > 0)
                         rFlat = tank.rootBlockTrans.right;
                     else
                         rFlat = -tank.rootBlockTrans.right;
+                    rFlat.y = 0;
+                    rFlat.Normalize();
                     rFlat.y = pilot.RollStrength;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
             }
+            //Debug.Log("TACtical_AI: upwards direction " + tank.name + "  is " + direct.y);
             return direct;
         }
         public static void AngleTowards(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
@@ -142,12 +157,14 @@ namespace TAC_AI.AI.Movement.AICores
             TankControl.ControlState control3D = (TankControl.ControlState) AircraftUtils.controlGet.GetValue(thisControl);
 
             thisInst.Navi3DDirect = (position - tank.boundsCentreWorldNoCheck).normalized;
-
+          
             thisInst.Navi3DUp = DetermineRoll(tank, pilot, thisInst.Navi3DDirect);
 
             Vector3 turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DUp)).eulerAngles;
-            Vector3 forwardFlat = tank.rootBlockTrans.forward;
-            forwardFlat.y = 0;
+            //Vector3 forwardFlat = tank.rootBlockTrans.forward;
+            //forwardFlat.y = 0;
+
+            //Debug.Log("TACtical_AI: Tech " + tank.name + " steering RAW" + turnVal);
 
             //Convert turnVal to runnable format
             if (turnVal.x > 180)
@@ -172,7 +189,14 @@ namespace TAC_AI.AI.Movement.AICores
                 turnVal.y = 0;
             if (Mathf.Abs(turnVal.z) < 0.01f)
                 turnVal.z = 0;
+            thisInst.Navi3DDirect = (position - tank.boundsCentreWorldNoCheck).normalized;
 
+            if (tank.rootBlockTrans.up.y < 0)
+            {   // upside down due to a unfindable oversight in code - just override the bloody thing when it happens
+                //Debug.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
+
+                turnVal.z = -Mathf.Clamp(turnVal.z * 10, -1, 1);
+            }
 
             //Turn our work in to process
             control3D.m_State.m_InputRotation = turnVal;
@@ -183,10 +207,10 @@ namespace TAC_AI.AI.Movement.AICores
             //Turn our work in to processing
             //Debug.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
             control3D.m_State.m_InputMovement = DriveVar;
-            if (pilot.SlowestPropLerpSpeed < 0.1f && pilot.PropBias.z > 0.75f && pilot.CurrentThrottle > 0.75f)
-                thisControl.BoostControlProps = true;
-            else
-                thisControl.BoostControlProps = false;
+            //if (pilot.SlowestPropLerpSpeed < 0.1f && pilot.PropBias.z > 0.75f && pilot.CurrentThrottle > 0.75f)
+            //    control3D.m_State.m_BoostProps = true;
+            //else
+            //    control3D.m_State.m_BoostProps = false;
 
 
             controlGet.SetValue(tank.control, control3D);

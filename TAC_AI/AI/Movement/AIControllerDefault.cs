@@ -74,6 +74,7 @@ namespace TAC_AI.AI
 
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
+            Debug.Log("TACtical_AI: Added ground AI from " + Tank.name);
         }
         public void UpdateEnemyMind(EnemyMind mind)
         {
@@ -94,7 +95,7 @@ namespace TAC_AI.AI
             {
                 Tank.AttachEvent.Unsubscribe(OnAttach);
                 Tank.DetachEvent.Unsubscribe(OnDetach);
-                Debug.Log("TACtical_AI: Removed ground AI from " + Tank.name);
+                //Debug.Log("TACtical_AI: Removed ground AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }

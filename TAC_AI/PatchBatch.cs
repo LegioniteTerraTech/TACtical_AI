@@ -270,7 +270,7 @@ namespace TAC_AI
                         if (randNum < 10)
                         {   // space invader
                             //Debug.Log("TACtical_AI: Throwing in TAC ref lol");
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Space);
+                            RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Space);
                         }
                         else if (randNum < 24)
                         {   // Aircraft fight
@@ -280,7 +280,7 @@ namespace TAC_AI
                                 Vector3 position = tech.boundsCentreWorld;// - (tech.rootBlockTrans.forward * 32);
                                 position.y += 64;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, Templates.BaseTerrain.Air, silentFail: false))
+                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, BaseTerrain.Air, silentFail: false))
                                     tech.visible.RemoveFromGame();
                             }
                         }
@@ -292,7 +292,7 @@ namespace TAC_AI
                                 Vector3 position = tech.boundsCentreWorld;// - (tech.rootBlockTrans.forward * 48);
                                 position.y += 64;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, Templates.BaseTerrain.Space, silentFail: false))
+                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, BaseTerrain.Space, silentFail: false))
                                     tech.visible.RemoveFromGame();
                             }
                         }
@@ -953,6 +953,30 @@ namespace TAC_AI
                         AIECore.TankAIManager.inst.Invoke("WarnPlayers", 2);
                 }
                 catch{ }
+            }
+        }
+
+        // Bases
+        [HarmonyPatch(typeof(TankBlock))]
+        [HarmonyPatch("OnAttach")]//On Game start
+        private static class InsureResetEnemyMiners
+        {
+            private static void Prefix(TankBlock __instance)
+            {
+                try
+                {
+                    if ((bool)__instance.GetComponent<ReverseCache>())
+                    {
+                        __instance.GetComponent<ReverseCache>().LoadNow();
+                        //Debug.Log("TACtical_AI: Destroyed " + __instance.name);
+                    }
+                    /*
+                    else if (__instance.GetComponent<ModuleItemProducer>() && __instance.tank.IsEnemy())
+                    {
+                        __instance.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
+                    }*/
+                }
+                catch { }
             }
         }
     }
