@@ -23,7 +23,7 @@ namespace TAC_AI
         [HarmonyPatch("ExecuteControl")]//On Control
         private static class PatchControlSystem
         {
-            private static bool Prefix(ModuleTechController __instance)
+            private static bool Prefix(ModuleTechController __instance, ref bool __result)
             {
                 if (KickStart.EnableBetterAI)
                 {
@@ -51,6 +51,7 @@ namespace TAC_AI
                                     //Debug.Log("TACtical_AI: Running BetterAI");
                                     //Debug.Log("TACtical_AI: Patched Tank ExecuteControl(TankAIHelper)");
                                     tankAIHelp.BetterAI(__instance.block.tank.control);
+                                    __result = true;
                                     return false;
                                 }
                             }
@@ -59,6 +60,7 @@ namespace TAC_AI
                                 if (__instance.block.tank.Anchors.NumIsAnchored > 0)
                                     __instance.block.tank.Anchors.UnanchorAll(true);
                                 __instance.block.tank.control.BoostControlJets = true;
+                                __result = true;
                                 return false;
                             }
                             else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy() && !ManSpawn.IsPlayerTeam(tank.Team))
@@ -66,6 +68,7 @@ namespace TAC_AI
                                 if (!tankAIHelp.Hibernate)
                                 {
                                     tankAIHelp.BetterAI(__instance.block.tank.control);
+                                    __result = true;
                                     return false;
                                 }
                             }

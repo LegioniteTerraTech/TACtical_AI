@@ -13,7 +13,7 @@ namespace TAC_AI.AI.AlliedOperations
         public static void MimicClosestAlly(AIECore.TankAIHelper thisInst, Tank tank)
         {
             Tank hostTech;
-            float dist;
+            float dist = 0;
             Tank vis;
             BGeneral.ResetValues(thisInst);
             try
@@ -35,7 +35,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
+                    //dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
                 else
                 {
@@ -50,7 +50,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
+                    //dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
                 float range = AIECore.Extremes(tank.blockBounds.extents) + AIECore.Extremes(vis.blockBounds.extents);

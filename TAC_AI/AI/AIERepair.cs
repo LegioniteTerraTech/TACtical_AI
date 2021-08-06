@@ -708,7 +708,7 @@ namespace TAC_AI.AI
                     attemptW = AttemptBlockAttach(tank, template, foundBlock, TechMemor, useLimitedSupplies);
                     if (attemptW)
                     {
-                        foundBlock.InitNew();
+                        //foundBlock.InitNew();
                         return true;
                     }
                 }
@@ -1035,7 +1035,7 @@ namespace TAC_AI.AI
                     attemptW = AttemptBlockAttachExt(tank, template, foundBlock);
                     if (attemptW)
                     {
-                        foundBlock.InitNew();
+                        //foundBlock.InitNew();
                         return true;
                     }
                 }

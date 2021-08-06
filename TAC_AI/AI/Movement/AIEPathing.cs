@@ -170,7 +170,7 @@ namespace TAC_AI.AI.Movement
                     for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
                         float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(AlliesAlt.ElementAt(stepper).blockBounds.extents);
-                        if (bestValue > temp && temp != 0)
+                        if (bestValue > temp && temp >= 1)
                         {
                             bestValue = temp;
                             bestStep = stepper;
@@ -184,7 +184,7 @@ namespace TAC_AI.AI.Movement
                     for (int stepper = 0; Allies.Count > stepper; stepper++)
                     {
                         float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
-                        if (bestValue > temp && temp != 0)
+                        if (bestValue > temp && temp >= 1)
                         {
                             bestValue = temp;
                             bestStep = stepper;
@@ -389,29 +389,31 @@ namespace TAC_AI.AI.Movement
 
 
         // Other navigation utilities
-        public static Vector3 GetDriveApproxAir(Tank tankToCopy, AIECore.TankAIHelper AIHelp)
+
+        private static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static Vector3 GetDriveApproxAir(Tank tankToCopy, AIECore.TankAIHelper AIHelp, out bool IsMoving)
         {
             //Get the position in which to drive inherited from player controls
             //  NOTE THAT THIS ONLY SUPPORTS THE DISTANCE OF PLAYER TECH'S SIZE PLUS THE MT TECH!!!
             Tank tank = AIHelp.tank;
             Vector3 end;
-            //first we get the 
-            Vector3 centerThis = tank.boundsCentreWorldNoCheck;
-            Vector3 offsetTo = tankToCopy.trans.InverseTransformPoint(centerThis);
+            //first we get the offset
+            Vector3 offsetTo = tankToCopy.trans.InverseTransformPoint(tank.boundsCentreWorldNoCheck) - tankToCopy.blockBounds.center;
 
-            FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
             TankControl.ControlState controlOverload = (TankControl.ControlState)controlGet.GetValue(tankToCopy.control);
 
             // Grab a vector to-go to set how the other tech should react in accordance to the host
-            Vector3 DAdjuster = controlOverload.m_State.m_InputMovement * 35;
-            Vector3 RAdjuster = controlOverload.m_State.m_InputRotation * -60;
+            Vector3 DAdjuster = controlOverload.m_State.m_InputMovement * 45;
+            Vector3 RAdjuster = controlOverload.m_State.m_InputRotation * -1;
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
-            Vector3 directed = Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo;
+            // Generate a rough tangent
+            Vector3 directed = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (45 * AIECore.ExtremesAbs(RAdjuster));
+
             Vector3 posToGo = directed + DAdjuster;
 
             //Run ETC copies
             TankControl.ControlState controlOverloadThis = (TankControl.ControlState)controlGet.GetValue(tank.control);
-            controlOverloadThis.m_State.m_BoostJets = controlOverload.m_State.m_BoostJets; 
+            controlOverloadThis.m_State.m_BoostJets = controlOverload.m_State.m_BoostJets;
             controlOverloadThis.m_State.m_BoostProps = controlOverload.m_State.m_BoostProps;
             controlGet.SetValue(tank.control, controlOverloadThis);
 
@@ -438,8 +440,9 @@ namespace TAC_AI.AI.Movement
             }
 
             // Then we pack it all up nicely in the end
-            end = tankToCopy.trans.TransformPoint(posToGo);
+            end = tankToCopy.trans.TransformPoint(posToGo + tankToCopy.blockBounds.center);
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
+            IsMoving = !(controlOverload.m_State.m_InputMovement + controlOverload.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
             return end;
         }
         public static bool AboveHeightFromGround(Vector3 input, float groundOffset = 50)

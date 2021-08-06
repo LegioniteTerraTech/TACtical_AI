@@ -148,7 +148,6 @@ namespace TAC_AI.Templates
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
-            block.InitNew();
 
             Tank theBase;
             if (storeBB)
@@ -216,7 +215,6 @@ namespace TAC_AI.Templates
             Quaternion quat = Quaternion.LookRotation(heading, Vector3.up);
 
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
-            block.InitNew();
 
             Tank theTech;
             theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
@@ -264,7 +262,6 @@ namespace TAC_AI.Templates
                 Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
                 TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
-                block.InitNew();
 
                 Tank theTech;
                 theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
@@ -292,7 +289,6 @@ namespace TAC_AI.Templates
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
-            block.InitNew();
 
             Tank theTech;
             theTech = TechFromBlock(block, Team, Blueprint.techName);
@@ -431,7 +427,6 @@ namespace TAC_AI.Templates
                 catch { }
             }*/
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(GetBlueprint(techType)), playerPos, playerFacing);
-            block.InitNew();
 
             Tank theTech;
             theTech = TechFromBlock(block, playerTeam, GetEnglishName(techType));
@@ -484,7 +479,6 @@ namespace TAC_AI.Templates
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
-            block.InitNew();
 
             Tank theTech;
             theTech = TechFromBlock(block, Team, Blueprint.Name);
@@ -516,7 +510,6 @@ namespace TAC_AI.Templates
             Quaternion techFacing = tech.transform.rotation;
             tech.visible.RemoveFromGame();
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(JSONTechBlueprint), techPos, techFacing);
-            block.InitNew();
 
             Tank theTech;
             theTech = TechFromBlock(block, playerTeam, OGName);

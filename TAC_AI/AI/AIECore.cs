@@ -43,7 +43,7 @@ namespace TAC_AI.AI
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        public static List<Tank> Allies;    //Single-player only
+        public static List<Tank> Allies = new List<Tank>();    //Single-player only
         //public static List<ResourceDispenser> Minables;
         public static List<Visible> Minables;
         public static List<ModuleHarvestReciever> Depots;
@@ -267,6 +267,10 @@ namespace TAC_AI.AI
         {
             return Mathf.Max(Mathf.Max(input.x, input.y), input.z);
         }
+        public static float ExtremesAbs(Vector3 input)
+        {
+            return Mathf.Max(Mathf.Max(Mathf.Abs(input.x), Mathf.Abs(input.y)), Mathf.Abs(input.z));
+        }
         public static bool AIMessage(Tank tech, ref bool hasMessaged, string message)
         {
             if (KickStart.isAnimeAIPresent)
@@ -316,7 +320,7 @@ namespace TAC_AI.AI
             {
                 if (ManNetwork.inst.IsMultiplayer())
                     return; // Doesn't work in MP, cannot use opimised searcher.
-                Allies = new List<Tank>();
+                Allies.Clear();
                 int AllyCount = 0;
                 var allTechs = Singleton.Manager<ManTechs>.inst;
                 int techCount = allTechs.CurrentTechs.Count();
@@ -333,7 +337,7 @@ namespace TAC_AI.AI
                             AllyCount++;
                         }
                     }
-                    //Debug.Log("TACtical_AI: Fetched allied tech list for AIs...");
+                    Debug.Log("TACtical_AI: Fetched allied tech list for AIs...");
                     if (AllyCount > 2)
                         moreThan2Allies = true;
                 }
@@ -1060,8 +1064,8 @@ namespace TAC_AI.AI
                         lastCloseAlly = AIEPathing.ClosestAlly(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
                         //Debug.Log("TACtical_AI: Ally is " + thisInst.lastAllyDist + " dist away");
                         //Debug.Log("TACtical_AI: Trigger threshold is " + (thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
-                        if (lastCloseAlly == null)
-                            Debug.Log("TACtical_AI: ALLY IS NULL");
+                        //if (lastCloseAlly == null)
+                        //    Debug.Log("TACtical_AI: ALLY IS NULL");
                         if (lastAllyDist < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
                         {
                             //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
@@ -1124,8 +1128,8 @@ namespace TAC_AI.AI
                         lastCloseAlly = AIEPathing.ClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
                         //Debug.Log("TACtical_AI: Ally is " + thisInst.lastAllyDist + " dist away");
                         //Debug.Log("TACtical_AI: Trigger threshold is " + (thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
-                        if (lastCloseAlly == null)
-                            Debug.Log("TACtical_AI: ALLY IS NULL");
+                        //if (lastCloseAlly == null)
+                        //    Debug.Log("TACtical_AI: ALLY IS NULL");
                         if (lastAllyDist < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
                         {
                             //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
@@ -1301,11 +1305,17 @@ namespace TAC_AI.AI
                 }
                 else
                 {
+                    /*
                     foreach (Visible thatTech in tank.Vision.IterateVisibles(ObjectTypes.Vehicle))
                     {
                         if (thatTech.tank.PlayerFocused)
                             return thatTech;
+                    }*/
+                    try
+                    {
+                        return Singleton.playerTank.visible;
                     }
+                    catch { }
                 }
                 return lastPlayer;
             }
