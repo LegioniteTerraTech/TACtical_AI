@@ -10,27 +10,6 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.Templates
 {
-    public class AIBookmarker : MonoBehaviour
-    {   // External AI-setting interface - used to set Tech AI state externally
-        public EnemyHandling commander = EnemyHandling.Wheeled;
-        public EnemyAttack attack = EnemyAttack.Circle;
-        public EnemyAttitude attitude = EnemyAttitude.Default;
-        public EnemySmarts smarts = EnemySmarts.Default;
-        public EnemyBolts bolts = EnemyBolts.Default;
-    }
-
-    /// <summary>
-    /// Don't try bothering with anything sneaky with this - it's built against illegal blocks and block rotations.
-    /// </summary>
-    public class BuilderExternal
-    {   // External builder interface - use to save Techs externally
-        public string Name = "unset";
-        public string Blueprint;
-        public bool InfBlocks;
-        public FactionSubTypes Faction;
-        public bool NonAggressive = false;
-        public int Cost = 0;
-    }
     internal class BookmarkBuilder : MonoBehaviour
     {
         public string blueprint;
@@ -41,7 +20,7 @@ namespace TAC_AI.Templates
 
     public static class RawTechLoader
     {
-        const float MinimumBaseSpacing = 350;
+        const float MinimumBaseSpacing = 325;
         const int MaxBlockLimitAttract = 128;
 
         static bool ForceSpawn = false;  // Test a specific base

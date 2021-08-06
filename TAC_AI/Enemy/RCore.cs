@@ -60,6 +60,11 @@ namespace TAC_AI.AI.Enemy
                 Debug.Log("TACtical_AI: Removing Enemy AI (delayed) for " + tank.name);
                 return;
             }
+            if (Mind.StartedAnchored)
+            {
+                if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0)
+                    tank.TryToggleTechAnchor();
+            }
 
             RBolts.ManageBolts(thisInst, tank, Mind);
             if (Mind.AllowRepairsOnFly)

@@ -269,7 +269,16 @@ namespace TAC_AI.AI.Enemy
                     }
                     catch { }
                     MakeMinersMineUnlimited(tank);
-                    tank.Anchors.TryAnchorAll(true);
+                    if (!tank.IsAnchored)
+                        tank.Anchors.TryAnchorAll(true);
+                    if (!tank.IsAnchored)
+                        tank.TryToggleTechAnchor();
+                    if (!tank.IsAnchored)
+                    {
+                        tank.Anchors.RetryAnchorOnBeam = true;
+                        tank.TryToggleTechAnchor();
+                    }
+                    MakeMinersMineUnlimited(tank);
                     DidFire = true;
                 }
             }

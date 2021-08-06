@@ -11,6 +11,29 @@ using TAC_AI.AI;
 
 namespace TAC_AI.Templates
 {
+    public class AIBookmarker : MonoBehaviour
+    {   // External AI-setting interface - used to set Tech AI state externally
+        public EnemyHandling commander = EnemyHandling.Wheeled;
+        public EnemyAttack attack = EnemyAttack.Circle;
+        public EnemyAttitude attitude = EnemyAttitude.Default;
+        public EnemySmarts smarts = EnemySmarts.Default;
+        public EnemyBolts bolts = EnemyBolts.Default;
+    }
+
+    /// <summary>
+    /// Don't try bothering with anything sneaky with this - it's built against illegal blocks and block rotations.
+    /// </summary>
+    public class BuilderExternal
+    {   // External builder interface - use to save Techs externally
+        public string Name = "unset";
+        public string Blueprint;
+        public bool InfBlocks;
+        public bool IsAnchored;
+        public FactionSubTypes Faction;
+        public bool NonAggressive = false;
+        public int Cost = 0;
+    }
+
     public class RawTechExporter : MonoBehaviour
     {
         public static GameObject inst;
@@ -137,7 +160,7 @@ namespace TAC_AI.Templates
                 temp.savedTech = ext.Blueprint;
                 temp.startingFunds = 0;
                 FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
-                temp.purposes = GetHandler(ext.Blueprint, MainCorp, out BaseTerrain terra, out int minCorpGrade);
+                temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                 temp.IntendedGrade = minCorpGrade;
                 temp.faction = MainCorp;
                 temp.terrain = terra;
@@ -186,7 +209,7 @@ namespace TAC_AI.Templates
             return true;
         }
         private static FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
-        public static List<BasePurpose> GetHandler(string blueprint, FactionSubTypes factionType, out BaseTerrain terra, out int minCorpGrade)
+        public static List<BasePurpose> GetHandler(string blueprint, FactionSubTypes factionType, bool Anchored, out BaseTerrain terra, out int minCorpGrade)
         {
             List<TankBlock> blocs = new List<TankBlock>();
             List<BlockMemory> mems = AIERepair.DesignMemory.JSONToTechExternal(blueprint);
@@ -301,35 +324,41 @@ namespace TAC_AI.Templates
             else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
             {   //Starship
                 terra = BaseTerrain.Space;
-                purposes.Add(BasePurpose.NotStationary);
+                if (!Anchored)
+                    purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
             {   // Airplane
                 terra = BaseTerrain.Air;
-                purposes.Add(BasePurpose.NotStationary);
+                if (!Anchored)
+                    purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
             {   // Chopper
                 terra = BaseTerrain.Air;
-                purposes.Add(BasePurpose.NotStationary);
+                if (!Anchored)
+                    purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
             {   // Naval
                 terra = BaseTerrain.Sea;
-                purposes.Add(BasePurpose.NotStationary);
+                if (!Anchored)
+                    purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
             {   // Melee
                 terra = BaseTerrain.AnyNonSea;
-                purposes.Add(BasePurpose.NotStationary);
+                if (!Anchored)
+                    purposes.Add(BasePurpose.NotStationary);
                 return purposes;
             }
             terra = BaseTerrain.Land;
-            purposes.Add(BasePurpose.NotStationary);
+            if (!Anchored)
+                purposes.Add(BasePurpose.NotStationary);
             return purposes;
         }
         private static void ValidateEnemyFolder()
@@ -376,6 +405,7 @@ namespace TAC_AI.Templates
             builder.Faction = tank.GetMainCorp();
             builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
             builder.InfBlocks = false;
+            builder.IsAnchored = tank.IsAnchored;
             builder.NonAggressive = false;
             builder.Cost = GetBBCost(tank);
             string builderJSON = JsonUtility.ToJson(builder, true);

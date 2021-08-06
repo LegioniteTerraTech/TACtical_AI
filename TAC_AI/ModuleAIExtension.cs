@@ -136,24 +136,24 @@ namespace TAC_AI
         {
             if (saving)
             {   //Save to snap
-                if (KickStart.EnableBetterAI)
-                {   //Allow resaving of Techs without mod affilation
+                if (KickStart.EnableBetterAI &&!Singleton.Manager<ManScreenshot>.inst.TakingSnapshot)
+                {   //Allow resaving of Techs but not saving this to snapshot to prevent bugs
                     SerialData serialData = new SerialData()
                     {
-                        savedMode = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().DediAI
+                        savedMode = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI
                     };
                     serialData.Store(blockSpec.saveState);
                     //Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
                 }
             }
             else
-            {   //Load from snap
+            {   //Load from save
                 try
                 {
                     SerialData serialData2 = SerialData<SerialData>.Retrieve(blockSpec.saveState);
                     if (serialData2 != null)
                     {
-                        var thisInst = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+                        var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
                         if (thisInst.DediAI != serialData2.savedMode)
                         {
                             thisInst.DediAI = serialData2.savedMode;

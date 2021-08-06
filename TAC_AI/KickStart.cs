@@ -61,6 +61,7 @@ namespace TAC_AI
         public static OptionToggle enemyBaseSpawn;
         public static OptionToggle enemyAirSpawn;
         public static OptionToggle enemySeaSpawn;
+        public static OptionRange enemyBaseCount;
 
 
         internal static bool firedAfterBlockInjector = false;
@@ -145,6 +146,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
             thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
+            thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
 
             var TACAI = ModName + " - General";
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF to uninstall and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
@@ -161,6 +163,8 @@ namespace TAC_AI
             diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
             enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyBaseCount= new OptionRange("Max Enemy Base Count", TACAIEnemies, MaxEnemyBaseLimit, 1, 16, 1);
+            enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
 

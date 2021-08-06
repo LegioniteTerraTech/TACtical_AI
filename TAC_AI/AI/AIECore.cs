@@ -578,20 +578,22 @@ namespace TAC_AI.AI
 
             public void OnAttach(TankBlock newBlock, Tank tank)
             {
-                this.EstTopSped = 1;
-                //this.LastBuildClock = 0;
-                this.PendingHeightCheck = true;
-                if (AIState == 1)
-                {
-                    try
+                if (tank != this.tank)
+                    return;
+                    this.EstTopSped = 1;
+                    //this.LastBuildClock = 0;
+                    this.PendingHeightCheck = true;
+                    if (AIState == 1)
                     {
-                        if ((bool)TechMemor)
+                        try
                         {
-                            TechMemor.SaveTech();
+                            if ((bool)TechMemor)
+                            {
+                                TechMemor.SaveTech();
+                            }
                         }
+                        catch { }
                     }
-                    catch { }
-                }
             }
             public void OnDetach(TankBlock newBlock, Tank tank)
             {
@@ -628,16 +630,22 @@ namespace TAC_AI.AI
 
             public void OnSpawn(Tank tankInfo)
             {
-                //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnSpawn");
-                if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
-                this.ResetAll(tankInfo);
+                if (tankInfo == tank)
+                {
+                    //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnSpawn");
+                    if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
+                        this.ResetAll(tankInfo);
+                }
             }
             public void OnDeathOrRemoval(Tank tankInfo, ManDamage.DamageInfo damage)
             {
-                //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnDeathOrRemoval");
-                //tankInfo.gameObject.GetComponent<TankAIHelper>().DediAI = AIType.Escort;
-                //this.ResetAll(tankInfo);
-                this.OverrideAllControls = false;
+                if (tankInfo == tank)
+                {
+                    //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnDeathOrRemoval");
+                    //tankInfo.gameObject.GetComponent<TankAIHelper>().DediAI = AIType.Escort;
+                    //this.ResetAll(tankInfo);
+                    this.OverrideAllControls = false;
+                }
             }
             /*
             public void OnRecycle(Tank tank)
