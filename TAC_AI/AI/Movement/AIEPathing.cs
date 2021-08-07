@@ -403,11 +403,11 @@ namespace TAC_AI.AI.Movement
             TankControl.ControlState controlOverload = (TankControl.ControlState)controlGet.GetValue(tankToCopy.control);
 
             // Grab a vector to-go to set how the other tech should react in accordance to the host
-            Vector3 DAdjuster = controlOverload.m_State.m_InputMovement * 45;
+            Vector3 DAdjuster = controlOverload.m_State.m_InputMovement * 2000;
             Vector3 RAdjuster = controlOverload.m_State.m_InputRotation * -1;
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
             // Generate a rough tangent
-            Vector3 directed = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (45 * AIECore.ExtremesAbs(RAdjuster));
+            Vector3 directed = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (1000 * AIECore.ExtremesAbs(RAdjuster));
 
             Vector3 posToGo = directed + DAdjuster;
 
@@ -719,6 +719,29 @@ namespace TAC_AI.AI.Movement
             else
                 final.y = height;
             return final;
+        }
+
+        // Aux
+        internal static void ModerateMaxAlt(ref Vector3 moderate, AIECore.TankAIHelper thisInst)
+        {
+            if ((bool)Singleton.playerTank)
+            {
+                if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight + Singleton.playerPos.y)
+                {
+                    moderate = OffsetFromGroundA(moderate, thisInst, 1);
+                }
+            }
+            else
+            {
+                try
+                {
+                    if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight)
+                    {
+                        moderate = OffsetFromGroundA(moderate, thisInst, 1);
+                    }
+                }
+                catch { }
+            }
         }
     }
 }

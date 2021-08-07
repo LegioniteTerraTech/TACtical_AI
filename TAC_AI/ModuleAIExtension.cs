@@ -56,6 +56,7 @@ namespace TAC_AI
             "Astrotech": false,
 
             // ----EXTRAS----
+            "AutoAnchor": false,    // Should the AI anchor and un-anchor automatically?
             "MeleePreferred": false,// Should the AI ram the enemy?
             "SidePreferred": false, // Should the AI orbit the enemy? (Partially overrides melee)
             "AdvAvoidence": false,  // Should the AI avoid two allied techs at once?
@@ -88,6 +89,7 @@ namespace TAC_AI
         public bool Astrotech = false;
 
         // ----EXTRAS----
+        public bool AutoAnchor = false;     // Should the AI handle anchors automatically?
         public bool MeleePreferred = false; // Should the AI ram the enemy?
         public bool SidePreferred = false;  // Should the AI orbit the enemy?
         public bool AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
@@ -110,8 +112,8 @@ namespace TAC_AI
         {
             TankBlock.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             TankBlock.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
-            SavedAI = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>().DediAI;
-            var thisInst = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+            SavedAI = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI;
+            var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
             //thisInst.AIList.Add(this);
             //thisInst.RefreshAI();
         }

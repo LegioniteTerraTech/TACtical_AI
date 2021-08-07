@@ -252,7 +252,7 @@ namespace TAC_AI.AI
                     else
                         blockCase.Append(ch);
                 }
-                Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
+                //Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
                 MemoryToTech(mem);
             }
 
@@ -400,7 +400,7 @@ namespace TAC_AI.AI
                     else
                         blockCase.Append(ch);
                 }
-                Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
+                //Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
                 return mem;
             }
         }

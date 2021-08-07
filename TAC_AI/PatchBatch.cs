@@ -41,12 +41,22 @@ namespace TAC_AI
                         if (!tank.PlayerFocused && !IsPlayerRemoteControlled)//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                         {
                             var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
-                            if (aI.CheckAIAvailable() && tank.IsFriendly())
+
+                            if (tank.FirstUpdateAfterSpawn)
+                            {
+                                // let the icon update
+                            }
+                            else if (aI.CheckAIAvailable() && tank.IsFriendly())
                             {
                                 //Debug.Log("TACtical_AI: AI Valid!");
                                 //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
                                 //tankAIHelp.AIState && 
-                                if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
+                                if (tankAIHelp.JustUnanchored)
+                                {
+                                    tankAIHelp.ForceAllAIsToEscort();
+                                    tankAIHelp.JustUnanchored = false;
+                                }
+                                else if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
                                 {
                                     //Debug.Log("TACtical_AI: Running BetterAI");
                                     //Debug.Log("TACtical_AI: Patched Tank ExecuteControl(TankAIHelper)");
@@ -74,10 +84,10 @@ namespace TAC_AI
                             }
                         }
                     }
-                    catch (Exception e)
+                    catch //(Exception e)
                     {
-                        Debug.Log("TACtical_AI: Failure on handling AI addition!");
-                        Debug.Log(e);
+                        //Debug.Log("TACtical_AI: Failure on handling AI addition!");
+                        //Debug.Log(e);
                     }
                 }
                 return true;
@@ -433,6 +443,7 @@ namespace TAC_AI
                         }
                         else if (name == "GC_AI_Module_Guard_222")
                         {
+                            //ModuleAdd.AutoAnchor = true; // temp testing
                             ModuleAdd.Prospector = true;
                             ModuleAdd.Energizer = true;
                             ModuleAdd.MTForAll = true;
@@ -449,6 +460,7 @@ namespace TAC_AI
                         {
                             ModuleAdd.Assault = true;
                             ModuleAdd.Aviator = true;
+                            ModuleAdd.Astrotech = true;
                             ModuleAdd.AdvancedAI = true;
                             ModuleAdd.MinCombatRange = 50;
                             ModuleAdd.MaxCombatRange = 200;
@@ -458,14 +470,15 @@ namespace TAC_AI
                             ModuleAdd.Assault = true;
                             ModuleAdd.AdvancedAI = true;
                             ModuleAdd.MinCombatRange = 50;
-                            ModuleAdd.MaxCombatRange = 150;
+                            ModuleAdd.MaxCombatRange = 225;
                         }
                         else if (name == "BF_AI_Module_Guard_212")
                         {
-                            ModuleAdd.Astrotech = true; // Piloting spaceship is VERY powerful
+                            ModuleAdd.Astrotech = true;
                             ModuleAdd.AdvAvoidence = true;
+                            ModuleAdd.SelfRepairAI = true; // EXTREMELY POWERFUL
                             ModuleAdd.MinCombatRange = 60;
-                            ModuleAdd.MaxCombatRange = 180;
+                            ModuleAdd.MaxCombatRange = 250;
                         }
                         /*
                         else if (name == "RR_AI_Module_Guard_212")
@@ -485,6 +498,7 @@ namespace TAC_AI
                         }
                         else if (name == "TSN_AI_Module_Guard_312")
                         {
+                            ModuleAdd.AutoAnchor = true;
                             ModuleAdd.Buccaneer = true;
                             ModuleAdd.AdvAvoidence = true;
                             ModuleAdd.MinCombatRange = 150;
@@ -492,6 +506,7 @@ namespace TAC_AI
                         }
                         else if (name == "LEG_AI_Module_Guard_112")
                         {   //Incase Legion happens and the AI needs help lol
+                            ModuleAdd.AutoAnchor = true;
                             ModuleAdd.Assault = true;
                             ModuleAdd.Aegis = true;
                             ModuleAdd.Prospector = true;
@@ -510,6 +525,7 @@ namespace TAC_AI
                         }
                         else if (name == "TAC_AI_Module_Plex_323")
                         {
+                            ModuleAdd.AutoAnchor = true;
                             ModuleAdd.Aviator = true;
                             ModuleAdd.Buccaneer = true;
                             ModuleAdd.Astrotech = true;
@@ -531,61 +547,94 @@ namespace TAC_AI
             }
         }
 
+        /* // Can't make this work - there's too many random checks prohibiting this
+        [HarmonyPatch(typeof(TargetAimer))]//
+        [HarmonyPatch("UpdateTarget")]//On targeting
+        private static class PatchAimingToHelpPlasmaCutter_Auto
+        {
+            static FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+            static FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static bool Prefix(TargetAimer __instance)
+            {
+                if (__instance.gameObject.name == "GC_PlasmaCutter_Auto_434")
+                {
+                    var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
+                    if (AICommand.IsNotNull() && !KickStart.isWeaponAimModPresent)
+                    {
+                        var tank = __instance.transform.root.GetComponent<Tank>();
+                        if (tank.IsNotNull())
+                        {// give that gimbal cutter the ability to mine resources!
+                            if (AIECore.FetchClosestResource(__instance.GetComponent<TankBlock>().centreOfMassWorld, 75, out Visible theResource))
+                            {
+                                //Debug.Log("TACtical_AI: Overriding PlasmaCutter_Auto to aim at resources");
+                                try
+                                {
+                                    targ.SetValue(__instance, theResource);
+                                }
+                                catch { }
+                                targPos.SetValue(__instance, theResource.centrePosition);
+                                return false;
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+        }*/
+
         [HarmonyPatch(typeof(TargetAimer))]//
         [HarmonyPatch("UpdateTarget")]//On targeting
         private static class PatchAimingToHelpAI
         {
+            static FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
             private static void Postfix(TargetAimer __instance)
             {
-                var AICommand = __instance.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+                var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
                 if (AICommand.IsNotNull() && !KickStart.isWeaponAimModPresent)
                 {
-                    if (AICommand.OverrideAim == 1)
+                    var tank = __instance.transform.root.GetComponent<Tank>();
+                    if (tank.IsNotNull())
                     {
-                        var tank = __instance.transform.root.GetComponent<Tank>();
-                        if (tank.IsNotNull() && !tank.IsPlayer)
+                        if (!tank.PlayerFocused)
                         {
-                            if (AICommand.lastEnemy.IsNotNull())
+                            if (AICommand.OverrideAim == 1)
                             {
-                                //Debug.Log("TACtical_AI: Overriding targeting to aim at " + AICommand.lastEnemy.name + "  pos " + AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
-                                //FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
-                                //targ.SetValue(__instance, AICommand.lastEnemy);
+                                if (AICommand.lastEnemy.IsNotNull())
+                                {
+                                    //Debug.Log("TACtical_AI: Overriding targeting to aim at " + AICommand.lastEnemy.name + "  pos " + AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
+                                    //FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
+                                    //targ.SetValue(__instance, AICommand.lastEnemy);
 
-                                FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
-                                //targPos.SetValue(__instance, tank.control.TargetPositionWorld);
-                                targPos.SetValue(__instance, AICommand.lastEnemy.GetAimPoint(__instance.transform.position));
-                                //Debug.Log("TACtical_AI: final aim is " + targPos.GetValue(__instance));
+                                    //targPos.SetValue(__instance, tank.control.TargetPositionWorld);
+                                    if ((bool)AICommand.lastEnemy.tank.CentralBlock && AICommand.lastEnemy.isActive)
+                                    {
+                                        targPos.SetValue(__instance, AICommand.lastEnemy.GetAimPoint(__instance.transform.position));
+                                    }
+                                    else
+                                        targPos.SetValue(__instance, tank.control.TargetPositionWorld);
+                                    //Debug.Log("TACtical_AI: final aim is " + targPos.GetValue(__instance));
 
+                                }
                             }
-                        }
-                    }
-                    else if (AICommand.OverrideAim == 2)
-                    {
-                        var tank = __instance.transform.root.GetComponent<Tank>();
-                        if (tank.IsNotNull() && !tank.IsPlayer)
-                        {
-                            if (AICommand.Obst.IsNotNull())
+                            else if (AICommand.OverrideAim == 2)
                             {
-                                //Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
+                                if (AICommand.Obst.IsNotNull())
+                                {
+                                    //Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
 
-                                FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
-                                targPos.SetValue(__instance, AICommand.Obst.position + (Vector3.up * 2));
+                                    targPos.SetValue(__instance, AICommand.Obst.position + (Vector3.up * 2));
 
+                                }
                             }
-                        }
-                    }
-                    else if (AICommand.OverrideAim == 3)
-                    {
-                        var tank = __instance.transform.root.GetComponent<Tank>();
-                        if (tank.IsNotNull() && !tank.IsPlayer)
-                        {
-                            if (AICommand.LastCloseAlly.IsNotNull())
+                            else if (AICommand.OverrideAim == 3)
                             {
-                                //Debug.Log("TACtical_AI: Overriding targeting to aim at player's target");
+                                if (AICommand.LastCloseAlly.IsNotNull())
+                                {
+                                    //Debug.Log("TACtical_AI: Overriding targeting to aim at player's target");
 
-                                FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
-                                targPos.SetValue(__instance, AICommand.LastCloseAlly.control.TargetPositionWorld);
+                                    targPos.SetValue(__instance, AICommand.LastCloseAlly.control.TargetPositionWorld);
 
+                                }
                             }
                         }
                     }
@@ -597,17 +646,17 @@ namespace TAC_AI
         [HarmonyPatch("UpdateAutoAimBehaviour")]//On targeting
         private static class PatchAimingSystemsToHelpAI
         {
-            private static void Postfix(TargetAimer __instance)
+            static FieldInfo aimers = typeof(ModuleWeapon).GetField("m_TargetAimer", BindingFlags.NonPublic | BindingFlags.Instance);
+            static FieldInfo aimerTargPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+            static FieldInfo WeaponTargPos = typeof(ModuleWeapon).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static void Postfix(ModuleWeapon __instance)
             {
                 if (!KickStart.isWeaponAimModPresent)
                 {
-                    FieldInfo aimers = typeof(ModuleWeapon).GetField("m_TargetAimer", BindingFlags.NonPublic | BindingFlags.Instance);
                     TargetAimer thisAimer = (TargetAimer)aimers.GetValue(__instance);
 
                     if (thisAimer.HasTarget)
                     {
-                        FieldInfo aimerTargPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
-                        FieldInfo WeaponTargPos = typeof(ModuleWeapon).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
                         WeaponTargPos.SetValue(__instance, (Vector3)aimerTargPos.GetValue(thisAimer));
                     }
                 }
@@ -769,6 +818,7 @@ namespace TAC_AI
         [HarmonyPatch("UpdateAICategory")]//On Auto Setting Tech AI
         private class ForceAIToComplyAnchorCorrectly
         {
+            static FieldInfo currentTreeActual = typeof(TechAI).GetField("m_CurrentAITreeType", BindingFlags.NonPublic | BindingFlags.Instance);
             private static void Postfix(TechAI __instance)
             {
                 var tAI = __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
@@ -776,13 +826,30 @@ namespace TAC_AI
                 {
                     if (tAI.JustUnanchored && tAI.AIState == 1)
                     {   //Set the AI back to escort to continue operations if autoanchor is true
-                        FieldInfo currentTreeActual = typeof(TechAI).GetField("m_CurrentAITreeType", BindingFlags.NonPublic | BindingFlags.Instance);
-                        AITreeType AISetting = (AITreeType)currentTreeActual.GetValue(__instance);
+                        __instance.SetBehaviorType(AITreeType.AITypes.Escort);
+                        if (!__instance.TryGetCurrentAIType(out AITreeType.AITypes type))
+                        {
+                            if (type != AITreeType.AITypes.Escort)
+                            {
+                                AITreeType AISetting = (AITreeType)currentTreeActual.GetValue(__instance);
 
-                        AISetting.m_TypeName = AITreeType.AITypes.Escort.ToString();
+                                AISetting.m_TypeName = AITreeType.AITypes.Escort.ToString();
 
-                        currentTreeActual.SetValue(__instance, AISetting);
-                        tAI.JustUnanchored = false;
+                                currentTreeActual.SetValue(__instance, AISetting);
+                                tAI.JustUnanchored = false;
+                            }
+                            else
+                                tAI.JustUnanchored = false;
+                        }
+                        else
+                        {
+                            AITreeType AISetting = (AITreeType)currentTreeActual.GetValue(__instance);
+
+                            AISetting.m_TypeName = AITreeType.AITypes.Escort.ToString();
+
+                            currentTreeActual.SetValue(__instance, AISetting);
+                            tAI.JustUnanchored = false;
+                        }
                     }
                 }
             }

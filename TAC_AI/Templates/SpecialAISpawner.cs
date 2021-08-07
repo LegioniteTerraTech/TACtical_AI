@@ -49,7 +49,6 @@ namespace TAC_AI.Templates
         const float AirSpawnDist = 400;
         const float AirDespawnDist = 475;
         const float AirSpawnInterval = 30;
-        const float AirMaxHeightOffset = 175;
 
         private static bool forceOn = true;    // spawn in creative no matter what
 
@@ -230,7 +229,7 @@ namespace TAC_AI.Templates
                         count--;
                         deadAircraftCount++;
                     }
-                    else if (aircraft.trans.position.y > AirMaxHeightOffset + Singleton.playerPos.y)
+                    else if (aircraft.trans.position.y > KickStart.AirMaxHeightOffset + Singleton.playerPos.y)
                     {
                         AirPool.RemoveAt(step);
                         Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + aircraft.name + " from AirPool as it flew above player distance.");

@@ -158,7 +158,7 @@ namespace TAC_AI.Templates
 
                 temp.techName = ext.Name;
                 temp.savedTech = ext.Blueprint;
-                temp.startingFunds = 0;
+                temp.startingFunds = ext.Cost;
                 FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
                 temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                 temp.IntendedGrade = minCorpGrade;
@@ -213,6 +213,13 @@ namespace TAC_AI.Templates
         {
             List<TankBlock> blocs = new List<TankBlock>();
             List<BlockMemory> mems = AIERepair.DesignMemory.JSONToTechExternal(blueprint);
+            if (mems.Count < 1)
+            {
+                Debug.Log("TACtical_AI: TECH IS NULL!  SKIPPING!");
+                minCorpGrade = 99;
+                terra = BaseTerrain.AnyNonSea;
+                return new List<BasePurpose>();
+            }
             foreach (BlockMemory mem in mems)
             {
                 blocs.Add(Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)));
@@ -316,7 +323,7 @@ namespace TAC_AI.Templates
                     isFlyingDirectionForwards = false;
             }
 
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.JSONToFirstBlock(blueprint)).GetComponent<ModuleAnchor>())
+            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
                 terra = BaseTerrain.Land;
                 return purposes;

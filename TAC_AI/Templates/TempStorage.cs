@@ -384,6 +384,15 @@ namespace TAC_AI.Templates
             } },
 
             //Chopper Techs
+            { SpawnBaseTypes.GSOQuadGale, new BaseTemplate {
+                techName = "Quad Gale",
+                faction = FactionSubTypes.GSO,
+                terrain = BaseTerrain.Air,
+                purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.MPSafe },
+                IntendedGrade = 2,
+                startingFunds = 54006,
+                savedTech = "{\"t\":\"GSOCockpit_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSOBlock_112\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-2.0},\"r\":0}|{\"t\":\"GSOBlock_112\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":-2.0},\"r\":0}|{\"t\":\"GSOFan_221\",\"p\":{\"x\":-2.0,\"y\":1.0,\"z\":-1.0},\"r\":18}|{\"t\":\"GSOFan_221\",\"p\":{\"x\":1.0,\"y\":1.0,\"z\":-1.0},\"r\":18}|{\"t\":\"GSOFan_221\",\"p\":{\"x\":2.0,\"y\":1.0,\"z\":-2.0},\"r\":20}|{\"t\":\"GSOFan_221\",\"p\":{\"x\":-1.0,\"y\":1.0,\"z\":-2.0},\"r\":20}|{\"t\":\"GSOBlock_111\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSOGyroAllAxisActive_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-3.0},\"r\":8}|{\"t\":\"GSOBlock_111\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":-3.0},\"r\":0}|{\"t\":\"GSOCockpit_111\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":1.0},\"r\":0}|{\"t\":\"GSOWheelStabiliser_111\",\"p\":{\"x\":0.0,\"y\":-2.0,\"z\":0.0},\"r\":18}|{\"t\":\"GSOWheelStabiliser_111\",\"p\":{\"x\":0.0,\"y\":-2.0,\"z\":-3.0},\"r\":20}|{\"t\":\"GSOCannonTurret_111\",\"p\":{\"x\":1.0,\"y\":-1.0,\"z\":0.0},\"r\":12}|{\"t\":\"GSOCannonTurret_111\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":0.0},\"r\":8}|{\"t\":\"GSOFuelTank_121\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":-1.0},\"r\":20}|{\"t\":\"GSOBooster_112\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-1.0},\"r\":12}|{\"t\":\"GSOBooster_112\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-1.0},\"r\":8}|{\"t\":\"VENSteeringHoverBi_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-4.0},\"r\":1}",
+            } },
             { SpawnBaseTypes.HESheertail, new BaseTemplate {
                 techName = "Sheertail",
                 faction = FactionSubTypes.HE,

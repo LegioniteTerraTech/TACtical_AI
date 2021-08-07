@@ -19,7 +19,7 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.theResource.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.theResource.tank.blockBounds.extents);
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
-            bool hasMessaged = false;
+            bool hasMessaged = true;
             thisInst.lastRange = dist;
 
             float AllyExt = AIECore.Extremes(thisInst.theResource.tank.blockBounds.extents);

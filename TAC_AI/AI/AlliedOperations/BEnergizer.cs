@@ -22,7 +22,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (thisInst.areWeFull)
             {
                 thisInst.areWeFull = false;
-                if (state.currentAmount / state.storageTotal > 0.9f)
+                if ((state.spareCapacity - state.storageTotal) / state.storageTotal > 0.9f)
                     thisInst.areWeFull = true;
 
                 thisInst.ActionPause = 20;
@@ -30,7 +30,7 @@ namespace TAC_AI.AI.AlliedOperations
             else
             {
                 thisInst.areWeFull = true;
-                if (state.currentAmount / state.storageTotal < 0.2f)
+                if ((state.spareCapacity - state.storageTotal) / state.storageTotal < 0.2f)
                     thisInst.areWeFull = false;
             }
 
@@ -53,7 +53,8 @@ namespace TAC_AI.AI.AlliedOperations
                     if (thisInst.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                        thisInst.AvoidStuff = false;
+                        thisInst.AvoidStuff = false; 
+                        thisInst.forceDrive = true;
                         thisInst.DriveVar = -1;
                         //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
                     }

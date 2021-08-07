@@ -91,6 +91,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 32);
+            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = this.AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
 
             if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
@@ -101,7 +102,7 @@ namespace TAC_AI.AI.Movement.AICores
             return true;
         }
 
-        public bool DriveDirectorEnemy(Enemy.EnemyMind mind)
+        public bool DriveDirectorEnemy(EnemyMind mind)
         {
             pilot.ForcePitchUp = false;
             if (pilot.Grounded)
@@ -148,7 +149,8 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 32);
-            pilot.AirborneDest = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
+            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
+            pilot.AirborneDest = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
 
             if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
             {

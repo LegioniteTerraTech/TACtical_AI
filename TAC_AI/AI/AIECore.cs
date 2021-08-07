@@ -64,16 +64,16 @@ namespace TAC_AI.AI
             theBase = null;
             finalPos = null;
             float bestValue = Mathf.Pow(MaxScanRange, 2);// MAX SCAN RANGE
-            foreach (ModuleHarvestReciever trans in Depots)
+            foreach (ModuleHarvestReciever reciever in Depots)
             {
-                float temp = (trans.trans.position - tankPos).sqrMagnitude;
-                bool takesChunks = trans.holder.Acceptance == ModuleItemHolder.AcceptFlags.Chunks;
-                if (bestValue > temp && temp != 0 && trans.trans.root.GetComponent<Tank>().Team == team && takesChunks)
+                float temp = (reciever.trans.position - tankPos).sqrMagnitude;
+                bool takesChunks = reciever.holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Chunks);
+                if (bestValue > temp && temp != 0 && !reciever.tank.boundsCentreWorldNoCheck.Approximately(tankPos, 1) && reciever.tank.Team == team && takesChunks)
                 {
                     fired = true;
-                    theBase = trans.trans.root.GetComponent<Tank>();
+                    theBase = reciever.tank;
                     bestValue = temp;
-                    finalPos = trans;
+                    finalPos = reciever;
                 }
             }
             return fired;
@@ -117,16 +117,16 @@ namespace TAC_AI.AI
             theBase = null;
             finalPos = null;
             float bestValue = Mathf.Pow(MaxScanRange, 2);// MAX SCAN RANGE
-            foreach (ModuleHarvestReciever trans in Depots)
+            foreach (ModuleHarvestReciever reciever in Depots)
             {
-                float temp = (trans.trans.position - tankPos).sqrMagnitude;
-                bool takesBlocks = trans.holder.Acceptance == ModuleItemHolder.AcceptFlags.Blocks;
-                if (bestValue > temp && temp != 0 && trans.trans.root.GetComponent<Tank>().Team == team && takesBlocks)
+                float temp = (reciever.trans.position - tankPos).sqrMagnitude;
+                bool takesBlocks = reciever.holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Blocks);
+                if (bestValue > temp && temp != 0 && !reciever.tank.boundsCentreWorldNoCheck.Approximately(tankPos, 1) && reciever.tank.Team == team && takesBlocks)
                 {
                     fired = true;
-                    theBase = trans.trans.root.GetComponent<Tank>();
+                    theBase = reciever.trans.root.GetComponent<Tank>();
                     bestValue = temp;
-                    finalPos = trans;
+                    finalPos = reciever;
                 }
             }
             return fired;
@@ -141,7 +141,7 @@ namespace TAC_AI.AI
                 if (vis.block.IsAttached || vis.InBeam)
                     continue;   // no grab aquired blocks
                 float temp = (vis.centrePosition - tankPos).sqrMagnitude;
-                if (bestValue > temp && temp != 0)
+                if (bestValue > temp && temp > 1)
                 {
                     fired = true;
                     bestValue = temp;
@@ -162,15 +162,15 @@ namespace TAC_AI.AI
             theBase = null;
             finalPos = null;
             float bestValue = Mathf.Pow(MaxScanRange, 2);// MAX SCAN RANGE
-            foreach (Transform trans in Chargers)
+            foreach (ModuleChargerTracker charge in Chargers)
             {
-                float temp = (trans.position - tankPos).sqrMagnitude;
-                if (bestValue > temp && temp != 0 && trans.root.GetComponent<Tank>().Team == team && trans.GetComponent<ModuleChargerTracker>().CanTransferCharge(tank))
+                float temp = (charge.trans.position - tankPos).sqrMagnitude;
+                if (bestValue > temp && temp > 1 && charge.tank != tank && charge.tank.Team == team && charge.CanTransferCharge(tank))
                 {
                     fired = true;
-                    theBase = trans.root.GetComponent<Tank>();
+                    theBase = charge.tank;
                     bestValue = temp;
-                    finalPos = trans;
+                    finalPos = charge.trans;
                 }
             }
             return fired;
@@ -194,7 +194,7 @@ namespace TAC_AI.AI
                         EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
                         bool hasCapacity = eState.storageTotal > 200;
                         bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
-                        if (Range > temp && temp != 0 && hasCapacity && needsCharge)
+                        if (Range > temp && temp > 1 && hasCapacity && needsCharge)
                         {
                             Range = temp;
                             bestStep = stepper;
@@ -212,7 +212,7 @@ namespace TAC_AI.AI
                         EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
                         bool hasCapacity = eState.storageTotal > 200;
                         bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
-                        if (Range > temp && temp != 0 && hasCapacity && needsCharge)
+                        if (Range > temp && temp > 1 && hasCapacity && needsCharge)
                         {
                             Range = temp;
                             bestStep = stepper;
@@ -422,7 +422,6 @@ namespace TAC_AI.AI
             public float IdealRangeCombat = 25; // The range the AI will linger from the enemy if PursueThreat is true
             public int AnchorAimDampening = 45; // How much do we dampen anchor movements by?
 
-            //BROKEN - cannot set AI types!
             public bool AutoAnchor = false;      // Should the AI toggle the anchor when it is still?
 
             // Repair Auxilliaries
@@ -669,7 +668,10 @@ namespace TAC_AI.AI
                         return;
                     }
                     if (sender.TechTeamID == this.tank.Team)
+                    {
+                        OnSwitchAI();
                         DediAI = type;
+                    }
                     else
                         Debug.Log("TACtical_AI: TrySetAITypeRemote - Invalid request received - player tried to change AI of Tech that wasn't theirs");
                 }
@@ -784,6 +786,7 @@ namespace TAC_AI.AI
 
             public void RefreshAI()
             {
+                AutoAnchor = false;     
                 FullMelee = false;      // Should the AI ram the enemy?
                 AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
                 SecondAvoidence = false;// Should the AI avoid two techs at once?
@@ -846,6 +849,8 @@ namespace TAC_AI.AI
                         isAstrotechAvail = true;
 
                     // Auxillary Functions
+                    if (AIEx.AutoAnchor)
+                        AutoAnchor = true;
                     if (AIEx.MeleePreferred)
                         FullMelee = true;
                     if (AIEx.AdvAvoidence)
@@ -942,15 +947,26 @@ namespace TAC_AI.AI
                 }
             }
 
+            public void OnSwitchAI()
+            {
+                this.EstTopSped = 1;
+                this.foundBase = false;
+                this.foundGoal = false;
+                this.lastBasePos = null;
+                this.lastPlayer = null;
+                this.lastEnemy = null;
+                this.LastCloseAlly = null;
+                this.theBase = null;
+                this.JustUnanchored = false;
+            }
             public void ForceAllAIsToEscort()
             {
-                //broken ATM, needed to return AI mode back to Escort on unanchor as unanchoring causes it to go to idle
-                foreach (ModuleAIBot AIbot in tank.blockman.IterateBlockComponents<ModuleAIBot>())
+                //Needed to return AI mode back to Escort on unanchor as unanchoring causes it to go to idle
+                try
                 {
-                    AIbot.m_AITypesEnabled.SetValue(false, 1);
-                    AIbot.m_AITypesEnabled.SetValue(true, 2);
-                    Debug.Log("TACtical_AI: set an AI to escort");
+                    tank.AI.SetBehaviorType(AITreeType.AITypes.Escort);
                 }
+                catch { }
             }
 
             private void DetermineCombat()
@@ -1372,8 +1388,9 @@ namespace TAC_AI.AI
                     if (lastEnemy != null)
                     {   // Combat repairs (combat mechanic)
                         if (AdvancedAI) // must be smrt
-                            AIERepair.RepairStepper(this, tank, TechMemor, 50);
-                        // otherwise we don't have enough processing power to perform repairs in combat
+                            AIERepair.RepairStepper(this, tank, TechMemor, 40);
+                        else
+                            AIERepair.RepairStepper(this, tank, TechMemor, 65);
                     }
                     else
                     {   // Repairs in peacetime
@@ -1389,13 +1406,13 @@ namespace TAC_AI.AI
             public void RunAlliedOperations()
             {
                 var aI = tank.AI;
+                TryRepairAllied();
 
                 aI.TryGetCurrentAIType(out this.lastAIType);
-                if (this.lastAIType == AITreeType.AITypes.Escort)
+                if (this.lastAIType == AITreeType.AITypes.Escort || this.lastAIType == AITreeType.AITypes.Guard)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired DelayedUpdate!");
                     this.Attempt3DNavi = false;
-                    TryRepairAllied();
 
                     //this.updateCA = true;
                     if (this.ActionPause > 0)
@@ -1440,7 +1457,6 @@ namespace TAC_AI.AI
                 if (KickStart.EnableBetterAI) //&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                 {
                     var aI = tank.AI;
-
                     if (tank.IsFriendly() && aI.CheckAIAvailable())
                     {   //MP is NOT supported!
                         //Player-Allied AI

@@ -17,6 +17,10 @@ namespace TAC_AI
     {
         const string ModName = "TACtical AIs";
 
+        // Control the aircrafts
+        public const float AirMaxHeightOffset = 175;
+        public const float AirMaxHeight = 150;
+
         internal static bool testEnemyAI = true;
         internal static int MaxEnemySplitLimit = 20;// How many techs that can exist for each team before giving up on splitting?
         internal static int MaxEnemyBaseLimit = 3;  // How many bases are allowed to exist in one instance

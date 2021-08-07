@@ -9,7 +9,7 @@ using TAC_AI.AI.Movement.AICores;
 
 namespace TAC_AI.AI
 {
-    class AIControllerAir : MonoBehaviour, IMovementAIController
+    internal class AIControllerAir : MonoBehaviour, IMovementAIController
     {
         internal static FieldInfo boostGet = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
         //internal static FieldInfo boostDir = typeof(BoosterJet).GetField("m_LocalBoostDirection", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -278,7 +278,7 @@ namespace TAC_AI.AI
 
             if (this.BankOnly)
             {  
-                Debug.Log("TACtical AI: Tech " + Tank.name + " does not apply enough forwards thrust " + totalThrust + " vs " + (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).magnitude + " to perform an immelmann.");
+                //Debug.Log("TACtical AI: Tech " + Tank.name + " does not apply enough forwards thrust " + totalThrust + " vs " + (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).magnitude + " to perform an immelmann.");
             }
             if (lowestDelta > 10 && boostBiasDirection == Vector3.zero)
             {   //IT HAS NO VALID PROPS OR BOOSTERS!!!!
@@ -292,7 +292,7 @@ namespace TAC_AI.AI
             BoostBias = boostBiasDirection.normalized;
 
             PropBias = biasDirection.normalized;
-            Debug.Log("TACtical AI: Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
+            //Debug.Log("TACtical AI: Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
             if (Mathf.Abs(Vector3.Dot(PropBias, Vector3.right)) > 0.2f)
             {   //CENTER OF THRUST MAY BE OFF!!!
                 SkewedFlightCenter = true;

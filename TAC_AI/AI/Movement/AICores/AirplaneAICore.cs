@@ -224,6 +224,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!pilot.TargetGrounded)
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
+            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
             AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 
@@ -326,6 +327,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!pilot.TargetGrounded)
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
+            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
             AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 

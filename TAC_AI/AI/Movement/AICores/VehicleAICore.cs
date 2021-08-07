@@ -50,33 +50,37 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (help.LastCloseAlly != null)
                     {
-                        help.lastDestination = AIEPathing.GetDriveApproxAir(help.LastCloseAlly, this.controller.Helper, out bool IsMoving);
-                        if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
+                        try
                         {
-                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
-                            help.MinimumRad = 0.1f;
-                            if (Vector3.Dot(this.controller.Tank.rootBlockTrans.forward, (help.lastDestination - this.controller.Tank.boundsCentreWorldNoCheck).normalized) >= 0)
+                            help.lastDestination = AIEPathing.GetDriveApproxAir(help.LastCloseAlly, this.controller.Helper, out bool IsMoving);
+                            if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
                             {
-                                //Debug.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
-                                help.Steer = true;
-                                help.DriveDir = EDriveType.Forwards;
+                                //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
+                                help.MinimumRad = 0.1f;
+                                if (Vector3.Dot(this.controller.Tank.rootBlockTrans.forward, (help.lastDestination - this.controller.Tank.boundsCentreWorldNoCheck).normalized) >= 0)
+                                {
+                                    //Debug.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
+                                    help.Steer = true;
+                                    help.DriveDir = EDriveType.Forwards;
+                                }
+                                else
+                                {
+                                    help.Steer = true;
+                                    help.DriveDir = EDriveType.Backwards;
+                                }
                             }
                             else
                             {
-                                help.Steer = true;
-                                help.DriveDir = EDriveType.Backwards;
+                                //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
+                                help.MinimumRad = 0f;
+                                help.lastDestination = tank.boundsCentreWorldNoCheck;
+                                help.forceDrive = true;
+                                help.DriveVar = 0;
+                                help.Steer = false;
+                                help.PivotOnly = true;
                             }
                         }
-                        else
-                        {
-                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
-                            help.MinimumRad = 0f;
-                            help.lastDestination = tank.boundsCentreWorldNoCheck;
-                            help.forceDrive = true;
-                            help.DriveVar = 0;
-                            help.Steer = false;
-                            help.PivotOnly = true;
-                        }
+                        catch { }
                     }
                     else
                     {
@@ -214,6 +218,8 @@ namespace TAC_AI.AI.Movement.AICores
             else if (help.DediAI == AIType.Buccaneer)
                 help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, tank, this.controller.Helper);
 
+            AIEPathing.ModerateMaxAlt(ref help.lastDestination, help);
+
             return true;
         }
 
@@ -292,6 +298,9 @@ namespace TAC_AI.AI.Movement.AICores
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper, this.controller.Tank.blockBounds.size.y);
             if (mind.EvilCommander == EnemyHandling.Wheeled)
                 help.lastDestination = AIEPathing.OffsetFromSea(help.lastDestination, tank, controller.Helper);
+
+            AIEPathing.ModerateMaxAlt(ref help.lastDestination, help);
+
             return true;
         }
 
