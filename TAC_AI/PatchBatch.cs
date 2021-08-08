@@ -972,8 +972,9 @@ namespace TAC_AI
 
                                             RawTechLoader.TryRemoveFromPop(tv.visible.tank);
                                             tv.visible.transform.Recycle();
+                                            pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                            Tank replacementBote = RawTechLoader.SpawnMobileTech(pos, posF, team, type);
+                                            Tank replacementBote = RawTechLoader.SpawnMobileTech(pos, posF, team, type, AutoTerrain: false);
                                             replacementBote.SetTeam(tv.TeamID, wasPop);
 
                                             Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
