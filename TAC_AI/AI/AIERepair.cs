@@ -37,6 +37,7 @@ namespace TAC_AI.AI
             public AIECore.TankAIHelper thisInst;
             public bool rejectSaveAttempts = false;
             public bool ranOutOfParts = false;
+            public int ReserveSuperGrabs = 0;
 
             public List<BlockMemory> SavedTech = new List<BlockMemory>();
 
@@ -198,6 +199,40 @@ namespace TAC_AI.AI
                 Debug.Log("TACtical_AI:  DesignMemory - Saved " + Tank.name + " to memory format");
 
                 return output;
+            }
+
+            // Advanced
+            public bool ChanceGrabBackBlock()
+            {
+                if (UnityEngine.Random.Range(0, 200) > KickStart.Difficulty)
+                {
+                    Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
+                    ReserveSuperGrabs++;
+                    return true;
+                }
+                return false;
+            }
+            public void ChanceDestroyBlock(TankBlock blockLoss)
+            {
+                if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
+                    blockLoss.damage.SelfDestruct(0.75f);
+            }
+            public bool TryAttachExistingBlock(TankBlock foundBlock)
+            {
+                bool attemptW = false;
+                // if we are smrt, run heavier operation
+                List<BlockMemory> posBlocks = ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.BlockType.ToString(); });
+                //Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                for (int step2 = 0; step2 < posBlocks.Count; step2++)
+                {
+                    BlockMemory template = posBlocks.ElementAt(step2);
+                    attemptW = AttemptBlockAttach(Tank, template, foundBlock, this);
+                    if (attemptW)
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             // JSON

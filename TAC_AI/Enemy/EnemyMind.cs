@@ -99,6 +99,12 @@ namespace TAC_AI.AI.Enemy
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
                 mind.AIControl.PendingSystemsCheck = true;
+                if ((bool)mind.TechMemor)
+                {
+                    if (mind.TechMemor.ChanceGrabBackBlock())
+                        return;// no destroy block
+                    mind.TechMemor.ChanceDestroyBlock(blockLoss);
+                }
             }
             catch { }
         }

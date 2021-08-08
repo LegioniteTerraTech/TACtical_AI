@@ -80,8 +80,10 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, int Delay = 25, bool Super = false)
         {
-            if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
+            if ((thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0) || mind.TechMemor.ReserveSuperGrabs > 0)
             {
+                if (mind.TechMemor.ReserveSuperGrabs > 0)
+                    mind.TechMemor.ReserveSuperGrabs--;
                 try
                 {
                     EnemyRepairLerp(tank, mind);
