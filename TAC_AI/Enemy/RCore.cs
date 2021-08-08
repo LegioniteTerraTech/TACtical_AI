@@ -366,7 +366,7 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.EvilCommander = EnemyHandling.Airplane;
             }
-            else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
+            else if ((modGyroCount > 0 || modWheelCount < modBoostCount) && isFlying && !isFlyingDirectionForwards)
             {
                 toSet.EvilCommander = EnemyHandling.Chopper;
             }

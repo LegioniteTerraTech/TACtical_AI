@@ -34,12 +34,12 @@ namespace TAC_AI.AI.Enemy
         public bool SolarsAvail = false;        // Do we currently have solar panels
         public bool Provoked = false;           // Were we hit from afar?
         public bool Hurt = false;               // Are we damaged?
-        public int Range = 250;                 // Aggro range
+        public int Range = KickStart.DefaultEnemyRange;// Aggro range
         public int TargetLockDuration = 0;      // For pesterer's random target swatching
         public Vector3 HoldPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
 
         internal bool queueRemove = false;
-        internal const float SpyperMaxRange = 1000;
+        internal const float SpyperMaxRange = 450;
         internal const float SpacingRange = 8;
         internal const float SpacingRangeAir = 16;
 

@@ -17,10 +17,13 @@ namespace TAC_AI
     {
         const string ModName = "TACtical AIs";
 
-        // Control the aircrafts
+        // Control the aircrafts and AI
         public const float AirMaxHeightOffset = 175;
         public const float AirMaxHeight = 150;
         public const float AirPromoteHeight = 200;
+        public const int DefaultEnemyRange = 150;
+        public const int EnemyExtendActionRange = 450;
+
 
         internal static bool testEnemyAI = true;
         internal static int MaxEnemySplitLimit = 20;// How many techs that can exist for each team before giving up on splitting?
@@ -30,6 +33,7 @@ namespace TAC_AI
 
         public static bool EnableBetterAI = true;
         public static int AIDodgeCheapness = 30;
+        public static int AIPopMaxLimit = 30;
         public static bool MuteNonPlayerRacket = true;
         public static bool enablePainMode = true;
         public static bool EnemiesHaveCreativeInventory = false;
@@ -67,6 +71,7 @@ namespace TAC_AI
         public static OptionToggle enemyAirSpawn;
         public static OptionToggle enemySeaSpawn;
         public static OptionRange enemyBaseCount;
+        public static OptionRange enemyMaxCount;
 
 
         internal static bool firedAfterBlockInjector = false;
@@ -152,6 +157,9 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
             thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
+            thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
+            if (!isPopInjectorPresent)
+                OverrideEnemyMax();
 
             var TACAI = ModName + " - General";
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF to uninstall and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
@@ -175,6 +183,12 @@ namespace TAC_AI
 
             if (!isPopInjectorPresent)
             {
+                enemyMaxCount = new OptionRange("Max Random Enemies Permitted", TACAIEnemies, AIPopMaxLimit, 6, 16, 1);
+                enemyMaxCount.onValueSaved.AddListener(() => { 
+                    AIPopMaxLimit = (int)enemyMaxCount.SavedValue; 
+                    thisModConfig.WriteConfigJsonFile();
+                    OverrideEnemyMax();
+                });
                 enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemies, AllowAirEnemiesToSpawn);
                 enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemies, AllowSeaEnemiesToSpawn);
@@ -196,6 +210,16 @@ namespace TAC_AI
         {
             Debug.Log("TACtical_AI: LAUNCHED BASE VALIDATOR");
             Templates.TempManager.ValidateAllStringTechs();
+        }
+
+        internal static FieldInfo limitBreak = typeof(ManPop).GetField("m_PopulationLimit", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static void OverrideEnemyMax()
+        {
+            try
+            {
+                limitBreak.SetValue(ManPop.inst, AIPopMaxLimit);
+            }
+            catch { }
         }
 
         public static bool LookForMod(string name)

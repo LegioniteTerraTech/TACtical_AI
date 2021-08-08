@@ -229,10 +229,12 @@ namespace TAC_AI.AI.Enemy
                     mind.MainFaction = builder.faction;
                     //Debug.Log("TACtical_AI: Tech " + tank.name + " set faction " + tank.GetMainCorp().ToString());
                 }
-                AIERepair.Turboconstruct(tank, mind.TechMemor, true);
-
-                RCore.BlockSetEnemyHandling(tank, mind, true);
-                RCore.RandomSetMindAttack(mind, tank);
+                if (builder.instant)
+                {
+                    AIERepair.Turboconstruct(tank, mind.TechMemor, true);
+                    RCore.BlockSetEnemyHandling(tank, mind, true);
+                    RCore.RandomSetMindAttack(mind, tank);
+                }
 
                 if (builder.unprovoked)
                 {

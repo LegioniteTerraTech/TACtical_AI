@@ -287,6 +287,8 @@ namespace TAC_AI.AI
 
         public class TankAIManager : MonoBehaviour
         {
+            internal static FieldInfo rangeOverride = typeof(ManTechs).GetField("m_SleepRangeFromCamera", BindingFlags.NonPublic | BindingFlags.Instance);
+
             public static TankAIManager inst;
 
             public static EventNoParams QueueUpdater = new EventNoParams();
@@ -302,6 +304,12 @@ namespace TAC_AI.AI
                 Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnTankRemoval);
                 QueueUpdater.Subscribe(FetchAllAllies);
                 Debug.Log("TACtical_AI: Created AIECore Manager.");
+
+                // Only change if no other mod changed
+                if ((float)rangeOverride.GetValue(ManTechs.inst) == 200f)
+                {   // more than twice the range
+                    rangeOverride.SetValue(ManTechs.inst, KickStart.EnemyExtendActionRange);
+                }
             }
             public static void OnTankAddition(Tank tonk)
             {

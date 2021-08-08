@@ -204,7 +204,7 @@ namespace TAC_AI.AI
             // Advanced
             public bool ChanceGrabBackBlock()
             {
-                if (UnityEngine.Random.Range(0, 200) > KickStart.Difficulty)
+                if (UnityEngine.Random.Range(0, 200) < KickStart.Difficulty)
                 {
                     Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
                     ReserveSuperGrabs++;
