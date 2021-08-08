@@ -23,8 +23,8 @@ namespace TAC_AI.AI.Enemy
             //    return;
             switch (mind.CommanderBolts)
             {
-                case EnemyBolts.Default:        // Blow up like default - first enemy sighting
-                    if (thisInst.lastEnemy.IsNotNull())
+                case EnemyBolts.Default:        // Blow up like default - first enemy sighting on spacebar
+                    if (thisInst.lastEnemy.IsNotNull() && thisInst.FIRE_NOW)
                         tank.control.DetonateExplosiveBolt();
                     break;
                 case EnemyBolts.MissionTrigger:  // do nothing

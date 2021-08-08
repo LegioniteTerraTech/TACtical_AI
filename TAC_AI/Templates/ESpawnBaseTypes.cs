@@ -93,6 +93,7 @@ namespace TAC_AI.Templates
         VENMachinator,      // gg toofast, tons of missiles
 
         HEPeanutJet,        // Intro cutscene enemy, has cruise missiles very early
+        HEProx,             // Little fighter
         HEVengence,         // Railgun fighter
         HEDropship,         // Wheeled Tank Dropship (Alien ref)
         HEBombsAway,        // Anti-base bomber
@@ -113,8 +114,10 @@ namespace TAC_AI.Templates
         GSOShallowWaterGuard,
         GCPlasmaDredge,
         GCYukonCharleyDredge,
+        VENScurry,
         VENNautilus,
         HESwaddleBoat,
+        HEDreadnaught,
         BFLuxYacht,
 
         //Player-helping naval crafts

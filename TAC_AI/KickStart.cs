@@ -20,6 +20,7 @@ namespace TAC_AI
         // Control the aircrafts
         public const float AirMaxHeightOffset = 175;
         public const float AirMaxHeight = 150;
+        public const float AirPromoteHeight = 200;
 
         internal static bool testEnemyAI = true;
         internal static int MaxEnemySplitLimit = 20;// How many techs that can exist for each team before giving up on splitting?

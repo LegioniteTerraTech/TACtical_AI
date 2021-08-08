@@ -22,8 +22,8 @@ namespace TAC_AI.Templates
             {
                 block.damage.SelfDestruct(0.5f);
             }
-            aircraft.blockman.Disintegrate();
             SpecialAISpawner.AirPool.Remove(this);
+            aircraft.blockman.Disintegrate();
         }
     }
     public class SpecialAISpawner : MonoBehaviour
@@ -107,7 +107,6 @@ namespace TAC_AI.Templates
                 return;
             if (AirPool.Count >= MaxAircraftAllowed)
                 return;
-
             Vector3 pos;
             if (playerTank.rbody.IsNotNull())
                 pos = (playerTank.rbody.velocity * Time.deltaTime * 5) + playerTank.boundsCentreWorldNoCheck;
@@ -124,6 +123,7 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: SpecialAISpawner - Could not spawn aircraft - Player has no corps unlocked!?!");
                 return;
             }
+            newAircraft.SetTeam(-1, true);
             TrackedAircraft newAir = new TrackedAircraft();
             newAir.Setup(newAircraft);
             AirPool.Add(newAir);
@@ -293,7 +293,13 @@ namespace TAC_AI.Templates
         public void Update()
         {   // 
             //Debug.Log("TACtical_AI: SpecialAISpawner - ACTIVE!!!  time" + counter);
-            if (counter > AirSpawnInterval / ((KickStart.Difficulty / 100) + 1.5f) && (Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn))
+            bool doubleSpawnRate = false;
+            try
+            {
+                doubleSpawnRate = Singleton.cameraTrans.position.y > KickStart.AirPromoteHeight;
+            }
+            catch { }
+            if ((Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn) && counter > (AirSpawnInterval / (doubleSpawnRate ? 2 : 1)) / ((KickStart.Difficulty / 100) + 1.5f))
             {   // determine if we should spawn new one, also manage existing pooled aircrafts
                 //Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
                 if (UnityEngine.Random.Range(-1, 101) < AircraftSpawnOdds && KickStart.AllowAirEnemiesToSpawn)
@@ -324,7 +330,7 @@ namespace TAC_AI.Templates
         }
         private static Vector3 GetAirOffsetFromPosition(Vector3 pos, Vector3 angleHeading)
         {   // 
-            return AI.Movement.AIEPathing.ForceOffsetFromGroundA(pos + -(angleHeading * AirSpawnDist) + (Singleton.cameraTrans.forward * 25), 50);
+            return AI.Movement.AIEPathing.OffsetFromGroundAAlt(pos + -(angleHeading * AirSpawnDist) + (Singleton.cameraTrans.forward * 25), 50);
         }
     }
 }

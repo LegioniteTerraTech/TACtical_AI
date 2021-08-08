@@ -67,6 +67,23 @@ namespace TAC_AI.AI.Enemy
         {
             return EnemyBases.FindAll(delegate (EnemyBaseFunder funds) { return funds.isHQ; }).Count;
         }
+        public static string GetActualNameDef(string name)
+        {
+            StringBuilder nameActual = new StringBuilder();
+            char lastIn = 'n';
+            foreach (char ch in name)
+            {
+                if (ch == 'â' && lastIn == ' ')
+                {
+                    nameActual.Remove(nameActual.Length - 2, 2);
+                    break;
+                }
+                else
+                    nameActual.Append(ch);
+                lastIn = ch;
+            }
+            return nameActual.ToString();
+        }
 
         public class EnemyBaseFunder : MonoBehaviour
         {
@@ -227,7 +244,7 @@ namespace TAC_AI.AI.Enemy
                 //Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + mind.EvilCommander.ToString() + " based enemy with attitude " + mind.CommanderAttack.ToString() + " | Mind " + mind.CommanderMind.ToString() + " | Smarts " + mind.CommanderSmarts.ToString() + " inbound!");
             }
             if (name.Contains(" ¥¥"))
-            {
+            {   // Main base
                 if (name.Contains("#"))
                 {
                     //It's not a base
@@ -279,6 +296,45 @@ namespace TAC_AI.AI.Enemy
                         tank.TryToggleTechAnchor();
                     }
                     MakeMinersMineUnlimited(tank);
+                    DidFire = true;
+                }
+            }
+            else if (name.Contains(" â"))
+            {   // Defense
+                if (name.Contains("#"))
+                {
+                    //It's not a base
+                    StringBuilder nameNew = new StringBuilder();
+                    nameNew.Append(GetActualNameDef(name));
+                    nameNew.Append(" Minion");
+                    tank.SetName(nameNew.ToString());
+                    // it's a minion of the base
+                }
+                else
+                {
+                    mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
+                    if (mind.TechMemor.IsNull())
+                    {
+                        mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                        mind.TechMemor.Initiate();
+                    }
+                    try
+                    {
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(GetActualNameDef(name));
+                        SetupBaseType(type, mind);
+                        mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
+                        tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
+                    }
+                    catch { }
+                    if (!tank.IsAnchored)
+                        tank.Anchors.TryAnchorAll(true);
+                    if (!tank.IsAnchored)
+                        tank.TryToggleTechAnchor();
+                    if (!tank.IsAnchored)
+                    {
+                        tank.Anchors.RetryAnchorOnBeam = true;
+                        tank.TryToggleTechAnchor();
+                    }
                     DidFire = true;
                 }
             }

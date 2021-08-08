@@ -362,10 +362,6 @@ namespace TAC_AI.AI.Enemy
                 toSet.EvilCommander = EnemyHandling.Stationary;
                 toSet.CommanderBolts = EnemyBolts.AtFull;
             }
-            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
-            {
-                toSet.EvilCommander = EnemyHandling.Starship;
-            }
             else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
             {
                 toSet.EvilCommander = EnemyHandling.Airplane;
@@ -374,9 +370,13 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.EvilCommander = EnemyHandling.Chopper;
             }
-            else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
+            else if (KickStart.isWaterModPresent && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 + FoilCount || modHoverCount > 1))
             {
                 toSet.EvilCommander = EnemyHandling.Naval;
+            }
+            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
+            {
+                toSet.EvilCommander = EnemyHandling.Starship;
             }
             else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
             {

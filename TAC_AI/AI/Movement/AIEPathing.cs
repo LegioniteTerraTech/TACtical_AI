@@ -593,6 +593,24 @@ namespace TAC_AI.AI.Movement
             final.y = final_y;
             return final;
         }
+        public static Vector3 OffsetFromGroundAAlt(Vector3 input, float groundOffset = 35)
+        {
+            float final_y;
+            Vector3 final = input;
+            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            if (terrain)
+                final_y = height + groundOffset;
+            else
+                final_y = 50 + groundOffset;
+            if (KickStart.isWaterModPresent)
+            {
+                if (KickStart.WaterHeight > height)
+                    final_y = KickStart.WaterHeight + groundOffset;
+            }
+            if (input.y < final_y)
+                final.y = final_y;
+            return final;
+        }
 
         // Sea
         public static Vector3 OffsetToSea(Vector3 input, Tank tank, AIECore.TankAIHelper thisInst)
@@ -742,6 +760,28 @@ namespace TAC_AI.AI.Movement
                 }
                 catch { }
             }
+        }
+        internal static bool IsUnderMaxAltPlayer(Vector3 Pos)
+        {
+            if ((bool)Singleton.playerTank)
+            {
+                if (Pos.y > KickStart.AirMaxHeight + Singleton.playerPos.y)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                try
+                {
+                    if (Pos.y > KickStart.AirMaxHeight)
+                    {
+                        return false;
+                    }
+                }
+                catch { }
+            }
+            return true;
         }
     }
 }

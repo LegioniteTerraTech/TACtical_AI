@@ -673,7 +673,7 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 driveVal;
             if (thisInst.AdviseAway)
             {   //Move from target
-                if (thisInst.lastEnemy.IsNotNull())
+                if (thisInst.lastEnemy.IsNotNull() && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
                     driveVal = InertiaTranslation(-tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized);
@@ -699,7 +699,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                if (thisInst.lastEnemy.IsNotNull() && thisInst.DediAI != AIType.MTMimic)
+                if (thisInst.lastEnemy.IsNotNull() && thisInst.DediAI != AIType.MTMimic && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {   //level alt with enemy
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
                     driveVal = InertiaTranslation(tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized);

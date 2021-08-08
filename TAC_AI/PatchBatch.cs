@@ -960,13 +960,28 @@ namespace TAC_AI
                                     // OVERRIDE TO SHIP
                                     try
                                     {
-                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(tv.Position, tv.visible.tank.rootBlockTrans.forward, tv.TeamID, RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp())));
-                                        RadarTypes inherit = tv.RadarType;
-                                        string previousTechName = tv.visible.tank.name;
-                                        tv.visible.transform.Recycle();
+                                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()));
+                                        if (type != SpawnBaseTypes.NotAvail)
+                                        {
+                                            RadarTypes inherit = tv.RadarType;
+                                            string previousTechName = tv.visible.tank.name;
+                                            Vector3 pos = tv.Position;
+                                            Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
+                                            int team = tv.TeamID;
+                                            bool wasPop = tv.visible.tank.IsPopulation;
 
-                                        Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
-                                        tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
+                                            RawTechLoader.TryRemoveFromPop(tv.visible.tank);
+                                            tv.visible.transform.Recycle();
+
+                                            Tank replacementBote = RawTechLoader.SpawnMobileTech(pos, posF, team, type);
+                                            replacementBote.SetTeam(tv.TeamID, wasPop);
+
+                                            Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
+                                            tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
+                                            if (tv == null)
+                                                tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
+                                        }
+                                        // Else we don't do anything.
                                     }
                                     catch
                                     {
@@ -974,19 +989,23 @@ namespace TAC_AI
 
                                         for (int fire = 0; fire < 25; fire++)
                                         {
-                                            TankBlock boom = Templates.RawTechLoader.SpawnBlockS(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward));
+                                            TankBlock boom = RawTechLoader.SpawnBlockS(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward));
                                             boom.visible.SetInteractionTimeout(20);
                                             boom.damage.SelfDestruct(0.5f);
                                         }
-                                        foreach (TankBlock block in tv.visible.tank.blockman.IterateBlocks())
+                                        try
                                         {
-                                            block.visible.SetInteractionTimeout(20);
-                                            block.damage.SelfDestruct(0.5f);
-                                            block.damage.Explode(true);
+                                            foreach (TankBlock block in tv.visible.tank.blockman.IterateBlocks())
+                                            {
+                                                block.visible.SetInteractionTimeout(20);
+                                                block.damage.SelfDestruct(0.5f);
+                                                block.damage.Explode(true);
+                                            }
+                                            tv.visible.tank.blockman.Disintegrate(true, false);
+                                            if (tv.visible.IsNotNull())
+                                                tv.visible.trans.Recycle();
                                         }
-                                        tv.visible.tank.blockman.Disintegrate(true, false);
-                                        if (tv.visible.IsNotNull())
-                                            tv.visible.trans.Recycle();
+                                        catch { }
                                     }
                                 }
                             }
