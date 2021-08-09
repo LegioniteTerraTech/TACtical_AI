@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using TAC_AI.AI;
 using UnityEngine;
 
 namespace TAC_AI
@@ -15,6 +12,7 @@ namespace TAC_AI
         public Transform trans;
         public ModuleItemHolder holder;
         internal float minEnergyAmount = 200;
+        private bool DockingRequested = false;
 
         public static implicit operator Transform(ModuleChargerTracker yes)
         {
@@ -31,13 +29,15 @@ namespace TAC_AI
         }
         public void OnAttach()
         {
-            AI.AIECore.Chargers.Add(this);
+            AIECore.Chargers.Add(this);
             tank = transform.root.GetComponent<Tank>();
+            DockingRequested = false;
         }
         public void OnDetach()
         {
             tank = null;
-            AI.AIECore.Chargers.Remove(this);
+            AIECore.Chargers.Remove(this);
+            DockingRequested = false;
         }
         public bool CanTransferCharge(Tank toChargeTank)
         {
@@ -49,6 +49,27 @@ namespace TAC_AI
             float chargeFraction = energyThat.currentAmount / energyThat.storageTotal;
 
             return energyThis.currentAmount > minEnergyAmount && energyThis.currentAmount / energyThis.storageTotal > chargeFraction;
+        }
+        public void RequestDocking()
+        {
+            if (!DockingRequested)
+            {
+                if (tank == null)
+                {
+                    Debug.Log("TACtical_AI: Tried to request docking to a charger that was not attached to anything");
+                    return;
+                }
+                DockingRequested = true;
+                Invoke("StopDocking", 2);
+                tank.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+            }
+        }
+        private void StopDocking()
+        {
+            if (DockingRequested)
+            {
+                DockingRequested = false;
+            }
         }
     }
 }

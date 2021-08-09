@@ -71,6 +71,7 @@ namespace TAC_AI.AI.AlliedOperations
                 Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 AIControllerAir pilot = (AIControllerAir) thisInst.MovementController;
+                /*
                 if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && (pilot.LargeAircraft || pilot.BankOnly))
                 {   // AC-130 broadside attack
                     if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
@@ -81,14 +82,14 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                 }
                 else
-                {   // Normal Dogfighting
+                {  */ // Normal Dogfighting
                     if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.25f || thisInst.Urgency >= 30)
                     {
                         thisInst.DANGER = true;
                         //thisInst.Urgency = 50;
                         thisInst.SettleDown();
                     }
-                }
+                //}
             }
             else
             {

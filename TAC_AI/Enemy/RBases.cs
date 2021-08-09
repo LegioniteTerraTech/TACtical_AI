@@ -287,7 +287,6 @@ namespace TAC_AI.AI.Enemy
                         tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
                     }
                     catch { }
-                    MakeMinersMineUnlimited(tank);
                     if (!tank.IsAnchored)
                         tank.Anchors.TryAnchorAll(true);
                     if (!tank.IsAnchored)
@@ -388,12 +387,16 @@ namespace TAC_AI.AI.Enemy
         {   // make autominers mine deep based on biome
             try
             {
+                //Debug.Log("TACtical_AI: " + tank.name + " is trying to mine unlimited");
                 foreach (ModuleItemProducer module in tank.blockman.IterateBlockComponents<ModuleItemProducer>())
                 {
                     module.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
                 }
             }
-            catch { }
+            catch
+            {
+                Debug.Log("TACtical_AI: MakeMinersMineUnlimited - game is being stubborn");
+            }
         }
         public static ChunkTypes[] TryGetBiomeResource(Vector3 pos)
         {   // make autominers mine deep based on biome

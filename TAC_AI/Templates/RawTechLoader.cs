@@ -21,7 +21,7 @@ namespace TAC_AI.Templates
 
     public static class RawTechLoader
     {
-        const float MinimumBaseSpacing = 325;
+        const float MinimumBaseSpacing = 80;
         const int MaxBlockLimitAttract = 128;
 
         static bool ForceSpawn = false;  // Test a specific base
@@ -170,15 +170,57 @@ namespace TAC_AI.Templates
         }
         internal static int SpawnSeaBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
         {   // N/A!!! WIP!!!
-            Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function");
-            //throw new NotImplementedException();
-            return 0;
+            //Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function");
+            Vector3 position = AIEPathing.ForceOffsetToSea(pos);
+            string baseBlueprint = GetBlueprint(toSpawn);
+            Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+
+            Tank theBase;
+            if (storeBB)
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + (GetBaseStartingFunds(toSpawn) + ExtraBB));
+            else
+            {
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " â");
+            }
+
+
+            theBase.FixupAnchors(true);
+            var namesav = theBase.gameObject.AddComponent<BookmarkBuilder>();
+            namesav.blueprint = baseBlueprint;
+            namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+            namesav.faction = GetMainCorp(toSpawn);
+            namesav.unprovoked = false;
+            namesav.instant = false;
+            return GetBaseBBCost(baseBlueprint);
         }
         internal static int SpawnAirBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
         {   // N/A!!! WIP!!!
-            Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function");
-            //throw new NotImplementedException();
-            return 0;
+            //Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function");
+            Vector3 position = AIEPathing.ForceOffsetToSea(pos);
+            string baseBlueprint = GetBlueprint(toSpawn);
+            Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+
+            Tank theBase;
+            if (storeBB)
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + (GetBaseStartingFunds(toSpawn) + ExtraBB));
+            else
+            {
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " â");
+            }
+
+
+            theBase.FixupAnchors(true);
+            var namesav = theBase.gameObject.AddComponent<BookmarkBuilder>();
+            namesav.blueprint = baseBlueprint;
+            namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+            namesav.faction = GetMainCorp(toSpawn);
+            namesav.unprovoked = false;
+            namesav.instant = false;
+            return GetBaseBBCost(baseBlueprint);
         }
 
 
@@ -836,7 +878,7 @@ namespace TAC_AI.Templates
 
         internal static void MakeSureCanExistWithBase(Tank tank)
         {
-            if (!tank.IsFriendly(tank.Team))
+            if (!tank.IsFriendly(tank.Team) || tank.Team == -1)
             {
                 int set = UnityEngine.Random.Range(5, 365);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");

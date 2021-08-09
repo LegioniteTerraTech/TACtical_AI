@@ -18,7 +18,7 @@ namespace TAC_AI
         const string ModName = "TACtical AIs";
 
         // Control the aircrafts and AI
-        public const float AirMaxHeightOffset = 175;
+        public const float AirMaxHeightOffset = 250;
         public const float AirMaxHeight = 150;
         public const float AirPromoteHeight = 200;
         public const int DefaultEnemyRange = 150;
@@ -33,7 +33,7 @@ namespace TAC_AI
 
         public static bool EnableBetterAI = true;
         public static int AIDodgeCheapness = 30;
-        public static int AIPopMaxLimit = 30;
+        public static int AIPopMaxLimit = 6;
         public static bool MuteNonPlayerRacket = true;
         public static bool enablePainMode = true;
         public static bool EnemiesHaveCreativeInventory = false;

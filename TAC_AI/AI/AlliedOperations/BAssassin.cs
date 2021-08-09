@@ -10,7 +10,7 @@ namespace TAC_AI.AI.AlliedOperations
     {
         public static void MotivateKill(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //The Handler that tells the Tank (Energizer) what to do movement-wise
+            //The Handler that tells the Tank (Assassin) what to do movement-wise
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
@@ -50,6 +50,7 @@ namespace TAC_AI.AI.AlliedOperations
 
                 if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
                 {
+                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                     if (thisInst.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -68,6 +69,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
                 {
+                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -91,6 +93,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
                 {
+                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");

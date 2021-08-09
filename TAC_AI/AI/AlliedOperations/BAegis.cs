@@ -7,7 +7,8 @@ using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAegis {
+    public static class BAegis 
+    {
         public static void MotivateProtect(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Aegis) what to do movement-wise
@@ -17,6 +18,11 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             if (thisInst.theResource.tank == null)
                 return;
+            if (thisInst.theResource.tank == tank)
+            {
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  Aegis - error: trying to protect self");
+                return;
+            }
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.theResource.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.theResource.tank.blockBounds.extents);
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             bool hasMessaged = false;
@@ -26,20 +32,42 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (dist < thisInst.lastTechExtents + AllyExt + 2)
             {
-                thisInst.DelayedAnchorClock = 0;
-                AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving " + thisInst.theResource.tank.name + " some room...");
-                thisInst.MoveFromObjective = true;
-                thisInst.forceDrive = true;
-                thisInst.DriveVar = -1;
-                if (thisInst.unanchorCountdown > 0)
-                    thisInst.unanchorCountdown--;
-                if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
+                if (thisInst.AvoidStuff)
                 {
-                    if (tank.Anchors.NumIsAnchored > 0)
+                    thisInst.DelayedAnchorClock = 0;
+                    AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving " + thisInst.theResource.tank.name + " some room...");
+                    thisInst.MoveFromObjective = true;
+                    thisInst.forceDrive = true;
+                    thisInst.DriveVar = -1;
+                    if (thisInst.unanchorCountdown > 0)
+                        thisInst.unanchorCountdown--;
+                    if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
                     {
-                        thisInst.unanchorCountdown = 15;
-                        tank.TryToggleTechAnchor();
-                        thisInst.JustUnanchored = true;
+                        if (tank.Anchors.NumIsAnchored > 0)
+                        {
+                            thisInst.unanchorCountdown = 15;
+                            tank.TryToggleTechAnchor();
+                            thisInst.JustUnanchored = true;
+                        }
+                    }
+                }
+                else
+                {   //Else we are holding off because someone is trying to dock.
+                    AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Waiting for other tech to finish their actions...");
+                    //thisInst.lastDestination = tank.transform.position;
+                    thisInst.AvoidStuff = true;
+                    thisInst.lastMoveAction = 0;
+                    thisInst.SettleDown();
+                    if (thisInst.DelayedAnchorClock < 15)
+                        thisInst.DelayedAnchorClock++;
+                    if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
+                    {
+                        if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
+                        {
+                            Debug.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
+                            tank.TryToggleTechAnchor();
+                            thisInst.anchorAttempts++;
+                        }
                     }
                 }
             }

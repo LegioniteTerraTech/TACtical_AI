@@ -64,6 +64,7 @@ namespace TAC_AI.AI.Enemy
             {
                 if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0)
                     tank.TryToggleTechAnchor();
+                RBases.MakeMinersMineUnlimited(tank);
             }
 
             RBolts.ManageBolts(thisInst, tank, Mind);
@@ -140,6 +141,11 @@ namespace TAC_AI.AI.Enemy
             toSet.HoldPos = tank.boundsCentreWorldNoCheck;
             toSet.Initiate();
             toSet.Range = 250;
+            try
+            {
+                toSet.Range = (int)tank.Radar.Range + 50;
+            }
+            catch { }
 
             bool isMissionTech = RMission.SetupMissionAI(thisInst, tank, toSet);
             if (isMissionTech)
@@ -471,6 +477,7 @@ namespace TAC_AI.AI.Enemy
                 if (toSet.CommanderMind == EnemyAttitude.Miner)
                     toSet.CommanderMind = EnemyAttitude.Homing;
             }
+
 
             if (toSet.CommanderAttack == EnemyAttack.Grudge)
                 toSet.FindEnemy();

@@ -21,20 +21,63 @@ namespace TAC_AI
 		{   // can't have this cycling again can we?
 			if (!cached)
 			{
-				chunks = (ChunkTypes[])mineOut.GetValue(GetComponent<ModuleItemProducer>());
-				flags = (ModuleItemProducer.OperateConditionFlags)minerOp.GetValue(GetComponent<ModuleItemProducer>());
-				minerOp.SetValue(GetComponent<ModuleItemProducer>(), ModuleItemProducer.OperateConditionFlags.Anchored);
-				mineOut.SetValue(GetComponent<ModuleItemProducer>(), RBases.TryGetBiomeResource(transform.position));
+				ModuleItemProducer produce = GetComponent<ModuleItemProducer>();
+				chunks = (ChunkTypes[])mineOut.GetValue(produce);
+				flags = (ModuleItemProducer.OperateConditionFlags)minerOp.GetValue(produce);
+				minerOp.SetValue(produce, ModuleItemProducer.OperateConditionFlags.Anchored);
+				mineOut.SetValue(produce, RBases.TryGetBiomeResource(transform.position));
 
 				cached = true;
+
 				Debug.Log("TACtical_AI: Saved " + name);
+                try
+                {
+                    Tank tank = transform.root.GetComponent<Tank>();
+                    Debug.Log("TACtical_AI: Stage 1");
+                    tank.FixupAnchors();
+                    if (tank.IsAnchored)
+                        tank.Anchors.UnanchorAll(true);
+                    if (tank.IsAnchored)
+                    {
+                        Debug.Log("TACtical_AI: Anchor is being stubborn");
+                        tank.TryToggleTechAnchor();
+                        tank.TryToggleTechAnchor();
+                        tank.TryToggleTechAnchor();
+                        tank.TryToggleTechAnchor();
+                        tank.TryToggleTechAnchor();
+                        if (tank.IsAnchored)
+                        {
+                            Debug.Log("TACtical_AI: Anchor is being stubborn 2");
+                            tank.TryToggleTechAnchor();
+                            tank.TryToggleTechAnchor();
+                            tank.TryToggleTechAnchor();
+                            tank.TryToggleTechAnchor();
+                            tank.TryToggleTechAnchor();
+                        }
+                    }
+                    Debug.Log("TACtical_AI: Stage 2");
+                    if (!tank.IsAnchored)
+                        tank.Anchors.TryAnchorAll(true);
+                    if (!tank.IsAnchored)
+                        tank.TryToggleTechAnchor();
+                    if (!tank.IsAnchored)
+                    {
+                        tank.Anchors.RetryAnchorOnBeam = true;
+                        tank.TryToggleTechAnchor();
+                    }
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: fired prematurely");
+                }
 			}
 		}
 		public void LoadNow()
-		{   // can't have this cycling again can we?
+		{   
 			mineOut.SetValue(GetComponent<ModuleItemProducer>(), chunks);
 			minerOp.SetValue(GetComponent<ModuleItemProducer>(), flags);
 			Debug.Log("TACtical_AI: Loaded " + name);
+			cached = false;
 			DestroyImmediate(this);
 		}
     }

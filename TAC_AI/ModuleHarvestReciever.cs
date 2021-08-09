@@ -1,4 +1,5 @@
 ﻿using System;
+using TAC_AI.AI;
 using UnityEngine;
 
 namespace TAC_AI
@@ -10,6 +11,7 @@ namespace TAC_AI
         public Tank tank;
         public Transform trans;
         public ModuleItemHolder holder;
+        private bool DockingRequested = false;
 
         public static implicit operator Transform(ModuleHarvestReciever yes)
         {
@@ -26,13 +28,36 @@ namespace TAC_AI
         }
         public void OnAttach()
         {
-            AI.AIECore.Depots.Add(this);
+            AIECore.Depots.Add(this);
             tank = transform.root.GetComponent<Tank>();
+            DockingRequested = false;
         }
         public void OnDetach()
         {
             tank = null;
-            AI.AIECore.Depots.Remove(this);
+            AIECore.Depots.Remove(this);
+            DockingRequested = false;
+        }
+        public void RequestDocking()
+        {
+            if (!DockingRequested)
+            {
+                if (tank == null)
+                {
+                    Debug.Log("TACtical_AI: Tried to request docking to a charger that was not attached to anything");
+                    return;
+                }
+                DockingRequested = true;
+                Invoke("StopDocking", 2);
+                tank.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+            }
+        }
+        private void StopDocking()
+        {
+            if (DockingRequested)
+            {
+                DockingRequested = false;
+            }
         }
     }
 }

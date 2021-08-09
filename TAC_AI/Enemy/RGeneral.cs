@@ -144,8 +144,7 @@ namespace TAC_AI.AI.Enemy
             }
             else if (thisInst.ActionPause == 0)
                 thisInst.ActionPause = 30;
-            else
-                thisInst.ActionPause--;
+            thisInst.ProceedToObjective = true;
         }
         public static void HomingIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {

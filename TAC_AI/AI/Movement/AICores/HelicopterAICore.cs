@@ -31,11 +31,18 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     return false;
                 }
-                //Try fighting the controls to land safely
+                //WIP - Try fighting the controls to land safely
 
                 return true;
             }
-            if (tank.wheelGrounded || pilot.ForcePitchUp)
+
+            if (tank.beam.IsActive)
+            {   // BEAMING
+                pilot.MainThrottle = 0;
+                HelicopterUtils.UpdateThrottleCopter(pilot, thisInst, thisControl);
+                HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, pilot.AirborneDest, true);
+            }
+            else if (tank.grounded || pilot.ForcePitchUp)
             {   // Try and takeoff
                 //Debug.Log("TACtical_AI: " + tank.name + " is taking off");
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, 45), true);

@@ -27,13 +27,20 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     return false;
                 }
-                //Try fighting the controls to land safely
+                //WIP - Try fighting the controls to land safely
 
                 return true;
             }
             //Debug.Log("TACtical_AI: Tech " + tank.name + " plane drive was called");
 
-            if (tank.grounded || pilot.ForcePitchUp)
+            if (tank.beam.IsActive)
+            {   // BEAMING
+                pilot.MainThrottle = 0;
+                pilot.PerformUTurn = 0;
+                this.pilot.UpdateThrottle(thisInst, thisControl);
+                AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
+            }
+            else if (tank.grounded || pilot.ForcePitchUp)
             {   // Try and takeoff
                 pilot.MainThrottle = 1;
                 pilot.PerformUTurn = 0;

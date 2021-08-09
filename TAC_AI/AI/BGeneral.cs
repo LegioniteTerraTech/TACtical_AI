@@ -11,7 +11,6 @@ namespace TAC_AI.AI
     {
         public static void ResetValues(AIECore.TankAIHelper thisInst)
         {
-            thisInst.AvoidStuff = true;
             thisInst.Yield = false;
             thisInst.PivotOnly = false;
             thisInst.FIRE_NOW = false;

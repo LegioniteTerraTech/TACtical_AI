@@ -591,20 +591,20 @@ namespace TAC_AI.AI
             {
                 if (tank != this.tank)
                     return;
-                    this.EstTopSped = 1;
-                    //this.LastBuildClock = 0;
-                    this.PendingHeightCheck = true;
-                    if (AIState == 1)
+                this.EstTopSped = 1;
+                //this.LastBuildClock = 0;
+                this.PendingHeightCheck = true;
+                if (AIState == 1)
+                {
+                    try
                     {
-                        try
+                        if ((bool)TechMemor)
                         {
-                            if ((bool)TechMemor)
-                            {
-                                TechMemor.SaveTech();
-                            }
+                            TechMemor.SaveTech();
                         }
-                        catch { }
                     }
+                    catch { }
+                }
             }
             public void OnDetach(TankBlock newBlock, Tank tank)
             {
@@ -957,6 +957,7 @@ namespace TAC_AI.AI
 
             public void OnSwitchAI()
             {
+                this.AvoidStuff = true;
                 this.EstTopSped = 1;
                 this.foundBase = false;
                 this.foundGoal = false;
@@ -1305,6 +1306,25 @@ namespace TAC_AI.AI
                 this.Urgency = 0;
                 this.FrustrationMeter = 0;
                 this.Obst = null;
+            }
+
+
+            public void AllowApproach()
+            {
+                if (AvoidStuff)
+                {
+                    AvoidStuff = false;
+                    CancelInvoke();
+                    //Debug.Log("TACtical_AI: AI " + tank.name + ":  Allowing approach");
+                    Invoke("StopAllowApproach", 2);
+                }
+            }
+            private void StopAllowApproach()
+            {
+                if (!AvoidStuff)
+                {
+                    AvoidStuff = true;
+                }
             }
 
             public bool IsTechMoving(float minSpeed)

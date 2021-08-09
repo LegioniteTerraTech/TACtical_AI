@@ -204,7 +204,7 @@ namespace TAC_AI.AI
             // Advanced
             public bool ChanceGrabBackBlock()
             {
-                if (UnityEngine.Random.Range(0, 200) < KickStart.Difficulty)
+                if (UnityEngine.Random.Range(0, 500) < KickStart.Difficulty)
                 {
                     Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
                     ReserveSuperGrabs++;
@@ -214,8 +214,17 @@ namespace TAC_AI.AI
             }
             public void ChanceDestroyBlock(TankBlock blockLoss)
             {
-                if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
-                    blockLoss.damage.SelfDestruct(0.75f);
+                try
+                {
+                    if (ManLicenses.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel != 0)
+                        if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
+                            blockLoss.damage.SelfDestruct(0.75f);
+                }
+                catch
+                {
+                    if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
+                        blockLoss.damage.SelfDestruct(0.75f);
+                }
             }
             public bool TryAttachExistingBlock(TankBlock foundBlock)
             {
@@ -478,10 +487,6 @@ namespace TAC_AI.AI
                 success = BlockAttachNetworkOverride(tank, template, canidate);
             if (success)
             {
-                if (canidate.GetComponent<ModuleItemProducer>() && tank.IsEnemy())
-                {
-                    canidate.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
-                }
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
                 if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
                 {
