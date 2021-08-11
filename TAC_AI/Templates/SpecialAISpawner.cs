@@ -30,6 +30,8 @@ namespace TAC_AI.Templates
         //          please let LegioniteTerraTech know.  
         //      For tech-related concerns or additions, confront Legionite on the TerraTech Community Discord.
 
+        private static bool forceOn = false;    // spawn in creative no matter what
+
         private static SpecialAISpawner inst;
         private static ManLicenses Licences;
 
@@ -46,7 +48,6 @@ namespace TAC_AI.Templates
         const float AirDespawnDist = 475;
         const float AirSpawnInterval = 30;
 
-        private static bool forceOn = true;    // spawn in creative no matter what
 
         public static void Initiate()
         {   // 
@@ -265,7 +266,7 @@ namespace TAC_AI.Templates
         /// </summary>
         /// <param name="tech"></param>
         /// <param name="player"></param>
-       internal static void Purge(Tank tech, NetPlayer player = null)
+       internal static void Purge(Tank tech)
         {   // 
             if (ManNetwork.IsNetworked)
             {
