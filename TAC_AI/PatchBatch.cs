@@ -971,7 +971,7 @@ namespace TAC_AI
                                             bool wasPop = tv.visible.tank.IsPopulation;
 
                                             RawTechLoader.TryRemoveFromPop(tv.visible.tank);
-                                            tv.visible.transform.Recycle();
+                                            SpecialAISpawner.Purge(tv.visible.tank);
                                             pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
                                             Tank replacementBote = RawTechLoader.SpawnMobileTech(pos, posF, team, type, AutoTerrain: false);

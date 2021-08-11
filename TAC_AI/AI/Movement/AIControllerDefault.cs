@@ -49,6 +49,12 @@ namespace TAC_AI.AI
             this.Helper.DriveDir = EDriveType.Forwards;
             if (this.Helper.AIState == 1)// Allied
             {
+                if (this.AICore == null)
+                {
+                    string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
+                    Debug.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
+                    return;
+                }
                 this.AICore.DriveDirector();
             }
             else//ENEMY

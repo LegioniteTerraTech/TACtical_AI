@@ -8,30 +8,37 @@ namespace TAC_AI.AI
         {
             float FinalAim;
 
-            if (!tank.beam.IsActive)
+            try
             {
-                if (thisInst.DANGER && thisInst.lastEnemy.IsNotNull())
+                if (!tank.beam.IsActive)
                 {
-                    thisInst.lastWeaponAction = 1;
-                    if (tank.IsAnchored)
+                    if (thisInst.DANGER && thisInst.lastEnemy.IsNotNull())
                     {
-                        Vector3 aimTo = (thisInst.lastEnemy.rbody.position - tank.rbody.position).normalized;
-                        float driveAngle = Vector3.Angle(aimTo, tank.transform.forward);
-                        if (Mathf.Abs(driveAngle) >= thisInst.AnchorAimDampening)
-                            FinalAim = 1;
-                        else
-                            FinalAim = Mathf.Abs(driveAngle / thisInst.AnchorAimDampening);
-                        thisControl.m_Movement.FaceDirection(tank, aimTo, FinalAim);//Face the music
+                        thisInst.lastWeaponAction = 1;
+                        if (tank.IsAnchored)
+                        {
+                            Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
+                            float driveAngle = Vector3.Angle(aimTo, tank.rootBlockTrans.forward);
+                            if (Mathf.Abs(driveAngle) >= thisInst.AnchorAimDampening)
+                                FinalAim = 1;
+                            else
+                                FinalAim = Mathf.Abs(driveAngle / thisInst.AnchorAimDampening);
+                            thisControl.m_Movement.FaceDirection(tank, aimTo, FinalAim);//Face the music
+                        }
+                    }
+                    else if (thisInst.Obst.IsNotNull())
+                    {
+                        thisInst.lastWeaponAction = 2;
+                    }
+                    else
+                    {
+                        thisInst.lastWeaponAction = 0;
                     }
                 }
-                else if (thisInst.Obst.IsNotNull())
-                {
-                    thisInst.lastWeaponAction = 2;
-                }
-                else
-                {
-                    thisInst.lastWeaponAction = 0;
-                }
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: WeaponDirector - Error on handling");
             }
         }
 
@@ -68,7 +75,7 @@ namespace TAC_AI.AI
                         }
                         catch
                         {
-                            Debug.Log("TACtical_AI: Crash on targeting scenery");
+                            Debug.Log("TACtical_AI: WeaponDirector - Crash on targeting scenery");
                         }
                         try
                         {

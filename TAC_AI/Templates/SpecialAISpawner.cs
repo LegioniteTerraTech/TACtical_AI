@@ -18,12 +18,8 @@ namespace TAC_AI.Templates
         public void OnSleep(bool yes)
         {   // It crashed 
             aircraft.SleepEvent.Unsubscribe(OnSleep);
-            foreach (TankBlock block in aircraft.blockman.IterateBlocks())
-            {
-                block.damage.SelfDestruct(0.5f);
-            }
             SpecialAISpawner.AirPool.Remove(this);
-            aircraft.blockman.Disintegrate();
+            SpecialAISpawner.Eradicate(aircraft);
         }
     }
     public class SpecialAISpawner : MonoBehaviour
@@ -233,7 +229,7 @@ namespace TAC_AI.Templates
                     {
                         AirPool.RemoveAt(step);
                         Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + aircraft.name + " from AirPool as it flew above player distance.");
-                        aircraft.visible.RemoveFromGame();
+                        Purge(aircraft);
                         step--;
                         count--;
                     }
@@ -241,7 +237,7 @@ namespace TAC_AI.Templates
                     {
                         AirPool.RemoveAt(step);
                         Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + aircraft.name + " from AirPool as it left AirDespawnDist radius.");
-                        aircraft.visible.RemoveFromGame();
+                        Purge(aircraft);
                         step--;
                         count--;
                     }
@@ -258,12 +254,48 @@ namespace TAC_AI.Templates
             foreach (TrackedAircraft aircraft in AirPool)
             {
                 if (aircraft.aircraft.IsNotNull())
-                    aircraft.aircraft.visible.RemoveFromGame();
+                    Purge(aircraft.aircraft);
             }
             AirPool.Clear();
             Debug.Log("TACtical_AI: SpecialAISpawner - Destroyed all enemy pooled aircraft");
         }
 
+        /// <summary>
+        /// Remove a Tech from existance
+        /// </summary>
+        /// <param name="tech"></param>
+        /// <param name="player"></param>
+       internal static void Purge(Tank tech, NetPlayer player = null)
+        {   // 
+            if (ManNetwork.IsNetworked)
+            {
+                //tech.netTech.RequestRemoveFromGame(player, false);
+                tech.netTech.RequestRemoveFromGame(tech.netTech.NetPlayer, false);
+            }
+            else
+                tech.visible.RemoveFromGame();
+        }
+        /// <summary>
+        /// Remove a Tech from existance the cool way
+        /// </summary>
+        /// <param name="tech"></param>
+        /// <param name="player"></param>
+        internal static void Eradicate(Tank tech)
+        {   // 
+            if (ManNetwork.IsNetworked)
+            {
+                //tech.netTech.SetToSelfDestruct(true, 0.1f);// only blows up cab
+                tech.netTech.RequestRemoveFromGame(tech.netTech.NetPlayer, false);
+            }
+            else
+            {
+                foreach (TankBlock block in tech.blockman.IterateBlocks())
+                {
+                    block.damage.SelfDestruct(0.5f);
+                }
+                tech.blockman.Disintegrate();
+            }
+        }
 
         private static void Resume()
         {   // 

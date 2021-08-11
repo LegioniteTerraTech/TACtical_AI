@@ -410,8 +410,7 @@ namespace TAC_AI.AI
 
             // Constants
             internal const int DodgeStrength = 60;  //The motivation in trying to move away from a tech in the way
-                                                   //250
-
+                                                    //250
 
             // Settables in ModuleAIExtension
             //   "turns on" functionality on the host Tech, none of these force it off
@@ -470,14 +469,16 @@ namespace TAC_AI.AI
             public int AttemptedRepairs = 0;    // How many times have we tried fix
             public float DamageThreshold = 0;   // How much damage have we taken? (100 is total destruction)
             //internal float Oops = 0;
+
+            // Directional Handling
             internal Vector3 lastDestination = Vector3.zero;    // Where we drive to in the world
+            internal float lastRange = 0;
 
             //AutoCollection
             internal float EstTopSped = 0;
             internal float recentSpeed = 1;
             internal int anchorAttempts = 0;
             internal float lastTechExtents = 0;
-            internal float lastRange = 0;
             internal float lastAuxVal = 0;
 
             public Visible lastPlayer;
@@ -672,8 +673,9 @@ namespace TAC_AI.AI
                 {
                     if (sender == null)
                     {
-                        Debug.Log("TACtical_AI: Anonymous sender error");
-                        return;
+                        Debug.Log("TACtical_AI: Host changed AI");
+                        //Debug.Log("TACtical_AI: Anonymous sender error");
+                        //return;
                     }
                     if (sender.TechTeamID == this.tank.Team)
                     {
@@ -1023,10 +1025,19 @@ namespace TAC_AI.AI
                 if (this.updateCA)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired CollisionAvoidUpdate!");
-                    AIEWeapons.WeaponDirector(thisControl, this, this.tank);
+                    try
+                    {
+                        AIEWeapons.WeaponDirector(thisControl, this, this.tank);
 
-                    this.AdviseAway = false;
-                    this.MovementController.DriveDirector();
+                        this.AdviseAway = false;
+                        this.MovementController.DriveDirector();
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: AI " + tank.name + ":  Potential error in DriveDirector (or WeaponDirector)!");
+                    }
+
+                    this.updateCA = false; // incase they fall out of sync
                 }
                 AIEWeapons.WeaponMaintainer(thisControl, this, this.tank);
                 this.MovementController.DriveMaintainer(thisControl);
@@ -1498,6 +1509,7 @@ namespace TAC_AI.AI
                                 TechMemor.SaveTech();
                             Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
                         }
+
                         if (OverrideAllControls)
                             return;
 
@@ -1507,8 +1519,6 @@ namespace TAC_AI.AI
                             this.updateCA = true;
                             this.DirectorUpdateClock = 0;
                         }
-                        else
-                            this.updateCA = false;
 
                         if (this.recentSpeed < 1)
                             this.recentSpeed = 1;

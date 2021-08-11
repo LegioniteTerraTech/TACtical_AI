@@ -206,7 +206,7 @@ namespace TAC_AI.AI
             {
                 if (UnityEngine.Random.Range(0, 500) < KickStart.Difficulty)
                 {
-                    Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
+                    //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
                     ReserveSuperGrabs++;
                     return true;
                 }
