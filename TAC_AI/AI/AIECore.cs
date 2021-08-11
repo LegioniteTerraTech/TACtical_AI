@@ -1039,8 +1039,15 @@ namespace TAC_AI.AI
 
                     this.updateCA = false; // incase they fall out of sync
                 }
-                AIEWeapons.WeaponMaintainer(thisControl, this, this.tank);
-                this.MovementController.DriveMaintainer(thisControl);
+                try
+                {
+                    AIEWeapons.WeaponMaintainer(thisControl, this, this.tank);
+                    this.MovementController.DriveMaintainer(thisControl);
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: AI " + tank.name + ":  Potential error in DriveMaintainer (or WeaponMaintainer)!");
+                }
             }
             
             /// <summary>
@@ -1447,7 +1454,11 @@ namespace TAC_AI.AI
                 var aI = tank.AI;
                 TryRepairAllied();
 
-                aI.TryGetCurrentAIType(out this.lastAIType);
+                if (!aI.TryGetCurrentAIType(out this.lastAIType))
+                {
+                    this.lastAIType = AITreeType.AITypes.Idle;
+                    return;
+                }
                 if (this.lastAIType == AITreeType.AITypes.Escort || this.lastAIType == AITreeType.AITypes.Guard)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Fired DelayedUpdate!");
@@ -1496,7 +1507,7 @@ namespace TAC_AI.AI
                 if (KickStart.EnableBetterAI) //&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                 {
                     var aI = tank.AI;
-                    if (tank.IsFriendly() && aI.CheckAIAvailable())
+                    if (tank.IsFriendly() && aI.CheckAIAvailable())//aI.CheckAIAvailable()
                     {   //MP is NOT supported!
                         //Player-Allied AI
                         if (this.AIState != 1)

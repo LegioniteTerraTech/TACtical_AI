@@ -22,6 +22,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 case AIType.Escort:
                     // We move to victory
+                    this.helper.IsMultiTech = false;
                     this.helper.lastPlayer = this.helper.GetPlayerTech();
                     this.helper.foundGoal = false;
                     //this.helper.IsMultiTech = false;// Disabled so that on tech split it can be set automatically

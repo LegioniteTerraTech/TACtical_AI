@@ -30,171 +30,171 @@ namespace TAC_AI.AI.Movement.AICores
         {
             var help = this.controller.Helper;
             // Debug.Log("TACtical_AI: Tech " + tank.name + " drive was called");
-            if (help.IsMultiTech)
-            {   //Override and disable most driving abilities
-                if (help.DediAI == AIType.MTSlave)
-                {   // act like a trailer
-                    help.DriveDir = EDriveType.Neutral;
-                    help.Steer = false;
-                    help.lastDestination = help.lastEnemy.transform.position;
-                    help.MinimumRad = 0;
-                }
-                else if (help.DediAI == AIType.MTTurret && help.lastEnemy != null)
-                {
-                    help.Steer = true;
-                    help.PivotOnly = true;
-                    help.lastDestination = help.lastEnemy.transform.position;
-                    help.MinimumRad = 0;
-                }
-                else if (help.DediAI == AIType.MTMimic && help.MTMimicHostAvail)
-                {
-                    if (help.LastCloseAlly != null)
+            try
+            {
+                if (help.IsMultiTech)
+                {   //Override and disable most driving abilities
+                    if (help.DediAI == AIType.MTSlave && help.lastEnemy != null)
+                    {   // act like a trailer
+                        help.DriveDir = EDriveType.Neutral;
+                        help.Steer = false;
+                        help.lastDestination = this.tank.boundsCentreWorldNoCheck;
+                        help.MinimumRad = 0;
+                    }
+                    else if (help.DediAI == AIType.MTTurret && help.lastEnemy != null)
                     {
-                        try
+                        help.Steer = true;
+                        help.PivotOnly = true;
+                        help.lastDestination = help.lastEnemy.transform.position;
+                        help.MinimumRad = 0;
+                    }
+                    else if (help.DediAI == AIType.MTMimic && help.MTMimicHostAvail)
+                    {
+                        if (help.LastCloseAlly != null)
                         {
-                            help.lastDestination = AIEPathing.GetDriveApproxAir(help.LastCloseAlly, this.controller.Helper, out bool IsMoving);
-                            if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
+                            try
                             {
-                                //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
-                                help.MinimumRad = 0.1f;
-                                if (Vector3.Dot(this.controller.Tank.rootBlockTrans.forward, (help.lastDestination - this.controller.Tank.boundsCentreWorldNoCheck).normalized) >= 0)
+                                help.lastDestination = AIEPathing.GetDriveApproxAir(help.LastCloseAlly, this.controller.Helper, out bool IsMoving);
+                                if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
                                 {
-                                    //Debug.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
-                                    help.Steer = true;
-                                    help.DriveDir = EDriveType.Forwards;
+                                    //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
+                                    help.MinimumRad = 0.1f;
+                                    if (Vector3.Dot(this.controller.Tank.rootBlockTrans.forward, (help.lastDestination - this.controller.Tank.boundsCentreWorldNoCheck).normalized) >= 0)
+                                    {
+                                        //Debug.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
+                                        help.Steer = true;
+                                        help.DriveDir = EDriveType.Forwards;
+                                    }
+                                    else
+                                    {
+                                        help.Steer = true;
+                                        help.DriveDir = EDriveType.Backwards;
+                                    }
                                 }
                                 else
                                 {
-                                    help.Steer = true;
-                                    help.DriveDir = EDriveType.Backwards;
+                                    //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
+                                    help.MinimumRad = 0f;
+                                    help.lastDestination = tank.boundsCentreWorldNoCheck;
+                                    help.forceDrive = true;
+                                    help.DriveVar = 0;
+                                    help.Steer = false;
+                                    help.PivotOnly = true;
                                 }
                             }
-                            else
-                            {
-                                //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
-                                help.MinimumRad = 0f;
-                                help.lastDestination = tank.boundsCentreWorldNoCheck;
-                                help.forceDrive = true;
-                                help.DriveVar = 0;
-                                help.Steer = false;
-                                help.PivotOnly = true;
-                            }
+                            catch { }
                         }
-                        catch { }
-                    }
-                    else
-                    {
-                        //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
-                        help.MinimumRad = 0f;
-                        help.lastDestination = tank.boundsCentreWorldNoCheck;
-                        help.forceDrive = true;
-                        help.DriveVar = 0;
-                        help.Steer = false;
+                        else
+                        {
+                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
+                            help.MinimumRad = 0f;
+                            help.lastDestination = tank.boundsCentreWorldNoCheck;
+                            help.forceDrive = true;
+                            help.DriveVar = 0;
+                            help.Steer = false;
+                        }
                     }
                 }
-            }
-            else if (help.ProceedToBase)
-            {
-                if (help.lastBasePos.IsNotNull())
+                else if (help.ProceedToBase)
                 {
-                    help.Steer = true;
-                    help.DriveDir = EDriveType.Forwards;
-                    help.lastDestination = help.AvoidAssistPrecise(help.lastBasePos.position);
-                    help.MinimumRad = Mathf.Max(help.lastTechExtents - 2, 0.5f);
-                }
-            }
-            else if (help.ProceedToMine)
-            {
-                if (help.theResource.tank != null)
-                {
-                    if (help.PivotOnly)
+                    if (help.lastBasePos.IsNotNull())
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = help.theResource.tank.boundsCentreWorldNoCheck;
-                        help.MinimumRad = 0;
+                        help.lastDestination = help.AvoidAssistPrecise(help.lastBasePos.position);
+                        help.MinimumRad = Mathf.Max(help.lastTechExtents - 2, 0.5f);
                     }
-                    else
+                }
+                else if (help.ProceedToMine)
+                {
+                    if (help.theResource.tank != null)
                     {
-                        if (help.FullMelee)
+                        if (help.PivotOnly)
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveType.Forwards;
-                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
+                            help.lastDestination = help.theResource.tank.boundsCentreWorldNoCheck;
                             help.MinimumRad = 0;
                         }
                         else
                         {
+                            if (help.FullMelee)
+                            {
+                                help.Steer = true;
+                                help.DriveDir = EDriveType.Forwards;
+                                help.lastDestination = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
+                                help.MinimumRad = 0;
+                            }
+                            else
+                            {
+                                help.Steer = true;
+                                help.DriveDir = EDriveType.Forwards;
+                                help.lastDestination = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
+                                help.MinimumRad = help.lastTechExtents + 2;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (help.PivotOnly)
+                        {
                             help.Steer = true;
                             help.DriveDir = EDriveType.Forwards;
-                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
-                            help.MinimumRad = help.lastTechExtents + 2;
+                            help.lastDestination = help.theResource.centrePosition;
+                            help.MinimumRad = 0;
+                        }
+                        else
+                        {
+                            if (help.FullMelee)
+                            {
+                                help.Steer = true;
+                                help.DriveDir = EDriveType.Forwards;
+                                help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
+                                help.MinimumRad = 0;
+                            }
+                            else
+                            {
+                                help.Steer = true;
+                                help.DriveDir = EDriveType.Forwards;
+                                help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
+                                help.MinimumRad = help.lastTechExtents + 2;
+                            }
+                        }
+                    }
+                }
+                else if (help.DediAI == AIType.Aegis)
+                {
+                    help.theResource = AIEPathing.ClosestUnanchoredAlly(this.controller.Tank.boundsCentreWorldNoCheck, out float bestval, tank).visible;
+                    bool Combat = this.TryAdjustForCombat();
+                    if (!Combat)
+                    {
+                        if (help.MoveFromObjective && help.theResource.IsNotNull())
+                        {
+                            help.Steer = true;
+                            help.DriveDir = EDriveType.Forwards;
+                            help.AdviseAway = true;
+                            help.lastDestination = help.theResource.transform.position;
+                            help.MinimumRad = 0.5f;
+                        }
+                        else if (help.ProceedToObjective && help.theResource.IsNotNull())
+                        {
+                            help.Steer = true;
+                            help.DriveDir = EDriveType.Forwards;
+                            help.lastDestination = help.AvoidAssist(help.theResource.tank.transform.position);
+                            help.MinimumRad = help.lastTechExtents + AIECore.Extremes(help.theResource.tank.blockBounds.extents) + 5;
+                        }
+                        else
+                        {
+                            //Debug.Log("TACtical_AI: AI IDLE");
                         }
                     }
                 }
                 else
                 {
-                    if (help.PivotOnly)
-                    {
-                        help.Steer = true;
-                        help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = help.theResource.centrePosition;
-                        help.MinimumRad = 0;
-                    }
-                    else
-                    {
-                        if (help.FullMelee)
-                        {
-                            help.Steer = true;
-                            help.DriveDir = EDriveType.Forwards;
-                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
-                            help.MinimumRad = 0;
-                        }
-                        else
-                        {
-                            help.Steer = true;
-                            help.DriveDir = EDriveType.Forwards;
-                            help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
-                            help.MinimumRad = help.lastTechExtents + 2;
-                        }
-                    }
-                }
-            }
-            else if (help.DediAI == AIType.Aegis)
-            {
-                help.theResource = AIEPathing.ClosestUnanchoredAlly(this.controller.Tank.boundsCentreWorldNoCheck, out float bestval, tank).visible;
-                bool Combat = this.TryAdjustForCombat();
-                if (!Combat)
-                {
-                    if (help.MoveFromObjective && help.theResource.IsNotNull())
-                    {
-                        help.Steer = true;
-                        help.DriveDir = EDriveType.Forwards;
-                        help.AdviseAway = true;
-                        help.lastDestination = help.theResource.transform.position;
-                        help.MinimumRad = 0.5f;
-                    }
-                    else if (help.ProceedToObjective && help.theResource.IsNotNull())
-                    {
-                        help.Steer = true;
-                        help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = help.AvoidAssist(help.theResource.tank.transform.position);
-                        help.MinimumRad = help.lastTechExtents + AIECore.Extremes(help.theResource.tank.blockBounds.extents) + 5;
-                    }
-                    else
-                    {
-                        //Debug.Log("TACtical_AI: AI IDLE");
-                    }
-                }
-            }
-            else
-            {
-                try
-                {
                     bool Combat = this.TryAdjustForCombat();
                     if (!Combat)
                     {
-                        if (help.MoveFromObjective && help.lastPlayer.IsNotNull())
+                        if (help.MoveFromObjective && (bool)help.lastPlayer)
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveType.Forwards;
@@ -202,7 +202,7 @@ namespace TAC_AI.AI.Movement.AICores
                             help.lastDestination = help.lastPlayer.transform.position;
                             help.MinimumRad = 0.5f;
                         }
-                        else if (help.ProceedToObjective && help.lastPlayer.IsNotNull())
+                        else if (help.ProceedToObjective && (bool)help.lastPlayer)
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveType.Forwards;
@@ -215,20 +215,26 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                     }
                 }
+            }
+            catch  (Exception e)
+            {
+                try
+                {
+                    Debug.Log("TACtical_AI: ERROR IN VehicleAICore");
+                    Debug.Log("TACtical_AI: Tank - " + tank.name);
+                    Debug.Log("TACtical_AI: Helper - " + (bool)this.controller.Helper);
+                    Debug.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
+                    if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
+                        Debug.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
+                    Debug.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
+                    Debug.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
+                    if ((bool)help.lastEnemy)
+                        Debug.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
+                    Debug.Log("TACtical_AI: " + e);
+                }
                 catch
                 {
-                    try
-                    {
-                        Debug.Log("TACtical_AI: ERROR IN VehicleAICore");
-                        Debug.Log("TACtical_AI: Tank - " + tank.name);
-                        Debug.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
-                        if ((bool)help.lastEnemy)
-                            Debug.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
-                    }
-                    catch
-                    {
-                        Debug.Log("TACtical_AI: Missing variable(s)");
-                    }
+                    Debug.Log("TACtical_AI: Missing variable(s)");
                 }
             }
             if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
@@ -252,7 +258,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     help.Steer = true;
                     help.DriveDir = EDriveType.Forwards;
-                    help.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.lastBasePos.position, this.controller.Helper, mind);
+                    help.lastDestination = RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.lastBasePos.position, this.controller.Helper, mind);
                     help.MinimumRad = Mathf.Max(help.lastTechExtents - 2, 0.5f);
                 }
             }
