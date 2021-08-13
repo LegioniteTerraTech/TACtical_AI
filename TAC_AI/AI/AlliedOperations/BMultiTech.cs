@@ -9,8 +9,17 @@ using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BMultiTech {
-        public static void MimicClosestAlly(AIECore.TankAIHelper thisInst, Tank tank)
+    public static class BMultiTech
+    {
+        public static void MTStatic(AIECore.TankAIHelper thisInst, Tank tank)
+        {   // stay still
+            BGeneral.ResetValues(thisInst);
+
+            thisInst.DANGER = false;
+            thisInst.PivotOnly = true;
+        }
+
+        public static void MimicAllClosestAlly(AIECore.TankAIHelper thisInst, Tank tank)
         {
             Tank hostTech;
             float dist = 0;

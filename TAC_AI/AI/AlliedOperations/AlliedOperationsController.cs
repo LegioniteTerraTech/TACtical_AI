@@ -58,9 +58,9 @@ namespace TAC_AI.AI.AlliedOperations
                     // Grab Scrape and sell
                     this.helper.IsMultiTech = false;
                     this.helper.foundGoal = false;
-                    //BScrapper.MotivateFind(this.helper, this.helper.tank);
+                    BScrapper.MotivateFind(this.helper, this.helper.tank);
                     BGeneral.SelfDefend(this.helper, this.helper.tank);
-                    Debug.Log("TACtical_AI: AI NOT READY YET!");
+                    Debug.Log("TACtical_AI: AI NOT READY YET! - " + this.helper.DediAI.ToString());
                     break;
 
                 case AIType.Energizer:
@@ -68,13 +68,14 @@ namespace TAC_AI.AI.AlliedOperations
                     this.helper.IsMultiTech = false;
                     BEnergizer.MotivateCharge(this.helper, this.helper.tank);
                     BGeneral.SelfDefend(this.helper, this.helper.tank);
+                    Debug.Log("TACtical_AI: AI NOT READY YET! - " + this.helper.DediAI.ToString());
                     break;
 
                 case AIType.MTTurret:
                     // Load, Aim,    FIIIIIRRRRRRRRRRRRRRRRRRRRRRRRRRRE!!!
                     this.helper.lastPlayer = this.helper.GetPlayerTech();
                     this.helper.IsMultiTech = true;
-                    BGeneral.ResetValues(this.helper);
+                    BMultiTech.MTStatic(this.helper, this.helper.tank);
                     //EMultiTech.FollowTurretBelow(this.helper, this.helper.tank);
                     BMultiTech.BeamLockWithinBounds(this.helper, this.helper.tank); //lock rigidbody with closest non-MT Tech on build beam
                     BMultiTech.MimicDefend(this.helper, this.helper.tank);
@@ -84,7 +85,7 @@ namespace TAC_AI.AI.AlliedOperations
                     // Defend and sit like good guard dog
                     this.helper.lastPlayer = this.helper.GetPlayerTech();
                     this.helper.IsMultiTech = true;
-                    BGeneral.ResetValues(this.helper);
+                    BMultiTech.MTStatic(this.helper, this.helper.tank);
                     BMultiTech.BeamLockWithinBounds(this.helper, this.helper.tank); //lock rigidbody with closest non-MT Tech on build beam
                     BMultiTech.MimicDefend(this.helper, this.helper.tank);
                     break;
@@ -94,8 +95,7 @@ namespace TAC_AI.AI.AlliedOperations
                     this.helper.lastPlayer = this.helper.GetPlayerTech();
                     this.helper.IsMultiTech = true;
                     this.helper.Attempt3DNavi = true;
-                    BGeneral.ResetValues(this.helper);
-                    BMultiTech.MimicClosestAlly(this.helper, this.helper.tank);
+                    BMultiTech.MimicAllClosestAlly(this.helper, this.helper.tank);
                     break;
 
                 case AIType.Astrotech:
@@ -120,7 +120,6 @@ namespace TAC_AI.AI.AlliedOperations
                     // Fly and doggyfight
                     this.helper.lastPlayer = this.helper.GetPlayerTech();
                     this.helper.IsMultiTech = false;
-                    this.helper.Attempt3DNavi = false;
                     BAviator.MotivateFly(this.helper, this.helper.tank);
                     BAviator.Dogfighting(this.helper, this.helper.tank);
                     break;

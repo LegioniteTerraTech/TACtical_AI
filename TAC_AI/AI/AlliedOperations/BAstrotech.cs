@@ -25,6 +25,16 @@ namespace TAC_AI.AI.AlliedOperations
 
             float playerExt = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
 
+            if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
+            {   // combat pilot will take care of the rest
+                //OBSTRUCTION MANAGEMENT
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                {
+                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
+                }
+                return;
+            }
+
             if (dist < thisInst.lastTechExtents + playerExt + 2)
             {
                 thisInst.DelayedAnchorClock = 0;

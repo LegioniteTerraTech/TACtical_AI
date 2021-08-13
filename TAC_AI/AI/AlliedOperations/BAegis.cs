@@ -30,6 +30,16 @@ namespace TAC_AI.AI.AlliedOperations
 
             float AllyExt = AIECore.Extremes(thisInst.theResource.tank.blockBounds.extents);
 
+            if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
+            {   // combat pilot will take care of the rest
+                //OBSTRUCTION MANAGEMENT
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                {
+                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
+                }
+                return;
+            }
+
             if (dist < thisInst.lastTechExtents + AllyExt + 2)
             {
                 if (thisInst.AvoidStuff)

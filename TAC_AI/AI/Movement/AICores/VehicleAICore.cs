@@ -723,7 +723,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                if (thisInst.lastEnemy.IsNotNull() && thisInst.DediAI != AIType.MTMimic && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
+                if (thisInst.lastEnemy.IsNotNull() && !thisInst.IsMultiTech && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {   //level alt with enemy
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
                     driveVal = InertiaTranslation(tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized);
@@ -759,7 +759,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
             }
-            if (thisInst.DediAI != AIType.MTMimic)
+            if (!thisInst.IsMultiTech)
             {
                 if (driveVal.y >= -0.5f && driveVal.y < 0f)
                     driveVal.y = 0; // prevent airships from slam-dunk

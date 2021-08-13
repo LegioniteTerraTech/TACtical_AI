@@ -142,24 +142,35 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
 
-                if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
+                if (dist < thisInst.lastTechExtents + thisInst.MinimumRad)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Engadging the enemy at " + thisInst.theResource.centrePosition);
-                    thisInst.Yield = true;
                     if (!thisInst.FullMelee)
                         thisInst.PivotOnly = true;
                     thisInst.SettleDown();
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Close to enemy at " + thisInst.theResource.centrePosition);
+                }
+                else if(dist < thisInst.lastTechExtents + thisInst.RangeToChase)
+                {
+                    if (thisInst.recentSpeed < 3)
+                    {
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
+                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    }
+                    else
+                        thisInst.SettleDown();
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Engadging the enemy at " + thisInst.theResource.centrePosition);
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
+                /*
                 else if (dist < thisInst.lastTechExtents + 12)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  In combat at " + thisInst.theResource.centrePosition);
                     thisInst.SettleDown();
-                }
+                }*/
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to fight at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
