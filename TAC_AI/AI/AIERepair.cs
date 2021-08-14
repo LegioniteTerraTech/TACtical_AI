@@ -755,12 +755,12 @@ namespace TAC_AI.AI
                 TechMemor.ranOutOfParts = false;
 
                 TankBlock foundBlock = null;
-                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
+                foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity, out bool worked);
+                if (!worked)
                 {
+                    Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");
                     continue;
                 }
-                else
-                    foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
                 List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });
@@ -967,7 +967,7 @@ namespace TAC_AI.AI
         }
         internal static void Turboconstruct(Tank tank, DesignMemory TechMemor, bool fullyCharge = true)
         {
-            Debug.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
+            Debug.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.ReturnContents().Count());
             int cBCount = tank.blockman.IterateBlocks().ToList().Count();
             int RepairAttempts = TechMemor.ReturnContents().Count() - cBCount + 3;
             try
@@ -1005,7 +1005,7 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
                 List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, cBlocks);
 
-                //Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
+                Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesMissing.Count());
                 if (!TrySpawnAndAttachBlockFromList(tank, TechMemor, typesMissing, false, false))
                     Debug.Log("TACtical AI: TurboRepair - attach attempt failed");
             }
@@ -1082,12 +1082,11 @@ namespace TAC_AI.AI
 
                 TankBlock foundBlock = null;
 
-                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bType))
+                foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity, out bool worked);
+                if (!worked)
                 {
                     continue;
                 }
-                else
-                    foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity);
                 bool attemptW = false;
 
                 List<BlockMemory> posBlocks = Mem.FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });

@@ -195,7 +195,8 @@ namespace TAC_AI.AI.Movement.AICores
             {   // upside down due to a unfindable oversight in code - just override the bloody thing when it happens
                 //Debug.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
 
-                turnVal.z = -Mathf.Clamp(turnVal.z * 10, -1, 1);
+                //Debug.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
+                //turnVal.z = -Mathf.Clamp(turnVal.z * 10, -1, 1);
             }
 
             //Turn our work in to process

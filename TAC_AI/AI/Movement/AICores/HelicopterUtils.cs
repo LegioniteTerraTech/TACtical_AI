@@ -159,13 +159,13 @@ namespace TAC_AI.AI.Movement.AICores
                 final = -0.1f;
                 if (tank.rbody.velocity.y < 0)
                 {
-                    final = Mathf.Abs(-Mathf.Pow(tank.rbody.velocity.y, 2));
+                    final = Mathf.Abs(-Mathf.Pow(tank.rbody.velocity.y, 2)) / 10;
                 }
             }
             else if (tank.rbody.velocity.y < 0 && final > -0.4f && final < 0)  // try ease fall
             {
                 //Debug.Log("TACtical_AI: " + tank.name + " dampening fall");
-                final = Mathf.Abs(-Mathf.Pow(tank.rbody.velocity.y, 2));
+                final = Mathf.Abs(-Mathf.Pow(tank.rbody.velocity.y, 2)) / 10;
             }
             if (tank.rbody.velocity.y > 4 && final > 0 && final < 1.4f)     // try ease flight
             {

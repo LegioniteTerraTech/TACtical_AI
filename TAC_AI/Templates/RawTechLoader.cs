@@ -148,7 +148,12 @@ namespace TAC_AI.Templates
             position.y = offset;
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return 0;
+            }
 
             Tank theBase;
             if (storeBB)
@@ -175,7 +180,12 @@ namespace TAC_AI.Templates
             string baseBlueprint = GetBlueprint(toSpawn);
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: SpawnSeaBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return 0;
+            }
 
             Tank theBase;
             if (storeBB)
@@ -202,7 +212,12 @@ namespace TAC_AI.Templates
             string baseBlueprint = GetBlueprint(toSpawn);
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
 
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: SpawnAirBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return 0;
+            }
 
             Tank theBase;
             if (storeBB)
@@ -261,8 +276,13 @@ namespace TAC_AI.Templates
                 position.y = offset;
             }
             Quaternion quat = Quaternion.LookRotation(heading, Vector3.up);
-
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: SpawnMobileTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return null;
+            }
 
             Tank theTech;
             theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
@@ -310,7 +330,12 @@ namespace TAC_AI.Templates
                 Vector3 position = pos;
                 Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+                if (!worked)
+                {
+                    Debug.Log("TACtical_AI: SpawnAttractTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                    return false;
+                }
 
                 Tank theTech;
                 theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
@@ -337,7 +362,12 @@ namespace TAC_AI.Templates
             }
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: SpawnEnemyTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return null;
+            }
 
             Tank theTech;
             theTech = TechFromBlock(block, Team, Blueprint.techName);
@@ -456,7 +486,6 @@ namespace TAC_AI.Templates
             int playerTeam = tech.Team;
             Vector3 playerPos = tech.transform.position;
             Quaternion playerFacing = tech.transform.rotation;
-            tech.visible.RemoveFromGame();
             /*
             List<TankBlock> toRemove = new List<TankBlock>();
             foreach (TankBlock block in tech.blockman.IterateBlocks())
@@ -476,7 +505,13 @@ namespace TAC_AI.Templates
                 }
                 catch { }
             }*/
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(GetBlueprint(techType)), playerPos, playerFacing);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(GetBlueprint(techType)), playerPos, playerFacing, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: StripPlayerTechOfBlocks - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return;
+            }
+            tech.visible.RemoveFromGame();
 
             Tank theTech;
             theTech = TechFromBlock(block, playerTeam, GetEnglishName(techType));
@@ -528,7 +563,12 @@ namespace TAC_AI.Templates
             }
             Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: SpawnTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return null;
+            }
 
             Tank theTech;
             theTech = TechFromBlock(block, Team, Blueprint.Name);
@@ -558,9 +598,13 @@ namespace TAC_AI.Templates
             string OGName = tech.name;
             Vector3 techPos = tech.transform.position;
             Quaternion techFacing = tech.transform.rotation;
-            tech.visible.RemoveFromGame();
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(JSONTechBlueprint), techPos, techFacing);
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(JSONTechBlueprint), techPos, techFacing, out bool worked);
+            if (!worked)
+            {
+                return tech;
+            }
 
+            tech.visible.RemoveFromGame();
             Tank theTech;
             theTech = TechFromBlock(block, playerTeam, OGName);
             return theTech;
@@ -569,9 +613,28 @@ namespace TAC_AI.Templates
 
 
         // Override
-        internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat)
+        internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat, out bool worked)
         {
-            return Singleton.Manager<ManLooseBlocks>.inst.HostSpawnBlock(type, position, quat, true);
+            if (Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
+            {
+                worked = true;
+                return Singleton.Manager<ManLooseBlocks>.inst.HostSpawnBlock(type, position, quat, true);
+            }
+            try
+            {
+                Debug.Log("TACtical AI: SpawnBlockS - Error on block " + type.ToString());
+            }
+            catch
+            {
+                Debug.Log("TACtical AI: SpawnBlockS - Error on unfetchable block");
+            }
+            if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(type))
+                Debug.Log("TACtical AI: SpawnBlockS - Could not spawn block!  Block does not exist!");
+            else if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
+                Debug.Log("TACtical AI: SpawnBlockS - Could not spawn block!  Block is invalid in current gamemode!");
+
+            worked = false;
+            return null;
         }
         internal static Tank TechFromBlock(TankBlock block, int Team, string name)
         {

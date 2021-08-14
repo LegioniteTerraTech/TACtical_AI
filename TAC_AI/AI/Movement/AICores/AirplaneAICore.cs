@@ -38,14 +38,22 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.MainThrottle = 0;
                 pilot.PerformUTurn = 0;
                 this.pilot.UpdateThrottle(thisInst, thisControl);
-                AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
+                Vector3 flat = tank.rootBlockTrans.forward;
+                flat.y = 0;
+                flat.Normalize();
+                flat.y = 0.5f;
+                AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (flat * 100));
             }
             else if (tank.grounded || pilot.ForcePitchUp)
             {   // Try and takeoff
                 pilot.MainThrottle = 1;
                 pilot.PerformUTurn = 0;
                 this.pilot.UpdateThrottle(thisInst, thisControl);
-                AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
+                Vector3 flat = tank.rootBlockTrans.forward;
+                flat.y = 0;
+                flat.Normalize();
+                flat.y = 0.5f;
+                AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (flat * 100));
             }
             else
             {
@@ -62,6 +70,7 @@ namespace TAC_AI.AI.Movement.AICores
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborting attack! Target too close!");
                         // AND PITCH UP NOW
                         pilot.MainThrottle = 1;
+                        pilot.PerformUTurn = 0;
                         this.pilot.UpdateThrottle(thisInst, thisControl);
                         AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
                     }
@@ -90,6 +99,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
+                            pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
@@ -123,6 +133,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
+                            pilot.MainThrottle = pilot.AdvisedThrottle;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
@@ -153,6 +164,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 pilot.AdvisedThrottle = 1;
                             else
                                 pilot.AdvisedThrottle = 0;
+                            pilot.MainThrottle = pilot.AdvisedThrottle;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }

@@ -520,7 +520,14 @@ namespace TAC_AI.AI
 
             //  !!ADVANCED!!
             internal bool Attempt3DNavi = false;            // Use 3D navigation  (VehicleAICore)
+
+            /// <summary>
+            /// In WORLD space
+            /// </summary>
             internal Vector3 Navi3DDirect = Vector3.zero;   // Forwards facing for 3D
+            /// <summary>
+            /// In WORLD space
+            /// </summary>
             internal Vector3 Navi3DUp = Vector3.zero;       // Upwards direction for 3D
             public float GroundOffsetHeight = 35;           // flote above ground this dist
 

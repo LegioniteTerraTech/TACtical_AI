@@ -942,9 +942,12 @@ namespace TAC_AI
 
                                         for (int fire = 0; fire < 25; fire++)
                                         {
-                                            TankBlock boom = RawTechLoader.SpawnBlockS(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward));
-                                            boom.visible.SetInteractionTimeout(20);
-                                            boom.damage.SelfDestruct(0.5f);
+                                            TankBlock boom = RawTechLoader.SpawnBlockS(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward), out bool worked);
+                                            if (!worked)
+                                            {
+                                                boom.visible.SetInteractionTimeout(20);
+                                                boom.damage.SelfDestruct(0.5f);
+                                            }
                                         }
                                         try
                                         {
