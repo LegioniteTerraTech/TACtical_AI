@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.Templates
 {
@@ -60,6 +62,7 @@ namespace TAC_AI.Templates
         }
         public static void DetermineActiveOnMode(Mode mode)
         {   // 
+            AirPool.Clear();
             if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign || mode is ModeCoOpCreative) && (ManNetwork.inst.IsServer || !ManNetwork.inst.IsMultiplayer()))
             {
                 Resume();
@@ -78,14 +81,7 @@ namespace TAC_AI.Templates
         }
         public static void UpdatePlayerTank()
         {   // 
-            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.IteratePlayerTechsControllable())
-            {
-                if (tech.IsPlayer)
-                {
-                    playerTank = tech;
-                    break;
-                }
-            }
+            playerTank = Singleton.playerTank;
         }
         public static void PlayerTankDeathCheck(Tank tank, ManDamage.DamageInfo oof)
         {   // 
@@ -260,13 +256,28 @@ namespace TAC_AI.Templates
             AirPool.Clear();
             Debug.Log("TACtical_AI: SpecialAISpawner - Destroyed all enemy pooled aircraft");
         }
+        private static void CollectPossibleAircraft()
+        {   // 
+            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
+            {
+                if (tech.GetComponent<AIECore.TankAIHelper>() && tech.IsPopulation)
+                {
+                    if (tech.GetComponent<AIECore.TankAIHelper>().MovementController is AIControllerAir || tech.GetComponent<EnemyMind>().EvilCommander == EnemyHandling.Starship)
+                    {
+                        TrackedAircraft newAir = new TrackedAircraft();
+                        newAir.Setup(tech);
+                        AirPool.Add(newAir);
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Remove a Tech from existance
         /// </summary>
         /// <param name="tech"></param>
         /// <param name="player"></param>
-       internal static void Purge(Tank tech)
+        internal static void Purge(Tank tech)
         {   // 
             if (ManNetwork.IsNetworked)
             {
@@ -310,6 +321,7 @@ namespace TAC_AI.Templates
                 inst.gameObject.SetActive(true);
                 Debug.Log("TACtical_AI: SpecialAISpawner - Activated special enemy spawns");
             }
+            CollectPossibleAircraft();
         }
         private static void Pause()
         {   // 
@@ -335,7 +347,7 @@ namespace TAC_AI.Templates
             if ((Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn) && counter > (AirSpawnInterval / (doubleSpawnRate ? 2 : 1)) / ((KickStart.Difficulty / 100) + 1.5f))
             {   // determine if we should spawn new one, also manage existing pooled aircrafts
                 //Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
-                if (UnityEngine.Random.Range(-1, 101) < AircraftSpawnOdds && KickStart.AllowAirEnemiesToSpawn)
+                if (KickStart.EnableBetterAI && KickStart.enablePainMode && KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(-1, 101) < AircraftSpawnOdds)
                     TrySpawnAircraftInAir();
                 counter = 0;
             }

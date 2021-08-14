@@ -180,7 +180,6 @@ namespace TAC_AI
                             //offset.x = -240.0f;
                             //offset.z = 442.0f;
                             BiomeMap edited = __instance.spawns[0].biomeMap;
-                            //Singleton.Manager<ManWorld>.inst.SeedString = "naval";
                             Singleton.Manager<ManWorld>.inst.SeedString = "68unRTyXMrX93DH";
                             Singleton.Manager<ManGameMode>.inst.RegenerateWorld(edited, __instance.spawns[1].cameraSpawn.forward, Quaternion.LookRotation(__instance.spawns[1].cameraSpawn.forward, Vector3.up));
                             Singleton.Manager<ManTimeOfDay>.inst.EnableSkyDome(enable: true);
@@ -189,49 +188,6 @@ namespace TAC_AI
                             KickStart.SpecialAttractPos = offset;
                             Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
                             Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
-
-
-                            /*
-                            int step = 0;
-                            foreach (ModeAttract.Spawn spawn in __instance.spawns)
-                            {
-                                Debug.Log("TACtical_AI: spawn " + step + " | pos" + spawn.cameraSpawn.position + " | vehiclepos " + spawn.vehicleSpawnCentre.position);
-                                step++;
-                            }
-
-                            //Vector3 offset = __instance.spawns[0].cameraSpawn.position;
-                            offset.x += 400;
-                            offset.z -= 430;
-                            KickStart.SpecialAttractPos = offset;
-
-                            int stepxM = 100;
-                            int stepzM = 100;
-                            float lowestHeight = 100;
-                            Vector3 posBest = Vector3.zero;
-                            for (int stepz = 0; stepz < stepzM; stepz++)
-                            {
-                                for (int stepx = 0; stepx < stepxM; stepx++)
-                                {
-                                    Vector3 wow = KickStart.SpecialAttractPos;
-                                    wow.x -= stepx * 8;
-                                    wow.z += stepz * 8;
-                                    if (!Singleton.Manager<ManWorld>.inst.GetTerrainHeight(wow, out float heightC))
-                                        continue;
-                                    if (heightC < lowestHeight)
-                                    {
-                                        lowestHeight = heightC;
-                                        posBest = wow;
-                                    }
-                                }
-                            }
-                            Debug.Log("TACtical_AI: deepest terrain of depth " + lowestHeight + " found at " + posBest);
-                            KickStart.SpecialAttractPos = posBest;
-                            KickStart.SpecialAttractPos = offset;
-                            Debug.Log("TACtical_AI: offset " + offset);
-                            Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
-                            Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
-                            Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
-                            */
 
                             return false;
                         }
@@ -253,7 +209,7 @@ namespace TAC_AI
                 {
                     if (KickStart.SpecialAttract)
                     {
-                        Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(1, 24), 0, 0);
+                        Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(8, 18), 0, 0);
                     }
                 }
                 catch { }
@@ -750,12 +706,8 @@ namespace TAC_AI
         {
             private static void Postfix(ModuleRemoteCharger __instance)
             {
-                var valid = __instance.GetComponent<ModuleChargerTracker>();
-                if (valid)
-                {
-                    var ModuleAdd = __instance.gameObject.AddComponent<ModuleHarvestReciever>();
-                    ModuleAdd.OnPool();
-                }
+                var ModuleAdd = __instance.gameObject.AddComponent<ModuleChargerTracker>();
+                ModuleAdd.OnPool();
             }
         }
 
@@ -955,7 +907,7 @@ namespace TAC_AI
                         {
                             if (tv.visible.tank != null)
                             {
-                                if (AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval && tv.visible.tank.IsEnemy())
+                                if (AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval && tv.visible.tank.Team == -1 && tv.visible.tank.IsPopulation)
                                 {
                                     // OVERRIDE TO SHIP
                                     try
@@ -996,6 +948,9 @@ namespace TAC_AI
                                         }
                                         try
                                         {
+                                            SpecialAISpawner.Eradicate(tv.visible.tank);
+
+                                            /*
                                             foreach (TankBlock block in tv.visible.tank.blockman.IterateBlocks())
                                             {
                                                 block.visible.SetInteractionTimeout(20);
@@ -1005,6 +960,7 @@ namespace TAC_AI
                                             tv.visible.tank.blockman.Disintegrate(true, false);
                                             if (tv.visible.IsNotNull())
                                                 tv.visible.trans.Recycle();
+                                            */
                                         }
                                         catch { }
                                     }

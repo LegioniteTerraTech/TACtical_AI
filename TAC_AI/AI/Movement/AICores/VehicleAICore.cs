@@ -819,7 +819,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 output = true;
                 thisInst.Steer = true;
-                float driveDyna = Mathf.Clamp(((thisInst.lastEnemy.transform.position - tank.boundsCentreWorldNoCheck).magnitude - thisInst.IdealRangeCombat) / 3f, -1, 1);
+                float driveDyna = Mathf.Clamp(((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude - thisInst.IdealRangeCombat) / 3f, -1, 1);
                 if (thisInst.SideToThreat)
                 {
                     if (thisInst.FullMelee)
@@ -875,7 +875,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.transform.position;
-                        thisInst.MinimumRad = 0;
+                        thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 3;
                         //thisControl.m_Movement.FacePosition(tank, thisInst.lastEnemy.transform.position, driveDyna);//Face the music
                     }
                 }
@@ -891,7 +891,7 @@ namespace TAC_AI.AI.Movement.AICores
             {   
                 output = true;
                 thisInst.Steer = true;
-                float driveDyna = Mathf.Clamp(((thisInst.lastEnemy.transform.position - tank.boundsCentreWorldNoCheck).magnitude - thisInst.IdealRangeCombat) / 3f, -1, 1);
+                float driveDyna = Mathf.Clamp(((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude - thisInst.IdealRangeCombat) / 3f, -1, 1);
                 if (mind.CommanderAttack == Enemy.EnemyAttack.Circle)
                 {   // works fine for now
                     thisInst.DriveDir = EDriveType.Perpendicular;
@@ -981,7 +981,7 @@ namespace TAC_AI.AI.Movement.AICores
             float strength = 1;
             if (!(bool)helper.LastCloseAlly && (helper.lastTechExtents * 1.5f) < helper.lastRange && Vector2.Dot(destinationVec.normalized.ToVector2XZ(), tank.rootBlockTrans.forward.ToVector2XZ()) > 0.9f)
             {
-                strength = (helper.lastTechExtents * 1.5f) / helper.lastRange;
+                strength = (helper.lastTechExtents * 2) / helper.lastRange;
             }
             return Mathf.Clamp(strength, 0, 1);
         }

@@ -34,8 +34,7 @@ namespace TAC_AI.AI.AlliedOperations
                     // Up your arsenal
                     this.helper.IsMultiTech = false;
                     BAssassin.MotivateKill(this.helper, this.helper.tank);
-                    //BAssassin.ShootToDestroy(this.helper, this.helper.tank);
-                    BGeneral.AimDefend(this.helper, this.helper.tank);
+                    BAssassin.ShootToDestroy(this.helper, this.helper.tank);
                     break;
 
                 case AIType.Aegis:
@@ -68,7 +67,6 @@ namespace TAC_AI.AI.AlliedOperations
                     this.helper.IsMultiTech = false;
                     BEnergizer.MotivateCharge(this.helper, this.helper.tank);
                     BGeneral.SelfDefend(this.helper, this.helper.tank);
-                    Debug.Log("TACtical_AI: AI NOT READY YET! - " + this.helper.DediAI.ToString());
                     break;
 
                 case AIType.MTTurret:

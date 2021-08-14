@@ -216,14 +216,25 @@ namespace TAC_AI.AI
             {
                 try
                 {
-                    if (ManLicenses.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel != 0)
+                    if (ManLicenses.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel < ManLicenses.inst.GetBlockTier(blockLoss.BlockType))
+                    {
+                        blockLoss.damage.SelfDestruct(0.1f); // - no get illegal blocks
+                    }
+                    else
+                    {
                         if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
-                            blockLoss.damage.SelfDestruct(0.75f);
+                        {
+                            if (KickStart.Difficulty == 150)
+                                blockLoss.damage.SelfDestruct(0.1f);
+                            else
+                                blockLoss.damage.SelfDestruct(0.75f);
+                        }
+                    }
                 }
                 catch
                 {
                     if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
-                        blockLoss.damage.SelfDestruct(0.75f);
+                        blockLoss.damage.SelfDestruct(0.1f);
                 }
             }
             public bool TryAttachExistingBlock(TankBlock foundBlock)
@@ -553,7 +564,7 @@ namespace TAC_AI.AI
             }
             return attached;
         }
-
+        
 
         // Other respective repair operations
         public static bool RepairLerp(Tank tank, DesignMemory TechMemor, AIECore.TankAIHelper thisInst, bool overrideChecker = false)
@@ -670,7 +681,7 @@ namespace TAC_AI.AI
             }
             return typesMissing;
         }
-        public static List<TankBlock> FindBlocksNearbyTank(Tank tank, float radius)
+        public static List<TankBlock> FindBlocksNearbyTank(Tank tank, float radius, bool includeSD = false)
         {
             List <TankBlock> fBlocks = new List<TankBlock>();
             foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, radius, new Bitfield<ObjectTypes>()))//new ObjectTypes[1]{ObjectTypes.Block})
@@ -679,16 +690,24 @@ namespace TAC_AI.AI
                 {
                     if (!foundBlock.block.tank && foundBlock.holderStack == null && Singleton.Manager<ManPointer>.inst.DraggingItem != foundBlock)
                     {
-                        if (foundBlock.block.PreExplodePulse)
-                            continue; //explode? no thanks
-                                      //Debug.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
+                        if (!includeSD)
+                        {
+                            if (foundBlock.block.PreExplodePulse)
+                                continue; //explode? no thanks
+                        }
+                        else
+                        {
+                            if (foundBlock.block.GetComponent<Damageable>().Health <= 0)
+                                continue;
+                        }
+                        //Debug.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
                         fBlocks.Add(foundBlock.block);
                     }
                 }
             }
             return fBlocks;
         }
-        public static bool TryAttachExistingBlockFromList(Tank tank, DesignMemory TechMemor, List<TankBlock> foundBlocks)
+        public static bool TryAttachExistingBlockFromList(Tank tank, DesignMemory TechMemor, List<TankBlock> foundBlocks, bool denySD = false)
         {
             int attachAttempts = foundBlocks.Count();
             //Debug.Log("TACtical AI: RepairLerp - Found " + attachAttempts + " loose blocks to use");
@@ -705,6 +724,10 @@ namespace TAC_AI.AI
                     attemptW = AttemptBlockAttach(tank, template, foundBlock, TechMemor);
                     if (attemptW)
                     {
+                        if (denySD)
+                        {
+                            foundBlock.damage.AbortSelfDestruct();
+                        }
                         return true;
                     }
                 }

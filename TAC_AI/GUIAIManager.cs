@@ -168,8 +168,6 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                /*
-                // N/A! - still broken
                 if (lastTank.isEnergizerAvail)
                 {
                     if (GUI.Button(new Rect(20, 190, 80, 30), fetchAI == AIType.Energizer ? "<color=#f23d3dff>POWER</color>" : "Power"))
@@ -177,7 +175,7 @@ namespace TAC_AI
                         changeAI = AIType.Energizer;
                         clicked = true;
                     }
-                }*/
+                }
                 if (lastTank.isAstrotechAvail)
                 {
                     if (GUI.Button(new Rect(100, 190, 80, 30), fetchAI == AIType.Astrotech ? "<color=#f23d3dff>SPACE</color>" : "Space"))

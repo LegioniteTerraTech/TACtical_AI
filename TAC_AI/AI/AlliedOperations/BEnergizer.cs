@@ -21,20 +21,21 @@ namespace TAC_AI.AI.AlliedOperations
             EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
             if (thisInst.areWeFull)
             {
-                thisInst.areWeFull = false;
-                if ((state.spareCapacity - state.storageTotal) / state.storageTotal > 0.9f)
-                    thisInst.areWeFull = true;
-
-                thisInst.ActionPause = 20;
+                if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.2f)
+                {
+                    thisInst.areWeFull = false;
+                }
             }
             else
             {
-                thisInst.areWeFull = true;
-                if ((state.spareCapacity - state.storageTotal) / state.storageTotal < 0.2f)
-                    thisInst.areWeFull = false;
+                if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.9f)
+                {
+                    thisInst.areWeFull = true;
+                    thisInst.ActionPause = 20;
+                }
             }
 
-            if (thisInst.areWeFull || thisInst.ActionPause > 10)
+            if (!thisInst.areWeFull)
             {
                 thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)

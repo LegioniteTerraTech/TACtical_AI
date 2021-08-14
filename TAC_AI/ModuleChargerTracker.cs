@@ -10,7 +10,6 @@ namespace TAC_AI
         // Returns the position of itself in the world as a point the AI can pathfind to
         public Tank tank;
         public Transform trans;
-        public ModuleItemHolder holder;
         internal float minEnergyAmount = 200;
         private bool DockingRequested = false;
 
@@ -25,7 +24,6 @@ namespace TAC_AI
             TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
             TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
             trans = transform;
-            holder = gameObject.GetComponent<ModuleItemHolder>();
         }
         public void OnAttach()
         {
@@ -46,9 +44,9 @@ namespace TAC_AI
             EnergyRegulator.EnergyState energyThis = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
 
             EnergyRegulator.EnergyState energyThat = toChargeTank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
-            float chargeFraction = energyThat.currentAmount / energyThat.storageTotal;
+            float chargeFraction = (energyThat.storageTotal - energyThat.spareCapacity) / energyThat.storageTotal;
 
-            return energyThis.currentAmount > minEnergyAmount && energyThis.currentAmount / energyThis.storageTotal > chargeFraction;
+            return (energyThis.storageTotal - energyThis.spareCapacity) > minEnergyAmount && (energyThis.storageTotal - energyThis.spareCapacity) / energyThis.storageTotal > chargeFraction;
         }
         public void RequestDocking()
         {

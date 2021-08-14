@@ -245,6 +245,7 @@ namespace TAC_AI.AI.Enemy
                 DidFire = true;
                 //Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + mind.EvilCommander.ToString() + " based enemy with attitude " + mind.CommanderAttack.ToString() + " | Mind " + mind.CommanderMind.ToString() + " | Smarts " + mind.CommanderSmarts.ToString() + " inbound!");
             }
+
             if (name.Contains(" ¥¥"))
             {   // Main base
                 if (name.Contains("#"))
@@ -269,9 +270,14 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    var funds = tank.gameObject.AddComponent<EnemyBaseFunder>();
-                    funds.Initiate(tank);
+                    var funds = tank.gameObject.GetComponent<EnemyBaseFunder>(); 
+                    if (funds.IsNull())
+                    {
+                        funds = tank.gameObject.AddComponent<EnemyBaseFunder>();
+                        funds.Initiate(tank);
+                    }
                     funds.SetBuildBucks(funds.GetBuildBucksFromName(name), true);
+
                     mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                     if (mind.TechMemor.IsNull())
                     {

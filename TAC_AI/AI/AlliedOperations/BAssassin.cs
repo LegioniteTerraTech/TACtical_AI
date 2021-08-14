@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
@@ -21,22 +22,25 @@ namespace TAC_AI.AI.AlliedOperations
             EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
             if (thisInst.areWeFull)
             {
-                thisInst.areWeFull = false;
-                if (state.currentAmount / state.storageTotal > 0.95f)
-                    thisInst.areWeFull = true;
-
-                thisInst.ActionPause = 20;
+                if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.4f)
+                {
+                    //Debug.Log("TACtical_AI: AI " + tank.name + ": Falling back to base! Charge " + (state.storageTotal - state.spareCapacity).ToString());
+                    thisInst.areWeFull = false;
+                }
             }
             else
             {
-                thisInst.areWeFull = true;
-                if (state.currentAmount / state.storageTotal < 0.4f)
-                    thisInst.areWeFull = false;
+                if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.95f)
+                {
+                    //Debug.Log("TACtical_AI: AI " + tank.name + ": Charged up and ready to attack!");
+                    thisInst.areWeFull = true;
+                    thisInst.ActionPause = 20;
+                }
             }
 
-            if (thisInst.areWeFull || thisInst.ActionPause > 10)
+            if (!thisInst.areWeFull)
             {
-                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest charger!");
@@ -131,16 +135,15 @@ namespace TAC_AI.AI.AlliedOperations
                     AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for enemies...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
                     }
-                    thisInst.ProceedToBase = true;
-                    return; // There's no resources left!
+                    return; // There's no enemies left!
                 }
-                thisInst.forceDrive = true;
-                thisInst.DriveVar = 1;
+                thisInst.lastDestination = thisInst.theResource.tank.boundsCentreWorldNoCheck;
+                thisInst.ProceedToObjective = true;
 
                 if (dist < thisInst.lastTechExtents + thisInst.MinimumRad)
                 {
@@ -149,18 +152,12 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Close to enemy at " + thisInst.theResource.centrePosition);
                 }
-                else if(dist < thisInst.lastTechExtents + thisInst.RangeToChase)
+                else if (dist < thisInst.lastTechExtents + thisInst.RangeToChase)
                 {
-                    if (thisInst.recentSpeed < 3)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
-                    }
-                    else
-                        thisInst.SettleDown();
+                    thisInst.AutoHandleObstruction();
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Engadging the enemy at " + thisInst.theResource.centrePosition);
                 }
-                else if (thisInst.recentSpeed < 3)
+                else if (thisInst.recentSpeed < 2)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
@@ -172,8 +169,48 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                 }*/
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to fight at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.ProceedToMine = true;
+                thisInst.ProceedToMine = false;
                 thisInst.foundBase = false;
+            }
+        }
+
+
+        public static void ShootToDestroy(AIECore.TankAIHelper thisInst, Tank tank)
+        {
+            // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
+            thisInst.DANGER = false;
+            //thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+
+            if (thisInst.theResource)
+            {
+                thisInst.lastEnemy = thisInst.theResource;
+            }
+
+            if (thisInst.lastEnemy != null)
+            {
+                Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
+                thisInst.WeaponDelayClock++;
+                if (thisInst.SideToThreat)
+                {
+                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.WeaponDelayClock >= 30)
+                    {
+                        thisInst.DANGER = true;
+                        thisInst.WeaponDelayClock = 30;
+                    }
+                }
+                else
+                {
+                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.WeaponDelayClock >= 30)
+                    {
+                        thisInst.DANGER = true;
+                        thisInst.WeaponDelayClock = 30;
+                    }
+                }
+            }
+            else
+            {
+                thisInst.WeaponDelayClock = 0;
+                thisInst.DANGER = false;
             }
         }
     }

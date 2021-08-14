@@ -35,7 +35,7 @@ namespace TAC_AI.AI.Enemy
                                 DefaultIdle(thisInst, tank, mind);
                             }
                         }
-                        if (energy.storageTotal - 100 < energy.currentAmount)
+                        if (energy.storageTotal - 100 < (energy.storageTotal - energy.spareCapacity))
                         {
                             mind.Hurt = false;
                         }
@@ -68,7 +68,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs < 4)
                     {
-                        if (energy.currentAmount / energy.storageTotal > 0.5)
+                        if ((energy.storageTotal - energy.spareCapacity) / energy.storageTotal > 0.5)
                         {
                             //flex yee building speeds on them players
                             thisInst.PendingSystemsCheck = !RRepair.EnemyInstaRepair(tank, mind);

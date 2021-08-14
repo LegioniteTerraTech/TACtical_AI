@@ -34,19 +34,20 @@ namespace TAC_AI.AI.Enemy
             }
             if (savedBCount != cBCount)
             {
+                bool hardest = KickStart.Difficulty == 150;
                 //Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
                 List<BlockTypes> typesMissing = AIERepair.GetMissingBlockTypes(mind.TechMemor, cBlocks);
 
-                List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3));
+                List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3), hardest);
                 fBlocks = fBlocks.OrderBy((blok) => (blok.centreOfMassWorld - tank.boundsCentreWorld).sqrMagnitude).ToList();
 
                 //int attachAttempts = fBlocks.Count();
                 //Debug.Log("TACtical AI: EnemyRepairLerp - Found " + attachAttempts + " loose blocks to use");
 
-                if (AIERepair.TryAttachExistingBlockFromList(tank, mind.TechMemor, fBlocks))
+                if (AIERepair.TryAttachExistingBlockFromList(tank, mind.TechMemor, fBlocks, hardest))
                     return true;
 
-                if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks) && mind.CommanderSmarts >= EnemySmarts.Smrt)
+                if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks || KickStart.AllowEnemiesToStartBases) && mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
                     //Debug.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
                     if (AIERepair.TrySpawnAndAttachBlockFromList(tank, mind.TechMemor, typesMissing, false, true))
@@ -80,10 +81,22 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, int Delay = 25, bool Super = false)
         {
-            if ((thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0) || mind.TechMemor.ReserveSuperGrabs > 0)
+            if (mind.TechMemor.ReserveSuperGrabs > 0)
             {
-                if (mind.TechMemor.ReserveSuperGrabs > 0)
+                while (mind.TechMemor.ReserveSuperGrabs > 0)
+                {
                     mind.TechMemor.ReserveSuperGrabs--;
+                    try
+                    {
+                        EnemyRepairLerp(tank, mind);
+                        thisInst.AttemptedRepairs = 1;
+                    }
+                    catch { }
+                }
+                thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
+            }
+            else if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
+            {
                 try
                 {
                     EnemyRepairLerp(tank, mind);

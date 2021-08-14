@@ -54,7 +54,7 @@ namespace TAC_AI.AI
 
         public const float minimumChargeFractionToConsider = 0.75f;
         // legdev
-        internal const bool Feedback = false;// set this to true to get AI feedback testing
+        internal const bool Feedback = true;// set this to true to get AI feedback testing
 
 
         // Mining
@@ -193,7 +193,7 @@ namespace TAC_AI.AI
                         float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                         EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
                         bool hasCapacity = eState.storageTotal > 200;
-                        bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
+                        bool needsCharge = (eState.storageTotal - eState.spareCapacity) / eState.storageTotal < minimumChargeFractionToConsider;
                         if (Range > temp && temp > 1 && hasCapacity && needsCharge)
                         {
                             Range = temp;
@@ -211,7 +211,7 @@ namespace TAC_AI.AI
                         float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                         EnergyRegulator.EnergyState eState = ally.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
                         bool hasCapacity = eState.storageTotal > 200;
-                        bool needsCharge = eState.currentAmount / eState.storageTotal < minimumChargeFractionToConsider;
+                        bool needsCharge = (eState.storageTotal - eState.spareCapacity) < minimumChargeFractionToConsider;
                         if (Range > temp && temp > 1 && hasCapacity && needsCharge)
                         {
                             Range = temp;
@@ -726,6 +726,9 @@ namespace TAC_AI.AI
                 this.theBase = null;
                 this.JustUnanchored = false;
                 this.OverrideAllControls = false;
+                var Funds = tank.gameObject.GetComponent<Enemy.RBases.EnemyBaseFunder>();
+                if (Funds.IsNotNull())
+                    Funds.OnRecycle(this.tank);
                 var Mind = tank.gameObject.GetComponent<Enemy.EnemyMind>();
                 if (Mind.IsNotNull())
                     Mind.SetForRemoval();
@@ -796,6 +799,7 @@ namespace TAC_AI.AI
 
             public void RefreshAI()
             {
+                IdealRangeCombat = 25; 
                 AutoAnchor = false;     
                 FullMelee = false;      // Should the AI ram the enemy?
                 AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
@@ -983,15 +987,28 @@ namespace TAC_AI.AI
             private void DetermineCombat()
             {
                 bool DoNotEngage = false;
-                if (this.lastPlayer.IsNotNull())
+                if (this.DediAI == AIType.Assault && this.lastBasePos.IsNotNull())
                 {
-                    if (this.lastBasePos.IsNotNull())
+                    if (this.IdealRangeCombat * 2 < (this.lastBasePos.position - this.tank.boundsCentreWorldNoCheck).magnitude)
                     {
-                        if (this.IdealRangeCombat * 2 < (this.lastBasePos.position - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI == AIType.Assault)
-                            DoNotEngage = true;
-                    }
-                    if (this.IdealRangeCombat < (this.lastPlayer.tank.boundsCentreWorldNoCheck - this.tank.boundsCentreWorldNoCheck).magnitude && this.DediAI != AIType.Assault)
                         DoNotEngage = true;
+
+                    }
+                    else if (this.AdvancedAI)
+                    {
+                        //WIP
+                        if (this.DamageThreshold > 30)
+                        {
+                            DoNotEngage = true;
+                        }
+                    }
+                }
+                else if (this.DediAI != AIType.Assault && this.lastPlayer.IsNotNull())
+                {
+                    if (this.IdealRangeCombat < (this.lastPlayer.tank.boundsCentreWorldNoCheck - this.tank.boundsCentreWorldNoCheck).magnitude)
+                    {
+                        DoNotEngage = true;
+                    }
                     else if (this.AdvancedAI)
                     {
                         //WIP
@@ -1198,6 +1215,13 @@ namespace TAC_AI.AI
             }
 
             // Obstruction Management
+            public void AutoHandleObstruction(float dist = 0, bool useRush = false, bool useGun = true)
+            {
+                if (!IsTechMoving(EstTopSped / 4))
+                {
+                    TryHandleObstruction(true, dist, useRush, useGun);
+                }
+            }
             public void TryHandleObstruction(bool hasMessaged, float dist, bool useRush, bool useGun)
             {
                 //Something is in the way - try fetch the scenery to shoot at
@@ -1347,9 +1371,20 @@ namespace TAC_AI.AI
 
             public bool IsTechMoving(float minSpeed)
             {
-                if (tank.rbody.IsNull())
-                    return false;
-                return tank.rbody.velocity.sqrMagnitude > minSpeed * minSpeed;
+                if (Attempt3DNavi || DediAI == AIType.Aviator)
+                {
+                    if (tank.rbody.IsNull())
+                        return false;
+                    return tank.rbody.velocity.sqrMagnitude > minSpeed * minSpeed;
+                }
+                else
+                {
+                    if (tank.rbody.IsNull())
+                        return false;
+                    if (!(bool)tank.rootBlockTrans)
+                        return false;
+                    return tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z > minSpeed;
+                }
             }
             public Visible GetPlayerTech()
             {
@@ -1531,12 +1566,12 @@ namespace TAC_AI.AI
                             this.DirectorUpdateClock = 0;
                         }
 
+                        this.recentSpeed = tank.GetForwardSpeed();
                         if (this.recentSpeed < 1)
                             this.recentSpeed = 1;
                         this.OperationsUpdateClock++;
                         if (this.OperationsUpdateClock > KickStart.AIClockPeriod)//Mathf.Max(25 / this.recentSpeed, 5)
                         {
-                            this.recentSpeed = tank.GetForwardSpeed();
                             RunAlliedOperations();
                             this.OperationsUpdateClock = 0;
                             if (this.EstTopSped < this.recentSpeed)
@@ -1566,12 +1601,12 @@ namespace TAC_AI.AI
                             else
                                 this.updateCA = false;
 
+                            this.recentSpeed = tank.GetForwardSpeed();
                             if (this.recentSpeed < 1)
                                 this.recentSpeed = 1;
                             this.OperationsUpdateClock++;
                             if (this.OperationsUpdateClock > KickStart.AIClockPeriod)
                             {
-                                this.recentSpeed = tank.GetForwardSpeed();
                                 RunEnemyOperations();
                                 this.OperationsUpdateClock = 0;
                                 if (this.EstTopSped < this.recentSpeed)
