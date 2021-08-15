@@ -42,6 +42,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.Retreat = true;
                 thisInst.MoveFromObjective = true;
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                thisInst.forceDrive = true;
+                thisInst.DriveVar = 1;
                 if (dist < spacer + (range / 4))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))

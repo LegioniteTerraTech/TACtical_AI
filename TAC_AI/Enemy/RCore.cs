@@ -358,6 +358,9 @@ namespace TAC_AI.AI.Enemy
                     shield.SetTargetScale(buubles.m_Radius);
                 }
 
+                if (bloc.GetComponent<ModulePacemaker>())
+                    tank.Holders.SetHeartbeatSpeed(TechHolders.HeartbeatSpeed.Fast);
+
             }
             Debug.Log("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
 
@@ -466,16 +469,30 @@ namespace TAC_AI.AI.Enemy
                 return;
             }
 
-            if (!Singleton.Manager<ManGameMode>.inst.GetIsInPlayableMode())
-            {   // make sure they fight
-                if (toSet.EvilCommander != EnemyHandling.Wheeled)
-                    toSet.CommanderAttack = EnemyAttack.Grudge;
-                if (toSet.CommanderAttack == EnemyAttack.Coward)
-                    toSet.CommanderAttack = EnemyAttack.Circle;
-                if (toSet.CommanderAttack == EnemyAttack.Spyper)
-                    toSet.CommanderAttack = EnemyAttack.Grudge;
-                if (toSet.CommanderMind == EnemyAttitude.Miner)
-                    toSet.CommanderMind = EnemyAttitude.Homing;
+            if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeAttract>())
+            {
+                if (KickStart.SpecialAttractNum != AttractType.Harvester)
+                {
+                    if (toSet.EvilCommander != EnemyHandling.Wheeled)
+                        toSet.CommanderAttack = EnemyAttack.Grudge;
+                    if (toSet.CommanderAttack == EnemyAttack.Coward)
+                        toSet.CommanderAttack = EnemyAttack.Circle;
+                    if (toSet.CommanderAttack == EnemyAttack.Spyper)
+                        toSet.CommanderAttack = EnemyAttack.Grudge;
+                    if (toSet.CommanderMind == EnemyAttitude.Miner)
+                        toSet.CommanderMind = EnemyAttitude.Homing;
+                }
+                else
+                {
+                    if (toSet.StartedAnchored)
+                    {
+                        toSet.EvilCommander = EnemyHandling.Stationary;
+                        toSet.CommanderMind = EnemyAttitude.Default;
+                        toSet.CommanderBolts = EnemyBolts.MissionTrigger;
+                    }
+                    else
+                        toSet.CommanderMind = EnemyAttitude.Miner;
+                }
             }
 
 
@@ -485,19 +502,21 @@ namespace TAC_AI.AI.Enemy
             if (toSet.CommanderMind == EnemyAttitude.Miner)
             {
                 thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
+                if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI
+                    toSet.CommanderAttack = EnemyAttack.Coward;
+                RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
             }
             else if (toSet.CommanderMind == EnemyAttitude.Boss)
             {
                 thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.Headquarters);
+                RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.Headquarters);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
             }
             else if (toSet.CommanderMind == EnemyAttitude.Invader)
             {
                 thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                Templates.RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.AnyNonHQ);
+                RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.AnyNonHQ);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
             }
             else

@@ -54,7 +54,7 @@ namespace TAC_AI.AI
 
         public const float minimumChargeFractionToConsider = 0.75f;
         // legdev
-        internal const bool Feedback = true;// set this to true to get AI feedback testing
+        internal const bool Feedback = false;// set this to true to get AI feedback testing
 
 
         // Mining
@@ -613,6 +613,11 @@ namespace TAC_AI.AI
                     }
                     catch { }
                 }
+                else if (AIState == 2)
+                {
+                    if (newBlock.GetComponent<ModulePacemaker>())
+                        tank.Holders.SetHeartbeatSpeed(TechHolders.HeartbeatSpeed.Fast);
+                }
             }
             public void OnDetach(TankBlock newBlock, Tank tank)
             {
@@ -1088,6 +1093,15 @@ namespace TAC_AI.AI
                 Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
                 return Final;
             }
+            public Vector3 GetDir(Tank targetToAvoid)
+            {
+                //What actually does the avoidence
+                //Debug.Log("TACtical_AI: GetOtherDir");
+                Vector3 inputOffset = tank.transform.position - targetToAvoid.transform.position;
+                float inputSpacing = Extremes(targetToAvoid.blockBounds.extents) + this.lastTechExtents + DodgeStrength;
+                Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
+                return Final;
+            }
 
 
             // Collision Avoidence
@@ -1138,6 +1152,72 @@ namespace TAC_AI.AI
                             //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
                             //thisInst.IsLikelyJammed = true;
                             IntVector3 ProccessedVal = GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, thisInst.AdvancedAI);
+                            if (obst)
+                                return (targetIn + ProccessedVal) / 3;
+                            else
+                                return (targetIn + ProccessedVal) / 2;
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.Log("TACtical_AI: Crash on Avoid " + e);
+                        return targetIn;
+                    }
+                }
+                if (targetIn.IsNaN())
+                {
+                    Debug.Log("TACtical_AI: AvoidAssist IS NaN!!");
+                    TankAIManager.FetchAllAllies();
+                }
+                return targetIn;
+            }
+            public Vector3 AvoidAssistInv(Vector3 targetIn)
+            {
+                //The method to determine if we should avoid an ally nearby while navigating to the target - REVERSED
+                var thisInst = gameObject.GetComponent<TankAIHelper>();
+                //thisInst.IsLikelyJammed = false;
+                if (thisInst.AvoidStuff)
+                {
+                    try
+                    {
+                        Tank lastCloseAlly;
+                        float lastAllyDist;
+                        if (thisInst.SecondAvoidence && moreThan2Allies)// MORE processing power
+                        {
+                            lastCloseAlly = AIEPathing.SecondClosestAlly(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                            if (lastAllyDist < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
+                            {
+                                if (lastAuxVal < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
+                                {
+                                    //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name + " and " + lastCloseAlly2.name);
+                                    //thisInst.IsLikelyJammed = true;
+                                    IntVector3 ProccessedVal2 = GetDir(lastCloseAlly) + GetDir(lastCloseAlly2) - AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst2, thisInst.AdvancedAI);
+                                    if (obst2)
+                                        return (targetIn + ProccessedVal2) / 4;
+                                    else
+                                        return (targetIn + ProccessedVal2) / 3;
+
+                                }
+                                //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                                //thisInst.IsLikelyJammed = true;
+                                IntVector3 ProccessedVal = GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, thisInst.AdvancedAI);
+                                if (obst)
+                                    return (targetIn + ProccessedVal) / 3;
+                                else
+                                    return (targetIn + ProccessedVal) / 2;
+                            }
+
+                        }
+                        lastCloseAlly = AIEPathing.ClosestAlly(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
+                        //Debug.Log("TACtical_AI: Ally is " + thisInst.lastAllyDist + " dist away");
+                        //Debug.Log("TACtical_AI: Trigger threshold is " + (thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
+                        //if (lastCloseAlly == null)
+                        //    Debug.Log("TACtical_AI: ALLY IS NULL");
+                        if (lastAllyDist < thisInst.lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 12)
+                        {
+                            //Debug.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                            //thisInst.IsLikelyJammed = true;
+                            IntVector3 ProccessedVal = GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, thisInst.AdvancedAI);
                             if (obst)
                                 return (targetIn + ProccessedVal) / 3;
                             else

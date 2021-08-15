@@ -28,12 +28,21 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             RGeneral.Engadge(thisInst, tank, mind);
 
-            if (dist > 10)
+            if (dist > 6)
             {
                 Debug.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
                 thisInst.ProceedToObjective = true;
                 thisInst.Steer = true;
                 thisInst.lastDestination = mind.HoldPos;
+                if (Mathf.Abs(Vector3.Dot(mind.HoldPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.6f)
+                {   //Move
+                    thisInst.forceDrive = true;
+                    thisInst.DriveVar = -1;
+                }
+                else
+                {   //Aim back
+                    thisInst.PivotOnly = true;
+                }
             }
             else
             {

@@ -202,40 +202,17 @@ namespace TAC_AI.AI
             }
 
             // Advanced
-            public bool ChanceGrabBackBlock()
+            public bool ChanceGrabBackBlock(TankBlock blockLoss)
             {
                 if (UnityEngine.Random.Range(0, 500) < KickStart.Difficulty)
                 {
                     //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
                     ReserveSuperGrabs++;
+                    if (KickStart.Difficulty == 150)
+                        blockLoss.damage.SelfDestruct(0.75f);
                     return true;
                 }
                 return false;
-            }
-            public void ChanceDestroyBlock(TankBlock blockLoss)
-            {
-                try
-                {
-                    if (ManLicenses.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel < ManLicenses.inst.GetBlockTier(blockLoss.BlockType))
-                    {
-                        blockLoss.damage.SelfDestruct(0.1f); // - no get illegal blocks
-                    }
-                    else
-                    {
-                        if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
-                        {
-                            if (KickStart.Difficulty == 150)
-                                blockLoss.damage.SelfDestruct(0.1f);
-                            else
-                                blockLoss.damage.SelfDestruct(0.75f);
-                        }
-                    }
-                }
-                catch
-                {
-                    if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
-                        blockLoss.damage.SelfDestruct(0.1f);
-                }
             }
             public bool TryAttachExistingBlock(TankBlock foundBlock)
             {
@@ -1005,7 +982,7 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
                 List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, cBlocks);
 
-                Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesMissing.Count());
+                //Debug.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesMissing.Count());
                 if (!TrySpawnAndAttachBlockFromList(tank, TechMemor, typesMissing, false, false))
                     Debug.Log("TACtical AI: TurboRepair - attach attempt failed");
             }

@@ -99,14 +99,44 @@ namespace TAC_AI.AI.Enemy
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
                 mind.AIControl.PendingSystemsCheck = true;
-                if ((bool)mind.TechMemor)
+                if (!blockLoss.GetComponent<ModuleTechController>())
                 {
-                    if (mind.TechMemor.ChanceGrabBackBlock())
-                        return;// no destroy block
-                    mind.TechMemor.ChanceDestroyBlock(blockLoss);
+                    if ((bool)mind.TechMemor)
+                    {   // cannot self-destruct timer cabs or death
+                        if (mind.TechMemor.ChanceGrabBackBlock(blockLoss))
+                            return;// no destroy block
+                        mind.ChanceDestroyBlock(blockLoss);
+                    }
+                    else
+                        mind.ChanceDestroyBlock(blockLoss);
                 }
             }
             catch { }
+        }
+        public void ChanceDestroyBlock(TankBlock blockLoss)
+        {
+            try
+            {
+                if (ManLicenses.inst.GetLicense(ManSpawn.inst.GetCorporation(blockLoss.BlockType)).CurrentLevel < ManLicenses.inst.GetBlockTier(blockLoss.BlockType) && !KickStart.AllowOverleveledBlockDrops)
+                {
+                    blockLoss.damage.SelfDestruct(0.6f); // - no get illegal blocks
+                }
+                else
+                {
+                    if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
+                    {
+                        if (KickStart.Difficulty == 150)
+                            blockLoss.damage.SelfDestruct(0.6f);
+                        else
+                            blockLoss.damage.SelfDestruct(0.75f);
+                    }
+                }
+            }
+            catch
+            {
+                if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
+                    blockLoss.damage.SelfDestruct(0.6f);
+            }
         }
 
         /// <summary>

@@ -75,6 +75,63 @@ namespace TAC_AI.AI.Enemy
             }
             return targetIn;
         }
+        public static Vector3 AvoidAssistEnemyInv(Tank tank, Vector3 targetIn, AIECore.TankAIHelper thisInst, EnemyMind mind)
+        {   //WIP
+            List<Tank> Allies = AllyList(tank);
+            if (!thisInst.AvoidStuff)
+                return targetIn;
+            try
+            {
+                Tank lastCloseAlly;
+                float lastAllyDist;
+                if (mind.CommanderSmarts >= EnemySmarts.Smrt && Allies.Count() > 1)// MORE processing power
+                {
+                    lastCloseAlly = SecondClosestAllyE(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, Allies);
+                    if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
+                    {
+                        if (lastAuxVal < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
+                        {
+                            IntVector3 ProccessedVal2 = thisInst.GetDir(lastCloseAlly) + thisInst.GetDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst2, true);
+                            if (obst2)
+                                return (targetIn + ProccessedVal2) / 4;
+                            else
+                                return (targetIn + ProccessedVal2) / 3;
+
+                        }
+                        IntVector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, true);
+                        if (obst)
+                            return (targetIn + ProccessedVal) / 3;
+                        else
+                            return (targetIn + ProccessedVal) / 2;
+                    }
+
+                }
+                lastCloseAlly = ClosestAllyE(tank.boundsCentreWorldNoCheck, out lastAllyDist, Allies);
+                if (lastCloseAlly == null)
+                {
+                    //Debug.Log("TACtical_AI: ALLY IS NULL");
+                    return targetIn;
+                }
+                if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
+                {
+                    IntVector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh);
+                    if (obst)
+                        return (targetIn + ProccessedVal) / 3;
+                    else
+                        return (targetIn + ProccessedVal) / 2;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: Crash on Avoid " + e);
+                return targetIn;
+            }
+            if (targetIn.IsNaN())
+            {
+                Debug.Log("TACtical_AI: AvoidAssistEnemy IS NaN!!");
+            }
+            return targetIn;
+        }
 
         /// <summary>
         /// Airborne Avoidence

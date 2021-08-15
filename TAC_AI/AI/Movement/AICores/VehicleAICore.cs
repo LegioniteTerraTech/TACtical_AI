@@ -199,7 +199,7 @@ namespace TAC_AI.AI.Movement.AICores
                             help.Steer = true;
                             help.DriveDir = EDriveType.Forwards;
                             help.AdviseAway = true;
-                            help.lastDestination = help.lastPlayer.transform.position;
+                            help.lastDestination = help.AvoidAssistInv(help.lastPlayer.transform.position);
                             help.MinimumRad = 0.5f;
                         }
                         else if (help.ProceedToObjective && (bool)help.lastPlayer)
@@ -302,21 +302,25 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                             help.DriveDir = EDriveType.Forwards;
                         help.AdviseAway = true;
-                        help.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.lastDestination, this.controller.Helper, mind);
+                        help.lastDestination = RPathfinding.AvoidAssistEnemyInv(this.controller.Tank, help.lastDestination, this.controller.Helper, mind);
                         help.MinimumRad = 0.5f;
                     }
                     else if (help.ProceedToObjective)
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.lastDestination, this.controller.Helper, mind);
-                        help.MinimumRad = help.lastTechExtents + 8;
+                        help.lastDestination = RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.lastDestination, this.controller.Helper, mind);
+
+                        if (mind.EvilCommander == EnemyHandling.Stationary)
+                            help.MinimumRad = 0.5f;
+                        else
+                            help.MinimumRad = help.lastTechExtents + 8;
                     }
                 }
             }
-            if (mind.EvilCommander == Enemy.EnemyHandling.Naval)
+            if (mind.EvilCommander == EnemyHandling.Naval)
                 help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, tank, this.controller.Helper);
-            else if (mind.EvilCommander == Enemy.EnemyHandling.Starship)
+            else if (mind.EvilCommander == EnemyHandling.Starship)
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper);
             else
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper, this.controller.Tank.blockBounds.size.y);
@@ -383,12 +387,18 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (thisInst.DriveDir == EDriveType.Backwards)
                     {   //Drive to target driving backwards
-                        thisControl.m_Movement.FaceDirection(tank, destDirect, Turner(thisInst, destDirect));//Face the music
+                        //if (thisInst.PivotOnly)
+                        //    thisControl.m_Movement.FaceDirection(tank, destDirect, 1);//need max aiming strength for turning
+                        //else
+                            thisControl.m_Movement.FaceDirection(tank, destDirect, Turner(thisInst, destDirect));//Face the music
                         thisControl.DriveControl = -1f;
                     }
                     else
                     {
-                        thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, Turner(thisInst, -destDirect));//Face the music
+                        //if (thisInst.PivotOnly)
+                        //    thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);// need max aiming strength for turning
+                        //else
+                            thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, Turner(thisInst, -destDirect));//Face the music
                         //Debug.Log("TACtical_AI: AI " + tank.name + ":  driving to " + thisInst.lastDestination);
                         if (thisInst.MinimumRad > 0)
                         {

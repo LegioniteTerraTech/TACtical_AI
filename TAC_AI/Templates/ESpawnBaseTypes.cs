@@ -69,6 +69,8 @@ namespace TAC_AI.Templates
 
         // MOBILE TECHS
         GSOTonyTeam,
+        GSOHarvesterTech,
+        GCHarvesterTech,
         // Hybridz - will spawn if player is at every max grade corp and they are PAIN
         AttractServo,
         // TAC lol

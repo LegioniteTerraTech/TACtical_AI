@@ -16,6 +16,18 @@ namespace TAC_AI
     {
     }
 
+    internal enum AttractType
+    {
+        Harvester,
+        Invader,
+        SpaceInvader,
+        Dogfight,
+        SpaceBattle,
+        NavalWarfare,
+        HQSiege,
+        Misc,
+    }
+
     internal static class Patches
     {
         // Where it all happens
@@ -102,13 +114,13 @@ namespace TAC_AI
         {
             private static void Prefix()
             {
-                if (KickStart.isBlockInjectorPresent && !KickStart.firedAfterBlockInjector)
+                if (!KickStart.firedAfterBlockInjector)//KickStart.isBlockInjectorPresent && 
                     KickStart.DelayedBaseLoader();
             }
         }
 
         [HarmonyPatch(typeof(ModeAttract))]
-        [HarmonyPatch("UpdateModeImpl")]
+        [HarmonyPatch("UpdateModeImpl")] // Checking title techs
         private static class RestartAttract
         {
             private static void Prefix(ModeAttract __instance)
@@ -117,34 +129,52 @@ namespace TAC_AI
                 int mode = (int)state.GetValue(__instance);
                 if (mode == 2)
                 {
-                    bool restart = true;
-                    List<Tank> active = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
-                    foreach (Tank tonk in active)
+                    if (KickStart.SpecialAttractNum == AttractType.Harvester)
                     {
-                        if (tonk.Weapons.GetFirstWeapon().IsNotNull())
+                        bool restart = false;
+                        List<Tank> active = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
+                        foreach (Tank tonk in active)
                         {
-                            foreach (Tank tonk2 in active)
-                            {
-                                if (tonk.IsEnemy(tonk2.Team))
-                                    restart = false;
-                            }
+                            if ((tonk.boundsCentreWorldNoCheck - Singleton.cameraTrans.position).magnitude > 125)
+                                restart = true;
                         }
-                        if (tonk.IsSleeping)
+                        if (restart == true)
                         {
-                            foreach (TankBlock block in tonk.blockman.IterateBlocks())
-                            {
-                                block.damage.SelfDestruct(0.5f);
-                            }
-                            tonk.blockman.Disintegrate(true, false);
+                            UILoadingScreenHints.SuppressNextHint = true;
+                            Singleton.Manager<ManUI>.inst.FadeToBlack();
+                            state.SetValue(__instance, 3);
                         }
                     }
-                    if (restart == true)
+                    else
                     {
-                        UILoadingScreenHints.SuppressNextHint = true;
-                        Singleton.Manager<ManUI>.inst.FadeToBlack();
-                        state.SetValue(__instance, 3);
+                        bool restart = true;
+                        List<Tank> active = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
+                        foreach (Tank tonk in active)
+                        {
+                            if (tonk.Weapons.GetFirstWeapon().IsNotNull())
+                            {
+                                foreach (Tank tonk2 in active)
+                                {
+                                    if (tonk.IsEnemy(tonk2.Team))
+                                        restart = false;
+                                }
+                            }
+                            if (tonk.IsSleeping)
+                            {
+                                foreach (TankBlock block in tonk.blockman.IterateBlocks())
+                                {
+                                    block.damage.SelfDestruct(0.5f);
+                                }
+                                tonk.blockman.Disintegrate(true, false);
+                            }
+                        }
+                        if (restart == true)
+                        {
+                            UILoadingScreenHints.SuppressNextHint = true;
+                            Singleton.Manager<ManUI>.inst.FadeToBlack();
+                            state.SetValue(__instance, 3);
+                        }
                     }
-
                 }
 
             }
@@ -156,18 +186,22 @@ namespace TAC_AI
         {
             private static bool Prefix(ModeAttract __instance)
             {
-                if (UnityEngine.Random.Range(1, 100) > 20 || KickStart.retryForBote == 1)
+                // Testing
+                bool caseOverride = false;
+                AttractType outNum = AttractType.Harvester;
+
+
+                if (UnityEngine.Random.Range(1, 100) > 20 || KickStart.retryForBote == 1 || caseOverride)
                 {
                     Debug.Log("TACtical_AI: Ooop - the special threshold has been met");
                     KickStart.SpecialAttract = true;
-                    bool caseOverride = false;
-                    int outNum = 45;//28;
                     if (KickStart.retryForBote == 1)
-                        outNum = 45;
+                        outNum = AttractType.NavalWarfare;
                     else if (!caseOverride)
-                        outNum = (int)(UnityEngine.Random.Range(1, 100) + 0.5f);
+                        outNum = (AttractType)UnityEngine.Random.Range(1, Enum.GetValues(typeof(AttractType)).Length);
                     KickStart.SpecialAttractNum = outNum;
-                    if (KickStart.SpecialAttractNum < 48 && KickStart.SpecialAttractNum >= 36)
+
+                    if (KickStart.SpecialAttractNum == AttractType.NavalWarfare)
                     {   // Naval Brawl
                         if (KickStart.isWaterModPresent)
                         {
@@ -235,13 +269,29 @@ namespace TAC_AI
                         List<Tank> tanksToConsider = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
 
 
-                        int randNum = KickStart.SpecialAttractNum;
-                        if (randNum < 10)
+                        AttractType randNum = KickStart.SpecialAttractNum;
+                        if (randNum == AttractType.SpaceInvader)
                         {   // space invader
                             //Debug.Log("TACtical_AI: Throwing in TAC ref lol");
                             RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Space);
                         }
-                        else if (randNum < 24)
+                        else if (randNum == AttractType.Harvester)
+                        {   // Peaceful harvesting
+                            for (int step = 0; TechCount > step; step++)
+                            {
+                                Tank tech = tanksToConsider.ElementAt(step);
+                                Vector3 position = tech.boundsCentreWorld;// - (tech.rootBlockTrans.forward * 32);
+
+                                if (step == 0)
+                                {
+                                    RawTechLoader.SpawnSpecificTypeTech(spawn, 1, -tech.rootBlockTrans.forward, new List<BasePurpose> { BasePurpose.HasReceivers }, silentFail: false);
+                                    RawTechLoader.SpawnSpecificTypeTech(position, 1, -tech.rootBlockTrans.forward, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting }, silentFail: false);
+                                }
+                                //if (RawTechLoader.SpawnSpecificTypeTech(position, 1, -tech.rootBlockTrans.forward, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting }, silentFail: false))
+                                    tech.visible.RemoveFromGame();
+                            }
+                        }
+                        else if (randNum == AttractType.Dogfight)
                         {   // Aircraft fight
                             for (int step = 0; TechCount > step; step++)
                             {
@@ -253,7 +303,7 @@ namespace TAC_AI
                                     tech.visible.RemoveFromGame();
                             }
                         }
-                        else if (randNum < 36)
+                        else if (randNum == AttractType.SpaceBattle)
                         {   // Airship assault
                             for (int step = 0; TechCount > step; step++)
                             {
@@ -261,11 +311,11 @@ namespace TAC_AI
                                 Vector3 position = tech.boundsCentreWorld;// - (tech.rootBlockTrans.forward * 48);
                                 position.y += 64;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, BaseTerrain.Space, silentFail: false))
+                                if (RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, BaseTerrain.Space, silentFail: false))
                                     tech.visible.RemoveFromGame();
                             }
                         }
-                        else if (randNum < 48)
+                        else if (randNum == AttractType.NavalWarfare)
                         {   // Naval Brawl
                             if (KickStart.isWaterModPresent)
                             {
@@ -300,7 +350,7 @@ namespace TAC_AI
                             else
                                 Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
                         }
-                        else if (randNum < 65)
+                        else if (randNum == AttractType.HQSiege)
                         {   // HQ Siege
                             foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
                             {
@@ -309,7 +359,7 @@ namespace TAC_AI
                             tankPos.SetTeam(916);
                             Templates.RawTechLoader.SpawnAttractTech(spawn, tankPos.Team, Vector3.forward, Templates.BaseTerrain.Land, tankPos.GetMainCorp(), Templates.BasePurpose.Headquarters);
                         }
-                        else if (randNum < 80)
+                        else if (randNum == AttractType.Misc)
                         {   // pending
                             for (int step = 0; TechCount > step; step++)
                             {
@@ -322,7 +372,7 @@ namespace TAC_AI
                             }
                             RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Air);
                         }
-                        else
+                        else // AttractType.Invader
                         {   // Land battle invoker
                             RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Land);
                         }
@@ -678,6 +728,23 @@ namespace TAC_AI
                 }
                 //else
                 //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (OnRecycle)");
+
+            }
+        }
+
+        [HarmonyPatch(typeof(ResourceDispenser))]
+        [HarmonyPatch("Deactivate")]//On instant remove
+        private static class PatchResourceDeactivateToHelpAI
+        {
+            private static void Prefix(ResourceDispenser __instance)
+            {
+                //Debug.Log("TACtical_AI: Removed resource from list (Deactivate)");
+                if (AIECore.Minables.Contains(__instance.visible))
+                {
+                    AIECore.Minables.Remove(__instance.visible);
+                }
+                //else
+                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Deactivate)");
 
             }
         }

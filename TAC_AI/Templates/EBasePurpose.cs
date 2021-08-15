@@ -35,6 +35,7 @@ namespace TAC_AI.Templates
         TechProduction,
         Headquarters,
         MPSafe,
+        HasReceivers,
         NotStationary,
         NoAutoSearch,
         NoWeapons,

@@ -107,6 +107,70 @@ namespace TAC_AI.AI.Movement
             return Offset;
         }
 
+        public static Vector3 ObstDir(Tank tank, AIECore.TankAIHelper thisInst, Visible vis)
+        {
+            //What actually does the avoidence
+            Vector3 inputOffset = tank.transform.position - vis.centrePosition;
+            float inputSpacing = vis.Radius + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
+            return Final;
+        }
+        public static Vector3 ObstDodgeOffsetInv(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false)
+        {
+            worked = false;
+            if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
+                return Vector3.zero;    // don't bother with this
+            Vector3 Offset = Vector3.zero;
+
+            if (tank.rbody == null)
+                return Vector3.zero; // no need, we are stationary
+
+            List<Visible> ObstList = ObstructionAwareness(tank.boundsCentreWorldNoCheck + tank.rbody.velocity, thisInst);
+            try
+            {
+                int bestStep = 0;
+                int auxStep = 0;
+                float bestValue = 500;
+                float auxBestValue = 500;
+                int steps = ObstList.Count;
+                bool moreThan2 = false;
+                if (steps <= 0)
+                    return Vector3.zero;
+                else if (steps > 1)
+                    moreThan2 = true;
+                for (int stepper = 0; steps > stepper; stepper++)
+                {
+                    float temp = Mathf.Clamp((ObstList.ElementAt(stepper).centrePosition - tank.boundsCentreWorldNoCheck).sqrMagnitude - ObstList.ElementAt(stepper).Radius, 0, 500);
+                    if (bestValue > temp && temp != 0)
+                    {
+                        auxStep = bestStep;
+                        bestStep = stepper;
+                        auxBestValue = bestValue;
+                        bestValue = temp;
+                    }
+                    else if (useTwo && bestValue < temp && auxBestValue > temp && temp != 0)
+                    {
+                        auxStep = stepper;
+                        auxBestValue = temp;
+                    }
+                }
+                thisInst.Yield = true;
+                worked = true;
+                if (useTwo && moreThan2)
+                {
+                    Offset = (ObstDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstDir(tank, thisInst, ObstList.ElementAt(auxStep))) / 2;
+                }
+                else
+                    Offset = ObstDir(tank, thisInst, ObstList.ElementAt(bestStep));
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: Error on ObstDodgeOffset");
+                Debug.Log(e);
+            }
+            return Offset;
+        }
+
 
         // ALLY COLLISION AVOIDENCE
         public static Tank ClosestAlly(Vector3 tankPos, out float bestValue, Tank thisTank)
@@ -402,8 +466,26 @@ namespace TAC_AI.AI.Movement
 
             TankControl.ControlState controlOverload = (TankControl.ControlState)controlGet.GetValue(tankToCopy.control);
 
+
+            Vector3 InputLineVal = controlOverload.m_State.m_InputMovement;
+            if (tankToCopy.GetComponent<AIECore.TankAIHelper>().lastAIType != AITreeType.AITypes.Escort || tankToCopy.PlayerFocused)
+            {
+                if (tankToCopy.control.GetThrottle(0, out float throttleX))
+                {   // X 
+                    InputLineVal.x = throttleX;
+                }
+                if (tankToCopy.control.GetThrottle(1, out float throttleY))
+                {   // Y
+                    InputLineVal.y = throttleY;
+                }
+                if (tankToCopy.control.GetThrottle(2, out float throttleZ))
+                {   // X
+                    InputLineVal.z = throttleZ;
+                }
+            }
+
             // Grab a vector to-go to set how the other tech should react in accordance to the host
-            Vector3 DAdjuster = controlOverload.m_State.m_InputMovement * 2000;
+            Vector3 DAdjuster = InputLineVal * 2000;
             Vector3 RAdjuster = controlOverload.m_State.m_InputRotation * -1;
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
             // Generate a rough tangent
@@ -442,7 +524,7 @@ namespace TAC_AI.AI.Movement
             // Then we pack it all up nicely in the end
             end = tankToCopy.trans.TransformPoint(posToGo + tankToCopy.blockBounds.center);
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
-            IsMoving = !(controlOverload.m_State.m_InputMovement + controlOverload.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
+            IsMoving = !(InputLineVal + controlOverload.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
             return end;
         }
         public static bool AboveHeightFromGround(Vector3 input, float groundOffset = 50)
@@ -666,12 +748,22 @@ namespace TAC_AI.AI.Movement
                     {
                         //thisInst.Yield = true;
                         //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is jammed on land!");
-                        final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                        if (thisInst.AdviseAway)
+                        { // Reverse
+                            final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                        }
+                        else
+                            final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
                     }
                     else if (vecCount > 0)
                     {
                         //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is trying to avoid terrain");
-                        final = thisInst.tank.boundsCentreWorldNoCheck + ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * AIECore.TankAIHelper.DodgeStrength);
+                        if (thisInst.AdviseAway)
+                        { // Reverse
+                            final = thisInst.tank.boundsCentreWorldNoCheck - ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * AIECore.TankAIHelper.DodgeStrength);
+                        }
+                        else
+                            final = thisInst.tank.boundsCentreWorldNoCheck + ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * AIECore.TankAIHelper.DodgeStrength);
                     }
                 }
             }
@@ -726,10 +818,22 @@ namespace TAC_AI.AI.Movement
                     if (highestHeight > KickStart.WaterHeight)
                     {
                         //Debug.Log("TACtical_AI: highest terrain  of depth " + highestHeight + " found at " + posBest);
-                        final = posBest;
+                        if (thisInst.AdviseAway)
+                        { // Reverse
+                            final = thisInst.tank.boundsCentreWorldNoCheck + (thisInst.tank.boundsCentreWorldNoCheck - posBest);
+                        }
+                        else
+                            final = posBest;
                     }
                     else
-                        final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                    {
+                        if (thisInst.AdviseAway)
+                        { // Reverse
+                            final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                        }
+                        else
+                            final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                    }
                 }
                 else
                     final.y = height;

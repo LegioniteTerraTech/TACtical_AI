@@ -35,6 +35,7 @@ namespace TAC_AI
         public static int AIDodgeCheapness = 30;
         public static int AIPopMaxLimit = 6;
         public static bool MuteNonPlayerRacket = true;
+        public static bool AllowOverleveledBlockDrops = false;
         public static bool enablePainMode = true;
         public static bool EnemiesHaveCreativeInventory = false;
         public static bool AllowEnemiesToStartBases = true;
@@ -64,6 +65,7 @@ namespace TAC_AI
         public static OptionToggle betterAI;
         public static OptionRange dodgePeriod;
         public static OptionToggle muteNonPlayerBuildRacket;
+        public static OptionToggle allowOverLevelBlocksDrop;
         public static OptionToggle painfulEnemies;
         public static OptionRange diff;
         public static OptionToggle infEnemySupplies;
@@ -76,7 +78,7 @@ namespace TAC_AI
 
         internal static bool firedAfterBlockInjector = false;
         public static bool SpecialAttract = false;
-        public static int SpecialAttractNum = 0;
+        internal static AttractType SpecialAttractNum = 0;
         public static int retryForBote = 0;
         public static Vector3 SpecialAttractPos;
 
@@ -154,7 +156,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
             thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
-            thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
+            thisModConfig.BindConfig<KickStart>(null, "AllowOverleveledBlockDrops");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
             thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
             thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
@@ -168,6 +170,8 @@ namespace TAC_AI
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, MuteNonPlayerRacket);
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            allowOverLevelBlocksDrop = new OptionToggle("Overleveled Enemy Block Grade Drops", TACAI, AllowOverleveledBlockDrops);
+            allowOverLevelBlocksDrop.onValueSaved.AddListener(() => { AllowOverleveledBlockDrops = allowOverLevelBlocksDrop.SavedValue; thisModConfig.WriteConfigJsonFile(); });
 
             var TACAIEnemies = ModName + " - Enemies";
             painfulEnemies = new OptionToggle("<b>Rebuilt Enemies</b>", TACAIEnemies, enablePainMode);
@@ -197,8 +201,8 @@ namespace TAC_AI
 
 
             // Now setup bases
-            if (!isBlockInjectorPresent)
-                InstantBaseLoader();
+            //if (!isBlockInjectorPresent)
+            //    InstantBaseLoader();
         }
         public static void DelayedBaseLoader()
         {

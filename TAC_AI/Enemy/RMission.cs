@@ -60,69 +60,106 @@ namespace TAC_AI.AI.Enemy
                 MissionAIStatus.Send(tank, mAIState);
             }
         }
+
+        public static bool SpecificNameCases(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {   // Handle specific enemy names to tailor the AI into working order
+            string name = tank.name;
+            bool DidFire = false;
+
+            if (name == "Missile Defense")
+            {   // The GSO Missile Turret
+                mind.AllowRepairsOnFly = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.Mild;
+                DidFire = true;
+            }
+            else if (name == "Wing-nut")
+            {   // Wing-nut mission
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                DidFire = true;
+            }
+            else if (name == "Spider King")
+            {   // Spider King mission
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                DidFire = true;
+            }
+            else if (name == "Fly")
+            {   // Spider King mission
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Starship;
+                mind.CommanderAttack = EnemyAttack.Pesterer;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                RCore.AutoSetIntelligence(mind, tank);
+                DidFire = true;
+            }
+            else if (name == "Enemy HQ")
+            {   //Base where enemies spawn from
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.AtFull;
+                DidFire = true;
+            }
+            else if (name == "Missile #2")
+            {
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.SuicideMissile;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.MissionTrigger;
+                DidFire = true;
+            }
+            /*
+            else if (name == "TAC InvaderAttract")
+            {
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Starship;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.MissionTrigger;
+                DidFire = true;
+            }
+            */
+
+            return DidFire;
+        }
+
         public static bool SetupMissionAI(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             string name = tank.name;
             // Don't worry the bases are sorted based on if they are valid or not
             bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
+            tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree1);
+            Debug.Log("TACtical_AI: AI " + tank.name + ":  AI Tree is " + tree1.ToString());
+
             if (!DidFire)
             {
-                if (name == "Missile Defense")
+                if (SpecificNameCases(thisInst, tank, mind))
                 {
-                    mind.AllowRepairsOnFly = true;
-                    mind.EvilCommander = EnemyHandling.Stationary;
-                    mind.CommanderAttack = EnemyAttack.Bully;
-                    mind.CommanderMind = EnemyAttitude.Homing;
-                    mind.CommanderSmarts = EnemySmarts.Mild;
                     DidFire = true;
                 }
-                else if (name == "Wingnut")
-                {
-                    mind.AllowRepairsOnFly = true;
-                    mind.InvertBullyPriority = true;
-                    mind.EvilCommander = EnemyHandling.Stationary;
-                    mind.CommanderAttack = EnemyAttack.Bully;
-                    mind.CommanderMind = EnemyAttitude.Homing;
-                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                    DidFire = true;
-                }
-                else if (name == "Enemy HQ")
-                {   //Base where enemies spawn from
-                    mind.AllowInvBlocks = true;
-                    mind.AllowRepairsOnFly = true;
-                    mind.InvertBullyPriority = true;
-                    mind.EvilCommander = EnemyHandling.Stationary;
-                    mind.CommanderAttack = EnemyAttack.Bully;
-                    mind.CommanderMind = EnemyAttitude.Homing;
-                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                    mind.CommanderBolts = EnemyBolts.AtFull;
-                    DidFire = true;
-                }
-                else if (name == "Missile #2")
-                {
-                    mind.AllowRepairsOnFly = true;
-                    mind.InvertBullyPriority = true;
-                    mind.EvilCommander = EnemyHandling.SuicideMissile;
-                    mind.CommanderAttack = EnemyAttack.Grudge;
-                    mind.CommanderMind = EnemyAttitude.Homing;
-                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                    mind.CommanderBolts = EnemyBolts.MissionTrigger;
-                    DidFire = true;
-                }
-                /*
-                else if (name == "TAC InvaderAttract")
-                {
-                    mind.AllowInvBlocks = true;
-                    mind.AllowRepairsOnFly = true;
-                    mind.InvertBullyPriority = true;
-                    mind.EvilCommander = EnemyHandling.Starship;
-                    mind.CommanderAttack = EnemyAttack.Grudge;
-                    mind.CommanderMind = EnemyAttitude.Homing;
-                    mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                    mind.CommanderBolts = EnemyBolts.MissionTrigger;
-                    DidFire = true;
-                }
-                */
                 else
                 {
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
