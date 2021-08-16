@@ -269,6 +269,26 @@ namespace TAC_AI.Templates
 
             return outTank;
         }
+        internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, List<BasePurpose> purposes, out Tank outTank, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99)
+        {   // This will try to spawn player-made enemy techs as well
+
+            if (ShouldUseCustomTechs(factionType, purposes, terrainType, false, maxGrade))
+            {
+                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, purposes, terrainType, maxGrade: maxGrade)], unProvoked, AutoTerrain);
+            }
+            else
+            {
+                SpawnBaseTypes type = GetEnemyBaseType(factionType, purposes, terrainType, maxGrade: maxGrade);
+                if (type == SpawnBaseTypes.NotAvail)
+                {
+                    outTank = null;
+                    return false;
+                }
+                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, purposes, terrainType, maxGrade: maxGrade), false, unProvoked, AutoTerrain);
+            }
+
+            return true;
+        }
         internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, out Tank outTank, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99)
         {   // This will try to spawn player-made enemy techs as well
 
@@ -472,7 +492,7 @@ namespace TAC_AI.Templates
             return theTech;
         }
         
-        internal static List<int> GetExternalIndexes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static List<int> GetExternalIndexes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool hostile = false)
         {
             try
             {
@@ -545,7 +565,7 @@ namespace TAC_AI.Templates
 
             return new List<int> { -1 };
         }
-        internal static List<int> GetExternalIndexes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static List<int> GetExternalIndexes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool hostile = false)
         {
             try
             {
@@ -654,10 +674,22 @@ namespace TAC_AI.Templates
 
             int CombinedVal = CustomTechs + PrefabTechs;
 
-            float RAND = UnityEngine.Random.Range(0, CombinedVal);
-            if (RAND > PrefabTechs)
+            if (KickStart.TryForceOnlyPlayerSpawns)
             {
-                return true;
+                Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: " + ((PrefabTechs > 0) ? "true" : "false"));
+                if (PrefabTechs > 0)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                float RAND = UnityEngine.Random.Range(0, CombinedVal);
+                Debug.Log("TACtical_AI: ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
+                if (RAND > PrefabTechs)
+                {
+                    return true;
+                }
             }
             return false;
         }
@@ -813,7 +845,7 @@ namespace TAC_AI.Templates
         // Override
         internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat, out bool worked)
         {
-            if (Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
+            if (Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
             {
                 worked = true;
                 return Singleton.Manager<ManLooseBlocks>.inst.HostSpawnBlock(type, position, quat, true);
@@ -826,7 +858,7 @@ namespace TAC_AI.Templates
             {
                 Debug.Log("TACtical AI: SpawnBlockS - Error on unfetchable block");
             }
-            if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(type))
+            if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
                 Debug.Log("TACtical AI: SpawnBlockS - Could not spawn block!  Block does not exist!");
             else if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
                 Debug.Log("TACtical AI: SpawnBlockS - Could not spawn block!  Block is invalid in current gamemode!");

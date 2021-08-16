@@ -112,7 +112,7 @@ namespace TAC_AI.AI
                 List<BlockMemory> clean = new List<BlockMemory>();
                 foreach (BlockMemory mem in overwrite)
                 {
-                    if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)))
+                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)))
                     {
                         Debug.Log("TACtical_AI:  DesignMemory - " + Tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
                         continue;
@@ -208,7 +208,7 @@ namespace TAC_AI.AI
                 {
                     //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
                     ReserveSuperGrabs++;
-                    if (KickStart.Difficulty == 150)
+                    if (KickStart.EnemyBlockDropChance == 0)
                         blockLoss.damage.SelfDestruct(0.75f);
                     return true;
                 }
@@ -364,7 +364,7 @@ namespace TAC_AI.AI
 
                 foreach (TankBlock bloc in ToSave)
                 {
-                    if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn(bloc.BlockType))
+                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(bloc.BlockType))
                         continue;
                     BlockMemory mem = new BlockMemory();
                     mem.t = bloc.BlockType.ToString();

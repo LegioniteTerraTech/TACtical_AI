@@ -325,6 +325,7 @@ namespace TAC_AI.AI.Enemy
 
             // We have to do it this way since modded blocks don't work well with the above
             List<TankBlock> blocs = BM.IterateBlocks().ToList();
+            int modControlCount = 0;
             int modBoostCount = 0;
             int modHoverCount = 0;
             int modGyroCount = 0;
@@ -332,6 +333,7 @@ namespace TAC_AI.AI.Enemy
             int modAGCount = 0;
             int modGunCount = 0;
             int modDrillCount = 0;
+            int modTeslaCount = 0;
 
             foreach (TankBlock bloc in blocs)
             {
@@ -345,10 +347,6 @@ namespace TAC_AI.AI.Enemy
                     modWheelCount++;
                 if (bloc.GetComponent<ModuleAntiGravityEngine>())
                     modAGCount++;
-                if (bloc.GetComponent<ModuleWeaponGun>())
-                    modGunCount++;
-                if (bloc.GetComponent<ModuleDrill>())
-                    modDrillCount++;
                 var buubles = bloc.GetComponent<ModuleShieldGenerator>();
                 if (ForceAllBubblesUp && buubles)
                 {
@@ -361,6 +359,19 @@ namespace TAC_AI.AI.Enemy
                 if (bloc.GetComponent<ModulePacemaker>())
                     tank.Holders.SetHeartbeatSpeed(TechHolders.HeartbeatSpeed.Fast);
 
+                if (bloc.GetComponent<ModuleTechController>())
+                {
+                    modControlCount++;
+                }
+                else
+                {
+                    if (bloc.GetComponent<ModuleWeaponGun>())
+                        modGunCount++;
+                    if (bloc.GetComponent<ModuleDrill>() || bloc.GetComponent<ModuleWeaponFlamethrower>())
+                        modDrillCount++;
+                    if (bloc.GetComponent<ModuleWeaponTeslaCoil>())
+                        modTeslaCount++;
+                }
             }
             Debug.Log("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
 
@@ -387,38 +398,48 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.EvilCommander = EnemyHandling.Starship;
             }
-            else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
+            else if (modGunCount < 1 && modDrillCount < 1 && modBoostCount > 0)
             {
                 toSet.EvilCommander = EnemyHandling.SuicideMissile;
             }
             else
                 toSet.EvilCommander = EnemyHandling.Wheeled;
+
+            if (modDrillCount + (modTeslaCount * 25) > modGunCount|| toSet.MainFaction == FactionSubTypes.GC)
+                toSet.LikelyMelee = true;
         }
         public static void RandomSetMindAttack(EnemyMind toSet, Tank tank)
         {
             //add Attitude
-            int randomNum2 = UnityEngine.Random.Range(1, 4);
-            switch (randomNum2)
+            if (IsUnarmed(tank))
             {
-                case 1:
-                    toSet.CommanderMind = EnemyAttitude.Default;
-                    break;
-                case 2:
-                    toSet.CommanderMind = EnemyAttitude.Homing;
-                    break;
-                case 3:
-                    //toSet.CommanderMind = EnemyAttitude.Junker;
-                    if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
-                        toSet.CommanderMind = EnemyAttitude.Miner;
-                    else
+                toSet.CommanderMind = EnemyAttitude.SubNeutral;
+            }
+            else
+            {
+                int randomNum2 = UnityEngine.Random.Range(1, 4);
+                switch (randomNum2)
+                {
+                    case 1:
                         toSet.CommanderMind = EnemyAttitude.Default;
-                    break;
-                case 4:
-                    if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
-                        toSet.CommanderMind = EnemyAttitude.Miner;
-                    else
-                        toSet.CommanderMind = EnemyAttitude.Default;
-                    break;
+                        break;
+                    case 2:
+                        toSet.CommanderMind = EnemyAttitude.Homing;
+                        break;
+                    case 3:
+                        //toSet.CommanderMind = EnemyAttitude.Junker;
+                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                            toSet.CommanderMind = EnemyAttitude.Miner;
+                        else
+                            toSet.CommanderMind = EnemyAttitude.Default;
+                        break;
+                    case 4:
+                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                            toSet.CommanderMind = EnemyAttitude.Miner;
+                        else
+                            toSet.CommanderMind = EnemyAttitude.Default;
+                        break;
+                }
             }
             //add Attack
             int randomNum3 = UnityEngine.Random.Range(1, 6);
@@ -440,6 +461,11 @@ namespace TAC_AI.AI.Enemy
                     toSet.CommanderAttack = EnemyAttack.Pesterer;
                     break;
                 case 6:
+                    if (toSet.LikelyMelee)
+                    {
+                        toSet.CommanderAttack = EnemyAttack.Bully;
+                        toSet.InvertBullyPriority = true;
+                    }
                     toSet.CommanderAttack = EnemyAttack.Spyper;
                     break;
             }
@@ -675,6 +701,10 @@ namespace TAC_AI.AI.Enemy
             }
             else
                 return EnemyHandling.Wheeled;
+        }
+        public static bool IsUnarmed(Tank tank)
+        {
+            return tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() + tank.blockman.IterateBlockComponents<ModuleDrill>().Count();
         }
     }
 }

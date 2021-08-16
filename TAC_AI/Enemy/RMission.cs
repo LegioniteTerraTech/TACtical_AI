@@ -128,6 +128,16 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
                 DidFire = true;
             }
+            else if (name == "DPS Target")
+            {   // R&D Target
+                mind.StartedAnchored = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Coward;
+                mind.CommanderMind = EnemyAttitude.Default;
+                mind.CommanderSmarts = EnemySmarts.Default;
+                mind.CommanderBolts = EnemyBolts.MissionTrigger;
+                DidFire = true;
+            }
             /*
             else if (name == "TAC InvaderAttract")
             {

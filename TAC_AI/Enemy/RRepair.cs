@@ -34,7 +34,7 @@ namespace TAC_AI.AI.Enemy
             }
             if (savedBCount != cBCount)
             {
-                bool hardest = KickStart.Difficulty == 150;
+                bool hardest = KickStart.EnemyBlockDropChance == 0;
                 //Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
                 List<BlockTypes> typesMissing = AIERepair.GetMissingBlockTypes(mind.TechMemor, cBlocks);
 

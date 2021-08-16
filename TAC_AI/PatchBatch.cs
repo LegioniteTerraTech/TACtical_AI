@@ -299,7 +299,7 @@ namespace TAC_AI
                                 Vector3 position = tech.boundsCentreWorld;// - (tech.rootBlockTrans.forward * 32);
                                 position.y += 64;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, BaseTerrain.Air, silentFail: false))
+                                if (RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -tech.rootBlockTrans.forward, BaseTerrain.Air, silentFail: false))
                                     tech.visible.RemoveFromGame();
                             }
                         }
@@ -339,8 +339,8 @@ namespace TAC_AI
                                     position = AI.Movement.AIEPathing.ForceOffsetToSea(position);
                                     tech.visible.RemoveFromGame();
 
-                                    if (!Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), forward, Templates.BaseTerrain.Sea, silentFail: false))
-                                        Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), forward, Templates.BaseTerrain.Space, silentFail: false);
+                                    if (!RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), forward, Templates.BaseTerrain.Sea, silentFail: false))
+                                        RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), forward, Templates.BaseTerrain.Space, silentFail: false);
                                 }
                                 //Debug.Log("TACtical_AI: cam is at " + Singleton.Manager<CameraManager>.inst.ca);
                                 Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
@@ -348,7 +348,7 @@ namespace TAC_AI
                                 Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
                             }
                             else
-                                Templates.RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
+                                RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, Templates.BaseTerrain.Land);
                         }
                         else if (randNum == AttractType.HQSiege)
                         {   // HQ Siege
@@ -357,7 +357,7 @@ namespace TAC_AI
                                 tech.SetTeam(4114);
                             }
                             tankPos.SetTeam(916);
-                            Templates.RawTechLoader.SpawnAttractTech(spawn, tankPos.Team, Vector3.forward, Templates.BaseTerrain.Land, tankPos.GetMainCorp(), Templates.BasePurpose.Headquarters);
+                            RawTechLoader.SpawnAttractTech(spawn, tankPos.Team, Vector3.forward, Templates.BaseTerrain.Land, tankPos.GetMainCorp(), Templates.BasePurpose.Headquarters);
                         }
                         else if (randNum == AttractType.Misc)
                         {   // pending
@@ -367,7 +367,7 @@ namespace TAC_AI
                                 Vector3 position = tech.boundsCentreWorld; //- (tech.rootBlockTrans.forward * 10);
                                 position.y += 10;
 
-                                if (Templates.RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, BaseTerrain.AnyNonSea))
+                                if (RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), tech.rootBlockTrans.forward, BaseTerrain.AnyNonSea))
                                     tech.visible.RemoveFromGame();
                             }
                             RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Air);
@@ -376,6 +376,8 @@ namespace TAC_AI
                         {   // Land battle invoker
                             RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Land);
                         }
+
+                        Debug.Log("TACtical_AI: Setup for attract type " + KickStart.SpecialAttractNum.ToString());
                     }
                 }
                 catch { }

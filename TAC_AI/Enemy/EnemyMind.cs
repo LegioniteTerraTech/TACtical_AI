@@ -30,6 +30,7 @@ namespace TAC_AI.AI.Enemy
         public bool AllowRepairsOnFly = false;  // If we are feeling extra evil
         public bool InvertBullyPriority = false;// Shoot the big techs instead
         public bool AllowInvBlocks = false;     // Can this tech spawn blocks from inventory?
+        public bool LikelyMelee = false;        // Can we melee?
 
         public bool SolarsAvail = false;        // Do we currently have solar panels
         public bool Provoked = false;           // Were we hit from afar?
@@ -123,18 +124,15 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
+                    if (UnityEngine.Random.Range(0, 100) < KickStart.EnemyBlockDropChance)
                     {
-                        if (KickStart.Difficulty == 150)
-                            blockLoss.damage.SelfDestruct(0.6f);
-                        else
-                            blockLoss.damage.SelfDestruct(0.75f);
+                        blockLoss.damage.SelfDestruct(0.75f);
                     }
                 }
             }
             catch
             {
-                if (UnityEngine.Random.Range(-50, 150) < KickStart.Difficulty)
+                if (UnityEngine.Random.Range(0, 100) < KickStart.EnemyBlockDropChance)
                     blockLoss.damage.SelfDestruct(0.6f);
             }
         }
@@ -147,6 +145,8 @@ namespace TAC_AI.AI.Enemy
         /// <returns></returns>
         public Visible FindEnemy(float inRange = 0, int pos = 1)
         {
+            if (CommanderMind == EnemyAttitude.SubNeutral)
+                return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
             if (CommanderAttack == EnemyAttack.Spyper) inRange = SpyperMaxRange;
@@ -296,6 +296,8 @@ namespace TAC_AI.AI.Enemy
 
         public Visible FindEnemyAir(float inRange = 0, int pos = 1)
         {
+            if (CommanderMind == EnemyAttitude.SubNeutral)
+                return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
             if (CommanderAttack == EnemyAttack.Spyper) inRange = SpyperMaxRange;

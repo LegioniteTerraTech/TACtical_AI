@@ -97,7 +97,7 @@ namespace TAC_AI
             changeAI = fetchAI;
             if (lastTank != null)
             {
-                if (GUI.Button(new Rect(20, 40, 80, 30), fetchAI == AIType.Escort ? "<color=#f23d3dff>ESCORT</color>" : "Escort"))
+                if (GUI.Button(new Rect(20, 40, 80, 30), fetchAI == AIType.Escort ? "<color=#f23d3dff>TANK</color>" : "Tank"))
                 {
                     changeAI = AIType.Escort;
                     clicked = true;
@@ -107,22 +107,22 @@ namespace TAC_AI
                     changeAI = AIType.MTSlave;
                     clicked = true;
                 }
-                if (lastTank.isAssassinAvail)
+                if (GUI.Button(new Rect(20, 70, 80, 30), lastTank.isAssassinAvail ? fetchAI == AIType.Assault ? "<color=#f23d3dff>KILL</color>" : "Kill" : "<color=#808080ff>kill</color>"))
                 {
-                    if (GUI.Button(new Rect(20, 70, 80, 30), fetchAI == AIType.Assault ? "<color=#f23d3dff>KILL</color>" : "Kill"))
+                    if (lastTank.isAssassinAvail)
                     {
                         changeAI = AIType.Assault;
                         clicked = true;
                     }
                 }
-                if (GUI.Button(new Rect(100, 70, 80, 30), fetchAI == AIType.MTTurret? "<color=#f23d3dff>TURRET</color>" : "Turret"))
+                if (GUI.Button(new Rect(100, 70, 80, 30), fetchAI == AIType.MTTurret ? "<color=#f23d3dff>TURRET</color>" : "Turret"))
                 {
                     changeAI = AIType.MTTurret;
                     clicked = true;
                 }
-                if (lastTank.isAegisAvail)
+                if (GUI.Button(new Rect(20, 100, 80, 30), lastTank.isAegisAvail ? fetchAI == AIType.Aegis ? "<color=#f23d3dff>PROTECT</color>" : "Protect" : "<color=#808080ff>protect</color>"))
                 {
-                    if (GUI.Button(new Rect(20, 100, 80, 30), fetchAI == AIType.Aegis ? "<color=#f23d3dff>PROTECT</color>" : "Protect"))
+                    if (lastTank.isAegisAvail)
                     {
                         changeAI = AIType.Aegis;
                         clicked = true;
@@ -133,52 +133,56 @@ namespace TAC_AI
                     changeAI = AIType.MTMimic;
                     clicked = true;
                 }
-                if (lastTank.isProspectorAvail)
+                if (GUI.Button(new Rect(20, 130, 80, 30), lastTank.isProspectorAvail ? fetchAI == AIType.Prospector ? "<color=#f23d3dff>MINER</color>" : "Miner" : "<color=#808080ff>miner</color>"))
                 {
-                    if (GUI.Button(new Rect(20, 130, 80, 30), fetchAI == AIType.Prospector ? "<color=#f23d3dff>MINER</color>" : "Miner"))
+                    if (lastTank.isProspectorAvail)
                     {
                         changeAI = AIType.Prospector;
                         clicked = true;
                     }
                 }
-                if (lastTank.isAviatorAvail)
+                if (GUI.Button(new Rect(100, 130, 80, 30), lastTank.isAviatorAvail ? fetchAI == AIType.Aviator ? "<color=#f23d3dff>PILOT</color>" : "Pilot" : "<color=#808080ff>pilot</color>"))
                 {
-                    if (GUI.Button(new Rect(100, 130, 80, 30), fetchAI == AIType.Aviator ? "<color=#f23d3dff>PILOT</color>" : "Pilot"))
+                    if (lastTank.isAviatorAvail)
                     {
                         changeAI = AIType.Aviator;
                         clicked = true;
                     }
                 }
+                //placeholder
+                if (GUI.Button(new Rect(20, 160, 80, 30), "<color=#808080ff>wip</color>"))
+                {
+                }
                 /*
                 // N/A!
-                if (lastTank.isScrapperAvail)
+                if (GUI.Button(new Rect(20, 160, 80, 30), lastTank.isScrapperAvail ? fetchAI == AI.AIEnhancedCore.DediAIType.Scrapper ? "<color=#f23d3dff>FETCH</color>" : "Fetch" : "<color=#808080ff>fetch</color>"))
                 {
-                    if (GUI.Button(new Rect(20, 160, 80, 30), fetchAI == AI.AIEnhancedCore.DediAIType.Scrapper ? "<color=#f23d3dff>FETCH</color>" : "Fetch"))
+                    if (lastTank.isScrapperAvail)
                     {
                         changeAI = AI.AIEnhancedCore.DediAIType.Scrapper;
                         clicked = true;
                     }
                 }
                 */
-                if (lastTank.isBuccaneerAvail && KickStart.isWaterModPresent)
+                if (GUI.Button(new Rect(100, 160, 80, 30), lastTank.isBuccaneerAvail && KickStart.isWaterModPresent ? fetchAI == AIType.Buccaneer ? "<color=#f23d3dff>SHIP</color>" : "Ship" : "<color=#808080ff>ship</color>"))
                 {
-                    if (GUI.Button(new Rect(100, 160, 80, 30), fetchAI == AIType.Buccaneer ? "<color=#f23d3dff>SHIP</color>" : "Ship"))
+                    if (lastTank.isBuccaneerAvail && KickStart.isWaterModPresent)
                     {
                         changeAI = AIType.Buccaneer;
                         clicked = true;
                     }
                 }
-                if (lastTank.isEnergizerAvail)
+                if (GUI.Button(new Rect(20, 190, 80, 30), lastTank.isEnergizerAvail ? fetchAI == AIType.Energizer ? "<color=#f23d3dff>CHARGER</color>" : "Charger" : "<color=#808080ff>charger</color>"))
                 {
-                    if (GUI.Button(new Rect(20, 190, 80, 30), fetchAI == AIType.Energizer ? "<color=#f23d3dff>POWER</color>" : "Power"))
+                    if (lastTank.isEnergizerAvail)
                     {
                         changeAI = AIType.Energizer;
                         clicked = true;
                     }
                 }
-                if (lastTank.isAstrotechAvail)
+                if (GUI.Button(new Rect(100, 190, 80, 30), lastTank.isAstrotechAvail ? fetchAI == AIType.Astrotech ? "<color=#f23d3dff>SPACE</color>" : "Space" : "<color=#808080ff>space</color>"))
                 {
-                    if (GUI.Button(new Rect(100, 190, 80, 30), fetchAI == AIType.Astrotech ? "<color=#f23d3dff>SPACE</color>" : "Space"))
+                    if (lastTank.isAstrotechAvail)
                     {
                         changeAI = AIType.Astrotech;
                         clicked = true;

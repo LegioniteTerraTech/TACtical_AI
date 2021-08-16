@@ -48,7 +48,7 @@ namespace TAC_AI.Templates
         private float counter = 0;
         private int updateTimer = 0;
 
-        const int MaxairborneAIAllowed = 4;
+        const int MaxAirborneAIAllowed = 4;
         const int AirborneAISpawnOdds = 37;   // Out of 100
         const int SpaceshipChance = 2;     // Out of 100
         const float AirSpawnDist = 400;
@@ -103,7 +103,7 @@ namespace TAC_AI.Templates
             //      attack unless provoked by the player or another enemy, which is unlikely.
             if (playerTank.IsNull())
                 return;
-            if (AirPool.Count >= MaxairborneAIAllowed)
+            if (AirPool.Count >= MaxAirborneAIAllowed)
                 return;
             Vector3 pos;
             if (playerTank.rbody.IsNotNull())
@@ -140,12 +140,12 @@ namespace TAC_AI.Templates
             {
                 List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
                 
-                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
+                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 0)// flight grade is 2 but random spawns start at 0
                     factionsAvail.Add(FactionSubTypes.GSO);
                 // GC literally can't fly an airborneAI
                 if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 2)
                     factionsAvail.Add(FactionSubTypes.GC);
-                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
+                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 0)// flight grade is 1 but random spawns start at 0
                     factionsAvail.Add(FactionSubTypes.VEN);
                 if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
                     factionsAvail.Add(FactionSubTypes.HE);
@@ -210,6 +210,14 @@ namespace TAC_AI.Templates
                 }
                 catch { }
                 Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
+                if (unProvoked)
+                {
+                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.NoWeapons }, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel))
+                        return finalTank;
+                    else
+                        return null;
+                }
+                // else we do default spawn
                 return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel);
             }
             catch { }

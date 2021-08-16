@@ -902,28 +902,28 @@ namespace TAC_AI.AI.Movement.AICores
                 output = true;
                 thisInst.Steer = true;
                 float driveDyna = Mathf.Clamp(((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude - thisInst.IdealRangeCombat) / 3f, -1, 1);
-                if (mind.CommanderAttack == Enemy.EnemyAttack.Circle)
+                if (mind.CommanderAttack == EnemyAttack.Circle)
                 {   // works fine for now
                     thisInst.DriveDir = EDriveType.Perpendicular;
-                    if (mind.CommanderMind == Enemy.EnemyAttitude.Miner)
+                    if (mind.CommanderMind == EnemyAttitude.Miner)
                     {   //orbit WHILE at enemy!;
-                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.lastDestination = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
                         thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
                     }
                     else if (driveDyna == 1)
                     {
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.lastDestination = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 2;
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.lastDestination = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 2;
                     }
                     else
                     {
-                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.lastDestination = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 2;
                     }
                 }
@@ -937,7 +937,7 @@ namespace TAC_AI.AI.Movement.AICores
                         thisInst.lastDestination = RPathfinding.AvoidAssistEnemy(this.controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), this.controller.Helper, mind);
                         thisInst.MinimumRad = 0.5f;
                     }
-                    else if (thisInst.ProceedToObjective && mind.MainFaction == FactionSubTypes.GC)
+                    else if (thisInst.ProceedToObjective && mind.LikelyMelee)
                     {
                         thisInst.Steer = true;
                         thisInst.DriveDir = EDriveType.Forwards;
@@ -960,23 +960,23 @@ namespace TAC_AI.AI.Movement.AICores
                     thisInst.DriveDir = EDriveType.Forwards;
                     if (mind.CommanderMind == Enemy.EnemyAttitude.Miner)
                     {
-                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.lastDestination = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
                         thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
                     }
                     else if (driveDyna == 1)
                     {
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5;
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.AdviseAway = true;
-                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        thisInst.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5; ;
                     }
                     else
                     {
-                        thisInst.lastDestination = Enemy.RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        thisInst.lastDestination = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5; ;
                     }
                     */

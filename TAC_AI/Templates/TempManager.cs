@@ -70,7 +70,8 @@ namespace TAC_AI.Templates
             bool valid = true;
             foreach (BlockMemory bloc in mem)
             {
-                if (!Singleton.Manager<ManSpawn>.inst.IsValidBlockToSpawn((BlockTypes)Enum.Parse(typeof(BlockTypes), bloc.t)))
+                BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), bloc.t);
+                if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
                     valid = false;
             }
             return valid;

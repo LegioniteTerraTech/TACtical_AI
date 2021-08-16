@@ -35,12 +35,13 @@ namespace TAC_AI
         public static int AIDodgeCheapness = 30;
         public static int AIPopMaxLimit = 6;
         public static bool MuteNonPlayerRacket = true;
-        public static bool AllowOverleveledBlockDrops = false;
+        public static bool AllowOverleveledBlockDrops { get { return EnemyBlockDropChance == 100; } } // Obsolete - true when 
         public static bool enablePainMode = true;
         public static bool EnemiesHaveCreativeInventory = false;
         public static bool AllowEnemiesToStartBases = true;
         public static bool AllowAirEnemiesToSpawn = true;
         public static bool AllowSeaEnemiesToSpawn = true;
+        public static bool TryForceOnlyPlayerSpawns = false;
         public static bool DesignsToLog = false;
 
         //public static bool DestroyTreesInWater = false;
@@ -53,11 +54,14 @@ namespace TAC_AI
         internal static bool isPopInjectorPresent = false;
         internal static bool isAnimeAIPresent = false;
 
-        public static int Difficulty = 50;  
+        public static int Difficulty = 50;
         // 50 means the full AI range is used
         // -50 means only the simpleton AI spawns
-        // 150 means only the smartest AI spawns
 
+        public static int EnemyBlockDropChance = 40;
+
+        //Calculated
+        public static int LastRawTechCount = 0;
         public static int LowerDifficulty { get { return Mathf.Clamp(Difficulty - 50, 0, 99); } }
         public static int UpperDifficulty { get { return Mathf.Clamp(Difficulty + 50, 1, 100); } }
 
@@ -68,10 +72,12 @@ namespace TAC_AI
         public static OptionToggle allowOverLevelBlocksDrop;
         public static OptionToggle painfulEnemies;
         public static OptionRange diff;
+        public static OptionRange blockRecoveryChance;
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
         public static OptionToggle enemyAirSpawn;
         public static OptionToggle enemySeaSpawn;
+        public static OptionToggle playerMadeTechsOnly;
         public static OptionRange enemyBaseCount;
         public static OptionRange enemyMaxCount;
 
@@ -153,15 +159,18 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "MuteNonPlayerRacket");
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "Difficulty");
+            thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
             thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
-            thisModConfig.BindConfig<KickStart>(null, "AllowOverleveledBlockDrops");
+            //thisModConfig.BindConfig<KickStart>(null, "AllowOverleveledBlockDrops");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
             thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
             thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
             if (!isPopInjectorPresent)
                 OverrideEnemyMax();
+            thisModConfig.BindConfig<KickStart>(null, "TryForceOnlyPlayerSpawns"); 
+
 
             var TACAI = ModName + " - General";
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF to uninstall and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
@@ -170,17 +179,21 @@ namespace TAC_AI
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, MuteNonPlayerRacket);
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            allowOverLevelBlocksDrop = new OptionToggle("Overleveled Enemy Block Grade Drops", TACAI, AllowOverleveledBlockDrops);
-            allowOverLevelBlocksDrop.onValueSaved.AddListener(() => { AllowOverleveledBlockDrops = allowOverLevelBlocksDrop.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            //allowOverLevelBlocksDrop = new OptionToggle("Overleveled Enemy Block Grade Drops", TACAI, AllowOverleveledBlockDrops);
+            //allowOverLevelBlocksDrop.onValueSaved.AddListener(() => { AllowOverleveledBlockDrops = allowOverLevelBlocksDrop.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            playerMadeTechsOnly = new OptionToggle("Try Spawning From Raw Enemy Folder Only", TACAI, TryForceOnlyPlayerSpawns);
+            playerMadeTechsOnly.onValueSaved.AddListener(() => { TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; thisModConfig.WriteConfigJsonFile(); });
 
             var TACAIEnemies = ModName + " - Enemies";
             painfulEnemies = new OptionToggle("<b>Rebuilt Enemies</b>", TACAIEnemies, enablePainMode);
             painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            diff = new OptionRange("AI Difficulty", TACAI, Difficulty, -50, 150, 25);
+            diff = new OptionRange("Enemy Difficulty", TACAI, Difficulty, -50, 150, 25);
             diff.onValueSaved.AddListener(() => { Difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            blockRecoveryChance = new OptionRange("Enemy Block Drop Chance", TACAI, EnemyBlockDropChance, 0, 100, 10);
+            blockRecoveryChance.onValueSaved.AddListener(() => { EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
             enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            enemyBaseCount= new OptionRange("Max Enemy Base Count", TACAIEnemies, MaxEnemyBaseLimit, 1, 16, 1);
+            enemyBaseCount = new OptionRange("Max Enemy Base Count", TACAIEnemies, MaxEnemyBaseLimit, 1, 16, 1);
             enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Reflection;
 using UnityEngine;
 using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
 
 
 namespace TAC_AI.AI.Movement.AICores
@@ -266,7 +267,7 @@ namespace TAC_AI.AI.Movement.AICores
             return true;
         }
 
-        public bool DriveDirectorEnemy(Enemy.EnemyMind mind)
+        public bool DriveDirectorEnemy(EnemyMind mind)
         {
             pilot.AdvisedThrottle = -1;
             pilot.ForcePitchUp = false;
@@ -287,7 +288,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.LowerEngines = true;
                 pilot.AirborneDest = this.pilot.Helper.lastDestination;
             }
-            else if (mind.CommanderMind == Enemy.EnemyAttitude.SubNeutral)
+            else if (mind.CommanderMind == EnemyAttitude.SubNeutral)
             {   // Fly straight, above ground in player visual distance
                 pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod) + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
             }
@@ -347,7 +348,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (!pilot.TargetGrounded)
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
             AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
-            pilot.AirborneDest = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
+            pilot.AirborneDest = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
             AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 
             if (pilot.LargeAircraft || pilot.BankOnly)
@@ -432,10 +433,12 @@ namespace TAC_AI.AI.Movement.AICores
             }
             return output;
         }
-        public bool TryAdjustForCombatEnemy(Enemy.EnemyMind mind)
+        public bool TryAdjustForCombatEnemy(EnemyMind mind)
         {
             bool output = false;
-            if (!this.pilot.Helper.Retreat && this.pilot.Helper.lastEnemy.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)
+
+            bool isCombatAttitude = mind.CommanderMind != EnemyAttitude.OnRails && mind.CommanderMind != EnemyAttitude.SubNeutral;
+            if (!this.pilot.Helper.Retreat && this.pilot.Helper.lastEnemy.IsNotNull() && isCombatAttitude)
             {
                 output = true;
                 float driveDyna = Mathf.Clamp(((this.pilot.Helper.lastEnemy.transform.position - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude - this.pilot.Helper.IdealRangeCombat) / 3f, -1, 1);
@@ -450,13 +453,13 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (driveDyna == 1)
                     {
                         this.pilot.Helper.DriveDir = EDriveType.Perpendicular;
-                        this.pilot.Helper.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
+                        this.pilot.Helper.lastDestination = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
                     }
                     else if (driveDyna < 0)
                     {
                         this.pilot.Helper.DriveDir = EDriveType.Perpendicular;
                         this.pilot.Helper.AdviseAway = true;
-                        this.pilot.Helper.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
+                        this.pilot.Helper.lastDestination = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
                     }
                     else
                     {
@@ -474,13 +477,13 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (driveDyna == 1)
                     {
                         this.pilot.Helper.DriveDir = EDriveType.Forwards;
-                        this.pilot.Helper.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
+                        this.pilot.Helper.lastDestination = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
                     }
                     else if (driveDyna < 0)
                     {
                         this.pilot.Helper.DriveDir = EDriveType.Forwards;
                         this.pilot.Helper.AdviseAway = true;
-                        this.pilot.Helper.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
+                        this.pilot.Helper.lastDestination = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, AircraftUtils.ForeAiming(this.pilot.Helper.lastEnemy), AircraftUtils.TryGetVelocityOffset(this.pilot.Tank, pilot), this.pilot.Helper, mind);
                     }
                     else
                     {
@@ -492,7 +495,7 @@ namespace TAC_AI.AI.Movement.AICores
                 this.pilot.Helper.lastRange = (this.pilot.Helper.lastEnemy.tank.boundsCentreWorld - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
 
                 pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(this.pilot.Helper.lastEnemy.tank.boundsCentreWorldNoCheck, pilot.AerofoilSluggishness + 25);
-                if (mind.CommanderSmarts >= Enemy.EnemySmarts.Meh)
+                if (mind.CommanderSmarts >= EnemySmarts.Meh)
                     AircraftUtils.AdviseThrottleTarget(pilot, this.pilot.Helper, this.pilot.Tank, this.pilot.Helper.lastEnemy);
                 else
                     pilot.AdvisedThrottle = 1;  //if Ai not smrt enough just hold shift

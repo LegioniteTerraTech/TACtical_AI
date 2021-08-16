@@ -166,7 +166,7 @@ namespace TAC_AI.Templates
                 temp.terrain = terra;
 
                 temps.Add(temp);
-                Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech.");
+                Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + ext.Cost + ".");
             }
             return temps;
         }
@@ -187,6 +187,16 @@ namespace TAC_AI.Templates
             }
             return Cleaned;
         }
+        internal static int GetTechCounts(string altDirectoryFromBaseDirectory = null)
+        {
+            string search;
+            if (altDirectoryFromBaseDirectory == null)
+                search = RawTechsDirectory + "\\Enemies";
+            else
+                search = BaseDirectory + "\\" + altDirectoryFromBaseDirectory;
+            return Directory.GetFiles(search).ToList().Count;
+        }
+
         private static bool GetNameJSON(string FolderDirectory, out string output)
         {
             StringBuilder final = new StringBuilder();
@@ -220,10 +230,10 @@ namespace TAC_AI.Templates
                 terra = BaseTerrain.AnyNonSea;
                 return new List<BasePurpose>();
             }
-            foreach (BlockMemory mem in mems)
-            {
-                blocs.Add(Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)));
-            };
+            //foreach (BlockMemory mem in mems)
+            //{
+            //    blocs.Add(Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)));
+            //}
 
             bool isFlying = false;
             bool isFlyingDirectionForwards = true;
@@ -234,6 +244,7 @@ namespace TAC_AI.Templates
             int FoilCount = 0;
             int MovingFoilCount = 0;
 
+            int modControlCount = 0;
             int modCollectCount = 0;
             int modEXPLODECount = 0;
             int modBoostCount = 0;
@@ -241,12 +252,16 @@ namespace TAC_AI.Templates
             int modGyroCount = 0;
             int modWheelCount = 0;
             int modAGCount = 0;
+            int modDangerCount = 0;
             int modGunCount = 0;
             int modDrillCount = 0;
             minCorpGrade = 0;
-            foreach (BlockMemory mem in mems)
+            foreach (BlockMemory blocRaw in mems)
             {
-                TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t));
+                BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), blocRaw.t);
+                TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
+                if (bloc.GetComponent<ModuleTechController>())
+                    modControlCount++;
                 if (bloc.GetComponent<ModuleItemHolder>())
                     modCollectCount++;
                 if (bloc.GetComponent<ModuleDetachableLink>())
@@ -259,7 +274,7 @@ namespace TAC_AI.Templates
                     {
                         if (jet.spinDelta <= 10)
                         {
-                            Quaternion quat = new OrthoRotation(mem.r);
+                            Quaternion quat = new OrthoRotation(blocRaw.r);
                             biasDirection -= quat * (jet.EffectorForwards * jet.force);
                         }
                     }
@@ -279,11 +294,13 @@ namespace TAC_AI.Templates
                     modWheelCount++;
                 if (bloc.GetComponent<ModuleAntiGravityEngine>())
                     modAGCount++;
+                if (bloc.GetComponent<ModuleWeapon>())
+                    modDangerCount++;
                 if (bloc.GetComponent<ModuleWeaponGun>())
                     modGunCount++;
                 if (bloc.GetComponent<ModuleDrill>())
                     modDrillCount++;
-                if (Singleton.Manager<ManSpawn>.inst.GetCorporation((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)) == factionType)
+                if (Singleton.Manager<ManSpawn>.inst.GetCorporation(type) == factionType)
                 {
                     if (bloc.m_Tier > minCorpGrade)
                         minCorpGrade = bloc.m_Tier;
@@ -299,6 +316,7 @@ namespace TAC_AI.Templates
                             MovingFoilCount++;
                     }
                 }
+                blocs.Add(bloc);
             }
 
             List<BasePurpose> purposes = new List<BasePurpose>();
@@ -323,49 +341,51 @@ namespace TAC_AI.Templates
                     isFlyingDirectionForwards = false;
             }
 
+            if (modDangerCount > modControlCount)
+                purposes.Add(BasePurpose.NoWeapons);
+
+            terra = BaseTerrain.Land;
             if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
-                terra = BaseTerrain.Land;
+                Debug.Log("TACtical_AI: Purposes: Anchored (static)");
                 return purposes;
             }
             else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
             {   //Starship
                 terra = BaseTerrain.Space;
-                if (!Anchored)
-                    purposes.Add(BasePurpose.NotStationary);
-                return purposes;
             }
             else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
             {   // Airplane
                 terra = BaseTerrain.Air;
-                if (!Anchored)
-                    purposes.Add(BasePurpose.NotStationary);
-                return purposes;
             }
             else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
             {   // Chopper
                 terra = BaseTerrain.Air;
-                if (!Anchored)
-                    purposes.Add(BasePurpose.NotStationary);
-                return purposes;
             }
             else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
             {   // Naval
                 terra = BaseTerrain.Sea;
-                if (!Anchored)
-                    purposes.Add(BasePurpose.NotStationary);
-                return purposes;
             }
             else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
             {   // Melee
                 terra = BaseTerrain.AnyNonSea;
-                if (!Anchored)
-                    purposes.Add(BasePurpose.NotStationary);
-                return purposes;
             }
-            terra = BaseTerrain.Land;
+
             if (!Anchored)
                 purposes.Add(BasePurpose.NotStationary);
+
+            string purposesList = "None.";
+            if (purposes.Count > 0)
+            {
+                purposesList = "";
+                foreach (BasePurpose purp in purposes)
+                {
+                    purposesList += purp.ToString() + "|";
+                }
+            }
+
+            Debug.Log("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList);
+
             return purposes;
         }
         private static void ValidateEnemyFolder()
@@ -577,6 +597,13 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                 return null;
             }
+        }
+
+
+        // Utilities
+        private static bool IsLethal(Tank tank)
+        {   // 
+            return tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() > tank.blockman.IterateBlockComponents<ModuleTechController>().Count();
         }
     }
 }

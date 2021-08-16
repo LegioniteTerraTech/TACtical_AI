@@ -208,13 +208,10 @@ namespace TAC_AI.AI.Enemy
             {
                 mind.AllowInvBlocks = true;
                 mind.AllowRepairsOnFly = true;
-                //mind.InvertBullyPriority = true;
-                //mind.EvilCommander = EnemyHandling.Starship;
                 mind.CommanderAttack = EnemyAttack.Grudge;
-                //mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
-                var builder = tank.GetComponent<Templates.BookmarkBuilder>();
+                var builder = tank.GetComponent<BookmarkBuilder>();
                 mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (mind.TechMemor.IsNull())
                 {
