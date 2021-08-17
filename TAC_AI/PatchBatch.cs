@@ -964,79 +964,171 @@ namespace TAC_AI
 
         [HarmonyPatch(typeof(ManPop))]
         [HarmonyPatch("OnSpawned")]//On enemy base bomb landing
-        private static class EmergencyOverrideOnWaterLanding
+        private static class EmergencyOverrideOnTechLanding
         {
+            private static bool TankExists(TrackedVisible tv)
+            {
+                if (tv != null)
+                {
+                    if (tv.visible != null)
+                    {
+                        if (tv.visible.tank != null)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
             private static void Prefix(ref TrackedVisible tv)
             {
-                if (!KickStart.isPopInjectorPresent && KickStart.EnableBetterAI && KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
+                if (!KickStart.isPopInjectorPresent && KickStart.EnableBetterAI && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
                 {
-                    if (tv != null)
+                    if (!TankExists(tv))
+                        return;
+                    if (tv.visible.tank.Team == -1 && tv.visible.tank.IsPopulation)
                     {
-                        if (tv.visible != null)
+                        if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval)
                         {
-                            if (tv.visible.tank != null)
+                            // OVERRIDE TO SHIP
+                            try
                             {
-                                if (AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && AI.Enemy.RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval && tv.visible.tank.Team == -1 && tv.visible.tank.IsPopulation)
+                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp())))
                                 {
-                                    // OVERRIDE TO SHIP
-                                    try
+                                    RadarTypes inherit = tv.RadarType;
+                                    string previousTechName = tv.visible.tank.name;
+                                    Vector3 pos = tv.Position;
+                                    Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
+                                    int team = tv.TeamID;
+                                    bool wasPop = tv.visible.tank.IsPopulation;
+
+                                    RawTechLoader.TryRemoveFromPop(tv.visible.tank);
+                                    SpecialAISpawner.Purge(tv.visible.tank);
+                                    pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
+
+                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()))], AutoTerrain: false);
+                                    replacementBote.SetTeam(tv.TeamID, wasPop);
+
+                                    Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
+                                    tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
+                                    if (tv == null)
+                                        tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
+                                }
+                                else
+                                {
+                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()));
+                                    if (type != SpawnBaseTypes.NotAvail)
                                     {
-                                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()));
-                                        if (type != SpawnBaseTypes.NotAvail)
-                                        {
-                                            RadarTypes inherit = tv.RadarType;
-                                            string previousTechName = tv.visible.tank.name;
-                                            Vector3 pos = tv.Position;
-                                            Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
-                                            int team = tv.TeamID;
-                                            bool wasPop = tv.visible.tank.IsPopulation;
+                                        RadarTypes inherit = tv.RadarType;
+                                        string previousTechName = tv.visible.tank.name;
+                                        Vector3 pos = tv.Position;
+                                        Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
+                                        int team = tv.TeamID;
+                                        bool wasPop = tv.visible.tank.IsPopulation;
 
-                                            RawTechLoader.TryRemoveFromPop(tv.visible.tank);
-                                            SpecialAISpawner.Purge(tv.visible.tank);
-                                            pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
+                                        RawTechLoader.TryRemoveFromPop(tv.visible.tank);
+                                        SpecialAISpawner.Purge(tv.visible.tank);
+                                        pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                            Tank replacementBote = RawTechLoader.SpawnMobileTech(pos, posF, team, type, AutoTerrain: false);
-                                            replacementBote.SetTeam(tv.TeamID, wasPop);
+                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(pos, posF, team, type, AutoTerrain: false);
+                                        replacementBote.SetTeam(tv.TeamID, wasPop);
 
-                                            Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
-                                            tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
-                                            if (tv == null)
-                                                tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
-                                        }
-                                        // Else we don't do anything.
+                                        Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
+                                        tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
+                                        if (tv == null)
+                                            tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
                                     }
-                                    catch
+                                    // Else we don't do anything.
+                                }
+                            }
+                            catch
+                            {
+                                Debug.Log("TACtical_AI:  attempt to swap tech failed, blowing up tech due to water landing");
+
+                                for (int fire = 0; fire < 25; fire++)
+                                {
+                                    TankBlock boom = RawTechLoader.SpawnBlockS(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward), out bool worked);
+                                    if (!worked)
                                     {
-                                        Debug.Log("TACtical_AI:  attempt to swap tech failed, blowing up tech due to water landing");
-
-                                        for (int fire = 0; fire < 25; fire++)
-                                        {
-                                            TankBlock boom = RawTechLoader.SpawnBlockS(BlockTypes.VENFuelTank_212, tv.Position, Quaternion.LookRotation(Vector3.forward), out bool worked);
-                                            if (!worked)
-                                            {
-                                                boom.visible.SetInteractionTimeout(20);
-                                                boom.damage.SelfDestruct(0.5f);
-                                            }
-                                        }
-                                        try
-                                        {
-                                            SpecialAISpawner.Eradicate(tv.visible.tank);
-
-                                            /*
-                                            foreach (TankBlock block in tv.visible.tank.blockman.IterateBlocks())
-                                            {
-                                                block.visible.SetInteractionTimeout(20);
-                                                block.damage.SelfDestruct(0.5f);
-                                                block.damage.Explode(true);
-                                            }
-                                            tv.visible.tank.blockman.Disintegrate(true, false);
-                                            if (tv.visible.IsNotNull())
-                                                tv.visible.trans.Recycle();
-                                            */
-                                        }
-                                        catch { }
+                                        boom.visible.SetInteractionTimeout(20);
+                                        boom.damage.SelfDestruct(0.5f);
                                     }
                                 }
+                                try
+                                {
+                                    SpecialAISpawner.Eradicate(tv.visible.tank);
+
+                                    /*
+                                    foreach (TankBlock block in tv.visible.tank.blockman.IterateBlocks())
+                                    {
+                                        block.visible.SetInteractionTimeout(20);
+                                        block.damage.SelfDestruct(0.5f);
+                                        block.damage.Explode(true);
+                                    }
+                                    tv.visible.tank.blockman.Disintegrate(true, false);
+                                    if (tv.visible.IsNotNull())
+                                        tv.visible.trans.Recycle();
+                                    */
+                                }
+                                catch { }
+                            }
+                        }
+                        else if (UnityEngine.Random.Range(0, 100) < KickStart.LandEnemyOverrideChance) // Override for normal Tech spawns
+                        {
+                            // OVERRIDE TECH SPAWN
+                            try
+                            {
+                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()), maxPrice: KickStart.EnemySpawnPriceMatching))
+                                {
+                                    RadarTypes inherit = tv.RadarType;
+                                    string previousTechName = tv.visible.tank.name;
+                                    Vector3 pos = tv.Position;
+                                    Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
+                                    int team = tv.TeamID;
+                                    bool wasPop = tv.visible.tank.IsPopulation;
+
+                                    RawTechLoader.TryRemoveFromPop(tv.visible.tank);
+                                    SpecialAISpawner.Purge(tv.visible.tank);
+                                    pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
+
+                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()), maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
+                                    replacementBote.SetTeam(tv.TeamID, wasPop);
+
+                                    Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
+                                    tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
+                                    if (tv == null)
+                                        tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
+                                }
+                                else
+                                {
+                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()), maxPrice: KickStart.EnemySpawnPriceMatching);
+                                    if (type != SpawnBaseTypes.NotAvail)
+                                    {
+                                        RadarTypes inherit = tv.RadarType;
+                                        string previousTechName = tv.visible.tank.name;
+                                        Vector3 pos = tv.Position;
+                                        Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
+                                        int team = tv.TeamID;
+                                        bool wasPop = tv.visible.tank.IsPopulation;
+
+                                        RawTechLoader.TryRemoveFromPop(tv.visible.tank);
+                                        SpecialAISpawner.Purge(tv.visible.tank);
+                                        pos = AI.Movement.AIEPathing.ForceOffsetFromGroundA(pos);
+
+                                        Tank replacementTank = RawTechLoader.SpawnMobileTech(pos, posF, team, type, AutoTerrain: false);
+                                        replacementTank.SetTeam(tv.TeamID, wasPop);
+
+                                        Debug.Log("TACtical_AI:  Tech " + previousTechName + " has been swapped out for land tech " + replacementTank.name + " instead");
+                                        tv = ManVisible.inst.GetTrackedVisible(replacementTank.visible.ID);
+                                        if (tv == null)
+                                            tv = new TrackedVisible(replacementTank.visible.ID, replacementTank.visible, ObjectTypes.Vehicle, inherit);
+                                    }
+                                    // Else we don't do anything.
+                                }
+                            }
+                            catch
+                            {
                             }
                         }
                     }

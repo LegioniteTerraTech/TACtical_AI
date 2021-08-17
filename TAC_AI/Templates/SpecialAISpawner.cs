@@ -44,12 +44,13 @@ namespace TAC_AI.Templates
         /// </summary>
         internal static List<TrackedairborneAI> AirPool = new List<TrackedairborneAI>();
 
-        private static bool thisActive = false;
+        internal static bool thisActive = false;
+        internal static bool CreativeMode = false;
         private float counter = 0;
         private int updateTimer = 0;
 
         const int MaxAirborneAIAllowed = 4;
-        const int AirborneAISpawnOdds = 37;   // Out of 100
+        const int AirborneAISpawnOdds = 15;   // Out of 100
         const int SpaceshipChance = 2;     // Out of 100
         const float AirSpawnDist = 400;
         const float AirDespawnDist = 475;
@@ -68,13 +69,20 @@ namespace TAC_AI.Templates
         public static void DetermineActiveOnMode(Mode mode)
         {   // 
             AirPool.Clear();
+            RawTechExporter.Reload();
+            OverrideManPop.QueuedChangeToRagnarokPop();
             if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign || mode is ModeCoOpCreative) && (ManNetwork.inst.IsServer || !ManNetwork.inst.IsMultiplayer()))
             {
+                if (mode is ModeMisc || mode is ModeCoOpCreative)
+                    CreativeMode = true;
+                else
+                    CreativeMode = false;
                 Resume();
             }
             else
             {
                 Pause();
+                CreativeMode = false;
             }
         }
         public static void UpdatePlayerTank(Tank tank, bool beam)
@@ -116,20 +124,41 @@ namespace TAC_AI.Templates
             pos = GetAirOffsetFromPosition(pos, forwards);
 
             Tank newAirborneAI;
-            if (UnityEngine.Random.Range(0, 100) < SpaceshipChance)
+            bool spawnSpace;
+            if (KickStart.CommitDeathMode)
             {
-                newAirborneAI = SpawnPrefabSpaceship(pos, forwards, out bool worked);
-                if (!worked)
-                    newAirborneAI = SpawnPrefabAircraft(pos, forwards);
+                spawnSpace = UnityEngine.Random.Range(0, 10) < 5;
             }
             else
-                newAirborneAI = SpawnPrefabAircraft(pos, forwards);
+                spawnSpace = UnityEngine.Random.Range(0, 100) < SpaceshipChance;
+
+            if (CreativeMode)
+            {
+                if (spawnSpace)
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false);
+                else
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionSubTypes.NULL, BaseTerrain.Air, AutoTerrain: false);
+            }
+            else
+            {
+                if (spawnSpace)
+                {
+                    newAirborneAI = SpawnPrefabSpaceship(pos, forwards, out bool worked);
+                    if (!worked)
+                        newAirborneAI = SpawnPrefabAircraft(pos, forwards);
+                }
+                else
+                    newAirborneAI = SpawnPrefabAircraft(pos, forwards);
+            }
             if (newAirborneAI == null)
             {
                 //Debug.Log("TACtical_AI: SpecialAISpawner - Could not spawn airborneAI - Player has no corps unlocked!?!");
                 return;
             }
-            newAirborneAI.SetTeam(-1, true);
+            if (!newAirborneAI.IsEnemy(newAirborneAI.Team))
+                newAirborneAI.SetTeam(GetRANDTeam(), true);
+            else
+                newAirborneAI.SetTeam(-1, true);
             TrackedairborneAI newAir = new TrackedairborneAI();
             newAir.Setup(newAirborneAI);
             AirPool.Add(newAir);
@@ -426,6 +455,7 @@ namespace TAC_AI.Templates
                 Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(PlayerTankDeathCheck);
                 inst.gameObject.SetActive(true);
                 Debug.Log("TACtical_AI: SpecialAISpawner - Activated special enemy spawns");
+                thisActive = true;
             }
             CollectPossibleAirborneAI();
         }
@@ -439,6 +469,7 @@ namespace TAC_AI.Templates
                 inst.counter = 0;
                 Licences = null;
                 Debug.Log("TACtical_AI: SpecialAISpawner - Deactivated special enemy spawns");
+                thisActive = false;
             }
         }
         public void Update()
@@ -453,8 +484,19 @@ namespace TAC_AI.Templates
             if ((Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn) && counter > (AirSpawnInterval / (doubleSpawnRate ? 2 : 1)) / ((KickStart.Difficulty / 100) + 1.5f))
             {   // determine if we should spawn new one, also manage existing pooled airborneAIs
                 //Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
-                if (KickStart.EnableBetterAI && KickStart.enablePainMode && KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(-1, 101) < AirborneAISpawnOdds)
-                    TrySpawnAirborneAIInAir();
+                if (KickStart.EnableBetterAI && KickStart.enablePainMode)
+                {
+                    if (KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(-1, 101) < AirborneAISpawnOdds)
+                        TrySpawnAirborneAIInAir();
+                    if (KickStart.CommitDeathMode)
+                    { // endless enemy havoc
+                        try
+                        {
+                            Singleton.Manager<ManPop>.inst.DebugForceSpawn();
+                        }
+                        catch { }
+                    }
+                }
                 counter = 0;
             }
             if (updateTimer > 25)
@@ -482,6 +524,10 @@ namespace TAC_AI.Templates
         private static Vector3 GetAirOffsetFromPosition(Vector3 pos, Vector3 angleHeading)
         {   // 
             return AI.Movement.AIEPathing.OffsetFromGroundAAlt(pos + -(angleHeading * AirSpawnDist) + (Singleton.cameraTrans.forward * 25), 50);
+        }
+        private static int GetRANDTeam()
+        {   // 
+            return UnityEngine.Random.Range(30, 28170);
         }
     }
 }

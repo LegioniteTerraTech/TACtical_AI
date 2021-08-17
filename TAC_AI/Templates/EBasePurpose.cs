@@ -28,16 +28,17 @@ namespace TAC_AI.Templates
     }
     public enum BasePurpose
     {
-        AnyNonHQ,
-        HarvestingNoHQ,
-        Defense,
-        Harvesting,
-        TechProduction,
-        Headquarters,
-        MPSafe,
-        HasReceivers,
-        NotStationary,
-        NoAutoSearch,
-        NoWeapons,
+        AnyNonHQ,       // Any base that's not an HQ
+        HarvestingNoHQ, // Any harvesting base that's not an HQ
+        Defense,        // Strictly defensive base element
+        Harvesting,     // Has Delivery cannons
+        TechProduction, // Base with Explosive Bolts attached
+        Headquarters,   // Calls in techs from orbit using funds
+        MPSafe,         // Has no MP blocked crafting blocks
+        HasReceivers,   // Has receivers
+        NotStationary,  // Mobile Tech
+        NoAutoSearch,   // Reserved for Attract
+        NoWeapons,      // unarmed
+        Fallback,       // run out of other options
     }
 }

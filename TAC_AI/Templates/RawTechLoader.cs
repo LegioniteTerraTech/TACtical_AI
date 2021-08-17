@@ -251,6 +251,7 @@ namespace TAC_AI.Templates
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
         }
+        
 
 
         // Mobile Enemy Techs
@@ -258,23 +259,22 @@ namespace TAC_AI.Templates
         {   // This will try to spawn player-made enemy techs as well
 
             Tank outTank;
-            if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade))
+            if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, unProvoked: unProvoked))
             {
-                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade)], unProvoked, AutoTerrain);
+                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, unProvoked: unProvoked)], unProvoked, AutoTerrain);
             }
             else
             {
-                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade), false, unProvoked, AutoTerrain);
+                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, unProvoked: unProvoked), false, unProvoked, AutoTerrain);
             }
 
             return outTank;
         }
         internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, List<BasePurpose> purposes, out Tank outTank, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99)
         {   // This will try to spawn player-made enemy techs as well
-
-            if (ShouldUseCustomTechs(factionType, purposes, terrainType, false, maxGrade))
+            if (ShouldUseCustomTechs(factionType, purposes, terrainType, false, maxGrade, unProvoked))
             {
-                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, purposes, terrainType, maxGrade: maxGrade)], unProvoked, AutoTerrain);
+                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, purposes, terrainType, maxGrade: maxGrade, unProvoked: unProvoked)], unProvoked, AutoTerrain);
             }
             else
             {
@@ -284,7 +284,7 @@ namespace TAC_AI.Templates
                     outTank = null;
                     return false;
                 }
-                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, purposes, terrainType, maxGrade: maxGrade), false, unProvoked, AutoTerrain);
+                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, purposes, terrainType, maxGrade: maxGrade, unProvoked: unProvoked), false, unProvoked, AutoTerrain);
             }
 
             return true;
@@ -292,13 +292,13 @@ namespace TAC_AI.Templates
         internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, out Tank outTank, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99)
         {   // This will try to spawn player-made enemy techs as well
 
-            if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade))
+            if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, unProvoked: unProvoked))
             {
-                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade)], unProvoked, AutoTerrain);
+                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, unProvoked: unProvoked)], unProvoked, AutoTerrain);
             }
             else
             {
-                SpawnBaseTypes type = GetEnemyBaseType(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade);
+                SpawnBaseTypes type = GetEnemyBaseType(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, unProvoked: unProvoked);
                 if (type == SpawnBaseTypes.NotAvail)
                 {
                     outTank = null;
@@ -492,7 +492,7 @@ namespace TAC_AI.Templates
             return theTech;
         }
         
-        internal static List<int> GetExternalIndexes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool hostile = false)
+        internal static List<int> GetExternalIndexes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
@@ -522,8 +522,11 @@ namespace TAC_AI.Templates
                         return false;
                     if (searchAttract && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
+                    if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
+                        return true;
                     if (cand.purposes.Count == 0)
                         return false;
+
                     return cand.purposes.Contains(purpose);
                 });
 
@@ -543,6 +546,13 @@ namespace TAC_AI.Templates
                     canidates = canidates.FindAll
                         (delegate (BaseTemplate cand) { return cand.IntendedGrade <= maxGrade; });
                 }
+
+                if (maxPrice > 0)
+                {
+                    canidates = canidates.FindAll
+                        (delegate (BaseTemplate cand) { return cand.startingFunds <= maxPrice; });
+                }
+
                 if (searchAttract)
                 {   // prevent laggy techs from entering
                     canidates = canidates.FindAll
@@ -565,7 +575,7 @@ namespace TAC_AI.Templates
 
             return new List<int> { -1 };
         }
-        internal static List<int> GetExternalIndexes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool hostile = false)
+        internal static List<int> GetExternalIndexes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool unProvoked = false)
         {
             try
             {
@@ -595,6 +605,8 @@ namespace TAC_AI.Templates
                         return false;
                     if (searchAttract && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
+                    if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
+                        return true;
                     if (cand.purposes.Count == 0)
                         return false;
 
@@ -646,31 +658,31 @@ namespace TAC_AI.Templates
             return new List<int> { -1 };
         }
         
-        internal static int GetExternalIndex(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static int GetExternalIndex(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
-                return GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade).GetRandomEntry();
+                return GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked).GetRandomEntry();
             }
             catch { }
 
             return -1;
         }
-        internal static int GetExternalIndex(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static int GetExternalIndex(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool unProvoked = false)
         {
             try
             {
-                return GetExternalIndexes(faction, purposes, terra, searchAttract, maxGrade).GetRandomEntry();
+                return GetExternalIndexes(faction, purposes, terra, searchAttract, maxGrade, unProvoked).GetRandomEntry();
             }
             catch { }
 
             return -1;
         }
 
-        internal static bool ShouldUseCustomTechs(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static bool ShouldUseCustomTechs(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
-            int CustomTechs = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade).Count;
-            int PrefabTechs = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade).Count;
+            int CustomTechs = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
+            int PrefabTechs = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
 
             int CombinedVal = CustomTechs + PrefabTechs;
 
@@ -693,10 +705,10 @@ namespace TAC_AI.Templates
             }
             return false;
         }
-        internal static bool ShouldUseCustomTechs(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static bool ShouldUseCustomTechs(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool unProvoked = false)
         {
-            int CustomTechs = GetExternalIndexes(faction, purposes, terra, searchAttract, maxGrade).Count;
-            int PrefabTechs = GetEnemyBaseTypes(faction, purposes, terra, searchAttract, maxGrade).Count;
+            int CustomTechs = GetExternalIndexes(faction, purposes, terra, searchAttract, maxGrade, unProvoked).Count;
+            int PrefabTechs = GetEnemyBaseTypes(faction, purposes, terra, searchAttract, maxGrade, unProvoked).Count;
 
             int CombinedVal = CustomTechs + PrefabTechs;
 
@@ -943,7 +955,7 @@ namespace TAC_AI.Templates
             return TempManager.techBases.ElementAtOrDefault(1).Value;
         }
 
-        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
@@ -985,6 +997,8 @@ namespace TAC_AI.Templates
                         return false;
                     if (searchAttract && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
+                    if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
+                        return true;
                     if (cand.Value.purposes.Count == 0)
                         return false;
                     return cand.Value.purposes.Contains(purpose);
@@ -1007,6 +1021,12 @@ namespace TAC_AI.Templates
                         (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.IntendedGrade <= maxGrade; });
                 }
 
+                if (maxPrice > 0)
+                {   
+                    canidates = canidates.FindAll
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.startingFunds <= maxPrice; });
+                }
+
                 if (searchAttract)
                 {   // prevent laggy techs from entering
                     canidates = canidates.FindAll
@@ -1015,7 +1035,7 @@ namespace TAC_AI.Templates
                 // finally, remove those which are N/A
 
                 if (canidates.Count == 0)
-                    return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
+                    return FallbackHandler(faction);
 
                 // final list compiling
                 List<SpawnBaseTypes> final = new List<SpawnBaseTypes>();
@@ -1027,10 +1047,10 @@ namespace TAC_AI.Templates
 
                 return final;
             }
-            catch { } // we resort to legacy
-            return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
+            catch { }
+            return FallbackHandler(faction);
         }
-        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool unProvoked = false)
         {
             try
             {
@@ -1072,6 +1092,8 @@ namespace TAC_AI.Templates
                         return false;
                     if (searchAttract && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
+                    if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
+                        return true;
                     if (cand.Value.purposes.Count == 0)
                         return false;
 
@@ -1109,6 +1131,53 @@ namespace TAC_AI.Templates
                 // finally, remove those which are N/A
 
                 if (canidates.Count == 0)
+                    return FallbackHandler(faction);
+
+                // final list compiling
+                List<SpawnBaseTypes> final = new List<SpawnBaseTypes>();
+
+                foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in canidates)
+                    final.Add(pair.Key);
+
+                final.Shuffle();
+
+                return final;
+            }
+            catch { } // we resort to legacy
+            return FallbackHandler(faction);
+        }
+        internal static List<SpawnBaseTypes> FallbackHandler(FactionSubTypes faction)
+        {
+            try
+            {
+                // Filters
+                List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
+                if (faction == FactionSubTypes.NULL)
+                {
+                    canidates = TempManager.techBases.ToList();
+                }
+                else
+                {
+                    canidates = TempManager.techBases.ToList().FindAll
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
+                }
+
+                canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
+                {
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !cand.Value.purposes.Contains(BasePurpose.MPSafe))
+                    {   // no illegal base in MP
+                        return false;
+                    }
+                    if (cand.Value.purposes.Contains(BasePurpose.Fallback))
+                    {
+                        return true;
+                    }
+                    return false;
+                });
+
+                // finally, remove those which are N/A
+
+                if (canidates.Count == 0)
                     return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
 
                 // final list compiling
@@ -1125,14 +1194,14 @@ namespace TAC_AI.Templates
             return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
         }
 
-        internal static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             if (ForceSpawn && !searchAttract)
                 return forcedBaseSpawn;
 
             try
             {
-                return GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade).GetRandomEntry();
+                return GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice).GetRandomEntry();
             }
             catch { } // we resort to legacy
 
@@ -1161,7 +1230,7 @@ namespace TAC_AI.Templates
 
             return (SpawnBaseTypes)UnityEngine.Random.Range(lowerRANDRange, higherRANDRange);
         }
-        internal static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99)
+        internal static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, bool unProvoked = false)
         {
             if (ForceSpawn && !searchAttract)
                 return forcedBaseSpawn;

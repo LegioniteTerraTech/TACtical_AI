@@ -40,6 +40,7 @@ namespace TAC_AI.Templates
         public static GameObject GUIWindow;
         private static Rect HotWindow = new Rect(0, 0, 200, 100);   // the "window"
         public static bool isOpen;
+        public static bool pendingInGameReload;
 
         public static string DLLDirectory;
         public static string BaseDirectory;
@@ -94,7 +95,21 @@ namespace TAC_AI.Templates
                     TempManager.ValidateAndAddAllExternalTechs();
                     timeDelay = Time.time - timeDelay;
                     Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+                    if (!SpecialAISpawner.thisActive)
+                        pendingInGameReload = true;
                 }
+            }
+        }
+        public static void Reload()
+        {
+            if (pendingInGameReload)
+            {
+                float timeDelay = Time.time;
+                Debug.Log("TACtical_AI: Reloading All Raw Enemy Techs (Ingame)!");
+                TempManager.ValidateAndAddAllExternalTechs();
+                timeDelay = Time.time - timeDelay;
+                Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+                pendingInGameReload = false;
             }
         }
 
@@ -152,13 +167,12 @@ namespace TAC_AI.Templates
             List<BaseTemplate> temps = new List<BaseTemplate>();
             foreach (string name in names)
             {
-
                 BuilderExternal ext = LoadEnemyTech(name);
                 BaseTemplate temp = new BaseTemplate();
 
                 temp.techName = ext.Name;
                 temp.savedTech = ext.Blueprint;
-                temp.startingFunds = ext.Cost;
+                temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
                 FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
                 temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                 temp.IntendedGrade = minCorpGrade;
@@ -166,7 +180,7 @@ namespace TAC_AI.Templates
                 temp.terrain = terra;
 
                 temps.Add(temp);
-                Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + ext.Cost + ".");
+                Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
             }
             return temps;
         }
@@ -256,6 +270,10 @@ namespace TAC_AI.Templates
             int modGunCount = 0;
             int modDrillCount = 0;
             minCorpGrade = 0;
+
+            BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
+            int gradeM = blockList.GetMaxGrade(factionType);
+            //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
                 BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), blocRaw.t);
@@ -282,7 +300,7 @@ namespace TAC_AI.Templates
                     foreach (BoosterJet boost in boosts)
                     {
                         //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                        boostBiasDirection -=  boost.LocalBoostDirection * (float)forceVal.GetValue(boost);
+                        boostBiasDirection -= boost.LocalBoostDirection * (float)forceVal.GetValue(boost);
                     }
                     modBoostCount++;
                 }
@@ -300,13 +318,48 @@ namespace TAC_AI.Templates
                     modGunCount++;
                 if (bloc.GetComponent<ModuleDrill>())
                     modDrillCount++;
-                if (Singleton.Manager<ManSpawn>.inst.GetCorporation(type) == factionType)
+
+                try
                 {
-                    if (bloc.m_Tier > minCorpGrade)
-                        minCorpGrade = bloc.m_Tier;
+                    /*
+                    BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
+                    int gradeM = blockList.GetMaxGrade(factionType);
+                    for (int step = 0; step > gradeM; step++)
+                    {
+                        if (blockList.GetInitialBlocksInTier(step, factionType).Contains(type))
+                        {
+                            if (step > minCorpGrade)
+                                minCorpGrade = step;
+                            break;
+                        }
+                    }*/
+
+                    int tier = Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetBlockTier(type, true);
+                    if (Singleton.Manager<ManSpawn>.inst.GetCorporation(type) == factionType)
+                    {
+                        if (tier > minCorpGrade)
+                        {
+                            minCorpGrade = tier;
+                        }
+                    }
+                    else
+                    {
+                        if (tier -1 > minCorpGrade)
+                        {
+                            if (tier > gradeM)
+                                minCorpGrade = gradeM - 1;
+                            else
+                                minCorpGrade = tier - 1;
+                        }
+                    }
                 }
+                catch
+                {
+                    //Debug.Log("TACtical_AI: GetHandler - error");
+                }
+
                 if (bloc.GetComponent<ModuleWing>())
-                { 
+                {
                     //Get the slowest spooling one
                     List<ModuleWing.Aerofoil> foils = bloc.GetComponent<ModuleWing>().m_Aerofoils.ToList();
                     FoilCount += foils.Count();
@@ -388,6 +441,19 @@ namespace TAC_AI.Templates
 
             return purposes;
         }
+        public static int ValidateCost(string blueprint, int ExistingCost)
+        {
+            if (ExistingCost <= 0)
+                ExistingCost = GetBBCost(AIERepair.DesignMemory.JSONToTechExternal(blueprint));
+            if (ExistingCost <= 0)
+            {
+                Debug.Log("TACtical_AI: ValidateCost - Invalid tech cost encountered ~ could not handle!");
+                ExistingCost = 0;
+            }
+
+            return ExistingCost;
+        }
+
         private static void ValidateEnemyFolder()
         {
             string destination = RawTechsDirectory + "\\Enemies";
@@ -429,7 +495,7 @@ namespace TAC_AI.Templates
         {
             BuilderExternal builder = new BuilderExternal();
             builder.Name = tank.name;
-            builder.Faction = tank.GetMainCorp();
+            builder.Faction = GetTopCorp(tank);
             builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
             builder.InfBlocks = false;
             builder.IsAnchored = tank.IsAnchored;
@@ -454,6 +520,19 @@ namespace TAC_AI.Templates
             foreach (TankBlock block in tank.blockman.IterateBlocks())
             {
                 output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(block.BlockType);
+            }
+            return output;
+        }
+        internal static int GetBBCost(List<BlockMemory> mem)
+        {
+            int output = 0;
+            foreach (BlockMemory block in mem)
+            {
+                try
+                {
+                    output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice((BlockTypes)Enum.Parse(typeof(BlockTypes), block.t));
+                }
+                catch { }
             }
             return output;
         }
@@ -601,6 +680,32 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        private static FactionSubTypes GetTopCorp(Tank tank)
+        {   // 
+            FactionSubTypes final = tank.GetMainCorp();
+            if (!(bool)Singleton.Manager<ManLicenses>.inst)
+                return final;
+            int corps = Enum.GetNames(typeof(FactionSubTypes)).Length;
+            int[] corpCounts = new int[corps];
+
+            foreach (TankBlock block in tank.blockman.IterateBlocks())
+            {
+                corpCounts[(int)Singleton.Manager<ManSpawn>.inst.GetCorporation(block.BlockType)]++;
+            }
+            int blockCounts = 0;
+            int bestCorpIndex = 0;
+            for (int step = 0; step < corps; step++)
+            {
+                int num = corpCounts[step];
+                if (num > blockCounts)
+                {
+                    bestCorpIndex = step;
+                    blockCounts = num;
+                }
+            }
+            final = (FactionSubTypes)bestCorpIndex;
+            return final;
+        }
         private static bool IsLethal(Tank tank)
         {   // 
             return tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() > tank.blockman.IterateBlockComponents<ModuleTechController>().Count();

@@ -215,16 +215,13 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderAttack = EnemyAttack.Spyper;
                 fired = true;
             }
-            else if (BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0 || toSet.MainFaction == FactionSubTypes.GC)
+            else if (BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0 || toSet.MainFaction == FactionSubTypes.GC || UnityEngine.Random.Range(0, 100) <= 17)
             {   // Miner
                 switch (UnityEngine.Random.Range(0, 3))
                 {
                     case 0:
-                        if (BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
-                            toSet.CommanderMind = EnemyAttitude.Miner;
-                        else
-                            toSet.CommanderMind = EnemyAttitude.Default;
-                        toSet.CommanderAttack = EnemyAttack.Coward;
+                        toSet.CommanderMind = EnemyAttitude.Miner;
+                        toSet.CommanderAttack = EnemyAttack.Pesterer;
                         toSet.Range = 64;
                         break;
                     default:
@@ -524,13 +521,17 @@ namespace TAC_AI.AI.Enemy
 
             if (toSet.CommanderAttack == EnemyAttack.Grudge)
                 toSet.FindEnemy();
+
             // now handle base spawning
             if (toSet.CommanderMind == EnemyAttitude.Miner)
             {
                 thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
                 if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI
                     toSet.CommanderAttack = EnemyAttack.Coward;
-                RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
+                if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                    RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
+                else
+                    RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.TechProduction);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
             }
             else if (toSet.CommanderMind == EnemyAttitude.Boss)

@@ -51,7 +51,7 @@ namespace TAC_AI.AI.Movement
             Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
-        public static Vector3 ObstDodgeOffset(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false)
+        public static Vector3 ObstDodgeOffset(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
         {
             worked = false;
             if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
@@ -66,8 +66,8 @@ namespace TAC_AI.AI.Movement
             {
                 int bestStep = 0;
                 int auxStep = 0;
-                float bestValue = 500;
-                float auxBestValue = 500;
+                float bestValue = 1500;
+                float auxBestValue = 1500;
                 int steps = ObstList.Count;
                 bool moreThan2 = false;
                 if (steps <= 0)
@@ -94,10 +94,18 @@ namespace TAC_AI.AI.Movement
                 worked = true;
                 if (useTwo && moreThan2)
                 {
-                    Offset = (ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstOtherDir(tank, thisInst, ObstList.ElementAt(auxStep))) / 2;
+                    if (useLargeObstAvoid && ObstructionAwarenessSetPiece(tank.boundsCentreWorldNoCheck + tank.rbody.velocity, tank, thisInst, out Vector3 posMon))
+                        Offset = (ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstOtherDir(tank, thisInst, ObstList.ElementAt(auxStep)) + posMon) / 3;
+                    else
+                        Offset = (ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstOtherDir(tank, thisInst, ObstList.ElementAt(auxStep))) / 2;
                 }
                 else
-                    Offset = ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep));
+                {
+                    if (useLargeObstAvoid && ObstructionAwarenessSetPiece(tank.boundsCentreWorldNoCheck + tank.rbody.velocity, tank, thisInst, out Vector3 posMon))
+                        Offset = (ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep)) + posMon) / 2;
+                    else
+                        Offset = ObstOtherDir(tank, thisInst, ObstList.ElementAt(bestStep));
+                }
             }
             catch (Exception e)
             {
@@ -115,7 +123,7 @@ namespace TAC_AI.AI.Movement
             Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
-        public static Vector3 ObstDodgeOffsetInv(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false)
+        public static Vector3 ObstDodgeOffsetInv(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
         {
             worked = false;
             if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
@@ -130,8 +138,8 @@ namespace TAC_AI.AI.Movement
             {
                 int bestStep = 0;
                 int auxStep = 0;
-                float bestValue = 500;
-                float auxBestValue = 500;
+                float bestValue = 1500;
+                float auxBestValue = 1500;
                 int steps = ObstList.Count;
                 bool moreThan2 = false;
                 if (steps <= 0)
@@ -158,10 +166,18 @@ namespace TAC_AI.AI.Movement
                 worked = true;
                 if (useTwo && moreThan2)
                 {
-                    Offset = (ObstDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstDir(tank, thisInst, ObstList.ElementAt(auxStep))) / 2;
+                    if (useLargeObstAvoid && ObstructionAwarenessSetPiece(tank.boundsCentreWorldNoCheck + tank.rbody.velocity, tank, thisInst, out Vector3 posMon, true))
+                        Offset = (ObstDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstDir(tank, thisInst, ObstList.ElementAt(auxStep)) + posMon) / 3;
+                    else
+                        Offset = (ObstDir(tank, thisInst, ObstList.ElementAt(bestStep)) + ObstDir(tank, thisInst, ObstList.ElementAt(auxStep))) / 2;
                 }
                 else
-                    Offset = ObstDir(tank, thisInst, ObstList.ElementAt(bestStep));
+                {
+                    if (useLargeObstAvoid && ObstructionAwarenessSetPiece(tank.boundsCentreWorldNoCheck + tank.rbody.velocity, tank, thisInst, out Vector3 posMon, true))
+                        Offset = (ObstDir(tank, thisInst, ObstList.ElementAt(bestStep)) + posMon) / 2;
+                    else
+                        Offset = ObstDir(tank, thisInst, ObstList.ElementAt(bestStep));
+                }
             }
             catch (Exception e)
             {
@@ -170,6 +186,94 @@ namespace TAC_AI.AI.Movement
             }
             return Offset;
         }
+
+        /// <summary>
+        /// also handles sceneryblockers
+        /// </summary>
+        /// <param name="posWorld"></param>
+        /// <param name="tank"></param>
+        /// <param name="thisInst"></param>
+        /// <param name="pos"></param>
+        /// <param name="invert"></param>
+        /// <returns></returns>
+        public static bool ObstructionAwarenessSetPiece(Vector3 posWorld, Tank tank, AIECore.TankAIHelper thisInst, out Vector3 pos, bool invert = false)
+        {
+            pos = Vector3.zero;
+            ManWorld world = Singleton.Manager<ManWorld>.inst;
+            if (!thisInst.tank.IsAnchored && world.GetSetPiecePlacement().Count > 0)
+            {
+                List<ManWorld.SavedSetPiece> ObstList = world.GetSetPiecePlacement();
+                float inRange = 1500;
+                bool isInRange = false;
+                int steps = ObstList.Count;
+                for (int stepper = 0; steps > stepper; stepper++)
+                {
+                    float temp = Mathf.Clamp((ObstList.ElementAt(stepper).m_WorldPosition.GameWorldPosition - posWorld).sqrMagnitude, 0, 500);
+                    if (inRange > temp && temp != 0)
+                    {
+                        isInRange = true;
+                        break;
+                    }
+                }
+                if (!isInRange)
+                {
+                    if (world.CheckIfInsideSceneryBlocker(SceneryBlocker.BlockMode.Spawn, posWorld, thisInst.lastTechExtents + 12))
+                    {
+                        if (world.LandmarkSpawner.GetNearestBlocker(posWorld, out Vector3 landmarkWorld))
+                        {
+                            pos = landmarkWorld;
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+                try
+                {
+                    LayerMask monuments = Globals.inst.layerLandmark.mask;
+                    Ray ray = new Ray(posWorld, thisInst.tank.rootBlockTrans.forward);
+                    Physics.Raycast(ray, out RaycastHit hitInfo, world.TileSize, monuments);
+                    if ((bool)hitInfo.collider)
+                    {
+                        if (hitInfo.collider.GetComponent<TerrainSetPiece>())
+                        {
+                            TerrainSetPiece piece = hitInfo.collider.GetComponent<TerrainSetPiece>();
+                            if (invert)
+                            {
+                                pos = ObstDirSetPiece(tank, thisInst, posWorld, piece);
+                            }
+                            else
+                            {
+                                pos = ObstOtherDirSetPiece(tank, thisInst, posWorld, piece);
+                            }
+                            return true;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.Log("TACtical_AI: Error on ObstructionAwarenessMonument");
+                    Debug.Log(e);
+                }
+            }
+            return false;
+        }
+        public static Vector3 ObstOtherDirSetPiece(Tank tank, AIECore.TankAIHelper thisInst, Vector3 pos, TerrainSetPiece vis)
+        {   //What actually does the avoidence
+            Vector3 inputOffset = tank.transform.position - pos;
+            float inputSpacing = vis.GetApproxCellRadius() + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
+            return Final;
+        }
+        public static Vector3 ObstDirSetPiece(Tank tank, AIECore.TankAIHelper thisInst, Vector3 pos, TerrainSetPiece vis)
+        {   //What actually does the avoidence
+            Vector3 inputOffset = tank.transform.position - pos;
+            float inputSpacing = vis.GetApproxCellRadius() + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
+            return Final;
+        }
+
+
+
 
 
         // ALLY COLLISION AVOIDENCE
