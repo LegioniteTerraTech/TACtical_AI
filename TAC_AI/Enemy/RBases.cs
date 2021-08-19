@@ -259,7 +259,7 @@ namespace TAC_AI.AI.Enemy
             public int GetBuildBucksFromName(string name = "")
             {
                 if (name == "")
-                    name = Tank.name;
+                    name = GetActualName(Tank.name);
                 StringBuilder funds = new StringBuilder();
                 char lastIn = 'n';
                 bool doingBB = false;
