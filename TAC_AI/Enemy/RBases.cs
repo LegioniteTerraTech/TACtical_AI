@@ -200,7 +200,7 @@ namespace TAC_AI.AI.Enemy
         public class EnemyBaseFunder : MonoBehaviour
         {
             public Tank Tank;
-            public List<BasePurpose> Purposes;
+            public List<BasePurpose> Purposes = new List<BasePurpose>();
             public int Team { get { return Tank.Team; } }
             public int BuildBucks { get { return buildBucks; } }
             private int buildBucks = 5000;
@@ -259,7 +259,7 @@ namespace TAC_AI.AI.Enemy
             public int GetBuildBucksFromName(string name = "")
             {
                 if (name == "")
-                    name = GetActualName(Tank.name);
+                    name = Tank.name;
                 StringBuilder funds = new StringBuilder();
                 char lastIn = 'n';
                 bool doingBB = false;
