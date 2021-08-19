@@ -100,8 +100,8 @@ namespace TAC_AI.AI.Enemy
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
                 mind.AIControl.PendingSystemsCheck = true;
-                //if (!tonk.ShouldExplodeDetachingBlocks)
-                //{
+                if (!tonk.FirstUpdateAfterSpawn)
+                {   // do NOT destroy blocks on split Techs!
                     if (!blockLoss.GetComponent<ModuleTechController>())
                     {
                         if ((bool)mind.TechMemor)
@@ -113,7 +113,7 @@ namespace TAC_AI.AI.Enemy
                         else
                             mind.ChanceDestroyBlock(blockLoss);
                     }
-                //}
+                }
             }
             catch { }
         }
