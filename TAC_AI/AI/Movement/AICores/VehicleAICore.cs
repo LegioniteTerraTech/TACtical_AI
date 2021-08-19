@@ -446,14 +446,14 @@ namespace TAC_AI.AI.Movement.AICores
                         if (thisInst.recentSpeed > 10)
                             thisControl.DriveControl = 0.2f;
                         else
-                            thisControl.DriveControl = -0.5f;
+                            thisControl.DriveControl = -1f;
                     }
                     else
                     {   // works with forwards
                         if (thisInst.recentSpeed > 10)
                             thisControl.DriveControl = -0.2f;
                         else
-                            thisControl.DriveControl = 0.5f;
+                            thisControl.DriveControl = 1f;
                     }
                 }
                 else if (thisInst.forceDrive)

@@ -15,9 +15,14 @@ namespace TAC_AI.AI.Enemy
 
 
         public static List<EnemyBaseFunder> EnemyBases = new List<EnemyBaseFunder>();
-
+        
+        /// <summary>
+        /// Does NOT count Defenses!!!
+        /// </summary>
+        /// <param name="Team"></param>
+        /// <returns></returns>
         public static int GetTeamBaseCount(int Team)
-        {
+        {   
             return EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; }).Count;
         }
         public static EnemyBaseFunder GetTeamFunder(int Team)
@@ -92,6 +97,14 @@ namespace TAC_AI.AI.Enemy
             {
                 var funds = GetTeamFunder(Team);
                 funds.SetBuildBucks(funds.BuildBucks - RawTechExporter.GetBBCost(tank));
+                try
+                {   // Prevent bribing of dead Techs
+                    if (tank.rootBlockTrans.GetComponent<TankBlock>())
+                    {
+                        return !tank.rootBlockTrans.GetComponent<TankBlock>().damage.AboutToDie;
+                    }
+                }
+                catch { return false; }
                 return true;
             }
             return false;
@@ -151,6 +164,36 @@ namespace TAC_AI.AI.Enemy
             }
             Debug.Log("TACtical_AI: PoolTeamMoney - Team " + Team + " Pooled a total of " + moneyPool + " Build Bucks this time.");
             funder.AddBuildBucks(moneyPool);
+        }
+
+
+        public static bool HasTooMuchOfType(int Team, BasePurpose purpose)
+        {
+            List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
+
+            int Count = 0;
+            foreach (EnemyBaseFunder funds in baseFunders)
+            {
+                if (funds.Purposes.Contains(purpose))
+                {
+                    Count++;
+                }
+            }
+            if (purpose == BasePurpose.Defense)
+            {
+                foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
+                {
+                    if (tech.Team == Team)
+                    {
+                        if (tech.IsAnchored && !tech.GetComponent<EnemyBaseFunder>())
+                        {
+                            Count++;
+                        }
+                    }
+                }
+            }
+
+            return purpose == BasePurpose.Defense ? (Count > 7) : (Count > 5);
         }
 
 
@@ -459,7 +502,7 @@ namespace TAC_AI.AI.Enemy
                 mind.EvilCommander = EnemyHandling.Stationary;
                 mind.CommanderMind = EnemyAttitude.Default;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                mind.CommanderAttack = EnemyAttack.Spyper;
+                mind.CommanderAttack = EnemyAttack.Grudge;
                 mind.CommanderBolts = EnemyBolts.AtFull;
             }
         }
@@ -490,7 +533,7 @@ namespace TAC_AI.AI.Enemy
 
 
                 if (TryFindExpansionLocation(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos))
-                {
+                {   // Try spawning defense
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, PickBuildBasedOnPriorities(mind, funds), RawTechLoader.GetTerrain(pos), maxGrade: grade, maxPrice: GetTeamFunds(tech.Team));
                     if (RawTechLoader.IsFallback(type))
                         return;
@@ -502,7 +545,7 @@ namespace TAC_AI.AI.Enemy
                         Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                 }
                 else if (TryFindExpansionLocation2(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
-                {
+                {   // Try spawning base extensions
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, PickBuildNonDefense(mind), RawTechLoader.GetTerrain(pos2), maxGrade: grade, maxPrice: GetTeamFunds(tech.Team));
                     if (RawTechLoader.IsFallback(type))
                         return;
@@ -522,7 +565,8 @@ namespace TAC_AI.AI.Enemy
 
         public static BasePurpose PickBuildBasedOnPriorities(EnemyMind mind, EnemyBaseFunder funds)
         {   // Expand the base!
-            if (GetTeamFunds(mind.AIControl.tank.Team) <= CheapestAutominerPrice(mind))
+            int team = mind.AIControl.tank.Team;
+            if (GetTeamFunds(team) <= CheapestAutominerPrice(mind) && !HasTooMuchOfType(team, BasePurpose.Autominer))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
                 return BasePurpose.Autominer;
             }
@@ -531,16 +575,26 @@ namespace TAC_AI.AI.Enemy
                 switch (UnityEngine.Random.Range(1, 7))
                 {
                     case 1:
+                        if (HasTooMuchOfType(team, BasePurpose.Defense))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.Defense;
                     case 2:
+                        if (HasTooMuchOfType(team, BasePurpose.Harvesting))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.Harvesting;
                     case 3:
+                        if (HasTooMuchOfType(team, BasePurpose.HasReceivers))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.HasReceivers;
                     case 4:
                         return BasePurpose.TechProduction;
                     case 5:
+                        if (HasTooMuchOfType(team, BasePurpose.Autominer))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.Autominer;
                     default:
+                        if (HasTooMuchOfType(team, BasePurpose.Defense))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.Defense;
                 }
             }
@@ -549,33 +603,49 @@ namespace TAC_AI.AI.Enemy
                 switch (UnityEngine.Random.Range(0, 5))
                 {
                     case 1:
+                        if (HasTooMuchOfType(team, BasePurpose.Defense))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.Defense;
                     case 2:
+                        if (HasTooMuchOfType(team, BasePurpose.Harvesting))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.Harvesting;
                     case 3:
+                        if (HasTooMuchOfType(team, BasePurpose.HasReceivers))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.HasReceivers;
                     case 4:
                         return BasePurpose.TechProduction;
                     case 5:
+                        if (HasTooMuchOfType(team, BasePurpose.Autominer))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.Autominer;
                     default:
+                        if (HasTooMuchOfType(team, BasePurpose.Harvesting))
+                            return BasePurpose.TechProduction;
                         return BasePurpose.AnyNonHQ;
                 }
             }
         }
         public static BasePurpose PickBuildNonDefense(EnemyMind mind)
         {   // Expand the base!
+            int team = mind.AIControl.tank.Team;
             switch (UnityEngine.Random.Range(0, 5))
             {
                 case 2:
+                    if (HasTooMuchOfType(team, BasePurpose.Defense))
+                        return BasePurpose.TechProduction;
                     return BasePurpose.Harvesting;
                 case 3:
+                    if (HasTooMuchOfType(team, BasePurpose.HasReceivers))
+                        return BasePurpose.TechProduction;
                     return BasePurpose.HasReceivers;
                 case 4:
-                    return BasePurpose.TechProduction;
                 case 5:
                     return BasePurpose.TechProduction;
                 default:
+                    if (HasTooMuchOfType(team, BasePurpose.Autominer))
+                        return BasePurpose.TechProduction;
                     return BasePurpose.Autominer;
             }
         }
