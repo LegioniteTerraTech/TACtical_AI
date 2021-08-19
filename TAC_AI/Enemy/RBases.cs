@@ -210,7 +210,7 @@ namespace TAC_AI.AI.Enemy
             {
                 Tank = tank;
                 tank.TankRecycledEvent.Subscribe(OnRecycle);
-                Purposes = RawTechLoader.GetBaseTemplate(RawTechLoader.GetEnemyBaseTypeFromName(tank.name)).purposes;
+                Purposes = RawTechLoader.GetBaseTemplate(RawTechLoader.GetEnemyBaseTypeFromName(GetActualName(tank.name))).purposes;
                 if (buildBucks == 5000)
                     buildBucks = GetBuildBucksFromName();
                 EnemyBases.Add(this);
