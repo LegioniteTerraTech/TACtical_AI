@@ -465,6 +465,9 @@ namespace TAC_AI.AI
             internal int FrustrationMeter = 0;  // tardiness buildup before we use our guns to remove obsticles
             internal float Urgency = 0;         // tardiness buildup before we just ignore obstructions
             internal float UrgencyOverload = 0; // builds up too much if our max speed was set too high
+            /// <summary>
+            /// Repairs requested?
+            /// </summary>
             public bool PendingSystemsCheck;    // Is this tech damaged?
             public int AttemptedRepairs = 0;    // How many times have we tried fix
             public float DamageThreshold = 0;   // How much damage have we taken? (100 is total destruction)
@@ -578,6 +581,7 @@ namespace TAC_AI.AI
             internal float LowestPointOnTech = 0;       // the lowest point in relation to the tech's block-based center
 
             public bool OverrideAllControls = false;    // force the tech to be controlled by external means
+            internal bool WasPaidFor = false;
 
             // AI Core
             public IMovementAIController MovementController;
@@ -738,6 +742,7 @@ namespace TAC_AI.AI
                 this.theBase = null;
                 this.JustUnanchored = false;
                 this.OverrideAllControls = false;
+                this.WasPaidFor = false;
                 var Funds = tank.gameObject.GetComponent<Enemy.RBases.EnemyBaseFunder>();
                 if (Funds.IsNotNull())
                     Funds.OnRecycle(this.tank);
@@ -747,6 +752,11 @@ namespace TAC_AI.AI
                 var Mem = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (Mem.IsNotNull())
                     Mem.Remove();
+                var Pnt = tank.gameObject.GetComponents<BookmarkBuilder>();
+                if (Pnt.Count() > 1)
+                {
+                    DestroyImmediate(Pnt[0]);
+                }
 
                 this.ResetToDefaultAIController();
 

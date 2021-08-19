@@ -81,6 +81,11 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, int Delay = 25, bool Super = false)
         {
+            if (!(bool)mind.TechMemor)
+            {
+                Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Tried to call EnemyRepairStepper when TechMemor is NULL");
+                return false;
+            }
             if (mind.TechMemor.ReserveSuperGrabs > 0)
             {
                 while (mind.TechMemor.ReserveSuperGrabs > 0)
@@ -116,15 +121,31 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (thisInst.repairStepperClock == 0)
                 {
-                    if (!Super)
-                        thisInst.repairStepperClock = Delay / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                    if (Templates.SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace))
+                    {
+                        thisInst.repairStepperClock = 1;
+                        thisInst.TechMemor.ReserveSuperGrabs = 9;
+                    }
+                    else if (tank.IsAnchored)
+                    {
+                        if (!Super)
+                            thisInst.repairStepperClock = Delay / Mathf.Max(((int)mind.CommanderSmarts * 2) + 1, 1);
+                        else
+                            thisInst.repairStepperClock = (Delay / 4) / Mathf.Max(((int)mind.CommanderSmarts * 2) + 1, 1);
+                    }
                     else
-                        thisInst.repairStepperClock = (Delay / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
-
+                    {
+                        if (!Super)
+                            thisInst.repairStepperClock = Delay / Mathf.Max((int)mind.CommanderSmarts+ 1, 1);
+                        else
+                            thisInst.repairStepperClock = (Delay / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                    }
                 }
                 else
                     thisInst.repairStepperClock--;
             }
+            if (mind.TechMemor.ReserveSuperGrabs < 0)
+                mind.TechMemor.ReserveSuperGrabs = 0;
             return thisInst.PendingSystemsCheck;
         }
 

@@ -3,11 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.IO;
 using System.Reflection;
-using UnityEngine;
-using TAC_AI.AI.Enemy;
-using TAC_AI.AI;
 
 namespace TAC_AI.Templates
 {

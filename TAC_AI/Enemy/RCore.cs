@@ -15,6 +15,7 @@ namespace TAC_AI.AI.Enemy
             RELIES ON EVERYTHING IN THE "AI" FOLDER TO FUNCTION PROPERLY!!!  
                 [excluding the Designators in said folder]
         */
+        const int BaseExpandChance = 8;
 
         internal static FieldInfo charge = typeof(ModuleShieldGenerator).GetField("m_EnergyDeficit", BindingFlags.NonPublic | BindingFlags.Instance);
         internal static FieldInfo charge2 = typeof(ModuleShieldGenerator).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -68,7 +69,7 @@ namespace TAC_AI.AI.Enemy
             }
 
             RBolts.ManageBolts(thisInst, tank, Mind);
-            if (Mind.AllowRepairsOnFly)
+            if (Mind.AllowRepairsOnFly && Mind.TechMemor)
             {
                 bool venPower = false;
                 if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
@@ -81,13 +82,9 @@ namespace TAC_AI.AI.Enemy
                     thisInst.lastEnemy = null;
                     Mind.CommanderAttack = EnemyAttack.Bully;
                 }
-                if (Mind.Hurt && thisInst.lastEnemy.IsNotNull())
+                if (Mind.Hurt)
                 {   // If we were hit, then we fight back the attacker
                     RandomSetMindAttack(Mind, tank);
-                    if (Mind.CommanderAttack == EnemyAttack.Circle)
-                    {   // Circle is not guarenteed to work on all aircraft
-                        Mind.CommanderAttack = EnemyAttack.Grudge;
-                    }
                 }
             }
             else if (Mind.EvilCommander != EnemyHandling.Stationary && Mind.EvilCommander != EnemyHandling.Airplane)
@@ -109,6 +106,8 @@ namespace TAC_AI.AI.Enemy
                         break;
                 }
             }
+
+            TryBaseOperations(Mind);
 
             //CommanderMind is handled in each seperate class
             Mind.EnemyOpsController.Execute();
@@ -286,7 +285,7 @@ namespace TAC_AI.AI.Enemy
             }
             boostBiasDirection.Normalize();
             biasDirection.Normalize();
-
+            
             if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
             {
                 isFlying = true;
@@ -381,7 +380,12 @@ namespace TAC_AI.AI.Enemy
             }
             else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
             {
-                toSet.EvilCommander = EnemyHandling.Airplane;
+                if ((modHoverCount > 2  && modWheelCount > 2) || modAGCount > 0)
+                {
+                    toSet.EvilCommander = EnemyHandling.Starship;
+                }
+                else
+                    toSet.EvilCommander = EnemyHandling.Airplane;
             }
             else if ((modGyroCount > 0 || modWheelCount < modBoostCount) && isFlying && !isFlyingDirectionForwards)
             {
@@ -706,6 +710,38 @@ namespace TAC_AI.AI.Enemy
         public static bool IsUnarmed(Tank tank)
         {
             return tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() + tank.blockman.IterateBlockComponents<ModuleDrill>().Count();
+        }
+        public static void TryBaseOperations(EnemyMind mind)
+        {
+            try
+            {
+                if (mind.GetComponent<RBases.EnemyBaseFunder>() && (bool)mind.TechMemor)
+                {
+                    // Bribe
+                    if ((bool)mind.AIControl.lastEnemy)
+                    {
+                        if (mind.AIControl.lastEnemy.tank.IsPopulation)
+                        {
+                            if (RBases.TryBribeTech(mind.AIControl.lastEnemy.tank, mind.AIControl.tank.Team))
+                            {
+                                mind.AIControl.lastEnemy.tank.SetTeam(mind.AIControl.tank.Team);
+                                Debug.Log("TACtical_AI: Tech " + mind.AIControl.lastEnemy.tank.name + " was purchased by " + mind.AIControl.tank.name + ".");
+                                try
+                                {
+                                    WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(mind.AIControl.lastEnemy);
+                                    Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Bribed!", pos2);
+
+                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + mind.AIControl.lastEnemy.tank.name + " was bribed by " + mind.AIControl.tank.name + "!");
+                                }
+                                catch { }
+                            }
+                        }
+                    }
+                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (RBases.GetTeamFunds(mind.AIControl.tank.Team) / 50000))
+                        RBases.ImTakingThatExpansion(mind, mind.GetComponent<RBases.EnemyBaseFunder>());
+                }
+            }
+            catch { }
         }
     }
 }

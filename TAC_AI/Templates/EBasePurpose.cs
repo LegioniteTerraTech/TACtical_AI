@@ -19,6 +19,7 @@ namespace TAC_AI.Templates
     }
     public enum BaseTerrain
     {
+        Any,
         AnyNonSea,
         Land,   // is anchored
         Sea,    // floats on water
@@ -32,6 +33,7 @@ namespace TAC_AI.Templates
         HarvestingNoHQ, // Any harvesting base that's not an HQ
         Defense,        // Strictly defensive base element
         Harvesting,     // Has Delivery cannons
+        Autominer,      // Can mine unlimited BB (DO NOT ATTACH THIS TAG TO HQs!!!)
         TechProduction, // Base with Explosive Bolts attached
         Headquarters,   // Calls in techs from orbit using funds
         MPSafe,         // Has no MP blocked crafting blocks

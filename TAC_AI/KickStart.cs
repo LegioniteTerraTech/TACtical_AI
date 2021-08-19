@@ -107,6 +107,7 @@ namespace TAC_AI
         public static OptionRange dodgePeriod;
         public static OptionToggle muteNonPlayerBuildRacket;
         public static OptionToggle allowOverLevelBlocksDrop;
+        public static OptionToggle exportReadableRAW;
         public static OptionToggle painfulEnemies;
         public static OptionRange diff;
         public static OptionRange landEnemyChangeChance;
@@ -197,6 +198,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
             thisModConfig.BindConfig<KickStart>(null, "MuteNonPlayerRacket");
+            thisModConfig.BindConfig<RawTechExporter>(null, "ExportJSONInsteadOfRAWTECH");
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "difficulty");
             thisModConfig.BindConfig<KickStart>(null, "LandEnemyReplaceChance");
@@ -230,6 +232,9 @@ namespace TAC_AI
             diff.onValueSaved.AddListener(() => { difficulty = (int)diff.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             blockRecoveryChance = new OptionRange("Enemy Block Drop Chance", TACAI, EnemyBlockDropChance, 0, 100, 10);
             blockRecoveryChance.onValueSaved.AddListener(() => { EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            exportReadableRAW = new OptionToggle("Export .JSON instead of .RAWTECH", TACAI, RawTechExporter.ExportJSONInsteadOfRAWTECH);
+            exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+
 
             var TACAIEnemies = ModName + " - Enemies";
             painfulEnemies = new OptionToggle("<b>Rebuilt Enemies</b>", TACAIEnemies, enablePainMode);
@@ -275,12 +280,14 @@ namespace TAC_AI
         {
             Debug.Log("TACtical_AI: LAUNCHED MODDED BLOCKS BASE VALIDATOR");
             TempManager.ValidateAllStringTechs();
+            DebugRawTechSpawner.Initiate();
             firedAfterBlockInjector = true;
         }
         public static void InstantBaseLoader()
         {
             Debug.Log("TACtical_AI: LAUNCHED BASE VALIDATOR");
-            Templates.TempManager.ValidateAllStringTechs();
+            TempManager.ValidateAllStringTechs();
+            DebugRawTechSpawner.Initiate();
         }
 
         internal static FieldInfo limitBreak = typeof(ManPop).GetField("m_PopulationLimit", BindingFlags.NonPublic | BindingFlags.Instance);

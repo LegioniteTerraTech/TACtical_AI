@@ -25,24 +25,32 @@ namespace TAC_AI.AI.Enemy
             {
                 case EnemyBolts.Default:        // Blow up like default - first enemy sighting on spacebar
                     if (thisInst.lastEnemy.IsNotNull() && thisInst.FIRE_NOW)
-                        tank.control.DetonateExplosiveBolt();
+                        BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.MissionTrigger:  // do nothing
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
                     if (AllyCount(tank) < KickStart.MaxEnemySplitLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
-                        tank.control.DetonateExplosiveBolt();
+                        BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
                     if (thisInst.lastEnemy.IsNotNull() && AllyCount(tank) < KickStart.MaxEnemySplitLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
-                        tank.control.DetonateExplosiveBolt();
+                        BlowBolts(tank, mind);
                     break;
                 default:                        // Unimplemented
                     if (thisInst.lastEnemy.IsNotNull())
-                        tank.control.DetonateExplosiveBolt();
+                        BlowBolts(tank, mind);
                     break;
             }
+        }
+        public static void BlowBolts(Tank tank, EnemyMind mind)
+        {
+            if (mind.TechMemor)
+            {
+                mind.TechMemor.ReserveSuperGrabs = -256;
+            }
+            tank.control.DetonateExplosiveBolt();
         }
 
         public static int AllyCount(Tank tank)

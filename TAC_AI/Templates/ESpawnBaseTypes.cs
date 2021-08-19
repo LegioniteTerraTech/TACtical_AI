@@ -44,12 +44,14 @@ namespace TAC_AI.Templates
         // Venture
         VENRallyHost,
         VENGasStation,
+        VENPitStop,
         VENTuningShop,
         VENGasSilo,
 
         // Hawkeye
         HECommandCentre,
         HECombatStation,
+        HEOilDerrick,
         HEComsat,
         HETankFactory,
         HEXLTankFactory,
@@ -107,6 +109,7 @@ namespace TAC_AI.Templates
 
         // Choppers
         GSOQuadGale,
+        GSOQuadGaleM,
         HESheertail,
         HEPocketApache,
         HESmashApache,

@@ -42,6 +42,8 @@ namespace TAC_AI.Templates
         public static bool isOpen;
         public static bool pendingInGameReload;
 
+        public static bool ExportJSONInsteadOfRAWTECH = false;
+
         public static string DLLDirectory;
         public static string BaseDirectory;
         public static string RawTechsDirectory;
@@ -55,6 +57,10 @@ namespace TAC_AI.Templates
             GUIWindow.AddComponent<GUIRawDisplay>();
             GUIWindow.SetActive(false);
             SetupWorkingDirectories();
+
+            #if DEBUG
+                ExportJSONInsteadOfRAWTECH = true;
+            #endif
         }
         internal class GUIRawDisplay : MonoBehaviour
         {
@@ -111,6 +117,15 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
                 pendingInGameReload = false;
             }
+        }
+        public static void ReloadExternal()
+        {
+            float timeDelay = Time.time;
+            Debug.Log("TACtical_AI: Reloading All Raw Enemy Techs!");
+            TempManager.ValidateAndAddAllExternalTechs();
+            timeDelay = Time.time - timeDelay;
+            Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+            pendingInGameReload = false;
         }
 
         private static void GUIHandler(int ID)
@@ -225,10 +240,16 @@ namespace TAC_AI.Templates
             }
             if (!final.ToString().Contains(".JSON"))
             {
-                output = null;
-                return false;
+                if (!final.ToString().Contains(".RAWTECH"))
+                {
+                    output = null;
+                    return false;
+                }
+                else
+                    final.Remove(final.Length - 8, 8);// remove ".RAWTECH"
             }
-            final.Remove(final.Length - 5, 5);// remove ".JSON"
+            else
+                final.Remove(final.Length - 5, 5);// remove ".JSON"
             output = final.ToString();
             return true;
         }
@@ -558,8 +579,16 @@ namespace TAC_AI.Templates
             }
             try
             {
-                File.WriteAllText(RawTechsDirectory + "\\" + TechName + ".JSON", RawTechJSON);
-                Debug.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
+                if (ExportJSONInsteadOfRAWTECH)
+                {
+                    File.WriteAllText(RawTechsDirectory + "\\" + TechName + ".JSON", RawTechJSON);
+                    Debug.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
+                }
+                else
+                {
+                    File.WriteAllText(RawTechsDirectory + "\\" + TechName + ".RAWTECH", RawTechJSON);
+                    Debug.Log("TACtical_AI: Saved RawTech.RAWTECH for " + TechName + " successfully.");
+                }
             }
             catch
             {
@@ -576,8 +605,17 @@ namespace TAC_AI.Templates
                 destination = BaseDirectory + "\\" + altFolderName;
             try
             {
-                string output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
-                Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                string output;
+                if (File.Exists(destination + "\\" + TechName + ".JSON"))
+                {
+                    output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
+                    Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                }
+                else
+                {
+                    output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
+                    Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                }
                 return output;
             }
             catch
@@ -667,8 +705,17 @@ namespace TAC_AI.Templates
             }
             try
             {
-                string output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
-                Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                string output;
+                if (File.Exists(destination + "\\" + TechName + ".JSON"))
+                {
+                    output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
+                    Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                }
+                else
+                {
+                    output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
+                    Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                }
                 return output;
             }
             catch

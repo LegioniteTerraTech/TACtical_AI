@@ -139,18 +139,59 @@ namespace TAC_AI.Templates
             // Now spawn teh main host
             if (spawnerTank.GetComponent<AIControllerAir>())
             {
-                return SpawnAirBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air, maxGrade: grade), haveBB, extraBB);
+                return SpawnAirBase(Vector3.forward, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air, maxGrade: grade), haveBB, extraBB);
             }
             else if (KickStart.isWaterModPresent)
             {
                 if (AIEPathing.AboveTheSea(pos))
                 {
-                    return SpawnSeaBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea, maxGrade: grade), haveBB, extraBB);
+                    return SpawnSeaBase(Vector3.forward, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea, maxGrade: grade), haveBB, extraBB);
                 }
             }
-            return SpawnLandBase(spawnerTank, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Land, maxGrade: grade), haveBB, extraBB);
+            return SpawnLandBase(Vector3.forward, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Land, maxGrade: grade), haveBB, extraBB);
         }
-        internal static int SpawnLandBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
+        internal static bool SpawnBaseExpansion(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes type)
+        {   // All bases are off-set rotated right to prevent the base from being built diagonally
+            TryClearAreaForBase(pos);
+
+            bool haveBB = ContainsPurpose(type, BasePurpose.Harvesting) || ContainsPurpose(type, BasePurpose.TechProduction);
+
+            if (haveBB)
+            {
+                if (!RBases.TryMakePurchase(GetBaseBBCost(GetBlueprint(type)), Team))
+                    return false;
+
+                if (spawnerTank.GetComponent<AIControllerAir>())
+                {
+                    return SpawnAirBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
+                }
+                else if (KickStart.isWaterModPresent)
+                {
+                    if (AIEPathing.AboveTheSea(pos))
+                    {
+                        return SpawnSeaBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
+                    }
+                }
+                return SpawnLandBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
+            }
+            else
+            {
+                if (spawnerTank.GetComponent<AIControllerAir>())
+                {
+                    return SpawnAirBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
+                }
+                else if (KickStart.isWaterModPresent)
+                {
+                    if (AIEPathing.AboveTheSea(pos))
+                    {
+                        return SpawnSeaBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
+                    }
+                }
+                return SpawnLandBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
+            }
+        }
+
+        internal static int SpawnBase(Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
         {
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             string baseBlueprint = GetBlueprint(toSpawn);
@@ -172,10 +213,10 @@ namespace TAC_AI.Templates
             {
                 theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " â");
             }
-            
-            
+
+
             theBase.FixupAnchors(true);
-            var namesav = theBase.gameObject.AddComponent<BookmarkBuilder>();
+            var namesav = theBase.gameObject.GetOrAddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
             namesav.faction = GetMainCorp(toSpawn);
@@ -183,10 +224,43 @@ namespace TAC_AI.Templates
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
         }
-        internal static int SpawnSeaBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
+        private static int SpawnLandBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
+        {
+            Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
+            string baseBlueprint = GetBlueprint(toSpawn);
+            Vector3 position = pos;
+            position.y = offset;
+            Quaternion quat = Quaternion.LookRotation(spawnerForwards, Vector3.up);
+
+            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+            if (!worked)
+            {
+                Debug.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                return 0;
+            }
+
+            Tank theBase;
+            if (storeBB)
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + (GetBaseStartingFunds(toSpawn) + ExtraBB));
+            else
+            {
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " â");
+            }
+            
+            
+            theBase.FixupAnchors(true);
+            var namesav = theBase.gameObject.GetOrAddComponent<BookmarkBuilder>();
+            namesav.blueprint = baseBlueprint;
+            namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+            namesav.faction = GetMainCorp(toSpawn);
+            namesav.unprovoked = false;
+            namesav.instant = false;
+            return GetBaseBBCost(baseBlueprint);
+        }
+        private static int SpawnSeaBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function - falling back to existing");
-            return SpawnLandBase(spawnerTank, pos, Team, toSpawn, storeBB, ExtraBB);
+            return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, ExtraBB);
 
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
@@ -209,7 +283,7 @@ namespace TAC_AI.Templates
 
 
             theBase.FixupAnchors(true);
-            var namesav = theBase.gameObject.AddComponent<BookmarkBuilder>();
+            var namesav = theBase.gameObject.GetOrAddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
             namesav.faction = GetMainCorp(toSpawn);
@@ -217,10 +291,10 @@ namespace TAC_AI.Templates
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
         }
-        internal static int SpawnAirBase(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
+        private static int SpawnAirBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function - falling back to existing");
-            return SpawnLandBase(spawnerTank, pos, Team, toSpawn, storeBB, ExtraBB);
+            return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, ExtraBB);
 
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
@@ -243,7 +317,7 @@ namespace TAC_AI.Templates
 
 
             theBase.FixupAnchors(true);
-            var namesav = theBase.gameObject.AddComponent<BookmarkBuilder>();
+            var namesav = theBase.gameObject.GetOrAddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
             namesav.faction = GetMainCorp(toSpawn);
@@ -323,30 +397,36 @@ namespace TAC_AI.Templates
             }
 
             string baseBlueprint = GetBlueprint(toSpawn);
-            Vector3 position = pos;
-            if (AutoTerrain)
-            {
-                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
-                position.y = offset;
-            }
-            Quaternion quat = Quaternion.LookRotation(heading, Vector3.up);
-            
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
-            if (!worked)
-            {
-                Debug.Log("TACtical_AI: SpawnMobileTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
-                return null;
-            }
 
-            Tank theTech;
-            theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
+
+            Tank theTech = InstantTech(pos, heading, Team, GetEnglishName(toSpawn), GetBlueprint(toSpawn), AutoTerrain);
+            if (theTech.IsNull())
+            {   // Generate via the failsafe method
+                Debug.Log("TACtical_AI: SpawnMobileTech - Generation failed, falling back to slower, reliable Tech building method");
+
+                Vector3 position = pos;
+                if (AutoTerrain)
+                {
+                    Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
+                    position.y = offset;
+                }
+                Quaternion quat = Quaternion.LookRotation(heading, Vector3.up);
+                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+                if (!worked)
+                {
+                    Debug.Log("TACtical_AI: SpawnMobileTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                    return null;
+                }
+                theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
+
+                var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
+                namesav.blueprint = baseBlueprint;
+                namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+                namesav.faction = GetMainCorp(toSpawn);
+                namesav.unprovoked = unProvoked;
+            }
 
             theTech.FixupAnchors(true);
-            var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
-            namesav.blueprint = baseBlueprint;
-            namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-            namesav.faction = GetMainCorp(toSpawn);
-            namesav.unprovoked = unProvoked;
 
             return theTech;
         }
@@ -381,24 +461,28 @@ namespace TAC_AI.Templates
                 }
 
                 string baseBlueprint = GetBlueprint(toSpawn);
-                Vector3 position = pos;
-                Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
-                if (!worked)
-                {
-                    Debug.Log("TACtical_AI: SpawnAttractTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
-                    return false;
+                Tank theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn), baseBlueprint, false);
+                if (theTech.IsNull())
+                {   // Generate via the failsafe method
+                    Debug.Log("TACtical_AI: SpawnAttractTech - Generation failed, falling back to slower, reliable Tech building method");
+                    Vector3 position = pos;
+                    Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
+                    TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+                    if (!worked)
+                    {
+                        Debug.Log("TACtical_AI: SpawnAttractTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                        return false;
+                    }
+                    theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
+
+                    var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
+                    namesav.blueprint = baseBlueprint;
+                    namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+                    namesav.faction = GetMainCorp(toSpawn);
                 }
 
-                Tank theTech;
-                theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
-
                 Debug.Log("TACtical_AI: SpawnAttractTech - Spawned " + GetEnglishName(toSpawn));
-                var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
-                namesav.blueprint = baseBlueprint;
-                namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-                namesav.faction = GetMainCorp(toSpawn);
                 return true;
             }
         }
@@ -433,28 +517,39 @@ namespace TAC_AI.Templates
                 }
 
                 string baseBlueprint = GetBlueprint(toSpawn);
-                Vector3 position = pos;
-                Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
-
-                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
-                if (!worked)
-                {
-                    Debug.Log("TACtical_AI: SpawnSpecificTypeTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
-                    return false;
-                }
-                bool storeBB = !ContainsPurpose(toSpawn, BasePurpose.NotStationary) && (ContainsPurpose(toSpawn, BasePurpose.Harvesting) || ContainsPurpose(toSpawn, BasePurpose.TechProduction));
 
                 Tank theTech;
+                bool storeBB = !ContainsPurpose(toSpawn, BasePurpose.NotStationary) && (ContainsPurpose(toSpawn, BasePurpose.Harvesting) || ContainsPurpose(toSpawn, BasePurpose.TechProduction));
                 if (storeBB)
-                    theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + 5);
+                    theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn) + " ¥¥" + 5, baseBlueprint, false);
                 else
-                    theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
+                    theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn), baseBlueprint, false);
+
+                if (theTech.IsNull())
+                {   // Generate via the failsafe method
+                    Debug.Log("TACtical_AI: SpawnSpecificTypeTech - Generation failed, falling back to slower, reliable Tech building method");
+                    Vector3 position = pos;
+                    Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
+
+                    TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+                    if (!worked)
+                    {
+                        Debug.Log("TACtical_AI: SpawnSpecificTypeTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                        return false;
+                    }
+
+                    if (storeBB)
+                        theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + 5);
+                    else
+                        theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
+
+                    var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
+                    namesav.blueprint = baseBlueprint;
+                    namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
+                    namesav.faction = GetMainCorp(toSpawn);
+                }
 
                 Debug.Log("TACtical_AI: SpawnSpecificTypeTech - Spawned " + GetEnglishName(toSpawn));
-                var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
-                namesav.blueprint = baseBlueprint;
-                namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-                namesav.faction = GetMainCorp(toSpawn);
                 return true;
             }
         }
@@ -464,30 +559,36 @@ namespace TAC_AI.Templates
         internal static Tank SpawnEnemyTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BaseTemplate Blueprint, bool unProvoked = false, bool AutoTerrain = true)
         {
             string baseBlueprint = Blueprint.savedTech;
-            Vector3 position = pos;
-            if (AutoTerrain)
-            {
-                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
-                position.y = offset;
-            }
-            Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
-            if (!worked)
-            {
-                Debug.Log("TACtical_AI: SpawnEnemyTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
-                return null;
-            }
+            Tank theTech = InstantTech(pos, facingDirect, Team, Blueprint.techName, baseBlueprint, AutoTerrain);
+            if (theTech.IsNull())
+            {   // Generate via the failsafe method
+                Debug.Log("TACtical_AI: SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
 
-            Tank theTech;
-            theTech = TechFromBlock(block, Team, Blueprint.techName);
+                Vector3 position = pos;
+                if (AutoTerrain)
+                {
+                    Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
+                    position.y = offset;
+                }
+
+                Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
+                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+                if (!worked)
+                {
+                    Debug.Log("TACtical_AI: SpawnEnemyTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                    return null;
+                }
+                theTech = TechFromBlock(block, Team, Blueprint.techName);
+
+                var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
+                namesav.blueprint = baseBlueprint;
+                namesav.infBlocks = false;
+                namesav.faction = Blueprint.faction;
+                namesav.unprovoked = unProvoked;
+            }
 
             Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.techName);
-            var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
-            namesav.blueprint = baseBlueprint;
-            namesav.infBlocks = false;
-            namesav.faction = Blueprint.faction;
-            namesav.unprovoked = unProvoked;
 
             return theTech;
         }
@@ -797,38 +898,44 @@ namespace TAC_AI.Templates
                 return null;
             }
             string baseBlueprint = Blueprint.Blueprint;
-            Vector3 position = pos;
-            if (AutoTerrain)
-            {
-                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
-                position.y = offset;
-            }
-            Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
-            if (!worked)
-            {
-                Debug.Log("TACtical_AI: SpawnTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
-                return null;
-            }
+            Tank theTech = InstantTech(pos, facingDirect, Team, Blueprint.Name, baseBlueprint, AutoTerrain);
+            if (theTech.IsNull())
+            {   // Generate via the failsafe method
+                Debug.Log("TACtical_AI: SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
 
-            Tank theTech;
-            theTech = TechFromBlock(block, Team, Blueprint.Name);
+                Vector3 position = pos;
+                if (AutoTerrain)
+                {
+                    Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
+                    position.y = offset;
+                }
+                Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
+                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
+                if (!worked)
+                {
+                    Debug.Log("TACtical_AI: SpawnTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                    return null;
+                }
+
+                theTech = TechFromBlock(block, Team, Blueprint.Name);
+                AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToTechExternal(baseBlueprint), Charged);
+                
+                if (theTech.IsEnemy())//enemy
+                {
+                    var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
+                    namesav.blueprint = baseBlueprint;
+                    namesav.infBlocks = Blueprint.InfBlocks;
+                    namesav.faction = Blueprint.Faction;
+                    namesav.unprovoked = Blueprint.NonAggressive;
+                }
+            }
             Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + AutoTerrain);
 
-            AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToTechExternal(baseBlueprint), Charged);
 
             if (Team == -2)//neutral
             {   // be crafty mike and face the player
                 theTech.AI.SetBehaviorType(AITreeType.AITypes.FacePlayer);
-            }
-            if (theTech.IsEnemy())//enemy
-            {
-                var namesav = theTech.gameObject.AddComponent<BookmarkBuilder>();
-                namesav.blueprint = baseBlueprint;
-                namesav.infBlocks = Blueprint.InfBlocks;
-                namesav.faction = Blueprint.Faction;
-                namesav.unprovoked = Blueprint.NonAggressive;
             }
 
             return theTech;
@@ -836,19 +943,28 @@ namespace TAC_AI.Templates
 
         public static Tank TechTransformer(Tank tech, string JSONTechBlueprint)
         {
-            int playerTeam = tech.Team;
+            int team = tech.Team;
             string OGName = tech.name;
             Vector3 techPos = tech.transform.position;
             Quaternion techFacing = tech.transform.rotation;
-            TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(JSONTechBlueprint), techPos, techFacing, out bool worked);
-            if (!worked)
-            {
-                return tech;
+
+
+            Tank theTech = InstantTech(techPos, techFacing * Vector3.forward, team, OGName, JSONTechBlueprint, false);
+            if (theTech.IsNull())
+            {   // Generate via the failsafe method
+                Debug.Log("TACtical_AI: TechTransformer - Generation failed, falling back to slower, reliable Tech building method");
+
+                TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(JSONTechBlueprint), techPos, techFacing, out bool worked);
+                if (!worked)
+                {
+                    return tech;
+                }
+
+                theTech = TechFromBlock(block, team, OGName);
             }
 
             tech.visible.RemoveFromGame();
-            Tank theTech;
-            theTech = TechFromBlock(block, playerTeam, OGName);
+
             return theTech;
         }
 
@@ -860,6 +976,7 @@ namespace TAC_AI.Templates
             if (Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
             {
                 worked = true;
+
                 return Singleton.Manager<ManLooseBlocks>.inst.HostSpawnBlock(type, position, quat, true);
             }
             try
@@ -886,7 +1003,48 @@ namespace TAC_AI.Templates
             TryForceIntoPop(theTech);
             return theTech;
         }
-        
+        internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded)
+        {
+            TechData data = new TechData();
+            data.Name = name;
+            data.m_Bounds = new IntVector3(new Vector3(18, 18, 18));
+            data.m_SkinMapping = new Dictionary<uint, string>();
+            data.m_TechSaveState = new Dictionary<int, TechComponent.SerialData>();
+            data.m_CreationData = new TechData.CreationData();
+            data.m_BlockSpecs = new List<TankPreset.BlockSpec>();
+            List<BlockMemory> mems = AIERepair.DesignMemory.JSONToTechExternal(blueprint);
+            foreach (BlockMemory mem in mems)
+            {
+                TankPreset.BlockSpec spec = new TankPreset.BlockSpec();
+                spec.block = mem.t;
+                if (Enum.TryParse(mem.t, out BlockTypes res))
+                    spec.m_BlockType = res;
+                spec.orthoRotation = new OrthoRotation(mem.r);
+                spec.position = mem.p;
+                spec.saveState = new Dictionary<int, Module.SerialData>();
+                spec.textSerialData = new List<string>();
+                spec.m_SkinID = 0;
+
+                data.m_BlockSpecs.Add(spec);
+            }
+            ManSpawn.TankSpawnParams tankSpawn = new ManSpawn.TankSpawnParams();
+            tankSpawn.techData = data;
+            tankSpawn.blockIDs = null;
+            tankSpawn.teamID = Team;
+            tankSpawn.position = pos;
+            tankSpawn.rotation = Quaternion.LookRotation(forward);
+            tankSpawn.grounded = grounded;
+            Tank theTech = Singleton.Manager<ManSpawn>.inst.SpawnTank(tankSpawn, true);
+            if (theTech.IsNull())
+            {
+                Debug.Log("TACtical_AI: InstantTech - error on SpawnTank");
+            }
+            else
+                TryForceIntoPop(theTech);
+            return theTech;
+        }
+
+
         private static FieldInfo forceInsert = typeof(ManPop).GetField("m_SpawnedTechs", BindingFlags.NonPublic | BindingFlags.Instance);
         internal static void TryForceIntoPop(Tank tank)
         {
@@ -1004,7 +1162,11 @@ namespace TAC_AI.Templates
                     return cand.Value.purposes.Contains(purpose);
                 });
 
-                if (terra == BaseTerrain.AnyNonSea)
+                if (terra == BaseTerrain.Any)
+                { 
+                    //allow all
+                }
+                else if (terra == BaseTerrain.AnyNonSea)
                 {
                     canidates = canidates.FindAll
                         (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.terrain != BaseTerrain.Sea; });
@@ -1106,7 +1268,12 @@ namespace TAC_AI.Templates
                     return valid;
                 });
 
-                if (terra == BaseTerrain.AnyNonSea)
+
+                if (terra == BaseTerrain.Any)
+                {
+                    //allow all
+                }
+                else if (terra == BaseTerrain.AnyNonSea)
                 {
                     canidates = canidates.FindAll
                         (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.terrain != BaseTerrain.Sea; });
@@ -1295,7 +1462,7 @@ namespace TAC_AI.Templates
                 return baseT.purposes.Contains(purpose);
             return false;
         }
-        internal static bool IsRadiusClearOfTechObst(Tank tank, Vector3 pos, float radius)
+        private static bool IsRadiusClearOfTechObst(Tank tank, Vector3 pos, float radius)
         {
             bool validLocation = true;
             foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle })))
@@ -1308,7 +1475,38 @@ namespace TAC_AI.Templates
             }
             return validLocation;
         }
-       
+        internal static bool IsFallback(SpawnBaseTypes type)
+        {
+            try
+            {
+                TempManager.techBases.TryGetValue(type, out BaseTemplate val);
+                if (val.purposes.Contains(BasePurpose.Fallback))
+                    return true;
+                return false;
+            }
+            catch { } 
+            return false;
+        }
+        internal static BaseTerrain GetTerrain(Vector3 pos)
+        {
+            try
+            {
+                if (AIEPathing.AboveHeightFromGround(pos, 25))
+                {
+                    return BaseTerrain.Air;
+                }
+                else if (KickStart.isWaterModPresent)
+                {
+                    if (AIEPathing.AboveTheSea(pos))
+                    {
+                        return BaseTerrain.Sea;
+                    }
+                }
+            }
+            catch { }
+            return BaseTerrain.Land;
+        }
+
 
 
         internal static int GetEnemyBaseCount()
@@ -1347,7 +1545,7 @@ namespace TAC_AI.Templates
             return baseCount;
         }
 
-        internal static void MakeSureCanExistWithBase(Tank tank)
+        private static void MakeSureCanExistWithBase(Tank tank)
         {
             if (!tank.IsFriendly(tank.Team) || tank.Team == -1)
             {
@@ -1357,7 +1555,7 @@ namespace TAC_AI.Templates
                 TryRemoveFromPop(tank);
             }
         }
-        internal static int ReassignToRandomEnemyBaseTeam()
+        private static int ReassignToRandomEnemyBaseTeam()
         {
             List<Tank> tanks = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
             List<Tank> enemyBases = new List<Tank>();

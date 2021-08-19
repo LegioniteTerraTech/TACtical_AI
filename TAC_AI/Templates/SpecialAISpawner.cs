@@ -71,6 +71,7 @@ namespace TAC_AI.Templates
             AirPool.Clear();
             RawTechExporter.Reload();
             OverrideManPop.QueuedChangeToRagnarokPop();
+            DebugRawTechSpawner.ShouldBeActive();
             if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign || mode is ModeCoOpCreative) && (ManNetwork.inst.IsServer || !ManNetwork.inst.IsMultiplayer()))
             {
                 if (mode is ModeMisc || mode is ModeCoOpCreative)
@@ -414,6 +415,7 @@ namespace TAC_AI.Templates
         /// <param name="player"></param>
         internal static void Purge(Tank tech)
         {   // 
+            Debug.Log("TACtical_AI: Purge - PURGED " + tech.name);
             if (ManNetwork.IsNetworked)
             {
                 //tech.netTech.RequestRemoveFromGame(player, false);

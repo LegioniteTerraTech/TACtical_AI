@@ -112,7 +112,12 @@ namespace TAC_AI.AI
                 List<BlockMemory> clean = new List<BlockMemory>();
                 foreach (BlockMemory mem in overwrite)
                 {
-                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)))
+                    BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t);
+                    if (Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
+                    {
+                        type = (BlockTypes)Singleton.Manager<ManMods>.inst.GetBlockID(mem.t);
+                    }
+                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
                     {
                         Debug.Log("TACtical_AI:  DesignMemory - " + Tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
                         continue;
@@ -148,7 +153,7 @@ namespace TAC_AI.AI
                     close = 128;
                     foreach (TankBlock bloc in ToSearch)
                     {
-                        if (bloc.cachedLocalPosition.sqrMagnitude < close * close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
+                        if (bloc.cachedLocalPosition.sqrMagnitude < close * close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored && !bloc.GetComponent<ModuleItemConsume>())
                         {
                             close = bloc.cachedLocalPosition.magnitude;
                             newRoot = bloc;
@@ -185,7 +190,7 @@ namespace TAC_AI.AI
                 foreach (TankBlock bloc in ToSave)
                 {
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.BlockType.ToString();
+                    mem.t = bloc.name; //bloc.BlockType.ToString();
                     mem.p = coreRot * (bloc.cachedLocalPosition - coreOffset);
                     Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
                     mem.r = new OrthoRotation(outr).rot;
@@ -842,6 +847,8 @@ namespace TAC_AI.AI
         }
         public static bool SystemsCheckBolts(Tank tank, DesignMemory TechMemor)
         {
+            if (!(bool)TechMemor)
+                return true;
             if (TechMemor.ReturnContents().Count != tank.blockman.IterateBlocks().Count())
             {
                 return true;

@@ -100,16 +100,19 @@ namespace TAC_AI.AI.Enemy
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
                 mind.AIControl.PendingSystemsCheck = true;
-                if (!blockLoss.GetComponent<ModuleTechController>())
+                if (!blockLoss.IsAttached)
                 {
-                    if ((bool)mind.TechMemor)
-                    {   // cannot self-destruct timer cabs or death
-                        if (mind.TechMemor.ChanceGrabBackBlock(blockLoss))
-                            return;// no destroy block
-                        mind.ChanceDestroyBlock(blockLoss);
+                    if (!blockLoss.GetComponent<ModuleTechController>())
+                    {
+                        if ((bool)mind.TechMemor)
+                        {   // cannot self-destruct timer cabs or death
+                            if (mind.TechMemor.ChanceGrabBackBlock(blockLoss))
+                                return;// no destroy block
+                            mind.ChanceDestroyBlock(blockLoss);
+                        }
+                        else
+                            mind.ChanceDestroyBlock(blockLoss);
                     }
-                    else
-                        mind.ChanceDestroyBlock(blockLoss);
                 }
             }
             catch { }
@@ -145,7 +148,7 @@ namespace TAC_AI.AI.Enemy
         /// <returns></returns>
         public Visible FindEnemy(float inRange = 0, int pos = 1)
         {
-            if (CommanderMind == EnemyAttitude.SubNeutral)
+            if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
                 return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
@@ -296,7 +299,7 @@ namespace TAC_AI.AI.Enemy
 
         public Visible FindEnemyAir(float inRange = 0, int pos = 1)
         {
-            if (CommanderMind == EnemyAttitude.SubNeutral)
+            if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
                 return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
