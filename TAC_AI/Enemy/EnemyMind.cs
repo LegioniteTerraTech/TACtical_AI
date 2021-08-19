@@ -100,8 +100,8 @@ namespace TAC_AI.AI.Enemy
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
                 mind.AIControl.PendingSystemsCheck = true;
-                if (!blockLoss.IsAttached)
-                {
+                //if (!tonk.ShouldExplodeDetachingBlocks)
+                //{
                     if (!blockLoss.GetComponent<ModuleTechController>())
                     {
                         if ((bool)mind.TechMemor)
@@ -113,7 +113,7 @@ namespace TAC_AI.AI.Enemy
                         else
                             mind.ChanceDestroyBlock(blockLoss);
                     }
-                }
+                //}
             }
             catch { }
         }
@@ -127,7 +127,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (UnityEngine.Random.Range(0, 100) < KickStart.EnemyBlockDropChance)
+                    if (UnityEngine.Random.Range(0, 99) >= KickStart.EnemyBlockDropChance)
                     {
                         blockLoss.damage.SelfDestruct(0.75f);
                     }
@@ -135,7 +135,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch
             {
-                if (UnityEngine.Random.Range(0, 100) < KickStart.EnemyBlockDropChance)
+                if (UnityEngine.Random.Range(0, 99) >= KickStart.EnemyBlockDropChance)
                     blockLoss.damage.SelfDestruct(0.6f);
             }
         }

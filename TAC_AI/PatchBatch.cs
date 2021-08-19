@@ -987,14 +987,23 @@ namespace TAC_AI
                 {
                     if (!TankExists(tv))
                         return;
-                    if (tv.visible.tank.Team == -1 && tv.visible.tank.IsPopulation)
+                    if (tv.visible.tank.IsPopulation)
                     {
                         if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval)
                         {
                             // OVERRIDE TO SHIP
                             try
                             {
-                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp())))
+                                int grade = 99;
+                                try
+                                {
+                                    if (!SpecialAISpawner.CreativeMode)
+                                        grade = ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp());
+                                }
+                                catch { }
+
+
+                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
                                 {
                                     RadarTypes inherit = tv.RadarType;
                                     string previousTechName = tv.visible.tank.name;
@@ -1007,7 +1016,7 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()))], AutoTerrain: false);
+                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade)], AutoTerrain: false);
                                     replacementBote.SetTeam(tv.TeamID, wasPop);
 
                                     Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
@@ -1017,8 +1026,8 @@ namespace TAC_AI
                                 }
                                 else
                                 {
-                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()));
-                                    if (type != SpawnBaseTypes.NotAvail)
+                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
+                                    if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                     {
                                         RadarTypes inherit = tv.RadarType;
                                         string previousTechName = tv.visible.tank.name;
@@ -1079,7 +1088,14 @@ namespace TAC_AI
                             // OVERRIDE TECH SPAWN
                             try
                             {
-                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()), maxPrice: KickStart.EnemySpawnPriceMatching))
+                                int grade = 99;
+                                try
+                                {
+                                    if (!SpecialAISpawner.CreativeMode)
+                                        grade = ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp());
+                                }
+                                catch { }
+                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
                                 {
                                     RadarTypes inherit = tv.RadarType;
                                     string previousTechName = tv.visible.tank.name;
@@ -1092,7 +1108,7 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()), maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
+                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
                                     replacementBote.SetTeam(tv.TeamID, wasPop);
 
                                     Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
@@ -1102,8 +1118,8 @@ namespace TAC_AI
                                 }
                                 else
                                 {
-                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp()), maxPrice: KickStart.EnemySpawnPriceMatching);
-                                    if (type != SpawnBaseTypes.NotAvail)
+                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
+                                    if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                     {
                                         RadarTypes inherit = tv.RadarType;
                                         string previousTechName = tv.visible.tank.name;

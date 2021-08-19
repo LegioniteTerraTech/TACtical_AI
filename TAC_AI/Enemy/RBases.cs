@@ -483,7 +483,8 @@ namespace TAC_AI.AI.Enemy
                 int grade = 99;
                 try
                 {
-                    grade = Singleton.Manager<ManLicenses>.inst.GetCurrentLevel(mind.MainFaction);
+                    if (!SpecialAISpawner.CreativeMode)
+                        grade = Singleton.Manager<ManLicenses>.inst.GetCurrentLevel(mind.MainFaction);
                 }
                 catch { }
 

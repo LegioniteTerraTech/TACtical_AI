@@ -126,7 +126,7 @@ namespace TAC_AI.Templates
             }
 
             // Are we a defended HQ?
-            int extraBB = 0;
+            int extraBB = 25000; // Extras for new bases
             if (purpose == BasePurpose.Headquarters)
             {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
                 extraBB += SpawnBaseAtPosition(spawnerTank, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
@@ -386,7 +386,7 @@ namespace TAC_AI.Templates
         internal static Tank SpawnMobileTech(Vector3 pos, Vector3 heading, int Team, SpawnBaseTypes inputSpawn, bool silentFail = true, bool unProvoked = false, bool AutoTerrain = true)
         {
             SpawnBaseTypes toSpawn = inputSpawn;
-            if (!IsBaseTemplateAvailable(toSpawn))
+            if (!IsBaseTemplateAvailable(toSpawn) || IsFallback(toSpawn))
             {
                 if (silentFail)
                     return null;
