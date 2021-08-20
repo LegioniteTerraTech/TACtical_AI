@@ -93,7 +93,7 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool TryBribeTech(Tank tank, int Team)
         {
-            if (tank.Team != Team && PurchasePossible(tank, Team))
+            if (tank.Team != Team && PurchasePossible(tank, Team) && RBolts.AllyCostCount(tank) < KickStart.MaxEnemyTechLimit)
             {
                 var funds = GetTeamFunder(Team);
                 funds.SetBuildBucks(funds.BuildBucks - RawTechExporter.GetBBCost(tank));
@@ -103,6 +103,8 @@ namespace TAC_AI.AI.Enemy
                     {
                         return !tank.rootBlockTrans.GetComponent<TankBlock>().damage.AboutToDie;
                     }
+                    else 
+                        return false;   // Root block does not exist
                 }
                 catch { return false; }
                 return true;

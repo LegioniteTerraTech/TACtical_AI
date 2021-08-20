@@ -26,8 +26,8 @@ namespace TAC_AI
 
 
         internal static bool testEnemyAI = true;
-        internal static int MaxEnemySplitLimit = 20;// How many techs that can exist for each team before giving up on splitting?
-        internal static int MaxEnemyBaseLimit = 3;  // How many bases are allowed to exist in one instance
+        internal static int MaxEnemyTechLimit = 26;// How many techs that can exist for each team before giving up on splitting?
+        internal static int MaxEnemyBaseLimit = 3;  // How many different enemy team bases are allowed to exist in one instance
         internal static int MaxEnemyHQLimit = 1;    // How many HQs are allowed to exist in one instance
         public static int AIClockPeriod = 5;        // How frequently we update
 
@@ -248,7 +248,7 @@ namespace TAC_AI
 
             if (!isPopInjectorPresent)
             {
-                enemyMaxCount = new OptionRange("Max Random Enemies Permitted", TACAIEnemies, AIPopMaxLimit, 6, 16, 1);
+                enemyMaxCount = new OptionRange("Max Wild Enemies Permitted", TACAIEnemies, AIPopMaxLimit, 6, 16, 1);
                 enemyMaxCount.onValueSaved.AddListener(() => { 
                     AIPopMaxLimit = (int)enemyMaxCount.SavedValue; 
                     thisModConfig.WriteConfigJsonFile();

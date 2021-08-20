@@ -44,6 +44,8 @@ namespace TAC_AI.AI.Enemy
         internal const float SpacingRange = 8;
         internal const float SpacingRangeAir = 16;
 
+        internal int BoltsQueued = 0;
+
         public void Initiate()
         {
             queueRemove = false;
@@ -75,7 +77,7 @@ namespace TAC_AI.AI.Enemy
                 DestroyImmediate(this);
             }
         }
-
+        
         public void OnHit(ManDamage.DamageInfo dingus)
         {
             if (dingus.Damage > 100)
@@ -100,7 +102,7 @@ namespace TAC_AI.AI.Enemy
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
                 mind.AIControl.PendingSystemsCheck = true;
-                if (!tonk.FirstUpdateAfterSpawn)
+                if (mind.BoltsQueued == 0)
                 {   // do NOT destroy blocks on split Techs!
                     if (!blockLoss.GetComponent<ModuleTechController>())
                     {
@@ -139,6 +141,8 @@ namespace TAC_AI.AI.Enemy
                     blockLoss.damage.SelfDestruct(0.6f);
             }
         }
+
+
 
         /// <summary>
         ///  Gets the enemy position based on current position and AI preferences

@@ -31,11 +31,11 @@ namespace TAC_AI.AI.Enemy
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (AllyCount(tank) < KickStart.MaxEnemySplitLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (AllyCostCount(tank) < KickStart.MaxEnemyTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemy.IsNotNull() && AllyCount(tank) < KickStart.MaxEnemySplitLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (thisInst.lastEnemy.IsNotNull() && AllyCostCount(tank) < KickStart.MaxEnemyTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 default:                        // Unimplemented
@@ -43,6 +43,8 @@ namespace TAC_AI.AI.Enemy
                         BlowBolts(tank, mind);
                     break;
             }
+            if (mind.BoltsQueued > 0)
+                mind.BoltsQueued--;
         }
         public static void BlowBolts(Tank tank, EnemyMind mind)
         {
@@ -50,10 +52,11 @@ namespace TAC_AI.AI.Enemy
             {
                 mind.TechMemor.ReserveSuperGrabs = -256;
             }
+            mind.BoltsQueued = 2;
             tank.control.DetonateExplosiveBolt();
         }
 
-        public static int AllyCount(Tank tank)
+        public static int AllyCostCount(Tank tank)
         {
             int AllyCount = 0;
             var allTechs = Singleton.Manager<ManTechs>.inst.CurrentTechs;
@@ -63,9 +66,14 @@ namespace TAC_AI.AI.Enemy
             {
                 for (int stepper = 0; techCount > stepper; stepper++)
                 {
-                    if (techs.ElementAt(stepper).IsFriendly(tank.Team))
+                    Tank tech = techs.ElementAt(stepper);
+                    if (tech.IsFriendly(tank.Team))
                     { 
                         AllyCount++;
+                        if (!tech.IsAnchored)
+                        {
+                            AllyCount += 2;
+                        }
                     }
                 }
             }
