@@ -198,7 +198,7 @@ namespace TAC_AI
                     if (KickStart.retryForBote == 1)
                         outNum = AttractType.NavalWarfare;
                     else if (!caseOverride)
-                        outNum = (AttractType)UnityEngine.Random.Range(1, Enum.GetValues(typeof(AttractType)).Length);
+                        outNum = (AttractType)UnityEngine.Random.Range(0, Enum.GetValues(typeof(AttractType)).Length);
                     KickStart.SpecialAttractNum = outNum;
 
                     if (KickStart.SpecialAttractNum == AttractType.NavalWarfare)

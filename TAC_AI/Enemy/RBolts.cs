@@ -31,11 +31,11 @@ namespace TAC_AI.AI.Enemy
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (AllyCostCount(tank) < KickStart.MaxEnemyTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (AllyCostCount(tank) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemy.IsNotNull() && AllyCostCount(tank) < KickStart.MaxEnemyTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (thisInst.lastEnemy.IsNotNull() && AllyCostCount(tank) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 default:                        // Unimplemented

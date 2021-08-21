@@ -12,10 +12,11 @@ namespace TAC_AI.Templates
     public class TrackedairborneAI
     {
         public Tank airborneAI;
-        public void Setup(Tank set)
+        public void Setup(Tank set, bool IsSpace = false)
         {   // 
             airborneAI = set;
-            airborneAI.SleepEvent.Subscribe(OnSleep);
+            if (!IsSpace)
+                airborneAI.SleepEvent.Subscribe(OnSleep);
         }
         public void OnSleep(bool yes)
         {   // It crashed 
@@ -133,10 +134,14 @@ namespace TAC_AI.Templates
             else
                 spawnSpace = UnityEngine.Random.Range(0, 100) < SpaceshipChance;
 
+            bool IsSpace = false;
             if (CreativeMode)
             {
                 if (spawnSpace)
+                {
                     newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false);
+                    IsSpace = true;
+                }
                 else
                     newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionSubTypes.NULL, BaseTerrain.Air, AutoTerrain: false);
             }
@@ -145,7 +150,9 @@ namespace TAC_AI.Templates
                 if (spawnSpace)
                 {
                     newAirborneAI = SpawnPrefabSpaceship(pos, forwards, out bool worked);
-                    if (!worked)
+                    if (worked)
+                        IsSpace = true;
+                    else
                         newAirborneAI = SpawnPrefabAircraft(pos, forwards);
                 }
                 else
@@ -161,7 +168,7 @@ namespace TAC_AI.Templates
             else
                 newAirborneAI.SetTeam(-1, true);
             TrackedairborneAI newAir = new TrackedairborneAI();
-            newAir.Setup(newAirborneAI);
+            newAir.Setup(newAirborneAI, IsSpace);
             AirPool.Add(newAir);
         }
         private static Tank SpawnPrefabAircraft(Vector3 pos, Vector3 forwards)

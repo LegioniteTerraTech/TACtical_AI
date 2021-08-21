@@ -12,17 +12,20 @@ namespace TAC_AI.AI.Enemy
     public static class RBases
     {
         const int MaxBasesPerTeam = 12;
+        const int MaxSingleBaseType = 4;
+        const int MaxDefenses = 8;
+        const int MaxAutominers = 6;
 
 
         public static List<EnemyBaseFunder> EnemyBases = new List<EnemyBaseFunder>();
-        
+
         /// <summary>
         /// Does NOT count Defenses!!!
         /// </summary>
         /// <param name="Team"></param>
         /// <returns></returns>
         public static int GetTeamBaseCount(int Team)
-        {   
+        {
             return EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; }).Count;
         }
         public static EnemyBaseFunder GetTeamFunder(int Team)
@@ -93,7 +96,7 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool TryBribeTech(Tank tank, int Team)
         {
-            if (tank.Team != Team && PurchasePossible(tank, Team) && RBolts.AllyCostCount(tank) < KickStart.MaxEnemyTechLimit)
+            if (tank.Team != Team && PurchasePossible(tank, Team) && RBolts.AllyCostCount(tank) < KickStart.EnemyTeamTechLimit)
             {
                 var funds = GetTeamFunder(Team);
                 funds.SetBuildBucks(funds.BuildBucks - RawTechExporter.GetBBCost(tank));
@@ -103,7 +106,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         return !tank.rootBlockTrans.GetComponent<TankBlock>().damage.AboutToDie;
                     }
-                    else 
+                    else
                         return false;   // Root block does not exist
                 }
                 catch { return false; }
@@ -195,9 +198,28 @@ namespace TAC_AI.AI.Enemy
                 }
             }
 
-            return purpose == BasePurpose.Defense ? (Count > 7) : (Count > 5);
-        }
+            bool thisIsTrue = false;
+            if (purpose == BasePurpose.Defense)
+            {
+                thisIsTrue = Count >= MaxDefenses;
+                if (thisIsTrue)
+                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many defenses and cannot make more");
+            }
+            else if (purpose == BasePurpose.Autominer)
+            {
+                thisIsTrue = Count >= MaxAutominers;
+                if (thisIsTrue)
+                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
+            }
+            else
+            {
+                thisIsTrue = Count >= MaxSingleBaseType;
+                if (thisIsTrue)
+                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many of type " + purpose.ToString() + " and cannot make more");
+            }
 
+            return thisIsTrue;
+        }
 
         public class EnemyBaseFunder : MonoBehaviour
         {
@@ -567,7 +589,7 @@ namespace TAC_AI.AI.Enemy
 
         public static BasePurpose PickBuildBasedOnPriorities(EnemyMind mind, EnemyBaseFunder funds)
         {   // Expand the base!
-            int team = mind.AIControl.tank.Team;
+            int team = mind.Tank.Team;
             if (GetTeamFunds(team) <= CheapestAutominerPrice(mind) && !HasTooMuchOfType(team, BasePurpose.Autominer))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
                 return BasePurpose.Autominer;
@@ -631,7 +653,7 @@ namespace TAC_AI.AI.Enemy
         }
         public static BasePurpose PickBuildNonDefense(EnemyMind mind)
         {   // Expand the base!
-            int team = mind.AIControl.tank.Team;
+            int team = mind.Tank.Team;
             switch (UnityEngine.Random.Range(0, 5))
             {
                 case 2:

@@ -42,5 +42,6 @@ namespace TAC_AI.Templates
         NoAutoSearch,   // Reserved for Attract
         NoWeapons,      // unarmed
         Fallback,       // run out of other options
+        NANI,           // Incomprehensibly powerful Tech spawn
     }
 }

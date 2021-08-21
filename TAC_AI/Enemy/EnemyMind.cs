@@ -13,7 +13,7 @@ namespace TAC_AI.AI.Enemy
     public class EnemyMind : MonoBehaviour
     {   // Where the brain is handled for enemies
         // ESSENTIALS
-        private Tank Tank;
+        public Tank Tank;
         public AIECore.TankAIHelper AIControl;
         public EnemyOperationsController EnemyOpsController;
         public AIERepair.DesignMemory TechMemor;
@@ -163,7 +163,7 @@ namespace TAC_AI.AI.Enemy
 
             if (target != null)
             {
-                if ((target.tank.boundsCentreWorldNoCheck - scanCenter).magnitude > TargetRange)
+                if (!target.isActive || (target.tank.boundsCentreWorldNoCheck - scanCenter).magnitude > TargetRange)
                     target = null;
             }
 
@@ -286,9 +286,9 @@ namespace TAC_AI.AI.Enemy
                         }
                     }
                 }
-                if (pos >= 3)
+                if (pos >= 3 && !(bool)target3)
                     return target3;
-                if (pos == 2)
+                if (pos == 2 && !(bool)target2)
                     return target2;
             }
             /*

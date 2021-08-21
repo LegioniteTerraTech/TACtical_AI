@@ -26,7 +26,7 @@ namespace TAC_AI
 
 
         internal static bool testEnemyAI = true;
-        internal static int MaxEnemyTechLimit = 26;// How many techs that can exist for each team before giving up on splitting?
+        internal static int EnemyTeamTechLimit = 26;// How many techs that can exist for each team before giving up on splitting?
         internal static int MaxEnemyBaseLimit = 3;  // How many different enemy team bases are allowed to exist in one instance
         internal static int MaxEnemyHQLimit = 1;    // How many HQs are allowed to exist in one instance
         public static int AIClockPeriod = 5;        // How frequently we update
@@ -130,11 +130,11 @@ namespace TAC_AI
         public static Vector3 SpecialAttractPos;
 
         public static float WaterHeight 
-        { 
-            get 
+        {
+            get
             {
                 float outValue = -25;
-                    try { outValue = WaterMod.QPatch.WaterHeight; } catch { }
+                try { outValue = WaterMod.QPatch.WaterHeight; } catch { }
                 return outValue;
             }
         }
@@ -241,7 +241,7 @@ namespace TAC_AI
             painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
             enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            enemyBaseCount = new OptionRange("Max Enemy Base Count", TACAIEnemies, MaxEnemyBaseLimit, 1, 16, 1);
+            enemyBaseCount = new OptionRange("Max Enemy Base Count", TACAIEnemies, MaxEnemyBaseLimit, 1, 6, 1);
             enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });

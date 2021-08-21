@@ -498,18 +498,7 @@ namespace TAC_AI.AI.Enemy
 
             if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeAttract>())
             {
-                if (KickStart.SpecialAttractNum != AttractType.Harvester)
-                {
-                    if (toSet.EvilCommander != EnemyHandling.Wheeled)
-                        toSet.CommanderAttack = EnemyAttack.Grudge;
-                    if (toSet.CommanderAttack == EnemyAttack.Coward)
-                        toSet.CommanderAttack = EnemyAttack.Circle;
-                    if (toSet.CommanderAttack == EnemyAttack.Spyper)
-                        toSet.CommanderAttack = EnemyAttack.Grudge;
-                    if (toSet.CommanderMind == EnemyAttitude.Miner)
-                        toSet.CommanderMind = EnemyAttitude.Homing;
-                }
-                else
+                if (KickStart.SpecialAttractNum == AttractType.Harvester)
                 {
                     if (toSet.StartedAnchored)
                     {
@@ -519,6 +508,17 @@ namespace TAC_AI.AI.Enemy
                     }
                     else
                         toSet.CommanderMind = EnemyAttitude.Miner;
+                }
+                else
+                {
+                    if (toSet.EvilCommander != EnemyHandling.Wheeled)
+                        toSet.CommanderAttack = EnemyAttack.Grudge;
+                    if (toSet.CommanderAttack == EnemyAttack.Coward)
+                        toSet.CommanderAttack = EnemyAttack.Circle;
+                    if (toSet.CommanderAttack == EnemyAttack.Spyper)
+                        toSet.CommanderAttack = EnemyAttack.Grudge;
+                    if (toSet.CommanderMind == EnemyAttitude.Miner)
+                        toSet.CommanderMind = EnemyAttitude.Homing;
                 }
             }
 
@@ -722,22 +722,22 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (mind.AIControl.lastEnemy.tank.IsPopulation)
                         {
-                            if (RBases.TryBribeTech(mind.AIControl.lastEnemy.tank, mind.AIControl.tank.Team))
+                            if (RBases.TryBribeTech(mind.AIControl.lastEnemy.tank, mind.Tank.Team))
                             {
-                                mind.AIControl.lastEnemy.tank.SetTeam(mind.AIControl.tank.Team);
-                                Debug.Log("TACtical_AI: Tech " + mind.AIControl.lastEnemy.tank.name + " was purchased by " + mind.AIControl.tank.name + ".");
+                                mind.AIControl.lastEnemy.tank.SetTeam(mind.Tank.Team);
+                                Debug.Log("TACtical_AI: Tech " + mind.AIControl.lastEnemy.tank.name + " was purchased by " + mind.Tank.name + ".");
                                 try
                                 {
                                     WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(mind.AIControl.lastEnemy);
                                     Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Bribed!", pos2);
 
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + mind.AIControl.lastEnemy.tank.name + " was bribed by " + mind.AIControl.tank.name + "!");
+                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + mind.AIControl.lastEnemy.tank.name + " was bribed by " + mind.Tank.name + "!");
                                 }
                                 catch { }
                             }
                         }
                     }
-                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (RBases.GetTeamFunds(mind.AIControl.tank.Team) / 50000))
+                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (RBases.GetTeamFunds(mind.Tank.Team) / 50000))
                         RBases.ImTakingThatExpansion(mind, mind.GetComponent<RBases.EnemyBaseFunder>());
                 }
             }

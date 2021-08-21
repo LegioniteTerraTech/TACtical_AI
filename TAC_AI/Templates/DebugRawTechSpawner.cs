@@ -252,7 +252,7 @@ namespace TAC_AI.Templates
                 {
                     if (val.purposes.Contains(BasePurpose.Defense))
                         RawTechLoader.SpawnBase(GetPlayerPos(), -1, type, false);
-                    if (val.purposes.Contains(BasePurpose.Headquarters))
+                    else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
                         int extraBB = 0;
                         SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);

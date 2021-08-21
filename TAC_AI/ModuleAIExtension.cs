@@ -94,7 +94,7 @@ namespace TAC_AI
         public bool SidePreferred = false;  // Should the AI orbit the enemy?
         public bool AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
         public bool AdvAvoidence = false;   // Should the AI avoid two allied techs at once?
-        public bool MTForAll = true;        // Should the AI listen to other Tech MT commands?
+        public bool MTForAll = false;        // Should the AI listen to other Tech MT commands?
         public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's safety?
         public bool SelfRepairAI = false;   // Can the AI self-repair?
         //public bool AnimeAI = false;      // Do we attempt a hookup to the AnimeAI mod and display a character for this AI?
@@ -119,7 +119,7 @@ namespace TAC_AI
         }
         public void OnDetach()
         {
-            var thisInst = TankBlock.transform.root.GetComponent<AI.AIECore.TankAIHelper>();
+            var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
             //thisInst.AIList.Remove(this);
             //if (!TankBlock.IsBeingRecycled())
             //    thisInst.RefreshAI();
@@ -136,39 +136,43 @@ namespace TAC_AI
 
         private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)
         {
-            if (saving)
-            {   //Save to snap
-                if (KickStart.EnableBetterAI &&!Singleton.Manager<ManScreenshot>.inst.TakingSnapshot)
-                {   //Allow resaving of Techs but not saving this to snapshot to prevent bugs
-                    SerialData serialData = new SerialData()
-                    {
-                        savedMode = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI
-                    };
-                    serialData.Store(blockSpec.saveState);
-                    //Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
-                }
-            }
-            else
-            {   //Load from save
-                try
-                {
-                    SerialData serialData2 = SerialData<SerialData>.Retrieve(blockSpec.saveState);
-                    if (serialData2 != null)
-                    {
-                        var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
-                        if (thisInst.DediAI != serialData2.savedMode)
+            try
+            {
+                if (saving)
+                {   //Save to snap
+                    if (KickStart.EnableBetterAI && !Singleton.Manager<ManScreenshot>.inst.TakingSnapshot)
+                    {   //Allow resaving of Techs but not saving this to snapshot to prevent bugs
+                        SerialData serialData = new SerialData()
                         {
-                            thisInst.DediAI = serialData2.savedMode;
-                            thisInst.RefreshAI();
-                            if (serialData2.savedMode == AIType.Aviator)
-                                thisInst.TestForFlyingAIRequirement();
-                        }
-                        SavedAI = serialData2.savedMode;
-                        //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
+                            savedMode = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI
+                        };
+                        serialData.Store(blockSpec.saveState);
+                        //Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
                     }
                 }
-                catch { }
+                else
+                {   //Load from save
+                    try
+                    {
+                        SerialData serialData2 = SerialData<SerialData>.Retrieve(blockSpec.saveState);
+                        if (serialData2 != null)
+                        {
+                            var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                            if (thisInst.DediAI != serialData2.savedMode)
+                            {
+                                thisInst.DediAI = serialData2.savedMode;
+                                thisInst.RefreshAI();
+                                if (serialData2.savedMode == AIType.Aviator)
+                                    thisInst.TestForFlyingAIRequirement();
+                            }
+                            SavedAI = serialData2.savedMode;
+                            //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
+                        }
+                    }
+                    catch { }
+                }
             }
+            catch { } // MP caused error - cannot resolve
         }
     }
 

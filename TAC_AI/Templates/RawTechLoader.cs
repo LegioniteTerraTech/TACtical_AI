@@ -154,13 +154,10 @@ namespace TAC_AI.Templates
         {   // All bases are off-set rotated right to prevent the base from being built diagonally
             TryClearAreaForBase(pos);
 
-            bool haveBB = ContainsPurpose(type, BasePurpose.Harvesting) || ContainsPurpose(type, BasePurpose.TechProduction);
+            bool haveBB = (ContainsPurpose(type, BasePurpose.Harvesting) || ContainsPurpose(type, BasePurpose.TechProduction)) && !ContainsPurpose(type, BasePurpose.NotStationary);
 
             if (haveBB)
             {
-                if (!RBases.TryMakePurchase(GetBaseBBCost(GetBlueprint(type)), Team))
-                    return false;
-
                 if (spawnerTank.GetComponent<AIControllerAir>())
                 {
                     return SpawnAirBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
@@ -175,7 +172,9 @@ namespace TAC_AI.Templates
                 return SpawnLandBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
             }
             else
-            {
+            {   // Defense
+                if (!RBases.TryMakePurchase(GetBaseBBCost(GetBlueprint(type)), Team))
+                    return false;
                 if (spawnerTank.GetComponent<AIControllerAir>())
                 {
                     return SpawnAirBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
