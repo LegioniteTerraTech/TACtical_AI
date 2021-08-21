@@ -125,8 +125,8 @@ namespace TAC_AI.Templates
                     break;
             }
 
+            int extraBB = 100000; // Extras for new bases
             // Are we a defended HQ?
-            int extraBB = 25000; // Extras for new bases
             if (purpose == BasePurpose.Headquarters)
             {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
                 extraBB += SpawnBaseAtPosition(spawnerTank, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
@@ -520,7 +520,9 @@ namespace TAC_AI.Templates
                 Tank theTech;
                 bool storeBB = !ContainsPurpose(toSpawn, BasePurpose.NotStationary) && (ContainsPurpose(toSpawn, BasePurpose.Harvesting) || ContainsPurpose(toSpawn, BasePurpose.TechProduction));
                 if (storeBB)
-                    theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn) + " ¥¥" + 5, baseBlueprint, false);
+                { 
+                    theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn) + " ¥¥" + 5, baseBlueprint, false, true);
+                }
                 else
                     theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn), baseBlueprint, false);
 
@@ -1002,7 +1004,7 @@ namespace TAC_AI.Templates
             TryForceIntoPop(theTech);
             return theTech;
         }
-        internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded)
+        internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false)
         {
             TechData data = new TechData();
             data.Name = name;
@@ -1032,7 +1034,10 @@ namespace TAC_AI.Templates
             tankSpawn.teamID = Team;
             tankSpawn.position = pos;
             tankSpawn.rotation = Quaternion.LookRotation(forward);
-            tankSpawn.grounded = grounded;
+            if (ForceAnchor)
+                tankSpawn.grounded = true;
+            else
+                tankSpawn.grounded = grounded;
             Tank theTech = Singleton.Manager<ManSpawn>.inst.SpawnTank(tankSpawn, true);
             if (theTech.IsNull())
             {
@@ -1040,6 +1045,22 @@ namespace TAC_AI.Templates
             }
             else
                 TryForceIntoPop(theTech);
+            if (ForceAnchor)
+            {
+                theTech.Anchors.UnanchorAll(false);
+                theTech.TryToggleTechAnchor();
+                if (!theTech.IsAnchored)
+                    theTech.TryToggleTechAnchor();
+                if (!theTech.IsAnchored)
+                    theTech.Anchors.TryAnchorAll(true);
+                if (!theTech.IsAnchored)
+                {
+                    theTech.Anchors.RetryAnchorOnBeam = true;
+                    theTech.Anchors.TryAnchorAll(true);
+                }
+                if (!theTech.IsAnchored)
+                    Debug.Log("TACtical_AI: InstantTech - Game is being stubborn - repeated attempts to anchor failed");
+            }
             return theTech;
         }
 

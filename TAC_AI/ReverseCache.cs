@@ -29,11 +29,10 @@ namespace TAC_AI
 
 				cached = true;
 
-				Debug.Log("TACtical_AI: Saved " + name);
+				//Debug.Log("TACtical_AI: Saved " + name);
                 try
                 {
                     Tank tank = transform.root.GetComponent<Tank>();
-                    Debug.Log("TACtical_AI: Stage 1");
                     tank.FixupAnchors();
                     if (tank.IsAnchored)
                         tank.Anchors.UnanchorAll(true);
@@ -55,7 +54,6 @@ namespace TAC_AI
                             tank.TryToggleTechAnchor();
                         }
                     }
-                    Debug.Log("TACtical_AI: Stage 2");
                     if (!tank.IsAnchored)
                         tank.Anchors.TryAnchorAll(true);
                     if (!tank.IsAnchored)
@@ -76,7 +74,7 @@ namespace TAC_AI
 		{   
 			mineOut.SetValue(GetComponent<ModuleItemProducer>(), chunks);
 			minerOp.SetValue(GetComponent<ModuleItemProducer>(), flags);
-			Debug.Log("TACtical_AI: Loaded " + name);
+			//Debug.Log("TACtical_AI: Loaded " + name);
 			cached = false;
 			DestroyImmediate(this);
 		}

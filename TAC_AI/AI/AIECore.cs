@@ -345,13 +345,13 @@ namespace TAC_AI.AI
                             AllyCount++;
                         }
                     }
-                    Debug.Log("TACtical_AI: Fetched allied tech list for AIs...");
+                    //Debug.Log("TACtical_AI: Fetched allied tech list for AIs...");
                     if (AllyCount > 2)
                         moreThan2Allies = true;
                 }
                 catch  (Exception e)
                 {
-                    Debug.Log("TACtical_AI: Error on fetchlist");
+                    Debug.Log("TACtical_AI: FetchAllAllies - Error on fetchlist");
                     Debug.Log(e);
                 }
                 if (AllyCount > 2)

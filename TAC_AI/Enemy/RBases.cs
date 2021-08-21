@@ -518,6 +518,17 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderAttack = EnemyAttack.Grudge;
                 mind.CommanderBolts = EnemyBolts.AtFull;
             }
+            else if (RawTechLoader.ContainsPurpose(type, BasePurpose.TechProduction))
+            {
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderMind = EnemyAttitude.Default;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderBolts = EnemyBolts.AtFullOnAggro;
+            }
             else
             {
                 mind.StartedAnchored = true;
@@ -537,6 +548,9 @@ namespace TAC_AI.AI.Enemy
         {   // Expand the base!
             try
             {
+                if (SpecialAISpawner.IsAttract)
+                    return; // no branching
+
                 Tank tech = mind.AIControl.tank;
 
                 if (UnityEngine.Random.Range(1, 10) == 1)

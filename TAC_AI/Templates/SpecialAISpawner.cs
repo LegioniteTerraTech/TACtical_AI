@@ -47,6 +47,7 @@ namespace TAC_AI.Templates
 
         internal static bool thisActive = false;
         internal static bool CreativeMode = false;
+        internal static bool IsAttract = false;
         private float counter = 0;
         private int updateTimer = 0;
 
@@ -86,6 +87,7 @@ namespace TAC_AI.Templates
                 Pause();
                 CreativeMode = false;
             }
+            IsAttract = mode is ModeAttract;
         }
         public static void UpdatePlayerTank(Tank tank, bool beam)
         {   // 
