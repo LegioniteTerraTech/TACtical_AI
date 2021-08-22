@@ -131,7 +131,7 @@ namespace TAC_AI.Templates
             bool spawnSpace;
             if (KickStart.CommitDeathMode)
             {
-                spawnSpace = UnityEngine.Random.Range(0, 10) < 5;
+                spawnSpace = UnityEngine.Random.Range(0, 10) < 1;
             }
             else
                 spawnSpace = UnityEngine.Random.Range(0, 100) < SpaceshipChance;
@@ -211,7 +211,7 @@ namespace TAC_AI.Templates
 
                 // spawn and return the airborneAI
                 if (hasAllDone) // all corps unlocked by player
-                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air);
+                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air, maxPrice: KickStart.EnemySpawnPriceMatching);
 
                 // if we don't have all corps possible maxed, we do the normal spawn
 
@@ -251,17 +251,17 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 if (unProvoked)
                 {
-                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.NoWeapons }, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel))
+                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.NoWeapons }, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching))
                         return finalTank;
                     else
                         return null;
                 }
                 // else we do default spawn
-                return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel);
+                return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
             }
             catch { }
             Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air, AutoTerrain: false);
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
         private static Tank SpawnPrefabSpaceship(Vector3 pos, Vector3 forwards, out bool worked)
         {   // 
@@ -302,7 +302,7 @@ namespace TAC_AI.Templates
 
                 // spawn and return the airborneAI
                 if (hasAllDone) // all corps unlocked by player
-                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space);
+                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space, maxPrice: KickStart.EnemySpawnPriceMatching);
 
                 // if we don't have all corps possible maxed, we do the normal spawn
 
@@ -340,13 +340,13 @@ namespace TAC_AI.Templates
                 }
                 catch { }
                 Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene"); 
-                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel);
+                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
                 return tech;
             }
             catch { }
             Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             worked = true;
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false);
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
         private static void ManagePooledAirborneAI()
         {   // 

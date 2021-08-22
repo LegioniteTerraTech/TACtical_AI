@@ -77,6 +77,8 @@ namespace TAC_AI.AI.Enemy
                     break;
                 RepairAttempts--;
             }
+            if (mind.StartedAnchored)
+                RBases.MakeMinersMineUnlimited(tank);
             return success;
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, int Delay = 25, bool Super = false)
@@ -98,6 +100,8 @@ namespace TAC_AI.AI.Enemy
                     }
                     catch { }
                 }
+                if (mind.StartedAnchored)
+                    RBases.MakeMinersMineUnlimited(tank);
                 thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
             }
             else if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
@@ -109,6 +113,8 @@ namespace TAC_AI.AI.Enemy
                     thisInst.AttemptedRepairs = 1;
                     if (mind.StartedAnchored && !(bool)thisInst.lastEnemy)   // Keep those anchors updating!
                         tank.Anchors.TryAnchorAll(true);
+                    if (mind.StartedAnchored)
+                        RBases.MakeMinersMineUnlimited(tank);
                 }
                 catch { }
             }

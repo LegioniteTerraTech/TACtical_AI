@@ -56,6 +56,7 @@ namespace TAC_AI.AI.Enemy
             Tank.DamageEvent.Subscribe(OnHit);
             Tank.DetachEvent.Subscribe(OnBlockLoss);
             AIControl.MovementController.UpdateEnemyMind(this);
+            AIControl.AvoidStuff = true;
             try
             {
                 MainFaction = Tank.GetMainCorp();   //Will help determine their Attitude

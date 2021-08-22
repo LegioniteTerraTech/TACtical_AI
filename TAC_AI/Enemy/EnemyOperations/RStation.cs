@@ -30,7 +30,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             if (dist > 6)
             {
-                Debug.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
+                //Debug.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
                 thisInst.ProceedToObjective = true;
                 thisInst.Steer = true;
                 thisInst.lastDestination = mind.HoldPos;

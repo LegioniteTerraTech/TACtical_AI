@@ -11,6 +11,7 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RBases
     {
+        const int MinimumBBRequired = 10000;
         const int MaxBasesPerTeam = 12;
         const int MaxSingleBaseType = 4;
         const int MaxDefenses = 8;
@@ -551,6 +552,9 @@ namespace TAC_AI.AI.Enemy
                 if (SpecialAISpawner.IsAttract)
                     return; // no branching
 
+                if (funds.BuildBucks < MinimumBBRequired)
+                    return; // Reduce expansion lag
+
                 Tank tech = mind.AIControl.tank;
 
                 if (UnityEngine.Random.Range(1, 10) == 1)
@@ -561,6 +565,7 @@ namespace TAC_AI.AI.Enemy
 
                 if (GetTeamBaseCount(tech.Team) >= MaxBasesPerTeam)
                     return;
+
                 int grade = 99;
                 try
                 {

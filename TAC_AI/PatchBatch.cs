@@ -187,7 +187,7 @@ namespace TAC_AI
             private static bool Prefix(ModeAttract __instance)
             {
                 // Testing
-                bool caseOverride = false;
+                bool caseOverride = true;
                 AttractType outNum = AttractType.Harvester;
 
 
@@ -441,9 +441,9 @@ namespace TAC_AI
                             ModuleAdd.Prospector = true;
                             ModuleAdd.Buccaneer = true;
                             ModuleAdd.AidAI = true;
-                            ModuleAdd.SelfRepairAI = true;
+                            //ModuleAdd.SelfRepairAI = true; // testing
                         }
-                        if (name == "GSO_AIAnchor_121")
+                        else if (name == "GSO_AIAnchor_121")
                         {
                             ModuleAdd.Aegis = true;
                             ModuleAdd.AidAI = true;
@@ -1108,13 +1108,13 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
-                                    replacementBote.SetTeam(tv.TeamID, wasPop);
+                                    Tank replacementTech = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
+                                    replacementTech.SetTeam(tv.TeamID, wasPop);
 
-                                    Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
-                                    tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
+                                    Debug.Log("TACtical_AI:  Tech " + previousTechName + " has been swapped out for land tech " + replacementTech.name + " instead");
+                                    tv = ManVisible.inst.GetTrackedVisible(replacementTech.visible.ID);
                                     if (tv == null)
-                                        tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
+                                        tv = new TrackedVisible(replacementTech.visible.ID, replacementTech.visible, ObjectTypes.Vehicle, inherit);
                                 }
                                 else
                                 {

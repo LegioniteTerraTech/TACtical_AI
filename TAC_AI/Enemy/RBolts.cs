@@ -21,6 +21,8 @@ namespace TAC_AI.AI.Enemy
         {
             //if (tank.IsSleeping)
             //    return;
+            if (AtWorldTechMax())
+                return; // world is too stressed to handle more
             switch (mind.CommanderBolts)
             {
                 case EnemyBolts.Default:        // Blow up like default - first enemy sighting on spacebar
@@ -83,6 +85,27 @@ namespace TAC_AI.AI.Enemy
                 Debug.Log(e);
             }
             return AllyCount;
+        }
+        public static bool AtWorldTechMax()
+        {
+            int Counter = 0;
+            var allTechs = Singleton.Manager<ManTechs>.inst.CurrentTechs;
+            int techCount = allTechs.Count();
+            try
+            {
+                for (int stepper = 0; techCount > stepper; stepper++)
+                {
+                    Tank tech = allTechs.ElementAt(stepper);
+                    if (tech.IsEnemy())
+                        Counter++;
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: AtWorldTechMax - Error on The World");
+                Debug.Log(e);
+            }
+            return Counter >= KickStart.MaxEnemyWorldCapacity;
         }
     }
 }

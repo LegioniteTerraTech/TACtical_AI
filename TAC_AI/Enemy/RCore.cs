@@ -69,7 +69,6 @@ namespace TAC_AI.AI.Enemy
                     tank.FixupAnchors(true);
                     if (!tank.IsAnchored)
                         tank.TryToggleTechAnchor();
-                    RBases.MakeMinersMineUnlimited(tank);
                 }
             }
 
@@ -434,11 +433,6 @@ namespace TAC_AI.AI.Enemy
                         break;
                     case 3:
                         //toSet.CommanderMind = EnemyAttitude.Junker;
-                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
-                            toSet.CommanderMind = EnemyAttitude.Miner;
-                        else
-                            toSet.CommanderMind = EnemyAttitude.Default;
-                        break;
                     case 4:
                         if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
                             toSet.CommanderMind = EnemyAttitude.Miner;

@@ -27,6 +27,7 @@ namespace TAC_AI
 
         internal static bool testEnemyAI = true;
         internal static int EnemyTeamTechLimit = 26;// How many techs that can exist for each team before giving up on splitting?
+        internal static int MaxEnemyWorldCapacity { get { return AIPopMaxLimit + (AIPopMaxLimit / 2); } }// How many techs that can exist brfore giving up?
         internal static int MaxEnemyBaseLimit = 3;  // How many different enemy team bases are allowed to exist in one instance
         internal static int MaxEnemyHQLimit = 1;    // How many HQs are allowed to exist in one instance
         public static int AIClockPeriod = 5;        // How frequently we update

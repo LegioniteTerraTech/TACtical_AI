@@ -29,17 +29,21 @@ namespace TAC_AI.Templates
         GSOSeller,
         GSOMidBase,
         GSOMinerCluster,
-        GSOMilitaryBase,
         GSOAIMinerProduction,
         GSOTechFactory,
         GSOStarport,
+        //-HQs
+        GSOsHQ,
+        GSOMilitaryBase,
 
         // GeoCorp
         GCMiningRig,
         GCTerraBore,
         GCProspectorHub,
-        GCHeadquarters,
         GCMiningLaser,
+        //-HQs
+        GCsHQ,
+        GCHeadquarters,
 
         // Venture
         VENRallyHost,
@@ -47,9 +51,11 @@ namespace TAC_AI.Templates
         VENPitStop,
         VENTuningShop,
         VENGasSilo,
+        //-HQs
+        VENsHQ,
+        VENSpeedac,
 
         // Hawkeye
-        HECommandCentre,
         HECombatStation,
         HEOilDerrick,
         HEComsat,
@@ -57,6 +63,9 @@ namespace TAC_AI.Templates
         HEXLTankFactory,
         HEMunitionsDepot,
         HEAircraftGarrison,
+        //-HQs
+        HEsHQ,
+        HECommandCentre,
 
         // The Defenses
         GSOLightDefense,
