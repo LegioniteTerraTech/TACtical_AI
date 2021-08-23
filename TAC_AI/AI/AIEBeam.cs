@@ -31,7 +31,7 @@ namespace TAC_AI.AI
                 {   // Handoff all operations to AIEAirborne
                     if (!pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
                     {   //Become a ground vehicle for now
-                        if (tank.grounded && tank.AI.IsTankOverturned())
+                        if (tank.grounded && IsTechTippedOver(tank, thisInst))
                         {
                             thisInst.beamTimeoutClock = 1;
                         }
@@ -82,7 +82,7 @@ namespace TAC_AI.AI
                 {
                     thisInst.beamTimeoutClock = 35;
                 }
-                else if (!thisInst.IsMultiTech && tank.AI.IsTankOverturned() && thisInst.RequestBuildBeam)
+                else if (!thisInst.IsMultiTech && IsTechTippedOver(tank, thisInst) && thisInst.RequestBuildBeam)
                 {
                     if (thisInst.DediAI == AIType.Astrotech)
                     {
@@ -151,5 +151,20 @@ namespace TAC_AI.AI
             return false;
         }
         */
+
+
+        private static bool IsTechTippedOver(Tank tank, AIECore.TankAIHelper thisInst)
+        {   // It's more crude than the built-in but should take less to process.
+            if (tank.rootBlockTrans.up.y < 0)
+            {   // the Tech is literally sideways
+                return true;
+            }
+            else if (tank.rootBlockTrans.up.y < 0.25f)
+            {   // If we are still moving, we DON'T Build Beam - we are climbing a slope
+                return thisInst.recentSpeed < thisInst.EstTopSped / 8;
+            }
+            //tank.AI.IsTankOverturned()
+            return false;
+        }
     }
 }

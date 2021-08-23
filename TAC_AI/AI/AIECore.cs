@@ -533,6 +533,7 @@ namespace TAC_AI.AI
             /// </summary>
             internal Vector3 Navi3DUp = Vector3.zero;       // Upwards direction for 3D
             public float GroundOffsetHeight = 35;           // flote above ground this dist
+            internal Vector3 TerrainUp = Vector3.up;        // Upwards direction of the terrain
 
             //Timestep
             internal int DirectorUpdateClock = 0;

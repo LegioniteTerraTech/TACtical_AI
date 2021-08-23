@@ -15,6 +15,7 @@ namespace TAC_AI.Templates
         public BaseTerrain terrain = BaseTerrain.Land;
         public int startingFunds = 5000;
         public string savedTech = "{\"t\":\"GSOAnchorFixed_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}";
+        public bool environ = false; // are we not a miner?
     }
     internal class TempStorage
     {

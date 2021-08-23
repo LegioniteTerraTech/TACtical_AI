@@ -467,7 +467,7 @@ namespace TAC_AI.AI.Enemy
                     case 3:
                         //toSet.CommanderMind = EnemyAttitude.Junker;
                     case 4:
-                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0 && RawTechLoader.CanBeMiner(toSet))
                             toSet.CommanderMind = EnemyAttitude.Miner;
                         else
                             toSet.CommanderMind = EnemyAttitude.Default;
@@ -806,13 +806,13 @@ namespace TAC_AI.AI.Enemy
         }
 
 
-        static readonly FieldInfo wasSet = typeof(ModuleBlockMover).GetField("Deserialized", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void HandleUnsetControlBlock(EnemyMind mind, TankBlock block)
         {
             if (!KickStart.isControlBlocksPresent)
                 return;
             try
             {
+                FieldInfo wasSet = typeof(ModuleBlockMover).GetField("Deserialized", BindingFlags.NonPublic | BindingFlags.Instance);
                 ModuleBlockMover mover = block.GetComponent<ModuleBlockMover>();
                 if (!(bool)mover)
                     return;

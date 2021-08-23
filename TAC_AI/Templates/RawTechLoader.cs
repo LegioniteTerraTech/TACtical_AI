@@ -1154,6 +1154,24 @@ namespace TAC_AI.Templates
             }
             return false;
         }
+
+        internal static bool CanBeMiner(EnemyMind mind)
+        {
+            if (mind.StartedAnchored)
+                return false;
+            bool can = true;
+            SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
+            if (type != SpawnBaseTypes.NotAvail)
+            {
+                TempManager.techBases.TryGetValue(type, out BaseTemplate val);
+                can = !val.environ;
+            }
+            else if (TempManager.ExternalEnemyTechs.Exists(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }))
+            {
+                can = !TempManager.ExternalEnemyTechs.Find(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }).environ;
+            }
+            return can;
+        }
         internal static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
         {
             return TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT);
