@@ -31,6 +31,7 @@ namespace TAC_AI.Templates
         public bool IsAnchored;
         public FactionSubTypes Faction;
         public bool NonAggressive = false;
+        public bool Eradicator = false;
         public int Cost = 0;
     }
 
@@ -178,42 +179,67 @@ namespace TAC_AI.Templates
         // Operations
         public static List<BaseTemplate> LoadAllEnemyTechs()
         {
-            List<string> names = GetTechNameList();
+            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + "\\Enemies");
             List<BaseTemplate> temps = new List<BaseTemplate>();
-            foreach (string name in names)
+            List<string> names = new List<string>();
+            Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
+            foreach (string Dir in Dirs)
             {
-                BuilderExternal ext = LoadEnemyTech(name);
-                BaseTemplate temp = new BaseTemplate();
+                names = GetTechNameListDir(Dir);
+                Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total RAW Techs found in " + GetNameDirectory(Dir) + ": " + names.Count());
+                foreach (string name in names)
+                {
+                    BuilderExternal ext = LoadEnemyTech(name);
+                    BaseTemplate temp = new BaseTemplate();
 
-                temp.techName = ext.Name;
-                temp.savedTech = ext.Blueprint;
-                temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
-                FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
-                temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
-                temp.IntendedGrade = minCorpGrade;
-                temp.faction = MainCorp;
-                temp.terrain = terra;
+                    temp.techName = ext.Name;
+                    temp.savedTech = ext.Blueprint;
+                    temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
+                    FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
+                    temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
+                    temp.IntendedGrade = minCorpGrade;
+                    temp.faction = MainCorp;
+                    temp.terrain = terra;
 
-                temps.Add(temp);
-                Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
+                    temps.Add(temp);
+                    Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
+                }
             }
             return temps;
+        }
+        internal static List<string> GetAllNames(string directory)
+        {
+            List<string> Cleaned = new List<string>();
+            List<string> Dirs = GetALLDirectoriesInFolder(directory);
+            Dirs.Add(directory); 
+            
+            foreach (string Dir in Dirs)
+            {
+                Cleaned.AddRange(GetTechNameList(Dir));
+            }
+
+            return Cleaned;
+        }
+        internal static List<string> GetTechNameListDir(string directory, bool ExcludeJSON = false)
+        {
+            List<string> toClean = Directory.GetFiles(directory).ToList();
+            List<string> Cleaned = CleanNames(toClean, ExcludeJSON);
+            return Cleaned;
         }
         internal static List<string> GetTechNameList(string altDirectoryFromBaseDirectory = null)
         {
             string search;
+            List<string> Cleaned;
             if (altDirectoryFromBaseDirectory == null)
-                search = RawTechsDirectory + "\\Enemies";
-            else
-                search = BaseDirectory + "\\" + altDirectoryFromBaseDirectory;
-            List<string> toClean = Directory.GetFiles(search).ToList();
-            List<string> Cleaned = new List<string>();
-            foreach (string cleaning in toClean)
             {
-                if (!GetNameJSON(cleaning, out string output))
-                    continue;
-                Cleaned.Add(output);
+                search = RawTechsDirectory + "\\Enemies";
             }
+            else
+            {
+                search = BaseDirectory + "\\" + altDirectoryFromBaseDirectory;
+            }
+            List<string> toClean = Directory.GetFiles(search).ToList();
+            Cleaned = CleanNames(toClean, false);
             return Cleaned;
         }
         internal static int GetTechCounts(string altDirectoryFromBaseDirectory = null)
@@ -226,7 +252,18 @@ namespace TAC_AI.Templates
             return Directory.GetFiles(search).ToList().Count;
         }
 
-        private static bool GetNameJSON(string FolderDirectory, out string output)
+        private static List<string> CleanNames(List<string> FolderDirectories, bool excludeJSON)
+        {
+            List<string> Cleaned = new List<string>();
+            foreach (string cleaning in FolderDirectories)
+            {
+                if (!GetNameJSON(cleaning, out string output, excludeJSON))
+                    continue;
+                Cleaned.Add(output);
+            }
+            return Cleaned;
+        }
+        private static bool GetNameJSON(string FolderDirectory, out string output, bool excludeJSON)
         {
             StringBuilder final = new StringBuilder();
             foreach (char ch in FolderDirectory)
@@ -238,18 +275,19 @@ namespace TAC_AI.Templates
                 else
                     final.Append(ch);
             }
-            if (!final.ToString().Contains(".JSON"))
+            if (!final.ToString().Contains(".RAWTECH"))
             {
-                if (!final.ToString().Contains(".RAWTECH"))
+                if (!final.ToString().Contains(".JSON") && !excludeJSON)
                 {
                     output = null;
                     return false;
                 }
                 else
-                    final.Remove(final.Length - 8, 8);// remove ".RAWTECH"
+                    final.Remove(final.Length - 5, 5);// remove ".JSON"
             }
             else
-                final.Remove(final.Length - 5, 5);// remove ".JSON"
+                final.Remove(final.Length - 8, 8);// remove ".RAWTECH"
+            
             output = final.ToString();
             return true;
         }
@@ -265,6 +303,8 @@ namespace TAC_AI.Templates
                 terra = BaseTerrain.AnyNonSea;
                 return new List<BasePurpose>();
             }
+
+            List<BasePurpose> purposes = new List<BasePurpose>();
             //foreach (BlockMemory mem in mems)
             //{
             //    blocs.Add(Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)));
@@ -297,8 +337,11 @@ namespace TAC_AI.Templates
             //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
-                BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), blocRaw.t);
+                BlockTypes type = AIERepair.StringToBlockType(blocRaw.t);
                 TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
+                if (bloc.IsNull())
+                    continue;
+
                 if (bloc.GetComponent<ModuleTechController>())
                     modControlCount++;
                 if (bloc.GetComponent<ModuleItemHolder>())
@@ -365,7 +408,7 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        if (tier -1 > minCorpGrade)
+                        if (tier - 1 > minCorpGrade)
                         {
                             if (tier > gradeM)
                                 minCorpGrade = gradeM - 1;
@@ -393,7 +436,6 @@ namespace TAC_AI.Templates
                 blocs.Add(bloc);
             }
 
-            List<BasePurpose> purposes = new List<BasePurpose>();
             if (modEXPLODECount > 0)
                 purposes.Add(BasePurpose.TechProduction);
             if (modCollectCount > 0)
@@ -447,6 +489,11 @@ namespace TAC_AI.Templates
 
             if (!Anchored)
                 purposes.Add(BasePurpose.NotStationary);
+
+            if (mems.Count >= KickStart.LethalTechSize || modGunCount > 48 || modHoverCount > 18)
+            {
+                purposes.Add(BasePurpose.NANI);
+            }
 
             string purposesList = "None.";
             if (purposes.Count > 0)
@@ -520,7 +567,8 @@ namespace TAC_AI.Templates
             builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
             builder.InfBlocks = false;
             builder.IsAnchored = tank.IsAnchored;
-            builder.NonAggressive = false;
+            builder.NonAggressive = !IsLethal(tank);
+            builder.Eradicator = tank.blockman.IterateBlocks().Count() >= KickStart.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18;
             builder.Cost = GetBBCost(tank);
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveTechToFile(tank.name, builderJSON);
@@ -727,6 +775,33 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        private static string GetNameDirectory(string FolderDirectory)
+        {
+            StringBuilder final = new StringBuilder();
+            foreach (char ch in FolderDirectory)
+            {
+                if (ch == '\\')
+                {
+                    final.Clear();
+                }
+                else
+                    final.Append(ch);
+            }
+
+            return final.ToString();
+        }
+        private static List<string> GetALLDirectoriesInFolder(string directory)
+        {   // 
+            List<string> final = new List<string>();
+            List<string> Dirs = Directory.GetDirectories(directory).ToList();
+            final.Add(directory);
+            foreach (string Dir in Dirs)
+            {
+                final.Add(Dir);
+                final.AddRange(GetALLDirectoriesInFolder(Dir));
+            }
+            return final;
+        }
         private static FactionSubTypes GetTopCorp(Tank tank)
         {   // 
             FactionSubTypes final = tank.GetMainCorp();

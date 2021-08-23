@@ -132,6 +132,7 @@ namespace TAC_AI.Templates
         VENNautilus,
         HESwaddleBoat,
         HEDreadnaught,
+        HEBattleSwivels,
         BFLuxYacht,
 
         //Player-helping naval crafts

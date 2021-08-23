@@ -41,7 +41,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = true;
                 thisInst.MoveFromObjective = true;
-                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                if ((bool)thisInst.lastEnemy)
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                else
+                    RGeneral.Scurry(thisInst, tank, mind);
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
                 if (dist < spacer + (range / 4))

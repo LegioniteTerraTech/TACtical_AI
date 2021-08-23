@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Reflection;
 using UnityEngine;
 using TAC_AI.Templates;
+using Control_Block;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -79,13 +80,32 @@ namespace TAC_AI.AI.Enemy
                 if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                 RRepair.EnemyRepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
             }
-            if (Mind.CommanderMind == EnemyAttitude.SubNeutral)
+
+            if (Mind.EvilCommander == EnemyHandling.Airplane)
             {
-                if (Mind.CommanderAttack == EnemyAttack.Grudge)
-                {   // Cannot be grudge while SubNeutral aircraft 
-                    thisInst.lastEnemy = null;
-                    Mind.CommanderAttack = EnemyAttack.Bully;
+                if (Mind.CommanderMind != EnemyAttitude.SubNeutral)
+                    EnemyOperations.RAircraft.EnemyDogfighting(thisInst, tank, Mind);
+                else
+                {
+                    if (Mind.CommanderAttack == EnemyAttack.Grudge)
+                    {   // Cannot be grudge while SubNeutral aircraft 
+                        thisInst.lastEnemy = null;
+                        Mind.CommanderAttack = EnemyAttack.Bully;
+                    }
+                    if (Mind.Hurt)
+                    {   // If we were hit, then we fight back the attacker
+                        RandomSetMindAttack(Mind, tank);
+                    }
                 }
+            }
+            else if (Mind.CommanderMind == EnemyAttitude.SubNeutral)
+            {   // other AI types
+                if (Mind.CommanderAttack != EnemyAttack.Coward)
+                {   // Cannot be combative while SubNeutral
+                    thisInst.lastEnemy = null;
+                    Mind.CommanderAttack = EnemyAttack.Coward;
+                }
+                RGeneral.Scurry(thisInst, tank, Mind);
                 if (Mind.Hurt)
                 {   // If we were hit, then we fight back the attacker
                     RandomSetMindAttack(Mind, tank);
@@ -257,6 +277,11 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderAttack = EnemyAttack.Grudge;
                 fired = true;
             }
+            if (BM.IterateBlocks().Count() >= KickStart.LethalTechSize)
+            {   // DEATH TO ALL
+                if (!SpecialAISpawner.Eradicators.Contains(tank))
+                    SpecialAISpawner.Eradicators.Add(tank);
+            }
             return fired;
         }
         public static void BlockSetEnemyHandling(Tank tank, EnemyMind toSet, bool ForceAllBubblesUp = false)
@@ -372,6 +397,8 @@ namespace TAC_AI.AI.Enemy
                     if (bloc.GetComponent<ModuleWeaponTeslaCoil>())
                         modTeslaCount++;
                 }
+
+                HandleUnsetControlBlock(toSet, bloc);
             }
             Debug.Log("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
 
@@ -412,6 +439,12 @@ namespace TAC_AI.AI.Enemy
 
             if (modDrillCount + (modTeslaCount * 25) > modGunCount|| toSet.MainFaction == FactionSubTypes.GC)
                 toSet.LikelyMelee = true;
+
+            if (modGunCount > 48 || modHoverCount > 18)
+            {   // DEATH TO ALL
+                if (!SpecialAISpawner.Eradicators.Contains(tank))
+                    SpecialAISpawner.Eradicators.Add(tank);
+            }
         }
         public static void RandomSetMindAttack(EnemyMind toSet, Tank tank)
         {
@@ -753,10 +786,13 @@ namespace TAC_AI.AI.Enemy
                                 Debug.Log("TACtical_AI: Tech " + mind.AIControl.lastEnemy.tank.name + " was purchased by " + mind.Tank.name + ".");
                                 try
                                 {
-                                    WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(mind.AIControl.lastEnemy);
-                                    Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Bribed!", pos2);
+                                    if (KickStart.DisplayEnemyEvents)
+                                    {
+                                        WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(mind.AIControl.lastEnemy);
+                                        Patches.PopupEnemyInfo("Bribed!", pos2);
 
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + mind.AIControl.lastEnemy.tank.name + " was bribed by " + mind.Tank.name + "!");
+                                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + mind.AIControl.lastEnemy.tank.name + " was bribed by " + mind.Tank.name + "!");
+                                    }
                                 }
                                 catch { }
                             }
@@ -764,6 +800,88 @@ namespace TAC_AI.AI.Enemy
                     }
                     if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (RBases.GetTeamFunds(mind.Tank.Team) / 50000))
                         RBases.ImTakingThatExpansion(mind, mind.GetComponent<RBases.EnemyBaseFunder>());
+                }
+            }
+            catch { }
+        }
+
+
+        static readonly FieldInfo wasSet = typeof(ModuleBlockMover).GetField("Deserialized", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static void HandleUnsetControlBlock(EnemyMind mind, TankBlock block)
+        {
+            if (!KickStart.isControlBlocksPresent)
+                return;
+            try
+            {
+                ModuleBlockMover mover = block.GetComponent<ModuleBlockMover>();
+                if (!(bool)mover)
+                    return;
+                if ((bool)wasSet.GetValue(mover))
+                    return;
+                Debug.Log("TACtical_AI: Setting a Control Block...");
+
+                mover.ProcessOperations.Clear();
+                if (mover.IsPlanarVALUE)
+                {
+                    mover.ProcessOperations.Add(new InputOperator()
+                    {
+                        m_InputKey = KeyCode.Space,
+                        m_InputType = InputOperator.InputType.EnemyTechIsNear,
+                        m_InputParam = mind.Range,
+                        m_OperationType = InputOperator.OperationType.IfThen,
+                        m_Strength = 0
+                    });
+                    mover.ProcessOperations.Add(new InputOperator()
+                    {
+                        m_InputKey = KeyCode.Space,
+                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputParam = mind.Range,
+                        m_OperationType = InputOperator.OperationType.TargetPointPredictive,
+                        m_Strength = 125
+                    });
+                    mover.ProcessOperations.Add(new InputOperator()
+                    {
+                        m_InputKey = KeyCode.Space,
+                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputParam = 0,
+                        m_OperationType = InputOperator.OperationType.ElseThen,
+                        m_Strength = 0
+                    });
+                    mover.ProcessOperations.Add(new InputOperator()
+                    {
+                        m_InputKey = KeyCode.Space,
+                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputParam = 0,
+                        m_OperationType = InputOperator.OperationType.SetPos,
+                        m_Strength = 0
+                    });
+                    mover.ProcessOperations.Add(new InputOperator()
+                    {
+                        m_InputKey = KeyCode.Space,
+                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputParam = 0,
+                        m_OperationType = InputOperator.OperationType.EndIf,
+                        m_Strength = 0
+                    });
+                }
+                else
+                {
+                    mover.ProcessOperations.Add(new InputOperator()
+                    {
+                        m_InputKey = KeyCode.Space,
+                        m_InputType = InputOperator.InputType.EnemyTechIsNear,
+                        m_InputParam = mind.Range,
+                        m_OperationType = InputOperator.OperationType.ShiftPos,
+                        m_Strength = 2
+                    });
+                    mover.ProcessOperations.Add(new InputOperator()
+                    {
+                        m_InputKey = KeyCode.Space,
+                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputParam = 0,
+                        m_OperationType = InputOperator.OperationType.ShiftPos,
+                        m_Strength = -1
+                    });
                 }
             }
             catch { }

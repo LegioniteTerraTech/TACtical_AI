@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
@@ -41,7 +42,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             if (thisInst.lastEnemy == null)
             {
-                RGeneral.LollyGag(thisInst, tank, mind);
+                LollyGagAir(thisInst, tank, mind);
                 return;
             }
             RGeneral.Engadge(thisInst, tank, mind);
@@ -198,6 +199,135 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
         }
 
+        public static bool LollyGagAir(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool holdGround = false)
+        {
+            bool isRegenerating = false;
+            if (mind.Hurt)// && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10)
+            {
+                var energy = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+                if (mind.CommanderSmarts >= EnemySmarts.Meh)
+                {
+                    if (energy.storageTotal > 500)
+                    {
+                        if (mind.SolarsAvail && tank.Anchors.NumPossibleAnchors > 0 && !tank.IsAnchored)
+                        {
+                            if (thisInst.anchorAttempts < 6)
+                            {
+                                tank.TryToggleTechAnchor();
+                                thisInst.anchorAttempts++;
+                            }
+                            else
+                            {   //Try to find new spot
+                                FlutterAround(thisInst, tank, mind);
+                            }
+                        }
+                        if (energy.storageTotal - 100 < (energy.storageTotal - energy.spareCapacity))
+                        {
+                            mind.Hurt = false;
+                        }
+                    }
+                    else
+                    {
+                        //Cannot repair block damage or recharge shields!
+                        mind.Hurt = false;
+                    }
+                    if (tank.IsAnchored && !mind.StartedAnchored)
+                    {
+                        isRegenerating = true;
+                    }
+                }
+                if (mind.CommanderSmarts == EnemySmarts.Smrt)
+                {
+                    if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs < 3)
+                    {
+                        bool venPower = false;
+                        if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
+                        thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                        thisInst.AttemptedRepairs++;
+                        Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        return true;
+                    }
+                    else
+                        mind.Hurt = false;
+                }
+                if (mind.CommanderSmarts >= EnemySmarts.IntAIligent)
+                {
+                    if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs < 4)
+                    {
+                        if ((energy.storageTotal - energy.spareCapacity) / energy.storageTotal > 0.5)
+                        {
+                            //flex yee building speeds on them players
+                            thisInst.PendingSystemsCheck = !RRepair.EnemyInstaRepair(tank, mind);
+                            thisInst.AttemptedRepairs++;
+                        }
+                        else
+                        {
+                            bool venPower = false;
+                            if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
+                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, 6, Super: venPower);
+                            thisInst.AttemptedRepairs++;
+                        }
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        return true;
+                    }
+                    else
+                        mind.Hurt = false;
+                }
+            }
+            else
+            {
+                thisInst.anchorAttempts = 0;
+            }
+
+            //Debug.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
+
+            if (holdGround)
+                thisInst.lastDestination = mind.HoldPos;
+            else
+            {
+                switch (mind.CommanderMind)
+                {
+                    case EnemyAttitude.Default: // do dumb stuff
+                    case EnemyAttitude.SubNeutral: // do dumb stuff
+                        FlutterAround(thisInst, tank, mind);
+                        break;
+                    case EnemyAttitude.Homing:  // Get nearest tech regardless of max combat range and attack them
+                        RGeneral.HomingIdle(thisInst, tank, mind);
+                        break;
+                    case EnemyAttitude.Miner:   // mine resources
+                        RMiner.MineYerOwnBusiness(thisInst, tank, mind);
+                        break;
+                    //The case below I still have to think of a reason for them to do the things
+                    case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
+                        FlutterAround(thisInst, tank, mind);
+                        break;
+                }
+            }
+            if (mind.EvilCommander == EnemyHandling.Naval)
+                thisInst.lastDestination = AIEPathing.OffsetToSea(thisInst.lastDestination, tank, thisInst);
+            else if (mind.EvilCommander == EnemyHandling.Starship)
+                thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst);
+            else //Snap to ground
+                thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst, tank.blockBounds.size.y);
+            return isRegenerating;
+        }
+        public static void FlutterAround(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {
+            if (thisInst.ActionPause == 1)
+            {
+                if (mind.GetComponent<AIControllerAir>() && UnityEngine.Random.Range(1, 10) < 6)
+                {
+                    var pilot = mind.GetComponent<AIControllerAir>();
+                    thisInst.lastDestination = pilot.Tank.boundsCentreWorldNoCheck + (pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod) + pilot.Tank.rootBlockTrans.forward;
+                }
+                thisInst.lastDestination = GetRANDPos(tank);
+                thisInst.ActionPause = 0;
+            }
+            else if (thisInst.ActionPause == 0)
+                thisInst.ActionPause = 30;
+            thisInst.ProceedToObjective = true;
+        }
+
         public static void EnemyDogfighting(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {   // Only accounts for forward weapons
 
@@ -232,6 +362,20 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.Urgency = 0;
                 thisInst.DANGER = false;
             }
+        }
+
+
+        // Utilities
+        public static Vector3 GetRANDPos(Tank tank)
+        {
+            float rangeRAND = 250;
+            Vector3 final = tank.boundsCentreWorldNoCheck;
+
+            final.x += UnityEngine.Random.Range(-rangeRAND, rangeRAND);
+            final.y += UnityEngine.Random.Range(-rangeRAND, rangeRAND);
+            final.z += UnityEngine.Random.Range(-rangeRAND, rangeRAND);
+
+            return final;
         }
     }
 }

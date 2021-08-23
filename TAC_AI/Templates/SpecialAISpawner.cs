@@ -9,7 +9,7 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.Templates
 {
-    public class TrackedairborneAI
+    public class TrackedAirborneAI
     {
         public Tank airborneAI;
         public void Setup(Tank set, bool IsSpace = false)
@@ -43,7 +43,13 @@ namespace TAC_AI.Templates
         /// <summary>
         /// AIRTECHS
         /// </summary>
-        internal static List<TrackedairborneAI> AirPool = new List<TrackedairborneAI>();
+        internal static List<TrackedAirborneAI> AirPool = new List<TrackedAirborneAI>();
+
+        /// <summary>
+        /// ERADICATORS (HUGE TECHS)
+        /// </summary>
+        /// 
+        public static List<Tank> Eradicators = new List<Tank>();
 
         internal static bool thisActive = false;
         internal static bool CreativeMode = false;
@@ -169,7 +175,7 @@ namespace TAC_AI.Templates
                 newAirborneAI.SetTeam(GetRANDTeam(), true);
             else
                 newAirborneAI.SetTeam(-1, true);
-            TrackedairborneAI newAir = new TrackedairborneAI();
+            TrackedAirborneAI newAir = new TrackedAirborneAI();
             newAir.Setup(newAirborneAI, IsSpace);
             AirPool.Add(newAir);
         }
@@ -348,6 +354,32 @@ namespace TAC_AI.Templates
             worked = true;
             return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
+
+        private static void ManagePooledAIs()
+        {   // 
+            ManagePooledAirborneAI();
+        }
+        private static void ManagePooledEradicators()
+        {   // 
+            int count = Eradicators.Count();
+            if (count > 0)
+            {
+                for (int step = 0; count > step; step++)
+                {
+                    try
+                    {
+                        Tank erad = Eradicators[step];
+                        if (!erad.visible.isActive)
+                        {
+                            Eradicators.Remove(erad);
+                            step--;
+                            count--;
+                        }
+                    }
+                    catch { }
+                }
+            }
+        }
         private static void ManagePooledAirborneAI()
         {   // 
             if (!KickStart.AllowAirEnemiesToSpawn)
@@ -393,7 +425,7 @@ namespace TAC_AI.Templates
         {   // 
             if (AirPool.Count == 0)
                 return;
-            foreach (TrackedairborneAI airborneAI in AirPool)
+            foreach (TrackedAirborneAI airborneAI in AirPool)
             {
                 if (airborneAI.airborneAI.IsNotNull())
                     Purge(airborneAI.airborneAI);
@@ -409,7 +441,7 @@ namespace TAC_AI.Templates
                 {
                     if (tech.GetComponent<AIECore.TankAIHelper>().MovementController is AIControllerAir || tech.GetComponent<EnemyMind>().EvilCommander == EnemyHandling.Starship)
                     {
-                        TrackedairborneAI newAir = new TrackedairborneAI();
+                        TrackedAirborneAI newAir = new TrackedAirborneAI();
                         newAir.Setup(tech);
                         AirPool.Add(newAir);
                     }
@@ -512,7 +544,7 @@ namespace TAC_AI.Templates
             }
             if (updateTimer > 25)
             {   // manager timer
-                ManagePooledAirborneAI();
+                ManagePooledAIs();
                 updateTimer = 0;
             }
             if (!Singleton.Manager<ManPauseGame>.inst.IsPaused)

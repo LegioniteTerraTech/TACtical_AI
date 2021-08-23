@@ -1011,7 +1011,7 @@ namespace TAC_AI.AI
                 bool DoNotEngage = false;
                 if (this.DediAI == AIType.Assault && this.lastBasePos.IsNotNull())
                 {
-                    if (this.IdealRangeCombat * 2 < (this.lastBasePos.position - this.tank.boundsCentreWorldNoCheck).magnitude)
+                    if (this.RangeToChase * 2 < (this.lastBasePos.position - this.tank.boundsCentreWorldNoCheck).magnitude)
                     {
                         DoNotEngage = true;
 
@@ -1027,7 +1027,7 @@ namespace TAC_AI.AI
                 }
                 else if (this.DediAI != AIType.Assault && this.lastPlayer.IsNotNull())
                 {
-                    if (this.IdealRangeCombat < (this.lastPlayer.tank.boundsCentreWorldNoCheck - this.tank.boundsCentreWorldNoCheck).magnitude)
+                    if (this.RangeToChase < (this.lastPlayer.tank.boundsCentreWorldNoCheck - this.tank.boundsCentreWorldNoCheck).magnitude)
                     {
                         DoNotEngage = true;
                     }

@@ -30,7 +30,6 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 case EnemyHandling.Airplane:
                     //-awaiting coding
                     RAircraft.TryFly(thisInst, tank, Mind);
-                    RAircraft.EnemyDogfighting(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Chopper:
                     //-awaiting coding, Starship but pid

@@ -24,6 +24,10 @@ namespace TAC_AI
         public const int DefaultEnemyRange = 150;
         public const int EnemyExtendActionRange = 450;
 
+        // EPIC TECH HANDLER
+        public const int LethalTechSize = 256;
+        public const int MaxEradicatorTechs = 2;
+
 
         internal static bool testEnemyAI = true;
         internal static int EnemyTeamTechLimit = 26;// How many techs that can exist for each team before giving up on splitting?
@@ -36,6 +40,7 @@ namespace TAC_AI
         public static int AIDodgeCheapness = 30;
         public static int AIPopMaxLimit = 6;
         public static bool MuteNonPlayerRacket = true;
+        public static bool DisplayEnemyEvents = true;
         public static bool AllowOverleveledBlockDrops { get { return EnemyBlockDropChance == 100; } } // Obsolete - true when 
         public static bool enablePainMode = true;
         public static bool EnemiesHaveCreativeInventory = false;
@@ -51,6 +56,7 @@ namespace TAC_AI
 
 
         internal static bool isWaterModPresent = false;
+        internal static bool isControlBlocksPresent = false;
         internal static bool isTougherEnemiesPresent = false;
         internal static bool isWeaponAimModPresent = false;
         internal static bool isBlockInjectorPresent = false;
@@ -109,6 +115,7 @@ namespace TAC_AI
         public static OptionToggle muteNonPlayerBuildRacket;
         public static OptionToggle allowOverLevelBlocksDrop;
         public static OptionToggle exportReadableRAW;
+        public static OptionToggle displayEvents;
         public static OptionToggle painfulEnemies;
         public static OptionRange diff;
         public static OptionRange landEnemyChangeChance;
@@ -161,44 +168,15 @@ namespace TAC_AI
             GUIAIManager.Initiate();
             RawTechExporter.Initiate();
 
-            if (LookForMod("WaterMod"))
-            {
-                Debug.Log("TACtical_AI: Found Water Mod!  Enabling water-related features!");
-                isWaterModPresent = true;
-            }
 
-            if (LookForMod("WeaponAimMod"))
-            {
-                Debug.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
-                isWeaponAimModPresent = true;
-            }
+            GetActiveMods();
 
-            if (LookForMod("TougherEnemies"))
-            {
-                Debug.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
-                isTougherEnemiesPresent = true;
-            }
-
-            if (LookForMod("BlockInjector"))
-            {
-                Debug.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
-                isBlockInjectorPresent = true;
-            }
-            if (LookForMod("PopulationInjector"))
-            {
-                Debug.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
-                isPopInjectorPresent = true;
-            }
-            if (LookForMod("AnimeAI"))
-            {
-                Debug.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
-                isAnimeAIPresent = true;
-            }
 
             ModConfig thisModConfig = new ModConfig();
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
             thisModConfig.BindConfig<KickStart>(null, "MuteNonPlayerRacket");
+            thisModConfig.BindConfig<KickStart>(null, "DisplayEnemyEvents");
             thisModConfig.BindConfig<RawTechExporter>(null, "ExportJSONInsteadOfRAWTECH");
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "difficulty");
@@ -223,10 +201,10 @@ namespace TAC_AI
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            displayEvents = new OptionToggle("Show Enemy AI Events", TACAI, DisplayEnemyEvents);
+            displayEvents.onValueSaved.AddListener(() => { DisplayEnemyEvents = displayEvents.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, MuteNonPlayerRacket);
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            //allowOverLevelBlocksDrop = new OptionToggle("Overleveled Enemy Block Grade Drops", TACAI, AllowOverleveledBlockDrops);
-            //allowOverLevelBlocksDrop.onValueSaved.AddListener(() => { AllowOverleveledBlockDrops = allowOverLevelBlocksDrop.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             playerMadeTechsOnly = new OptionToggle("Try Spawning From Raw Enemy Folder Only", TACAI, TryForceOnlyPlayerSpawns);
             playerMadeTechsOnly.onValueSaved.AddListener(() => { TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             diff = new OptionRange("Enemy Difficulty", TACAI, difficulty, -50, 150, 25);
@@ -263,7 +241,7 @@ namespace TAC_AI
                 enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemies, AllowSeaEnemiesToSpawn);
                 enemySeaSpawn.onValueSaved.AddListener(() => { AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                ragnarok = new OptionToggle("<b>Ragnarok - Death To All</b>", TACAIEnemies, CommitDeathMode);
+                ragnarok = new OptionToggle("<b>Ragnarok - Death To All</b> - Requires Beefy Computer", TACAIEnemies, CommitDeathMode);
                 ragnarok.onValueSaved.AddListener(() => {
                     CommitDeathMode = ragnarok.SavedValue;
                     OverrideManPop.ChangeToRagnarokPop(CommitDeathMode);
@@ -311,6 +289,48 @@ namespace TAC_AI
                 }
             }
             return false;
+        }
+        public static void GetActiveMods()
+        {
+            if (LookForMod("WaterMod"))
+            {
+                Debug.Log("TACtical_AI: Found Water Mod!  Enabling water-related features!");
+                isWaterModPresent = true;
+            }
+
+            if (LookForMod("Control Block"))
+            {
+                Debug.Log("TACtical_AI: Control Blocks!  Letting RawTech loader override unassigned swivels to auto-target!");
+                isControlBlocksPresent = true;
+            }
+
+            if (LookForMod("WeaponAimMod"))
+            {
+                Debug.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
+                isWeaponAimModPresent = true;
+            }
+
+            if (LookForMod("TougherEnemies"))
+            {
+                Debug.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
+                isTougherEnemiesPresent = true;
+            }
+
+            if (LookForMod("BlockInjector"))
+            {
+                Debug.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
+                isBlockInjectorPresent = true;
+            }
+            if (LookForMod("PopulationInjector"))
+            {
+                Debug.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
+                isPopInjectorPresent = true;
+            }
+            if (LookForMod("AnimeAI"))
+            {
+                Debug.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
+                isAnimeAIPresent = true;
+            }
         }
     }
 }

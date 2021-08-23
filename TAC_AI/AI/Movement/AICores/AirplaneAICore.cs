@@ -290,7 +290,20 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (mind.CommanderMind == EnemyAttitude.SubNeutral)
             {   // Fly straight, above ground in player visual distance
-                pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod) + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
+                if (this.pilot.Helper.ProceedToObjective)
+                {   // Fly to target
+                    this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper);
+                    if ((this.pilot.Helper.lastDestination - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
+                    {   //We are at target
+                        pilot.AirborneDest = this.pilot.Helper.lastDestination + (this.pilot.Tank.rootBlockTrans.forward * 100);
+                    }
+                    else
+                    {
+                        pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                    }
+                }
+                else
+                    pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime * KickStart.AIClockPeriod) + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
             }
             else
             {

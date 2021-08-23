@@ -74,7 +74,7 @@ namespace TAC_AI.AI
                 foreach (TankBlock bloc in ToSave)
                 {
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.BlockType.ToString();
+                    mem.t = bloc.name;
                     mem.p = bloc.cachedLocalPosition;
                     mem.r = bloc.cachedLocalRotation.rot;
                     SavedTech.Add(mem);
@@ -95,7 +95,7 @@ namespace TAC_AI.AI
                 foreach (TankBlock bloc in overwrite)
                 {
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.BlockType.ToString();
+                    mem.t = bloc.name;
                     mem.p = bloc.cachedLocalPosition;
                     mem.r = bloc.cachedLocalRotation.rot;
                     SavedTech.Add(mem);
@@ -190,7 +190,7 @@ namespace TAC_AI.AI
                 foreach (TankBlock bloc in ToSave)
                 {
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.name; //bloc.BlockType.ToString();
+                    mem.t = bloc.name; //bloc.name;
                     mem.p = coreRot * (bloc.cachedLocalPosition - coreOffset);
                     Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
                     mem.r = new OrthoRotation(outr).rot;
@@ -223,7 +223,7 @@ namespace TAC_AI.AI
             {
                 bool attemptW = false;
                 // if we are smrt, run heavier operation
-                List<BlockMemory> posBlocks = ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.BlockType.ToString(); });
+                List<BlockMemory> posBlocks = ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.name; });
                 //Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
@@ -289,6 +289,7 @@ namespace TAC_AI.AI
                     else
                         blockCase.Append(ch);
                 }
+                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
                 //Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
                 MemoryToTech(mem);
             }
@@ -372,7 +373,7 @@ namespace TAC_AI.AI
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(bloc.BlockType))
                         continue;
                     BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.BlockType.ToString();
+                    mem.t = bloc.name;
                     mem.p = coreRot * (bloc.cachedLocalPosition - coreOffset);
                     Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
                     mem.r = new OrthoRotation(outr).rot;
@@ -437,9 +438,23 @@ namespace TAC_AI.AI
                     else
                         blockCase.Append(ch);
                 }
+                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
                 //Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
                 return mem;
             }
+        }
+        public static BlockTypes StringToBlockType(string mem)
+        {
+            if (!Enum.TryParse(mem, out BlockTypes type))
+            {
+                type = (BlockTypes)ManMods.inst.GetBlockID(mem);
+            }
+            /*
+            else if (ManMods.inst.IsModdedBlock(type))
+            {
+                type = (BlockTypes)ManMods.inst.GetBlockID(mem);
+            }*/
+            return type;
         }
         public static BlockTypes JSONToFirstBlock(string toLoad)
         {   // Loading a Tech from the BlockMemory
@@ -465,7 +480,12 @@ namespace TAC_AI.AI
                     blockCase.Append(ch);
             }
 
-            return (BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t);
+            BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t);
+            if (ManMods.inst.IsModdedBlock(type))
+            {
+                type = (BlockTypes)ManMods.inst.GetBlockID(mem.t);
+            }
+            return type;
         }
 
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
@@ -648,7 +668,7 @@ namespace TAC_AI.AI
             int toFilter = TechMemor.ReturnContents().Count();
             for (int step = 0; step < toFilter; step++)
             {
-                typesToRepair.Add((BlockTypes)Enum.Parse(typeof(BlockTypes),TechMemor.ReturnContents().ElementAt(step).t));
+                typesToRepair.Add(StringToBlockType(TechMemor.ReturnContents().ElementAt(step).t));
             }
             typesToRepair = typesToRepair.Distinct().ToList();
 
@@ -698,7 +718,7 @@ namespace TAC_AI.AI
                 TankBlock foundBlock = foundBlocks[step];
                 bool attemptW = false;
                 // if we are smrt, run heavier operation
-                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.BlockType.ToString(); });
+                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.name; });
                 //Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
@@ -793,7 +813,7 @@ namespace TAC_AI.AI
                         if (foundBlock.block.PreExplodePulse)
                             continue; //explode? no thanks
                                       //Debug.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
-                        if (TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.block.BlockType.ToString(); }).Count() > 0)
+                        if (TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.block.name; }).Count() > 0)
                         {
                             blocksNearby = true;
                             break;
@@ -1042,7 +1062,7 @@ namespace TAC_AI.AI
             int toFilter = Mem.Count();
             for (int step = 0; step < toFilter; step++)
             {
-                typesToRepair.Add((BlockTypes)Enum.Parse(typeof(BlockTypes), Mem.ElementAt(step).t));
+                typesToRepair.Add(StringToBlockType(Mem.ElementAt(step).t));
             }
             typesToRepair = typesToRepair.Distinct().ToList();
 

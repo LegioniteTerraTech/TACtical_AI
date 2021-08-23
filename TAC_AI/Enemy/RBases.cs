@@ -111,7 +111,6 @@ namespace TAC_AI.AI.Enemy
                         return false;   // Root block does not exist
                 }
                 catch { return false; }
-                return true;
             }
             return false;
         }
@@ -431,8 +430,8 @@ namespace TAC_AI.AI.Enemy
                     try
                     {
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(funds.GetActualName(name));
-                        Debug.Log("TACtical_AI: " + funds.GetActualName(name) + " |type " + type.ToString());
                         SetupBaseType(type, mind);
+                        Debug.Log("TACtical_AI: Registered base " + funds.GetActualName(name) + " |type " + type.ToString());
                         mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
                         tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
                     }

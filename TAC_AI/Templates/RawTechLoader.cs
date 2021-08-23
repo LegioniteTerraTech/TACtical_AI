@@ -27,6 +27,7 @@ namespace TAC_AI.Templates
         static bool ForceSpawn = false;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
 
+
         // Main initiation function
         internal static void TrySpawnBase(Tank tank, AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
         {
@@ -96,11 +97,15 @@ namespace TAC_AI.Templates
                     haveBB = true;
                     try
                     {
-                        WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
-                        Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Enemy HQ!", pos2);
+                        if (KickStart.DisplayEnemyEvents)
+                        {
+                            WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
 
-                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Enemy HQ!");
-                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                            Patches.PopupEnemyInfo("Enemy HQ!", pos2);
+
+                            Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Enemy HQ!");
+                            Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                        }
                     }
                     catch { }
                     break;
@@ -112,11 +117,15 @@ namespace TAC_AI.Templates
 
                     try
                     {
-                        WorldPosition pos3 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
-                        Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay("Rival!", pos3);
+                        if (KickStart.DisplayEnemyEvents)
+                        {
+                            WorldPosition pos3 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
 
-                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
-                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                            Patches.PopupEnemyInfo("Rival!", pos3);
+
+                            Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
+                            Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                        }
                     }
                     catch { }
             break;
@@ -201,7 +210,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                Debug.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -234,7 +243,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                Debug.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -260,7 +269,7 @@ namespace TAC_AI.Templates
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function - falling back to existing");
             return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, ExtraBB);
-
+            /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
@@ -268,7 +277,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: SpawnSeaBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                Debug.Log("TACtical_AI: SpawnSeaBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -289,12 +298,13 @@ namespace TAC_AI.Templates
             namesav.unprovoked = false;
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
+            */
         }
         private static int SpawnAirBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function - falling back to existing");
             return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, ExtraBB);
-
+            /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
             Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
@@ -302,7 +312,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: SpawnAirBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                Debug.Log("TACtical_AI: SpawnAirBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -323,6 +333,7 @@ namespace TAC_AI.Templates
             namesav.unprovoked = false;
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
+            */
         }
         
 
@@ -413,7 +424,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
                 if (!worked)
                 {
-                    Debug.Log("TACtical_AI: SpawnMobileTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                    Debug.Log("TACtical_AI: SpawnMobileTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return null;
                 }
                 theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
@@ -470,7 +481,7 @@ namespace TAC_AI.Templates
                     TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
                     if (!worked)
                     {
-                        Debug.Log("TACtical_AI: SpawnAttractTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                        Debug.Log("TACtical_AI: SpawnAttractTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                         return false;
                     }
                     theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
@@ -518,7 +529,7 @@ namespace TAC_AI.Templates
                 string baseBlueprint = GetBlueprint(toSpawn);
 
                 Tank theTech;
-                if (ContainsPurpose(toSpawn, BasePurpose.NotStationary))
+                if (!ContainsPurpose(toSpawn, BasePurpose.NotStationary))
                 {
                     theTech = null; //InstantTech does not handle this correctly 
                 }
@@ -527,21 +538,24 @@ namespace TAC_AI.Templates
 
                 if (theTech.IsNull())
                 {   // Generate via the failsafe method
-                    Debug.Log("TACtical_AI: SpawnSpecificTypeTech - Generation failed, falling back to slower, reliable Tech building method");
+                    //Debug.Log("TACtical_AI: SpawnSpecificTypeTech - Generation failed, falling back to slower, reliable Tech building method");
                     Vector3 position = pos;
                     Quaternion quat = Quaternion.LookRotation(facingDirect, Vector3.up);
 
                     TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
                     if (!worked)
                     {
-                        Debug.Log("TACtical_AI: SpawnSpecificTypeTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                        Debug.Log("TACtical_AI: SpawnSpecificTypeTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                         return false;
                     }
 
                     bool storeBB = !ContainsPurpose(toSpawn, BasePurpose.NotStationary) && (ContainsPurpose(toSpawn, BasePurpose.Harvesting) || ContainsPurpose(toSpawn, BasePurpose.TechProduction));
 
                     if (storeBB)
+                    {
                         theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + 5);
+                        theTech.FixupAnchors(true);
+                    }
                     else
                         theTech = TechFromBlock(block, Team, GetEnglishName(toSpawn));
 
@@ -578,7 +592,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
                 if (!worked)
                 {
-                    Debug.Log("TACtical_AI: SpawnEnemyTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                    Debug.Log("TACtical_AI: SpawnEnemyTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return null;
                 }
                 theTech = TechFromBlock(block, Team, Blueprint.techName);
@@ -627,6 +641,8 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
+                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
+                        return false;
                     if (cand.purposes.Count == 0)
                         return false;
 
@@ -710,6 +726,8 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
+                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
+                        return false;
                     if (cand.purposes.Count == 0)
                         return false;
 
@@ -859,7 +877,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(GetBlueprint(techType)), playerPos, playerFacing, out bool worked);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: StripPlayerTechOfBlocks - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                Debug.Log("TACtical_AI: StripPlayerTechOfBlocks - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return;
             }
             tech.visible.RemoveFromGame();
@@ -922,7 +940,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
                 if (!worked)
                 {
-                    Debug.Log("TACtical_AI: SpawnTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL");
+                    Debug.Log("TACtical_AI: SpawnTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return null;
                 }
 
@@ -981,7 +999,7 @@ namespace TAC_AI.Templates
         // Override
         internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat, out bool worked)
         {
-            if (Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) && TechDataAvailValidation.IsBlockAvailableInMode(type))
+            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(position) && Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) && TechDataAvailValidation.IsBlockAvailableInMode(type))
             {
                 worked = true;
 
@@ -1023,11 +1041,7 @@ namespace TAC_AI.Templates
             List<BlockMemory> mems = AIERepair.DesignMemory.JSONToTechExternal(blueprint);
             foreach (BlockMemory mem in mems)
             {
-                BlockTypes type;
-                if (Enum.TryParse(mem.t, out BlockTypes res))
-                    type = res;
-                else
-                    type = BlockTypes.GSOAIController_111;
+                BlockTypes type = AIERepair.StringToBlockType(mem.t);
                 if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) || !TechDataAvailValidation.IsBlockAvailableInMode(type))
                 {
                     Debug.Log("TACtical_AI: InstantTech - Removed " + mem.t + " as it was invalidated");
@@ -1195,6 +1209,8 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
+                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
+                        return false;
                     if (cand.Value.purposes.Count == 0)
                         return false;
                     return cand.Value.purposes.Contains(purpose);
@@ -1294,6 +1310,8 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
+                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
+                        return false;
                     if (cand.Value.purposes.Count == 0)
                         return false;
 

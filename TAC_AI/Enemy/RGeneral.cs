@@ -11,7 +11,7 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RGeneral
     {
-        static float RANDRange = 50;
+        const float RANDRange = 125;
 
         public static bool LollyGag(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool holdGround = false)
         {
@@ -102,6 +102,7 @@ namespace TAC_AI.AI.Enemy
                 switch (mind.CommanderMind)
                 {
                     case EnemyAttitude.Default: // do dumb stuff
+                    case EnemyAttitude.SubNeutral: // do dumb stuff
                         DefaultIdle(thisInst, tank, mind);
                         break;
                     case EnemyAttitude.Homing:  // Get nearest tech regardless of max combat range and attack them
@@ -143,15 +144,18 @@ namespace TAC_AI.AI.Enemy
                 thisInst.ActionPause = 0;
             }
             else if (thisInst.ActionPause == 0)
-                thisInst.ActionPause = 30;
-            thisInst.ProceedToObjective = true;
+                thisInst.ActionPause = 60;
+            if (thisInst.ActionPause > 15)
+                thisInst.ProceedToObjective = true;
+            else
+                thisInst.ProceedToObjective = false;
         }
         public static void HomingIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //Try find next target to assault
             try
             {
-                thisInst.lastEnemy = mind.FindEnemy(inRange: 500);
+                thisInst.lastEnemy = mind.FindEnemy(inRange: KickStart.EnemyExtendActionRange);
                 if (thisInst.lastEnemy == null)
                     DefaultIdle(thisInst, tank, mind);
             }
@@ -166,6 +170,17 @@ namespace TAC_AI.AI.Enemy
             final.z += UnityEngine.Random.Range(-RANDRange, RANDRange);
 
             return final;
+        }
+
+
+        public static void Scurry(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {
+            // Determines the weapons actions and aiming of the AI - Sub-Neutral (Coward)
+            //if (mind.CommanderAttack == EnemyAttack.Coward)
+            //{
+                thisInst.lastEnemy = mind.FindEnemy();
+                thisInst.DANGER = false;
+            //}
         }
 
 

@@ -153,8 +153,8 @@ namespace TAC_AI.AI.Enemy
         /// <returns></returns>
         public Visible FindEnemy(float inRange = 0, int pos = 1)
         {
-            if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
-                return null; // We NO ATTACK
+            //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
+            //    return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
             if (CommanderAttack == EnemyAttack.Spyper) inRange = SpyperMaxRange;
@@ -304,8 +304,8 @@ namespace TAC_AI.AI.Enemy
 
         public Visible FindEnemyAir(float inRange = 0, int pos = 1)
         {
-            if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
-                return null; // We NO ATTACK
+            //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
+            //    return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
             if (CommanderAttack == EnemyAttack.Spyper) inRange = SpyperMaxRange;

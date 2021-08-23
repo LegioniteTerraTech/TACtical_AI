@@ -30,6 +30,91 @@ namespace TAC_AI
 
     internal static class Patches
     {
+        /*
+        static FieldInfo panelData = typeof(FloatingTextOverlay).GetField("m_Data", BindingFlags.NonPublic | BindingFlags.Instance);
+        static FieldInfo textInput = typeof(FloatingTextPanel).GetField("m_AmountText", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        static FieldInfo listOverlays = typeof(ManOverlay).GetField("m_ActiveOverlays", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        static FieldInfo rects = typeof(FloatingTextPanel).GetField("m_Rect", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        static FieldInfo sScale = typeof(FloatingTextPanel).GetField("m_InitialScale", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        static FieldInfo scale = typeof(FloatingTextPanel).GetField("m_scaler", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        static FieldInfo CaseThis = typeof(ManOverlay).GetField("m_ConsumptionAddMoneyOverlayData", BindingFlags.NonPublic | BindingFlags.Instance);
+
+
+        private static bool savedOverlay = false;
+        private static FloatingTextOverlayData overlayEdit;
+        */
+        internal static void PopupEnemyInfo(string text, WorldPosition pos)
+        {
+            // Big mess trying to get some hard-locked code working
+            /*
+            if (!savedOverlay)
+            {
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 1");
+
+                RectTransform rTrans = new RectTransform();
+                Text texter = rTrans.gameObject.AddComponent<Text>();
+                FloatingTextOverlayData refer = (FloatingTextOverlayData)CaseThis.GetValue(ManOverlay.inst);
+
+
+
+                //texter = (Text)textInput.GetValue(refer.m_PanelPrefab);
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 2");
+
+                texter.text = "39203921";
+                texter.color = Color.red;
+                texter.fontSize = (int)((float)texter.fontSize * 10.75f);
+
+                FloatingTextPanel panel = new FloatingTextPanel();
+
+                //panel = refer.m_PanelPrefab;
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 3.5");
+                rects.SetValue(panel, rTrans);
+                sScale.SetValue(panel, Vector3.one);
+                scale.SetValue(panel, 1f);
+
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 3");
+                textInput.SetValue(panel, texter);
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 4");
+
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 5");
+                overlayEdit = new FloatingTextOverlayData();
+                overlayEdit.m_StayTime = refer.m_StayTime;
+                overlayEdit.m_MaxCameraResizeDist = refer.m_MaxCameraResizeDist;
+                overlayEdit.m_HiddenInModes = refer.m_HiddenInModes;
+                overlayEdit.m_MinCameraResizeDist = refer.m_MinCameraResizeDist;
+                overlayEdit.m_CamResizeCurve = refer.m_CamResizeCurve;
+                overlayEdit.m_AboveDist = refer.m_AboveDist;
+                overlayEdit.m_PanelPrefab = panel;
+
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 4");
+                savedOverlay = true;
+            }
+
+            FloatingTextOverlay fOverlay = new FloatingTextOverlay(overlayEdit);
+
+            fOverlay.Set(text, pos);
+
+            FloatingTextOverlayData textCase = (FloatingTextOverlayData)CaseThis.GetValue(ManOverlay.inst);
+            if (textCase.VisibleInCurrentMode && fOverlay != null)
+            {
+                List<Overlay> over = (List<Overlay>)listOverlays.GetValue(ManOverlay.inst);
+                over.Add(fOverlay);
+                listOverlays.SetValue(ManOverlay.inst, over);
+                Debug.Log("TACtical_AI: PopupEnemyInfo - Force inserted popup");
+            }
+            Debug.Log("TACtical_AI: PopupEnemyInfo - Threw popup \"" + text + "\"");
+            */
+
+            ManOverlay.inst.AddFloatingTextOverlay(text, pos);
+        }
+
+
+
         // Where it all happens
         [HarmonyPatch(typeof(ModuleTechController))]
         [HarmonyPatch("ExecuteControl")]//On Control
@@ -187,9 +272,13 @@ namespace TAC_AI
             private static bool Prefix(ModeAttract __instance)
             {
                 // Testing
-                bool caseOverride = true;
+                bool caseOverride = false;
                 AttractType outNum = AttractType.Harvester;
 
+#if DEBUG
+#else
+                caseOverride = false;
+#endif
 
                 if (UnityEngine.Random.Range(1, 100) > 20 || KickStart.retryForBote == 1 || caseOverride)
                 {
@@ -796,18 +885,20 @@ namespace TAC_AI
                     if (pog.currentRecipe.m_OutputType == RecipeTable.Recipe.OutputType.Money && sellStolen.GetValue(__instance) == null)
                     {
                         int sellGain = pog.currentRecipe.m_MoneyOutput;
-
-                        WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
-                        Singleton.Manager<ManOverlay>.inst.AddFloatingTextOverlay(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
-                        if (Singleton.Manager<ManNetwork>.inst.IsServer)
+                        if (KickStart.DisplayEnemyEvents)
                         {
-                            PopupNumberMessage message = new PopupNumberMessage
+                            WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
+                            PopupEnemyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
+                            if (Singleton.Manager<ManNetwork>.inst.IsServer)
                             {
-                                m_Type = PopupNumberMessage.Type.Money,
-                                m_Number = sellGain,
-                                m_Position = pos
-                            };
-                            Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
+                                PopupNumberMessage message = new PopupNumberMessage
+                                {
+                                    m_Type = PopupNumberMessage.Type.Money,
+                                    m_Number = sellGain,
+                                    m_Position = pos
+                                };
+                                Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
+                            }
                         }
                         valid.AddBuildBucks(sellGain);
                     }
