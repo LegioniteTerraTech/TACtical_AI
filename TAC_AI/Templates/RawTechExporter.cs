@@ -242,14 +242,16 @@ namespace TAC_AI.Templates
             Cleaned = CleanNames(toClean, false);
             return Cleaned;
         }
-        internal static int GetTechCounts(string altDirectoryFromBaseDirectory = null)
+        internal static int GetTechCounts()
         {
-            string search;
-            if (altDirectoryFromBaseDirectory == null)
-                search = RawTechsDirectory + "\\Enemies";
-            else
-                search = BaseDirectory + "\\" + altDirectoryFromBaseDirectory;
-            return Directory.GetFiles(search).ToList().Count;
+            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + "\\Enemies");
+            int techCount = 0;
+            Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
+            foreach (string Dir in Dirs)
+            {
+                techCount += GetTechNameListDir(Dir).Count;
+            }
+            return techCount;
         }
 
         private static List<string> CleanNames(List<string> FolderDirectories, bool excludeJSON)

@@ -21,7 +21,7 @@ namespace TAC_AI
         private static AIECore.TankAIHelper lastTank;
 
         private static GameObject GUIWindow;
-        private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
+        private static Rect HotWindow = new Rect(0, 0, 200, 240);   // the "window"
         private static float xMenu = 0;
         private static float yMenu = 0;
 
@@ -97,17 +97,17 @@ namespace TAC_AI
             changeAI = fetchAI;
             if (lastTank != null)
             {
-                if (GUI.Button(new Rect(20, 40, 80, 30), fetchAI == AIType.Escort ? "<color=#f23d3dff>TANK</color>" : "Tank"))
+                if (GUI.Button(new Rect(20, 30, 80, 30), fetchAI == AIType.Escort ? new GUIContent("<color=#f23d3dff>TANK</color>", "ACTIVE") : new GUIContent("Tank", "Avoids Water")))
                 {
                     changeAI = AIType.Escort;
                     clicked = true;
                 }
-                if (GUI.Button(new Rect(100, 40, 80, 30), fetchAI == AIType.MTSlave ? "<color=#f23d3dff>SLAVE</color>" : "Slave"))
+                if (GUI.Button(new Rect(100, 30, 80, 30), fetchAI == AIType.MTSlave ? new GUIContent("<color=#f23d3dff>SLAVE</color>", "ACTIVE") : new GUIContent("Slave", "Fire at targets")))
                 {
                     changeAI = AIType.MTSlave;
                     clicked = true;
                 }
-                if (GUI.Button(new Rect(20, 70, 80, 30), lastTank.isAssassinAvail ? fetchAI == AIType.Assault ? "<color=#f23d3dff>KILL</color>" : "Kill" : "<color=#808080ff>kill</color>"))
+                if (GUI.Button(new Rect(20, 60, 80, 30), lastTank.isAssassinAvail ? fetchAI == AIType.Assault ? new GUIContent("<color=#f23d3dff>KILL</color>", "ACTIVE") : new GUIContent("Kill", "Needs Charging Base") : new GUIContent("<color=#808080ff>kill</color>", "Need HE AI")))
                 {
                     if (lastTank.isAssassinAvail)
                     {
@@ -115,12 +115,12 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                if (GUI.Button(new Rect(100, 70, 80, 30), fetchAI == AIType.MTTurret ? "<color=#f23d3dff>TURRET</color>" : "Turret"))
+                if (GUI.Button(new Rect(100, 60, 80, 30), fetchAI == AIType.MTTurret ? new GUIContent("<color=#f23d3dff>TURRET</color>", "ACTIVE") : new GUIContent("Turret", "Aim, then fire")))
                 {
                     changeAI = AIType.MTTurret;
                     clicked = true;
                 }
-                if (GUI.Button(new Rect(20, 100, 80, 30), lastTank.isAegisAvail ? fetchAI == AIType.Aegis ? "<color=#f23d3dff>PROTECT</color>" : "Protect" : "<color=#808080ff>protect</color>"))
+                if (GUI.Button(new Rect(20, 90, 80, 30), lastTank.isAegisAvail ? fetchAI == AIType.Aegis ? new GUIContent("<color=#f23d3dff>PROTECT</color>", "ACTIVE") : new GUIContent("Protect","Follow Closest Ally") : new GUIContent("<color=#808080ff>protect</color>", "Need GSO AI")))
                 {
                     if (lastTank.isAegisAvail)
                     {
@@ -128,12 +128,12 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                if (GUI.Button(new Rect(100, 100, 80, 30), fetchAI == AIType.MTMimic ? "<color=#f23d3dff>MIMIC</color>" : "Mimic"))
+                if (GUI.Button(new Rect(100, 90, 80, 30), fetchAI == AIType.MTMimic ? new GUIContent("<color=#f23d3dff>MIMIC</color>", "ACTIVE") : new GUIContent("Mimic", "Copy closest Tech")))
                 {
                     changeAI = AIType.MTMimic;
                     clicked = true;
                 }
-                if (GUI.Button(new Rect(20, 130, 80, 30), lastTank.isProspectorAvail ? fetchAI == AIType.Prospector ? "<color=#f23d3dff>MINER</color>" : "Miner" : "<color=#808080ff>miner</color>"))
+                if (GUI.Button(new Rect(20, 120, 80, 30), lastTank.isProspectorAvail ? fetchAI == AIType.Prospector ? new GUIContent("<color=#f23d3dff>MINER</color>", "ACTIVE") : new GUIContent("Miner", "Needs Receiver Base") : new GUIContent("<color=#808080ff>miner</color>", "Need GSO or GC AI")))
                 {
                     if (lastTank.isProspectorAvail)
                     {
@@ -141,7 +141,7 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                if (GUI.Button(new Rect(100, 130, 80, 30), lastTank.isAviatorAvail ? fetchAI == AIType.Aviator ? "<color=#f23d3dff>PILOT</color>" : "Pilot" : "<color=#808080ff>pilot</color>"))
+                if (GUI.Button(new Rect(100, 120, 80, 30), lastTank.isAviatorAvail ? fetchAI == AIType.Aviator ? new GUIContent("<color=#f23d3dff>PILOT</color>", "ACTIVE") : new GUIContent("Pilot", "Fly Plane or Heli") : new GUIContent("<color=#808080ff>pilot</color>", "Need HE or VEN AI")))
                 {
                     if (lastTank.isAviatorAvail)
                     {
@@ -150,12 +150,12 @@ namespace TAC_AI
                     }
                 }
                 //placeholder
-                if (GUI.Button(new Rect(20, 160, 80, 30), "<color=#808080ff>wip</color>"))
+                if (GUI.Button(new Rect(20, 150, 80, 30), new GUIContent("<color=#808080ff>wip</color>", "")))
                 {
                 }
                 /*
                 // N/A!
-                if (GUI.Button(new Rect(20, 160, 80, 30), lastTank.isScrapperAvail ? fetchAI == AI.AIEnhancedCore.DediAIType.Scrapper ? "<color=#f23d3dff>FETCH</color>" : "Fetch" : "<color=#808080ff>fetch</color>"))
+                if (GUI.Button(new Rect(20, 150, 80, 30), lastTank.isScrapperAvail ? fetchAI == AI.AIEnhancedCore.DediAIType.Scrapper ? "<color=#f23d3dff>FETCH</color>" : "Fetch" : "<color=#808080ff>fetch</color>"))
                 {
                     if (lastTank.isScrapperAvail)
                     {
@@ -164,7 +164,7 @@ namespace TAC_AI
                     }
                 }
                 */
-                if (GUI.Button(new Rect(100, 160, 80, 30), lastTank.isBuccaneerAvail && KickStart.isWaterModPresent ? fetchAI == AIType.Buccaneer ? "<color=#f23d3dff>SHIP</color>" : "Ship" : "<color=#808080ff>ship</color>"))
+                if (GUI.Button(new Rect(100, 150, 80, 30), lastTank.isBuccaneerAvail && KickStart.isWaterModPresent ? fetchAI == AIType.Buccaneer ? new GUIContent("<color=#f23d3dff>SHIP</color>", "ACTIVE") : new GUIContent("Ship", "Stay in water") : new GUIContent("<color=#808080ff>ship</color>", "Need GSO or VEN AI")))
                 {
                     if (lastTank.isBuccaneerAvail && KickStart.isWaterModPresent)
                     {
@@ -172,7 +172,7 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                if (GUI.Button(new Rect(20, 190, 80, 30), lastTank.isEnergizerAvail ? fetchAI == AIType.Energizer ? "<color=#f23d3dff>CHARGER</color>" : "Charger" : "<color=#808080ff>charger</color>"))
+                if (GUI.Button(new Rect(20, 180, 80, 30), lastTank.isEnergizerAvail ? fetchAI == AIType.Energizer ? new GUIContent("<color=#f23d3dff>CHARGER</color>", "ACTIVE") : new GUIContent("Charger", "Need Charge Base & Charger") : new GUIContent("<color=#808080ff>charger</color>", "Need GC AI")))
                 {
                     if (lastTank.isEnergizerAvail)
                     {
@@ -180,7 +180,7 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                if (GUI.Button(new Rect(100, 190, 80, 30), lastTank.isAstrotechAvail ? fetchAI == AIType.Astrotech ? "<color=#f23d3dff>SPACE</color>" : "Space" : "<color=#808080ff>space</color>"))
+                if (GUI.Button(new Rect(100, 180, 80, 30), lastTank.isAstrotechAvail ? fetchAI == AIType.Astrotech ? new GUIContent("<color=#f23d3dff>SPACE</color>", "ACTIVE") : new GUIContent("Space", "Fly above") : new GUIContent("<color=#808080ff>space</color>", "Need BF AI")))
                 {
                     if (lastTank.isAstrotechAvail)
                     {
@@ -188,6 +188,7 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
+                GUI.Label(new Rect(20, 210, 160, 20), GUI.tooltip);
                 if (clicked)
                 {
                     SetOption(changeAI);
@@ -239,7 +240,7 @@ namespace TAC_AI
             Debug.Log("TACtical_AI: Opened AI menu!");
             fetchAI = lastTank.DediAI;
             isCurrentlyOpen = true;
-            HotWindow = new Rect(xMenu, yMenu, 200, 230);
+            HotWindow = new Rect(xMenu, yMenu, 200, 250);
             windowTimer = 120;
             GUIWindow.SetActive(true);
         }

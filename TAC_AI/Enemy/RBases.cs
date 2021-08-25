@@ -11,11 +11,10 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RBases
     {
-        const int MinimumBBRequired = 10000;
-        const int MaxBasesPerTeam = 12;
-        const int MaxSingleBaseType = 4;
-        const int MaxDefenses = 8;
-        const int MaxAutominers = 6;
+        const int MinimumBBRequired = 10000; // Before expanding
+        private static int MaxSingleBaseType { get { return KickStart.MaxBasesPerTeam / 3; } }
+        private static int MaxDefenses { get { return KickStart.MaxBasesPerTeam * (2 / 3); } }
+        private static int MaxAutominers { get { return KickStart.MaxBasesPerTeam / 2; } }
 
 
         public static List<EnemyBaseFunder> EnemyBases = new List<EnemyBaseFunder>();
@@ -113,6 +112,14 @@ namespace TAC_AI.AI.Enemy
                 catch { return false; }
             }
             return false;
+        }
+        public static void TryAddMoney(int amount, int Team)
+        {
+            EnemyBaseFunder funds = GetTeamFunder(Team);
+            if (funds.IsNotNull())
+            {
+                funds.AddBuildBucks(amount);
+            }
         }
         public static int GetEnemyHQCount()
         {
@@ -238,6 +245,7 @@ namespace TAC_AI.AI.Enemy
                 if (buildBucks == 5000)
                     buildBucks = GetBuildBucksFromName();
                 EnemyBases.Add(this);
+                PoolTeamMoney(tank.Team);
             }
             public void OnRecycle(Tank tank)
             {
@@ -546,6 +554,8 @@ namespace TAC_AI.AI.Enemy
         // Base Operations
         public static void ImTakingThatExpansion(EnemyMind mind, EnemyBaseFunder funds)
         {   // Expand the base!
+            if (!KickStart.AllowEnemyBaseExpand)
+                return;
             try
             {
                 if (SpecialAISpawner.IsAttract)
@@ -556,13 +566,12 @@ namespace TAC_AI.AI.Enemy
 
                 Tank tech = mind.AIControl.tank;
 
-                if (UnityEngine.Random.Range(1, 10) == 1)
+                if (UnityEngine.Random.Range(1, 100) < 7)
                 {
-                    PoolTeamMoney(tech.Team);
                     AllTeamTechsBuildRequest(tech.Team);
                 }
 
-                if (GetTeamBaseCount(tech.Team) >= MaxBasesPerTeam)
+                if (GetTeamBaseCount(tech.Team) >= KickStart.MaxBasesPerTeam)
                     return;
 
                 int grade = 99;

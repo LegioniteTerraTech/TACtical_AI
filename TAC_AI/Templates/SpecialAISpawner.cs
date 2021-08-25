@@ -357,6 +357,7 @@ namespace TAC_AI.Templates
 
         private static void ManagePooledAIs()
         {   // 
+            ManagePooledEradicators();
             ManagePooledAirborneAI();
         }
         private static void ManagePooledEradicators()
@@ -437,15 +438,30 @@ namespace TAC_AI.Templates
         {   // 
             foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
             {
-                if (tech.GetComponent<AIECore.TankAIHelper>() && tech.IsPopulation)
+                try
                 {
-                    if (tech.GetComponent<AIECore.TankAIHelper>().MovementController is AIControllerAir || tech.GetComponent<EnemyMind>().EvilCommander == EnemyHandling.Starship)
+                    if (tech.GetComponent<AIECore.TankAIHelper>() && tech.IsPopulation)
                     {
-                        TrackedAirborneAI newAir = new TrackedAirborneAI();
-                        newAir.Setup(tech);
-                        AirPool.Add(newAir);
+                        bool IsAirBorne = false;
+                        if (tech.GetComponent<EnemyMind>())
+                            if (tech.GetComponent<EnemyMind>().EvilCommander == EnemyHandling.Starship)
+                                IsAirBorne = true;
+                        if (tech.GetComponent<AIECore.TankAIHelper>().MovementController is AIControllerAir || IsAirBorne)
+                        {
+                            try
+                            {
+                                TrackedAirborneAI newAir = new TrackedAirborneAI();
+                                newAir.Setup(tech);
+                                AirPool.Add(newAir);
+                            }
+                            catch
+                            {
+                                Debug.Log("TACtical_AI: SpecialAISpawner - Error on handling enemy airborne AI pool");
+                            }
+                        }
                     }
                 }
+                catch { }
             }
         }
 

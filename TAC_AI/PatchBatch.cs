@@ -875,9 +875,38 @@ namespace TAC_AI
         {
             static readonly FieldInfo progress = typeof(ModuleItemConsume).GetField("m_ConsumeProgress", BindingFlags.NonPublic | BindingFlags.Instance);
             static readonly FieldInfo sellStolen = typeof(ModuleItemConsume).GetField("m_OperateItemInterceptedBy", BindingFlags.NonPublic | BindingFlags.Instance);
-            
+
             private static void Prefix(ModuleItemConsume __instance)
             {
+                if (ManNetwork.IsHost || !ManNetwork.IsNetworked)
+                {
+                    ModuleItemConsume.Progress pog = (ModuleItemConsume.Progress)progress.GetValue(__instance);
+                    if (pog.currentRecipe.m_OutputType == RecipeTable.Recipe.OutputType.Money && sellStolen.GetValue(__instance) == null)
+                    {
+                        int sellGain = (int)(pog.currentRecipe.m_MoneyOutput * KickStart.EnemySellGainModifier);
+                        if (KickStart.DisplayEnemyEvents)
+                        {
+                            WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
+                            PopupEnemyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
+                            if (Singleton.Manager<ManNetwork>.inst.IsServer)
+                            {
+                                PopupNumberMessage message = new PopupNumberMessage
+                                {
+                                    m_Type = PopupNumberMessage.Type.Money,
+                                    m_Number = sellGain,
+                                    m_Position = pos
+                                };
+                                Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
+                            }
+                        }
+                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                    }
+                }
+            }
+            /* Legacy
+            private static void Prefix(ModuleItemConsume __instance)
+            {
+
                 var valid = __instance.transform.root.GetComponent<RBases.EnemyBaseFunder>();
                 if ((bool)valid && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
                 {
@@ -900,7 +929,56 @@ namespace TAC_AI
                                 Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
                             }
                         }
-                        valid.AddBuildBucks(sellGain);
+                        valid.AddBuildBucks((int)(sellGain * KickStart.EnemySellGainModifier));
+                    }
+                }
+            }*/
+        }
+
+        [HarmonyPatch(typeof(ModuleHeart))]
+        [HarmonyPatch("UpdatePickupTargets")]//On Creation
+        private static class LetEnemiesSCUStuff
+        {
+            static FieldInfo PNR = typeof(ModuleHeart).GetField("m_EventHorizonRadius", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static void Prefix(ModuleHeart __instance)
+            {
+                var valid = __instance.GetComponent<ModuleItemHolder>();
+                var valid2 = __instance.transform.root.GetComponent<RBases.EnemyBaseFunder>();
+                if (valid && valid2)
+                {
+                    int team = __instance.block.tank.Team;
+                    if (ManSpawn.IsEnemyTeam(team))
+                    {
+                        ModuleItemHolder.Stack stack = valid.SingleStack;
+                        Vector3 vec = stack.BasePosWorld();
+                        for (int num = stack.items.Count - 1; num >= 0; num--)
+                        {
+                            Visible vis = stack.items[num];
+                            if (!vis.IsPrePickup && vis.block)
+                            {
+                                float magnitude = (vis.centrePosition - vec).magnitude;
+                                if (magnitude <= (float)PNR.GetValue(__instance) && Singleton.Manager<ManPointer>.inst.DraggingItem != vis)
+                                {
+                                    int sellGain = (int)(KickStart.EnemySellGainModifier * Singleton.Manager<RecipeManager>.inst.GetBlockSellPrice(vis.block.BlockType));
+                                    if (KickStart.DisplayEnemyEvents)
+                                    {
+                                        WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
+                                        PopupEnemyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
+                                        if (Singleton.Manager<ManNetwork>.inst.IsServer)
+                                        {
+                                            PopupNumberMessage message = new PopupNumberMessage
+                                            {
+                                                m_Type = PopupNumberMessage.Type.Money,
+                                                m_Number = sellGain,
+                                                m_Position = pos
+                                            };
+                                            Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
+                                        }
+                                    }
+                                    RBases.TryAddMoney(sellGain, team);
+                                }
+                            }
+                        }
                     }
                 }
             }

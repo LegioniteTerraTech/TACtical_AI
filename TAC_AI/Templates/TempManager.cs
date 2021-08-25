@@ -10,8 +10,17 @@ namespace TAC_AI.Templates
 {
     public static class TempManager
     {
+        private static int lastExtCount = 0;
+
         public static void ValidateAllStringTechs()
         {
+            List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> preCompile = new List<KeyValuePair<SpawnBaseTypes, BaseTemplate>>();
+
+            preCompile.AddRange(CommunityStorage.ReturnAllCommunityStored());
+            preCompile.AddRange(TempStorage.techBasesPrefab);
+
+            TempStorage.techBasesAll = preCompile.ToDictionary(x => x.Key, x => x.Value);
+
             techBases = new Dictionary<SpawnBaseTypes, BaseTemplate>();
             foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in TempStorage.techBasesAll)
             {
@@ -24,23 +33,31 @@ namespace TAC_AI.Templates
                     Debug.Log("TACtical AIs: Could not load " + pair.Value.techName + " as it contained missing blocks");
                 }
             }
+
             TempStorage.techBasesAll.Clear(); // GC, do your duty
+            CommunityStorage.UnloadRemainingUnused();
+
             ValidateAndAddAllExternalTechs();
         }
         public static void ValidateAndAddAllExternalTechs()
         {
             ExternalEnemyTechs = new List<BaseTemplate>();
-            List<BaseTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
-            foreach (BaseTemplate raw in ExternalTechsRaw)
+            int tCount = RawTechExporter.GetTechCounts();
+            if (tCount != lastExtCount)
             {
-                if (ValidateBlocksInTech(raw.savedTech))
+                List<BaseTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
+                foreach (BaseTemplate raw in ExternalTechsRaw)
                 {
-                    ExternalEnemyTechs.Add(raw);
+                    if (ValidateBlocksInTech(raw.savedTech))
+                    {
+                        ExternalEnemyTechs.Add(raw);
+                    }
+                    else
+                    {
+                        Debug.Log("TACtical AIs: Could not load " + raw.techName + " as it contained missing blocks");
+                    }
                 }
-                else
-                {
-                    Debug.Log("TACtical AIs: Could not load " + raw.techName + " as it contained missing blocks");
-                }
+                lastExtCount = tCount;
             }
         }
 

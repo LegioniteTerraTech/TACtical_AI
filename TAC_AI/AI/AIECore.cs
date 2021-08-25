@@ -87,20 +87,23 @@ namespace TAC_AI.AI
             for (int step = 0; step < run; step++)
             {
                 var trans = Minables.ElementAt(step);
-                if (!trans.gameObject.GetComponent<ResourceDispenser>().IsDeactivated)
+                if (trans.isActive)
                 {
-                    //Debug.Log("TACtical_AI:Skipped over inactive");
-                    if (!trans.gameObject.GetComponent<Damageable>().Invulnerable)
+                    if (!trans.GetComponent<ResourceDispenser>().IsDeactivated)
                     {
-                        //Debug.Log("TACtical_AI: Skipped over invincible");
-                        float temp = (trans.centrePosition - tankPos).sqrMagnitude;
-                        if (bestValue > temp && temp != 0)
+                        //Debug.Log("TACtical_AI:Skipped over inactive");
+                        if (!trans.GetComponent<Damageable>().Invulnerable)
                         {
-                            theResource = trans;
-                            fired = true;
-                            bestValue = temp;
+                            //Debug.Log("TACtical_AI: Skipped over invincible");
+                            float temp = (trans.centrePosition - tankPos).sqrMagnitude;
+                            if (bestValue > temp && temp != 0)
+                            {
+                                theResource = trans;
+                                fired = true;
+                                bestValue = temp;
+                            }
+                            continue;
                         }
-                        continue;
                     }
                 }
                 Minables.Remove(trans);//it's invalid and must be destroyed

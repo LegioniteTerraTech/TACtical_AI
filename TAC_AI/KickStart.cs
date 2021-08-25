@@ -34,6 +34,7 @@ namespace TAC_AI
         internal static int MaxEnemyWorldCapacity { get { return AIPopMaxLimit + (AIPopMaxLimit / 2); } }// How many techs that can exist brfore giving up?
         internal static int MaxEnemyBaseLimit = 3;  // How many different enemy team bases are allowed to exist in one instance
         internal static int MaxEnemyHQLimit = 1;    // How many HQs are allowed to exist in one instance
+        internal static int MaxBasesPerTeam = 6;    // How many base expansions can a single team perform?
         public static int AIClockPeriod = 5;        // How frequently we update
 
         public static bool EnableBetterAI = true;
@@ -45,12 +46,14 @@ namespace TAC_AI
         public static bool enablePainMode = true;
         public static bool EnemiesHaveCreativeInventory = false;
         public static bool AllowEnemiesToStartBases = true;
+        public static bool AllowEnemyBaseExpand = true;
         public static bool AllowLandOverrideEnemies = true;
         public static bool AllowAirEnemiesToSpawn = true;
         public static bool AllowSeaEnemiesToSpawn = true;
         public static bool TryForceOnlyPlayerSpawns = false;
         public static bool DesignsToLog = false;
         public static bool CommitDeathMode = false;
+        public static float EnemySellGainModifier = 1; // multiply enemy sell gains by this value
 
         //public static bool DestroyTreesInWater = false;
 
@@ -97,12 +100,16 @@ namespace TAC_AI
 
         public static int lastPlayerTechPrice = 0;
         public static int EnemySpawnPriceMatching {
-            get {
+            get 
+            {
+                if (CommitDeathMode)
+                    return int.MaxValue; // allow EVERYTHING
                 if (Singleton.playerTank.IsNotNull())
                 {
                     lastPlayerTechPrice = RawTechExporter.GetBBCost(Singleton.playerTank);
                 }
                 int priceMax = (int)((((float)(Difficulty + 50) / 100) + 0.5f) * lastPlayerTechPrice);
+                // Easiest results in 50% max player cost spawns, Hardest results in 250% max player cost spawns, Regular is is 150% max player cost spawns.
                 return Mathf.Max(lastPlayerTechPrice / 2, priceMax);
             }
         }
@@ -122,6 +129,8 @@ namespace TAC_AI
         public static OptionRange blockRecoveryChance;
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
+        public static OptionToggle enemyBaseExpand;
+        public static OptionRange enemyExpandLim;
         public static OptionToggle enemyLandSpawn;
         public static OptionToggle enemyAirSpawn;
         public static OptionToggle enemySeaSpawn;
@@ -184,19 +193,23 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
+            thisModConfig.BindConfig<KickStart>(null, "AllowEnemyBaseExpand");
+            thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
             thisModConfig.BindConfig<KickStart>(null, "AllowLandOverrideEnemies");
             thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
             //thisModConfig.BindConfig<KickStart>(null, "AllowOverleveledBlockDrops");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
             thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
             thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
-            if (!isPopInjectorPresent)
-                OverrideEnemyMax();
             thisModConfig.BindConfig<KickStart>(null, "TryForceOnlyPlayerSpawns");
             thisModConfig.BindConfig<KickStart>(null, "CommitDeathMode");
+            thisModConfig.BindConfig<KickStart>(null, "EnemySellGainModifier");
 
 
-            var TACAI = ModName + " - General";
+            if (!isPopInjectorPresent)
+                OverrideEnemyMax();
+
+            var TACAI = ModName;
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF to uninstall and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
@@ -215,33 +228,38 @@ namespace TAC_AI
             exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; thisModConfig.WriteConfigJsonFile(); });
 
 
-            var TACAIEnemies = ModName + " - Enemies";
+            var TACAIEnemies = ModName + " - Enemies General";
             painfulEnemies = new OptionToggle("<b>Rebuilt Enemies</b>", TACAIEnemies, enablePainMode);
             painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
-            enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            enemyBaseCount = new OptionRange("Max Enemy Base Count", TACAIEnemies, MaxEnemyBaseLimit, 1, 6, 1);
-            enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
+            enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyBaseCount = new OptionRange("Max Enemy Bases", TACAIEnemies, MaxEnemyBaseLimit, 1, 6, 1);
+            enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyBaseExpand = new OptionToggle("Enemy Bases Can Expand", TACAIEnemies, AllowEnemyBaseExpand);
+            enemyBaseExpand.onValueSaved.AddListener(() => { AllowEnemyBaseExpand = enemyBaseExpand.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyExpandLim = new OptionRange("Max Enemy Base Expansions", TACAIEnemies, MaxBasesPerTeam, 3, 12, 3);
+            enemyExpandLim.onValueSaved.AddListener(() => { MaxBasesPerTeam = (int)enemyExpandLim.SavedValue; thisModConfig.WriteConfigJsonFile(); });
 
             if (!isPopInjectorPresent)
             {
-                enemyMaxCount = new OptionRange("Max Wild Enemies Permitted", TACAIEnemies, AIPopMaxLimit, 6, 16, 1);
+                var TACAIEnemiesPop = ModName + " - Enemies Populator";
+                enemyMaxCount = new OptionRange("Max Wild Enemies Permitted", TACAIEnemiesPop, AIPopMaxLimit, 6, 16, 1);
                 enemyMaxCount.onValueSaved.AddListener(() => { 
                     AIPopMaxLimit = (int)enemyMaxCount.SavedValue; 
                     thisModConfig.WriteConfigJsonFile();
                     OverrideEnemyMax();
                 });
-                enemyLandSpawn = new OptionToggle("Custom Land Enemies", TACAIEnemies, AllowLandOverrideEnemies);
+                enemyLandSpawn = new OptionToggle("Custom Land Enemies", TACAIEnemiesPop, AllowLandOverrideEnemies);
                 enemyLandSpawn.onValueSaved.AddListener(() => { AllowLandOverrideEnemies = enemyLandSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                landEnemyChangeChance = new OptionRange("Custom Land Enemy Chance", TACAIEnemies, LandEnemyReplaceChance, 0, 100, 5);
+                landEnemyChangeChance = new OptionRange("Custom Land Enemy Chance", TACAIEnemiesPop, LandEnemyReplaceChance, 0, 100, 5);
                 landEnemyChangeChance.onValueSaved.AddListener(() => { LandEnemyReplaceChance = (int)landEnemyChangeChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemies, AllowAirEnemiesToSpawn);
+                enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemiesPop, AllowAirEnemiesToSpawn);
                 enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemies, AllowSeaEnemiesToSpawn);
+                enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemiesPop, AllowSeaEnemiesToSpawn);
                 enemySeaSpawn.onValueSaved.AddListener(() => { AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                ragnarok = new OptionToggle("<b>Ragnarok - Death To All</b> - Requires Beefy Computer", TACAIEnemies, CommitDeathMode);
+                ragnarok = new OptionToggle("<b>Ragnarok - Death To All</b> - Requires Beefy Computer", TACAIEnemiesPop, CommitDeathMode);
                 ragnarok.onValueSaved.AddListener(() => {
                     CommitDeathMode = ragnarok.SavedValue;
                     OverrideManPop.ChangeToRagnarokPop(CommitDeathMode);
@@ -258,6 +276,7 @@ namespace TAC_AI
         public static void DelayedBaseLoader()
         {
             Debug.Log("TACtical_AI: LAUNCHED MODDED BLOCKS BASE VALIDATOR");
+            AIERepair.ConstructErrorBlocksList();
             TempManager.ValidateAllStringTechs();
             DebugRawTechSpawner.Initiate();
             firedAfterBlockInjector = true;
@@ -265,6 +284,7 @@ namespace TAC_AI
         public static void InstantBaseLoader()
         {
             Debug.Log("TACtical_AI: LAUNCHED BASE VALIDATOR");
+            AIERepair.ConstructErrorBlocksList();
             TempManager.ValidateAllStringTechs();
             DebugRawTechSpawner.Initiate();
         }
@@ -281,7 +301,7 @@ namespace TAC_AI
 
         public static bool LookForMod(string name)
         {
-            foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 if (assembly.FullName.StartsWith(name))
                 {

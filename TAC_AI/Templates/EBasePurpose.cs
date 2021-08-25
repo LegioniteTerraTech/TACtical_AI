@@ -36,7 +36,7 @@ namespace TAC_AI.Templates
         Autominer,      // Can mine unlimited BB (DO NOT ATTACH THIS TAG TO HQs!!!)
         TechProduction, // Base with Explosive Bolts attached
         Headquarters,   // Calls in techs from orbit using funds
-        MPSafe,         // Has no MP blocked crafting blocks
+        MPUnsafe,       // MP blocked crafting blocks
         HasReceivers,   // Has receivers
         NotStationary,  // Mobile Tech
         NoAutoSearch,   // Reserved for Attract

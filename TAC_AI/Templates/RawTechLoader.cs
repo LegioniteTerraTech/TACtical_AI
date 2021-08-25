@@ -1172,6 +1172,21 @@ namespace TAC_AI.Templates
             }
             return can;
         }
+        internal static bool ShouldDetonateBoltsNow(EnemyMind mind)
+        {
+            bool can = true;
+            SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
+            if (type != SpawnBaseTypes.NotAvail)
+            {
+                TempManager.techBases.TryGetValue(type, out BaseTemplate val);
+                can = val.deployBoltsASAP;
+            }
+            else if (TempManager.ExternalEnemyTechs.Exists(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }))
+            {
+                can = TempManager.ExternalEnemyTechs.Find(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }).deployBoltsASAP;
+            }
+            return can;
+        }
         internal static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
         {
             return TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT);
@@ -1201,7 +1216,7 @@ namespace TAC_AI.Templates
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !cand.Value.purposes.Contains(BasePurpose.MPSafe))
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
                     {   // no illegal base in MP
                         return false;
                     }
@@ -1302,7 +1317,7 @@ namespace TAC_AI.Templates
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !cand.Value.purposes.Contains(BasePurpose.MPSafe))
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
                     {   // no illegal base in MP
                         return false;
                     }
@@ -1410,7 +1425,7 @@ namespace TAC_AI.Templates
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && !cand.Value.purposes.Contains(BasePurpose.MPSafe))
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
                     {   // no illegal base in MP
                         return false;
                     }
@@ -1544,12 +1559,12 @@ namespace TAC_AI.Templates
         private static bool IsRadiusClearOfTechObst(Tank tank, Vector3 pos, float radius)
         {
             bool validLocation = true;
-            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle })))
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[2] { ObjectTypes.Vehicle, ObjectTypes.Scenery })))
             {
-                if (vis.tank.IsNotNull())
+                if (vis.isActive)
                 {
-                    if (vis.tank != tank)
-                        validLocation = false;
+                    //if (vis.tank != tank)
+                    validLocation = false;
                 }
             }
             return validLocation;

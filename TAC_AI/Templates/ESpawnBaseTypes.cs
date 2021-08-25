@@ -150,6 +150,17 @@ namespace TAC_AI.Templates
         // Space
         GSOSpaceshipMini,
         GSOSpaceshipCompact,
+        
+        //-----------
+        // COMMUNITY
+        //-----------
+        // Land Techs
+        Chungmus,
+        TidusJ,
+        U1T1M4T3P4RTYBUSSS,
+
+        // Eradicators
+        Invulnerable2,
     }
 
 }

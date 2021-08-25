@@ -33,15 +33,19 @@ namespace TAC_AI.AI.Enemy
         public static void ScarePlayer(Tank tank)
         {
             //Debug.Log("TACtical_AI: enemy AI active!");
-            var tonk = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
-            if (tonk.IsNotNull())
+            try
             {
-                bool player = tonk.tank.IsPlayer;
-                if (player)
+                var tonk = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                if (tonk.IsNotNull())
                 {
-                    Singleton.Manager<ManMusic>.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, tonk.tank);
+                    bool player = tonk.tank.IsPlayer;
+                    if (player)
+                    {
+                        Singleton.Manager<ManMusic>.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, tonk.tank);
+                    }
                 }
             }
+            catch { }
         }
 
         // Begin the AI tree
@@ -609,6 +613,11 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                     Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + toSet.EvilCommander.ToString() + " based enemy with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+
+                if (RawTechLoader.ShouldDetonateBoltsNow(toSet) && tank.FirstUpdateAfterSpawn)
+                {
+                    tank.control.DetonateExplosiveBolt();
+                }
             }
         }
         public static void SetFromScheme(EnemyMind toSet, Tank tank)

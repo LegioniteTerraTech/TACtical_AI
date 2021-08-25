@@ -81,7 +81,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Error on ally counting");
+                Debug.Log("TACtical_AI: AllyCostCount - Error on ally counting");
                 Debug.Log(e);
             }
             return AllyCount;

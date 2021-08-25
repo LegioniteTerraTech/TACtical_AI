@@ -112,11 +112,7 @@ namespace TAC_AI.AI
                 List<BlockMemory> clean = new List<BlockMemory>();
                 foreach (BlockMemory mem in overwrite)
                 {
-                    BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t);
-                    if (Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
-                    {
-                        type = (BlockTypes)Singleton.Manager<ManMods>.inst.GetBlockID(mem.t);
-                    }
+                    BlockTypes type = StringToBlockType(mem.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
                     {
                         Debug.Log("TACtical_AI:  DesignMemory - " + Tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
@@ -443,19 +439,42 @@ namespace TAC_AI.AI
                 return mem;
             }
         }
+        private static Dictionary<string, BlockTypes> errorNames = new Dictionary<string, BlockTypes>();
+
+        public static void ConstructErrorBlocksList()
+        {
+            errorNames.Clear();
+            List<BlockTypes> types = Singleton.Manager<ManSpawn>.inst.GetLoadedTankBlockNames().ToList();
+            foreach (BlockTypes type in types)
+            {
+                string name = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
+                if (type.ToString() != name && !Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
+                {
+                    if (!errorNames.Keys.Contains(name))
+                        errorNames.Add(name, type);
+                }
+            }
+        }
+        public static bool TryGetMismatchNames(string name, ref BlockTypes type)
+        {
+            if (errorNames.TryGetValue(name, out BlockTypes val))
+            {
+                type = val;
+                return true;
+            }
+            return false;
+        }
+
         public static BlockTypes StringToBlockType(string mem)
         {
             if (!Enum.TryParse(mem, out BlockTypes type))
             {
-                type = (BlockTypes)ManMods.inst.GetBlockID(mem);
+                if (!TryGetMismatchNames(mem, ref type))
+                    type = (BlockTypes)Singleton.Manager<ManMods>.inst.GetBlockID(mem);
             }
-            /*
-            else if (ManMods.inst.IsModdedBlock(type))
-            {
-                type = (BlockTypes)ManMods.inst.GetBlockID(mem);
-            }*/
             return type;
         }
+
         public static BlockTypes JSONToFirstBlock(string toLoad)
         {   // Loading a Tech from the BlockMemory
             StringBuilder RAW = new StringBuilder();
@@ -480,12 +499,7 @@ namespace TAC_AI.AI
                     blockCase.Append(ch);
             }
 
-            BlockTypes type = (BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t);
-            if (ManMods.inst.IsModdedBlock(type))
-            {
-                type = (BlockTypes)ManMods.inst.GetBlockID(mem.t);
-            }
-            return type;
+            return StringToBlockType(mem.t);
         }
 
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
