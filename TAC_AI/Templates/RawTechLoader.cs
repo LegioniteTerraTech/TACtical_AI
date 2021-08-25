@@ -1174,17 +1174,21 @@ namespace TAC_AI.Templates
         }
         internal static bool ShouldDetonateBoltsNow(EnemyMind mind)
         {
-            bool can = true;
-            SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
-            if (type != SpawnBaseTypes.NotAvail)
+            bool can = false;
+            try
             {
-                TempManager.techBases.TryGetValue(type, out BaseTemplate val);
-                can = val.deployBoltsASAP;
+                SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
+                if (type != SpawnBaseTypes.NotAvail)
+                {
+                    if (TempManager.techBases.TryGetValue(type, out BaseTemplate val))
+                        can = val.deployBoltsASAP;
+                }
+                else if (TempManager.ExternalEnemyTechs.Exists(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }))
+                {
+                    can = TempManager.ExternalEnemyTechs.Find(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }).deployBoltsASAP;
+                }
             }
-            else if (TempManager.ExternalEnemyTechs.Exists(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }))
-            {
-                can = TempManager.ExternalEnemyTechs.Find(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }).deployBoltsASAP;
-            }
+            catch { }
             return can;
         }
         internal static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
