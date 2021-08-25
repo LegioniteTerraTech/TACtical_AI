@@ -246,7 +246,6 @@ namespace TAC_AI.Templates
         {
             List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + "\\Enemies");
             int techCount = 0;
-            Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
             foreach (string Dir in Dirs)
             {
                 techCount += GetTechNameListDir(Dir).Count;

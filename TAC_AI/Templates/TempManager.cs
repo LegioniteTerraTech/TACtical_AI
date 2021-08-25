@@ -41,10 +41,10 @@ namespace TAC_AI.Templates
         }
         public static void ValidateAndAddAllExternalTechs()
         {
-            ExternalEnemyTechs = new List<BaseTemplate>();
             int tCount = RawTechExporter.GetTechCounts();
             if (tCount != lastExtCount)
             {
+                ExternalEnemyTechs = new List<BaseTemplate>();
                 List<BaseTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
                 foreach (BaseTemplate raw in ExternalTechsRaw)
                 {
