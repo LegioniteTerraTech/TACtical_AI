@@ -30,7 +30,7 @@ namespace TAC_AI
 
     internal static class Patches
     {
-        /*
+        
         static FieldInfo panelData = typeof(FloatingTextOverlay).GetField("m_Data", BindingFlags.NonPublic | BindingFlags.Instance);
         static FieldInfo textInput = typeof(FloatingTextPanel).GetField("m_AmountText", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -39,51 +39,83 @@ namespace TAC_AI
         static FieldInfo rects = typeof(FloatingTextPanel).GetField("m_Rect", BindingFlags.NonPublic | BindingFlags.Instance);
 
         static FieldInfo sScale = typeof(FloatingTextPanel).GetField("m_InitialScale", BindingFlags.NonPublic | BindingFlags.Instance);
-
         static FieldInfo scale = typeof(FloatingTextPanel).GetField("m_scaler", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        static FieldInfo canvas = typeof(FloatingTextPanel).GetField("m_CanvasGroup", BindingFlags.NonPublic | BindingFlags.Instance);
 
         static FieldInfo CaseThis = typeof(ManOverlay).GetField("m_ConsumptionAddMoneyOverlayData", BindingFlags.NonPublic | BindingFlags.Instance);
 
 
         private static bool savedOverlay = false;
         private static FloatingTextOverlayData overlayEdit;
-        */
+        private static GameObject textStor;
+        private static CanvasGroup canGroup;
+
         internal static void PopupEnemyInfo(string text, WorldPosition pos)
         {
             // Big mess trying to get some hard-locked code working
-            /*
+            
             if (!savedOverlay)
             {
                 Debug.Log("TACtical_AI: PopupEnemyInfo - 1");
 
-                RectTransform rTrans = new RectTransform();
+                textStor = new GameObject("NewTextEnemy", typeof(RectTransform));
+
+                RectTransform rTrans = textStor.GetComponent<RectTransform>();
                 Text texter = rTrans.gameObject.AddComponent<Text>();
                 FloatingTextOverlayData refer = (FloatingTextOverlayData)CaseThis.GetValue(ManOverlay.inst);
+                Text textRefer = (Text)textInput.GetValue(refer.m_PanelPrefab);
 
 
 
                 //texter = (Text)textInput.GetValue(refer.m_PanelPrefab);
                 Debug.Log("TACtical_AI: PopupEnemyInfo - 2");
 
-                texter.text = "39203921";
-                texter.color = Color.red;
-                texter.fontSize = (int)((float)texter.fontSize * 10.75f);
+                texter.fontStyle = textRefer.fontStyle;
+                texter.material = textRefer.material;
+                texter.alignment = textRefer.alignment;
+                texter.font = textRefer.font;
+                texter.color = new Color(0.95f, 0.1f, 0.1f, 0.95f);
+                texter.fontSize = (int)((float)texter.fontSize * 2f);
+                texter.SetAllDirty();
 
-                FloatingTextPanel panel = new FloatingTextPanel();
+                FloatingTextPanel panel = textStor.AddComponent<FloatingTextPanel>();
 
                 //panel = refer.m_PanelPrefab;
                 Debug.Log("TACtical_AI: PopupEnemyInfo - 3.5");
+                //canGroup = (CanvasGroup)canvas.GetValue(refer.m_PanelPrefab);
+
+                try
+                {
+                    CanvasGroup cG = (CanvasGroup)canvas.GetValue(refer.m_PanelPrefab);
+                    canGroup = rTrans.gameObject.AddComponent<CanvasGroup>();
+                    canGroup.alpha = 0.95f;
+                    canGroup.blocksRaycasts = false;
+                    canGroup.hideFlags = 0;
+                    canGroup.ignoreParentGroups = true;
+                    canGroup.interactable = false;
+                }
+                catch { }
+
+                canvas.SetValue(panel, canGroup);
                 rects.SetValue(panel, rTrans);
-                sScale.SetValue(panel, Vector3.one);
-                scale.SetValue(panel, 1f);
+                sScale.SetValue(panel, Vector3.one * 2.5f);
+                scale.SetValue(panel, 2.5f);
 
                 Debug.Log("TACtical_AI: PopupEnemyInfo - 3");
                 textInput.SetValue(panel, texter);
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 4");
 
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 5");
-                overlayEdit = new FloatingTextOverlayData();
+
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 4");
+                overlayEdit = textStor.AddComponent<FloatingTextOverlayData>();
+                overlayEdit.m_HiddenInModes = new List<ManGameMode.GameType>
+                {
+                    ManGameMode.GameType.Attract,
+                    ManGameMode.GameType.Gauntlet,
+                    ManGameMode.GameType.SumoShowdown,
+                };
                 overlayEdit.m_StayTime = refer.m_StayTime;
+                overlayEdit.m_FadeOutTime = refer.m_FadeOutTime;
                 overlayEdit.m_MaxCameraResizeDist = refer.m_MaxCameraResizeDist;
                 overlayEdit.m_HiddenInModes = refer.m_HiddenInModes;
                 overlayEdit.m_MinCameraResizeDist = refer.m_MinCameraResizeDist;
@@ -91,7 +123,7 @@ namespace TAC_AI
                 overlayEdit.m_AboveDist = refer.m_AboveDist;
                 overlayEdit.m_PanelPrefab = panel;
 
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 4");
+                Debug.Log("TACtical_AI: PopupEnemyInfo - 5");
                 savedOverlay = true;
             }
 
@@ -108,9 +140,9 @@ namespace TAC_AI
                 Debug.Log("TACtical_AI: PopupEnemyInfo - Force inserted popup");
             }
             Debug.Log("TACtical_AI: PopupEnemyInfo - Threw popup \"" + text + "\"");
-            */
+            
 
-            ManOverlay.inst.AddFloatingTextOverlay(text, pos);
+           // ManOverlay.inst.AddFloatingTextOverlay(text, pos);
         }
 
 
@@ -127,8 +159,8 @@ namespace TAC_AI
                     //Debug.Log("TACtical_AI: AIEnhanced enabled");
                     try
                     {
-                        var aI = __instance.transform.root.GetComponent<Tank>().AI;
                         var tank = __instance.transform.root.GetComponent<Tank>();
+                        var aI = __instance.transform.root.GetComponent<Tank>().AI;
                         bool IsPlayerRemoteControlled = false;
                         try
                         {
@@ -190,6 +222,142 @@ namespace TAC_AI
                 return true;
             }
         }
+
+        [HarmonyPatch(typeof(TankDescriptionOverlay))]
+        [HarmonyPatch("RefreshMarker")]//On icon update
+        private static class SendUpdateAIDisp
+        {
+            static FieldInfo tech = typeof(TankDescriptionOverlay).GetField("m_Tank", BindingFlags.NonPublic | BindingFlags.Instance);
+            static FieldInfo panel = typeof(TankDescriptionOverlay).GetField("m_PanelInst", BindingFlags.NonPublic | BindingFlags.Instance);
+            static FieldInfo icon = typeof(LocatorPanel).GetField("m_FactionIcon", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static void Postfix(TankDescriptionOverlay __instance)
+            {
+                if (KickStart.EnableBetterAI)
+                {
+                    try
+                    {
+
+                        Tank tank = (Tank)tech.GetValue(__instance);
+                        //RawTechExporter.lastTech = tank.GetComponent<AIECore.TankAIHelper>();
+                        
+                        LocatorPanel Panel = (LocatorPanel)panel.GetValue(__instance);
+                        if (tank.IsNotNull() && Panel.IsNotNull())
+                        {
+                            AIECore.TankAIHelper lastTech = tank.GetComponent<AIECore.TankAIHelper>();
+                            if (lastTech.IsNotNull())
+                            {
+                                if (lastTech.AIState == 1)
+                                {
+                                    if (RawTechExporter.aiIcons.TryGetValue(lastTech.DediAI, out Sprite sprite))
+                                    {
+                                        //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                        Image cache = (Image)icon.GetValue(Panel);
+                                        cache.sprite = sprite;
+                                        icon.SetValue(Panel, cache);
+                                    }
+                                }
+                            }
+                        }
+                        //Panel.Format(Singleton.Manager<ManUI>.inst.GetAICategoryIcon(AICategories.AIHostile), new Color(0.8f, 0.8f, 0.8f, 0.8f), Singleton.Manager<ManUI>.inst.GetAICategoryIcon(AICategories.AIHostile), new Color(0.8f, 0.8f, 0.8f, 0.8f), TechWeapon.ManualTargetingReticuleState.NotTargeted);
+                        //Debug.Log("TACtical_AI: SendUpdateAIDisp - sent!");
+                        //return false;
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: SendUpdateAIDisp - failiure on send!");
+                    }
+                }
+            }
+        }
+
+        /*
+        [HarmonyPatch(typeof(LocatorPanel))]
+        [HarmonyPatch("Format")]//On icon update
+        private static class SendUpdateAIDisp2
+        {
+            static FieldInfo icon = typeof(LocatorPanel).GetField("m_FactionIcon", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static bool Prefix(LocatorPanel __instance, ref Sprite iconSprite)
+            {
+                if (KickStart.EnableBetterAI)
+                {
+                    try
+                    {
+
+                        //Debug.Log("TACtical_AI: UpdateAIDisplay - Triggered!");
+                        if (RawTechExporter.lastTech.IsNotNull())
+                        {
+                            if (RawTechExporter.lastTech.AIState == 1)
+                            {
+                                if (RawTechExporter.aiIcons.TryGetValue(RawTechExporter.lastTech.DediAI, out Sprite sprite))
+                                {
+                                    //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                    iconSprite = sprite;
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        //Image cache = (Image)icon.GetValue(__instance);
+                        //cache.sprite = Singleton.Manager<ManUI>.inst.GetAICategoryIcon(AICategories.AIHostile);
+                        //icon.SetValue(__instance, cache);
+
+                        //Debug.Log("TACtical_AI: SendUpdateAIDisp2 - Caught Update!");
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: SendUpdateAIDisp - failiure on send!");
+                    }
+                }
+                return true;
+            }
+        }
+
+        [HarmonyPatch(typeof(ManUI))]
+        [HarmonyPatch("GetAICategoryIcon")]//On icon update
+        private static class UpdateAIDisplay
+        {
+            static bool fired = false;
+            private static bool Prefix(ManUI __instance, ref Sprite __result)
+            {
+                //Debug.Log("TACtical_AI: UpdateAIDisplay - Trigger");
+                if (KickStart.EnableBetterAI)
+                {
+                    try
+                    {
+                        if (!fired)
+                        {
+                            Debug.Log("TACtical_AI: UpdateAIDisplay - snapping sprite!"); 
+                            Sprite image = __instance.m_SpriteFetcher.GetAICategoryIcon(AICategories.AIHostile);
+                            RenderTexture grabTex = RenderTexture.GetTemporary(
+                                image.texture.width,
+                                image.texture.height,
+                                0,
+                                RenderTextureFormat.Default,
+                                RenderTextureReadWrite.Linear
+                                );
+                            Graphics.Blit(image.texture, grabTex);
+                            RenderTexture grabTex2 = RenderTexture.active;
+                            RenderTexture.active = grabTex;
+
+                            Texture2D generated = new Texture2D((int)image.rect.width, (int)image.rect.height);
+                            generated.ReadPixels(new Rect(0, 0, (int)grabTex.width, (int)grabTex.height), 0, 0);
+
+                            Debug.Log("TACtical_AI: UpdateModeDisplay - deployed!");
+                            FileUtils.SaveTexture(generated, RawTechExporter.BaseDirectory + "\\AI2.png");
+                            fired = true;
+                        }
+                        //image.sprite = spride override
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: UpdateModeDisplay - failiure on update!");
+                    }
+                }
+                return true;
+            }
+        }*/
+
+
 
         // this is a VERY big mod
         //   we must make it look big like it is
@@ -878,7 +1046,12 @@ namespace TAC_AI
 
             private static void Prefix(ModuleItemConsume __instance)
             {
-                if (ManNetwork.IsHost || !ManNetwork.IsNetworked)
+                int team = 0;
+                if (__instance.block.tank.IsNotNull())
+                {
+                    team = __instance.block.tank.Team;
+                }
+                if ((ManNetwork.IsHost || !ManNetwork.IsNetworked) && ManSpawn.IsEnemyTeam(team))
                 {
                     ModuleItemConsume.Progress pog = (ModuleItemConsume.Progress)progress.GetValue(__instance);
                     if (pog.currentRecipe.m_OutputType == RecipeTable.Recipe.OutputType.Money && sellStolen.GetValue(__instance) == null)
@@ -943,8 +1116,7 @@ namespace TAC_AI
             private static void Prefix(ModuleHeart __instance)
             {
                 var valid = __instance.GetComponent<ModuleItemHolder>();
-                var valid2 = __instance.transform.root.GetComponent<RBases.EnemyBaseFunder>();
-                if (valid && valid2)
+                if (valid)
                 {
                     int team = __instance.block.tank.Team;
                     if (ManSpawn.IsEnemyTeam(team))

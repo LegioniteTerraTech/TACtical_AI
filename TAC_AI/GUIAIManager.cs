@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,7 +18,7 @@ namespace TAC_AI
         public static bool isCurrentlyOpen = false;
         private static AIType fetchAI = AIType.Escort;
         private static AIType changeAI = AIType.Escort;
-        private static AIECore.TankAIHelper lastTank;
+        internal static AIECore.TankAIHelper lastTank;
 
         private static GameObject GUIWindow;
         private static Rect HotWindow = new Rect(0, 0, 200, 240);   // the "window"
@@ -97,17 +97,105 @@ namespace TAC_AI
             changeAI = fetchAI;
             if (lastTank != null)
             {
+                switch (fetchAI)
+                {
+                    case AIType.Aegis:
+                        if ((bool)lastTank.lastEnemy)
+                            GUI.tooltip = "In Combat";
+                        else if ((bool)lastTank.LastCloseAlly)
+                            GUI.tooltip = "Following Ally";
+                        else
+                            GUI.tooltip = "Protecting Allied";
+                        break;
+                    case AIType.Assault:
+                        GUI.tooltip = "Scouting for Enemies";
+                        break;
+                    case AIType.Astrotech:
+                        if ((bool)lastTank.lastEnemy)
+                            GUI.tooltip = "In Combat";
+                        else
+                            GUI.tooltip = "Floating Escort";
+                        break;
+                    case AIType.Aviator:
+                        if ((bool)lastTank.lastEnemy)
+                            GUI.tooltip = "In Combat";
+                        else
+                            GUI.tooltip = "Flying Escort";
+                        break;
+                    case AIType.Buccaneer:
+                        if ((bool)lastTank.lastEnemy)
+                            GUI.tooltip = "In Combat";
+                        else
+                            GUI.tooltip = "Sailing Escort";
+                        break;
+                    case AIType.Energizer:
+                        if ((bool)lastTank.foundGoal)
+                            GUI.tooltip = "Charging Ally";
+                        else if ((bool)lastTank.foundBase)
+                            GUI.tooltip = "Recharging...";
+                        else
+                            GUI.tooltip = "Task Complete";
+                        break;
+                    case AIType.Escort:
+                        if ((bool)lastTank.lastEnemy)
+                            GUI.tooltip = "In Combat";
+                        else
+                            GUI.tooltip = "Land Escort";
+                        break;
+                    case AIType.MTMimic:
+                        if (lastTank.OnlyPlayerMT)
+                        {
+                            if ((bool)lastTank.LastCloseAlly)
+                                GUI.tooltip = "Copying Player";
+                            else
+                                GUI.tooltip = "Searching for Player";
+                        }
+                        else
+                        {
+                            if((bool)lastTank.LastCloseAlly)
+                                GUI.tooltip = "Copying Close Ally";
+                            else
+                                GUI.tooltip = "Searching for Ally";
+                        }
+                        break;
+                    case AIType.MTSlave:
+                        if ((bool)lastTank.DANGER)
+                            GUI.tooltip = "Weapons Active";
+                        else
+                            GUI.tooltip = "Weapons Primed";
+                        break;
+                    case AIType.MTTurret:
+                        if ((bool)lastTank.DANGER)
+                            GUI.tooltip = "Shooting at Enemy";
+                        else if ((bool)lastTank.lastEnemy)
+                            GUI.tooltip = "Aiming at Enemy";
+                        else
+                            GUI.tooltip = "Face the Danger";
+                        break;
+                    case AIType.Prospector:
+                        if ((bool)lastTank.foundGoal)
+                            GUI.tooltip = "Mining Resources";
+                        else if ((bool)lastTank.foundBase)
+                            GUI.tooltip = "Returning Resources";
+                        else
+                            GUI.tooltip = "No Resources Detected!";
+                        break;
+                    case AIType.Scrapper:
+                        GUI.tooltip = "Scavenging Blocks";
+                        break;
+                }
+
                 if (GUI.Button(new Rect(20, 30, 80, 30), fetchAI == AIType.Escort ? new GUIContent("<color=#f23d3dff>TANK</color>", "ACTIVE") : new GUIContent("Tank", "Avoids Water")))
                 {
                     changeAI = AIType.Escort;
                     clicked = true;
                 }
-                if (GUI.Button(new Rect(100, 30, 80, 30), fetchAI == AIType.MTSlave ? new GUIContent("<color=#f23d3dff>SLAVE</color>", "ACTIVE") : new GUIContent("Slave", "Fire at targets")))
+                if (GUI.Button(new Rect(100, 30, 80, 30), fetchAI == AIType.MTSlave ? new GUIContent("<color=#f23d3dff>STATIC</color>", "ACTIVE") : new GUIContent("Static", "Weapons only")))
                 {
                     changeAI = AIType.MTSlave;
                     clicked = true;
                 }
-                if (GUI.Button(new Rect(20, 60, 80, 30), lastTank.isAssassinAvail ? fetchAI == AIType.Assault ? new GUIContent("<color=#f23d3dff>KILL</color>", "ACTIVE") : new GUIContent("Kill", "Needs Charging Base") : new GUIContent("<color=#808080ff>kill</color>", "Need HE AI")))
+                if (GUI.Button(new Rect(20, 60, 80, 30), lastTank.isAssassinAvail ? fetchAI == AIType.Assault ? new GUIContent("<color=#f23d3dff>SCOUT</color>", "ACTIVE") : new GUIContent("Scout", "Needs Charging Base") : new GUIContent("<color=#808080ff>scout</color>", "Need HE AI")))
                 {
                     if (lastTank.isAssassinAvail)
                     {
@@ -150,7 +238,7 @@ namespace TAC_AI
                     }
                 }
                 //placeholder
-                if (GUI.Button(new Rect(20, 150, 80, 30), new GUIContent("<color=#808080ff>wip</color>", "")))
+                if (GUI.Button(new Rect(20, 150, 80, 30), new GUIContent("<color=#808080ff>scrap</color>", "Awaiting Space Junkers")))
                 {
                 }
                 /*
@@ -203,6 +291,7 @@ namespace TAC_AI
             //GUI.DragWindow();
         }
 
+        static FieldInfo bubble = typeof(Tank).GetField("m_Overlay", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void SetOption(AIType dediAI)
         {
             if (ManNetwork.IsNetworked)
@@ -222,6 +311,9 @@ namespace TAC_AI
                 lastTank.DediAI = dediAI;
                 fetchAI = dediAI;
                 lastTank.TestForFlyingAIRequirement();
+
+                TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
+                overlay.Update();
             }
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);

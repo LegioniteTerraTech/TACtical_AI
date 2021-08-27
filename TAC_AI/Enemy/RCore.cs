@@ -68,14 +68,17 @@ namespace TAC_AI.AI.Enemy
             }
             if (Mind.StartedAnchored)
             {
-                if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0)
+                if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0 && Mind.AIControl.anchorAttempts < 16)
                 {
                     //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
                     tank.FixupAnchors(true);
                     if (!tank.IsAnchored)
-                        tank.TryToggleTechAnchor();
+                        tank.Anchors.TryAnchorAll(true);
+                    Mind.AIControl.anchorAttempts++;
                 }
             }
+            else
+                Mind.AIControl.anchorAttempts = 0;
 
             RBolts.ManageBolts(thisInst, tank, Mind);
             if (Mind.AllowRepairsOnFly && Mind.TechMemor)
@@ -424,7 +427,12 @@ namespace TAC_AI.AI.Enemy
             }
             else if ((modGyroCount > 0 || modWheelCount < modBoostCount) && isFlying && !isFlyingDirectionForwards)
             {
-                toSet.EvilCommander = EnemyHandling.Chopper;
+                if ((modHoverCount > 2 && modWheelCount > 2) || modAGCount > 0)
+                {
+                    toSet.EvilCommander = EnemyHandling.Starship;
+                }
+                else
+                    toSet.EvilCommander = EnemyHandling.Chopper;
             }
             else if (KickStart.isWaterModPresent && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 + FoilCount || modHoverCount > 1))
             {
@@ -459,18 +467,24 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                int randomNum2 = UnityEngine.Random.Range(1, 4);
+                int randomNum2 = UnityEngine.Random.Range(0, 0);
                 switch (randomNum2)
                 {
+                    case 0:
                     case 1:
+                    case 2:
+                    case 3:
                         toSet.CommanderMind = EnemyAttitude.Default;
                         break;
-                    case 2:
+                    case 4:
+                    case 5:
+                    //toSet.CommanderMind = EnemyAttitude.Junker;
+                    case 6:
+                    case 7:
                         toSet.CommanderMind = EnemyAttitude.Homing;
                         break;
-                    case 3:
-                        //toSet.CommanderMind = EnemyAttitude.Junker;
-                    case 4:
+                    case 8:
+                    case 9:
                         if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0 && RawTechLoader.CanBeMiner(toSet))
                             toSet.CommanderMind = EnemyAttitude.Miner;
                         else
@@ -525,7 +539,7 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderSmarts = EnemySmarts.Default;
                 toSet.EvilCommander = EnemyHandling.Wheeled;
             }
-            if (toSet.CommanderSmarts == EnemySmarts.Default && toSet.EvilCommander == EnemyHandling.Wheeled)
+            if (toSet.CommanderSmarts == EnemySmarts.Default && toSet.CommanderMind != EnemyAttitude.Miner && toSet.EvilCommander == EnemyHandling.Wheeled)
             {
                 thisInst.Hibernate = true;// enable the default AI
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");

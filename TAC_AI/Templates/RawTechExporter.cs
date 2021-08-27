@@ -49,6 +49,10 @@ namespace TAC_AI.Templates
         public static string BaseDirectory;
         public static string RawTechsDirectory;
 
+        // AI Icons
+        public static Dictionary<AIType, Sprite> aiIcons;
+        public static AIECore.TankAIHelper lastTech;
+
         // GUI
         public static void Initiate()
         {
@@ -58,10 +62,20 @@ namespace TAC_AI.Templates
             GUIWindow.AddComponent<GUIRawDisplay>();
             GUIWindow.SetActive(false);
             SetupWorkingDirectories();
+            aiIcons = new Dictionary<AIType, Sprite> {
+                {AIType.MTMimic,  LoadSprite("AI_MT.png") },
+                {AIType.MTSlave,  LoadSprite("AI_MT.png") },
+                {AIType.MTTurret,  LoadSprite("AI_MT.png") },
+                {AIType.Assault,  LoadSprite("AI_Assault.png") },
+                {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
+                {AIType.Aviator,  LoadSprite("AI_Pilot.png") },
+                {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
+                {AIType.Astrotech,  LoadSprite("AI_Space.png") },
+            };
 
-            #if DEBUG
-                ExportJSONInsteadOfRAWTECH = true;
-            #endif
+#if DEBUG
+            ExportJSONInsteadOfRAWTECH = true;
+#endif
         }
         internal class GUIRawDisplay : MonoBehaviour
         {
@@ -776,6 +790,22 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        private static Sprite LoadSprite(string pngName)
+        {
+            string destination = DLLDirectory + "\\AI_Icons\\" + pngName;
+            try
+            {
+                Texture2D tex = FileUtils.LoadTexture(destination);
+                Sprite output = Sprite.Create(tex, new Rect(0,0, tex.width, tex.height), Vector2.zero);
+                Debug.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
+                return output;
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   File is missing!");
+                return null;
+            }
+        }
         private static string GetNameDirectory(string FolderDirectory)
         {
             StringBuilder final = new StringBuilder();

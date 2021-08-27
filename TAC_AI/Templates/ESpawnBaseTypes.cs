@@ -150,17 +150,32 @@ namespace TAC_AI.Templates
         // Space
         GSOSpaceshipMini,
         GSOSpaceshipCompact,
-        
+        GSOSpaceship,
+        HEClatoe,
+        HECroc,
+        BFTrident,
+
         //-----------
         // COMMUNITY
         //-----------
         // Land Techs
+        VENHarvester,
         Chungmus,
         TidusJ,
         U1T1M4T3P4RTYBUSSS,
+        Kickball2,
 
-        // Eradicators
+        // Space Techs
+        Vette2,
+
+        //-Eradicators
         Invulnerable2,
+        Tyrant2,
+
+        // Bases
+        GSO0GExtractor,
+        GSOPowerStation,
+        GSOQuickBuck,
     }
 
 }
