@@ -187,7 +187,7 @@ namespace TAC_AI.AI
                 {
                     BlockMemory mem = new BlockMemory();
                     mem.t = bloc.name; //bloc.name;
-                    mem.p = coreRot * (bloc.cachedLocalPosition - coreOffset);
+                    mem.p = Quaternion.Inverse(coreRot) * (bloc.cachedLocalPosition - coreOffset);
                     Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
                     mem.r = new OrthoRotation(outr).rot;
                     if (!Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(bloc).Contains(mem.r))
@@ -370,7 +370,7 @@ namespace TAC_AI.AI
                         continue;
                     BlockMemory mem = new BlockMemory();
                     mem.t = bloc.name;
-                    mem.p = coreRot * (bloc.cachedLocalPosition - coreOffset);
+                    mem.p = Quaternion.Inverse(coreRot) * (bloc.cachedLocalPosition - coreOffset);
                     Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
                     mem.r = new OrthoRotation(outr).rot;
                     if (!Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(bloc).Contains(mem.r))
@@ -691,7 +691,7 @@ namespace TAC_AI.AI
             for (int step = 0; step < toFilter2; step++)
             {
                 int present = cBlocks.FindAll(delegate (TankBlock cand) { return typesToRepair[step] == cand.BlockType; }).Count;
-                int mem = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return typesToRepair[step].ToString() == cand.t; }).Count;
+                int mem = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return typesToRepair[step] == StringToBlockType(cand.t); }).Count;
                 if (mem > present)// are some blocks not accounted for?
                     typesMissing.Add(typesToRepair[step]);
             }
@@ -779,7 +779,7 @@ namespace TAC_AI.AI
                 }
                 bool attemptW = false;
 
-                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == bType.ToString(); });
+                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return StringToBlockType(cand.t) == bType; });
                 //Debug.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {

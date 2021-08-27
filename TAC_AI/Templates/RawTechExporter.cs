@@ -476,7 +476,7 @@ namespace TAC_AI.Templates
                 purposes.Add(BasePurpose.NoWeapons);
 
             terra = BaseTerrain.Land;
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
+            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
                 Debug.Log("TACtical_AI: Purposes: Anchored (static)");
                 return purposes;

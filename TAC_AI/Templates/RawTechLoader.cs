@@ -1543,7 +1543,7 @@ namespace TAC_AI.Templates
             List<BlockMemory> mem = AIERepair.DesignMemory.JSONToTechExternal(JSONTechBlueprint);
             foreach (BlockMemory block in mem)
             {
-                output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice((BlockTypes)Enum.Parse(typeof(BlockTypes), block.t), true);
+                output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(AIERepair.StringToBlockType(block.t), true);
             }
             return output;
         }
