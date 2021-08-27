@@ -151,6 +151,7 @@ namespace TAC_AI.Templates
             { SpawnBaseTypes.Vette2, new BaseTemplate {
                 techName = "Vette V2", // Altered a bit
                 faction = FactionSubTypes.HE,
+                terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
                 startingFunds = 1112685,
@@ -162,6 +163,7 @@ namespace TAC_AI.Templates
             { SpawnBaseTypes.Tyrant2, new BaseTemplate {
                 techName = "Tyrant",
                 faction = FactionSubTypes.HE,
+                terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NANI },
                 IntendedGrade = 2,
                 startingFunds = 6960795,

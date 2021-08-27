@@ -86,7 +86,31 @@ namespace TAC_AI.Templates
                     HoriPosOff += 200;
                     MaxExtensionY = true;
                 }
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), temp.techName.ToString()))
+                string disp;
+                if (temp.purposes.Contains(BasePurpose.NotStationary))
+                {
+                    switch (temp.terrain)
+                    {
+                        case BaseTerrain.Land:
+                            disp = "<color=#90ee90ff>" + temp.techName.ToString() + "</color>";
+                            break;
+                        case BaseTerrain.Air:
+                            disp = "<color=#ffa500ff>" + temp.techName.ToString() + "</color>";
+                            break;
+                        case BaseTerrain.Sea:
+                            disp = "<color=#add8e6ff>" + temp.techName.ToString() + "</color>";
+                            break;
+                        case BaseTerrain.Space:
+                            disp = "<color=#ffff00ff>" + temp.techName.ToString() + "</color>";
+                            break;
+                        default:
+                            disp = temp.techName.ToString();
+                            break;
+                    }
+                }
+                else
+                    disp = temp.techName.ToString();
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), disp))
                 {
                     index = step;
                     clicked = true;
@@ -145,7 +169,32 @@ namespace TAC_AI.Templates
                     HoriPosOff += 200;
                     MaxExtensionY = true;
                 }
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), temp.Key.ToString()))
+                string disp;
+                if (temp.Value.purposes.Contains(BasePurpose.NotStationary))
+                {
+                    switch (temp.Value.terrain)
+                    {
+                        case BaseTerrain.Land:
+                            disp = "<color=#90ee90ff>" + temp.Key.ToString() + "</color>";
+                            break;
+                        case BaseTerrain.Air:
+                            disp = "<color=#ffa500ff>" + temp.Key.ToString() + "</color>";
+                            break;
+                        case BaseTerrain.Sea:
+                            disp = "<color=#add8e6ff>" + temp.Key.ToString() + "</color>";
+                            break;
+                        case BaseTerrain.Space:
+                            disp = "<color=#ffff00ff>" + temp.Key.ToString() + "</color>";
+                            break;
+                        default:
+                            disp = temp.Key.ToString();
+                            break;
+                    }
+                }
+                else
+                    disp = temp.Key.ToString();
+
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), disp))
                 {
                     type = temp.Key;
                     clicked = true;
