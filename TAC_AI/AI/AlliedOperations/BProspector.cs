@@ -7,6 +7,8 @@ namespace TAC_AI.AI.AlliedOperations
 {
     public static class BProspector
     {
+        const float FindBaseExtension = 500;
+
         public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
@@ -16,11 +18,11 @@ namespace TAC_AI.AI.AlliedOperations
 
             BGeneral.ResetValues(thisInst);
 
-            if (thisInst.lastEnemy != null)
+            if (thisInst.AdvancedAI && thisInst.lastEnemy != null)
             {   //RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out Tank theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (theBase == null)
@@ -29,7 +31,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (thisInst.theBase == null)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                     thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     return;
@@ -84,7 +86,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (thisInst.areWeFull || thisInst.ActionPause > 10)
             {
-                thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
@@ -188,7 +190,7 @@ namespace TAC_AI.AI.AlliedOperations
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);

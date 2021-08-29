@@ -310,7 +310,7 @@ namespace TAC_AI.Templates
         public static List<BasePurpose> GetHandler(string blueprint, FactionSubTypes factionType, bool Anchored, out BaseTerrain terra, out int minCorpGrade)
         {
             List<TankBlock> blocs = new List<TankBlock>();
-            List<BlockMemory> mems = AIERepair.DesignMemory.JSONToTechExternal(blueprint);
+            List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
             if (mems.Count < 1)
             {
                 Debug.Log("TACtical_AI: TECH IS NULL!  SKIPPING!");
@@ -527,7 +527,7 @@ namespace TAC_AI.Templates
         public static int ValidateCost(string blueprint, int ExistingCost)
         {
             if (ExistingCost <= 0)
-                ExistingCost = GetBBCost(AIERepair.DesignMemory.JSONToTechExternal(blueprint));
+                ExistingCost = GetBBCost(AIERepair.DesignMemory.JSONToMemoryExternal(blueprint));
             if (ExistingCost <= 0)
             {
                 Debug.Log("TACtical_AI: ValidateCost - Invalid tech cost encountered ~ could not handle!");

@@ -123,6 +123,9 @@ namespace TAC_AI.Templates
                 return;
             if (AirPool.Count >= MaxAirborneAIAllowed)
                 return;
+            if (10 / Time.deltaTime < 20) // game is lagging to much
+                return;
+
             Vector3 pos;
             if (playerTank.rbody.IsNotNull())
                 pos = (playerTank.rbody.velocity * Time.deltaTime * 5) + playerTank.boundsCentreWorldNoCheck;
@@ -355,6 +358,68 @@ namespace TAC_AI.Templates
             return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
 
+        public static void TrySpawnTraderTroll(Vector3 pos)
+        {   // Spawn trader trolls to make bigger techs fight harder
+            Debug.Log("TACtical_AI: TrySpawnTraderTroll - Queued request at " + pos + "!");
+            if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
+                return;
+
+            if (UnityEngine.Random.Range(1, 100) > KickStart.UpperDifficulty)
+                return;
+
+            if (!RBases.IsLocationGridEmpty(pos))
+                return;
+
+            try
+            {
+                List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
+
+                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
+                    factionsAvail.Add(FactionSubTypes.GSO);
+                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered)
+                    factionsAvail.Add(FactionSubTypes.GC);
+                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered)
+                    factionsAvail.Add(FactionSubTypes.VEN);
+                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered)
+                    factionsAvail.Add(FactionSubTypes.HE);
+                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered)
+                    factionsAvail.Add(FactionSubTypes.BF);
+                if (factionsAvail.Count == 0)
+                    return;
+                FactionSubTypes factionSelect = factionsAvail.GetRandomEntry();
+
+                //pos = GetOffsetPosAngle(pos); 
+
+                if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos3))
+                    return;
+
+                if (RawTechLoader.SpawnSpecificTypeTech(pos3, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(factionSelect).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true))
+                {
+                    Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+                    try
+                    {
+                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
+                    }
+                    catch { }
+                }
+                return;
+            }
+            catch { }
+            Debug.Log("TACtical_AI: TrySpawnTraderTroll - Could not fetch corps, resorting to random spawns");
+
+            if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos2))
+                return;
+            if (RawTechLoader.SpawnSpecificTypeTech(pos2, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionSubTypes.NULL, forceInstant: true, isPopulation: true))
+            {
+                Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+                try
+                {
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
+                }
+                catch { }
+            }
+        }
+
         private static void ManagePooledAIs()
         {   // 
             ManagePooledEradicators();
@@ -574,6 +639,12 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        private static Vector3 GetOffsetPosAngle(Vector3 pos)
+        {   // 
+            float randAngle = UnityEngine.Random.Range(0, 360);
+            Vector3 angleHeading = Quaternion.AngleAxis(randAngle, Vector3.up) * Vector3.forward;
+            return pos + (angleHeading * 64);
+        }
         private static Vector3 GetRandAirAngle()
         {   // 
             float randAngle = UnityEngine.Random.Range(0, 360);

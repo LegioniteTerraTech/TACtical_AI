@@ -118,6 +118,10 @@ namespace TAC_AI.AI
                         Debug.Log("TACtical_AI:  DesignMemory - " + Tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
                         continue;
                     }
+                    // get rid of floating point errors
+                    mem.p.x = Mathf.RoundToInt(mem.p.x);
+                    mem.p.y = Mathf.RoundToInt(mem.p.y);
+                    mem.p.z = Mathf.RoundToInt(mem.p.z);
                     clean.Add(mem);
                 }
                 SavedTech = clean;
@@ -128,78 +132,11 @@ namespace TAC_AI.AI
             }
             public TankBlock TryFindProperRootBlock(List<TankBlock> ToSearch)
             {
-                bool IsAnchoredAnchorPresent = false;
-                float close = 128;
-                TankBlock newRoot = ToSearch.First();
-                foreach (TankBlock bloc in ToSearch)
-                {
-                    if (bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
-                    {
-                        IsAnchoredAnchorPresent = true;
-                        break;
-                    }
-                    if (bloc.cachedLocalPosition.sqrMagnitude < close * close && (bloc.GetComponent<ModuleTechController>() || bloc.GetComponent<ModuleAIBot>()))
-                    {
-                        close = bloc.cachedLocalPosition.magnitude;
-                        newRoot = bloc;
-                    }
-                }
-                if (IsAnchoredAnchorPresent)
-                {
-                    close = 128;
-                    foreach (TankBlock bloc in ToSearch)
-                    {
-                        if (bloc.cachedLocalPosition.sqrMagnitude < close * close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored && !bloc.GetComponent<ModuleItemConsume>())
-                        {
-                            close = bloc.cachedLocalPosition.magnitude;
-                            newRoot = bloc;
-                        }
-                    }
-                }
-                return newRoot;
+                return FindProperRootBlockExternal(ToSearch);
             }
             public List<BlockMemory> TechToMemory()
             {
-                // This resaves the whole tech cab-forwards regardless of original rotation
-                //   It's because any solutions that involve the cab in a funny direction will demand unholy workarounds.
-                //   I seriously don't know why the devs didn't try it this way, perhaps due to lag reasons.
-                //   or the blocks that don't allow upright placement (just detach those lmao)
-                List<BlockMemory> output = new List<BlockMemory>();
-                List<TankBlock> ToSave = Tank.blockman.IterateBlocks().ToList();
-                Vector3 coreOffset = Vector3.zero;
-                Quaternion coreRot;
-                if (ToSave == null || ToSave.Count == 0)
-                    return new List<BlockMemory>();
-
-                TankBlock rootBlock = TryFindProperRootBlock(ToSave);
-                if (rootBlock != ToSave.First())
-                {
-                    ToSave.Remove(rootBlock);
-                    ToSave.Insert(0, rootBlock);
-                    coreOffset = rootBlock.cachedLocalPosition;
-                    coreRot = rootBlock.cachedLocalRotation;
-                    Tank.blockman.SetRootBlock(rootBlock);
-                }
-                else
-                    coreRot = new OrthoRotation(OrthoRotation.r.u000);
-
-                foreach (TankBlock bloc in ToSave)
-                {
-                    BlockMemory mem = new BlockMemory();
-                    mem.t = bloc.name; //bloc.name;
-                    mem.p = Quaternion.Inverse(coreRot) * (bloc.cachedLocalPosition - coreOffset);
-                    Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
-                    mem.r = new OrthoRotation(outr).rot;
-                    if (!Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(bloc).Contains(mem.r))
-                    {   // block cannot be saved - illegal rotation.
-                        Debug.Log("TACtical_AI:  DesignMemory - " + Tank.name + ": could not save " + bloc.name + " in blueprint due to illegal rotation.");
-                        continue;
-                    }
-                    output.Add(mem);
-                }
-                Debug.Log("TACtical_AI:  DesignMemory - Saved " + Tank.name + " to memory format");
-
-                return output;
+                return TechToMemoryExternal(Tank);
             }
 
             // Advanced
@@ -317,14 +254,15 @@ namespace TAC_AI.AI
                 TankBlock newRoot = ToSearch.First();
                 foreach (TankBlock bloc in ToSearch)
                 {
+                    Vector3 blockPos = bloc.CalcFirstFilledCellLocalPos();
                     if (bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
                     {
                         IsAnchoredAnchorPresent = true;
                         break;
                     }
-                    if (bloc.cachedLocalPosition.sqrMagnitude < close * close && (bloc.GetComponent<ModuleTechController>() || bloc.GetComponent<ModuleAIBot>()))
+                    if (blockPos.sqrMagnitude < close * close && (bloc.GetComponent<ModuleTechController>() || bloc.GetComponent<ModuleAIBot>()))
                     {
-                        close = bloc.cachedLocalPosition.magnitude;
+                        close = blockPos.magnitude;
                         newRoot = bloc;
                     }
                 }
@@ -333,9 +271,10 @@ namespace TAC_AI.AI
                     close = 128;
                     foreach (TankBlock bloc in ToSearch)
                     {
-                        if (bloc.cachedLocalPosition.sqrMagnitude < close * close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
+                        Vector3 blockPos = bloc.CalcFirstFilledCellLocalPos();
+                        if (blockPos.sqrMagnitude < close * close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
                         {
-                            close = bloc.cachedLocalPosition.magnitude;
+                            close = blockPos.magnitude;
                             newRoot = bloc;
                         }
                     }
@@ -353,11 +292,14 @@ namespace TAC_AI.AI
                 Vector3 coreOffset = Vector3.zero;
                 Quaternion coreRot;
                 TankBlock rootBlock = FindProperRootBlockExternal(ToSave);
-                if (rootBlock != ToSave.First())
+                if (rootBlock != null)
                 {
-                    ToSave.Remove(rootBlock);
-                    ToSave.Insert(0, rootBlock);
-                    coreOffset = rootBlock.cachedLocalPosition;
+                    if (rootBlock != ToSave.First())
+                    {
+                        ToSave.Remove(rootBlock);
+                        ToSave.Insert(0, rootBlock);
+                    }
+                    coreOffset = rootBlock.trans.localPosition;
                     coreRot = rootBlock.cachedLocalRotation;
                     tank.blockman.SetRootBlock(rootBlock);
                 }
@@ -370,8 +312,13 @@ namespace TAC_AI.AI
                         continue;
                     BlockMemory mem = new BlockMemory();
                     mem.t = bloc.name;
-                    mem.p = Quaternion.Inverse(coreRot) * (bloc.cachedLocalPosition - coreOffset);
-                    Quaternion outr = Quaternion.Inverse(coreRot) * bloc.cachedLocalRotation;
+                    mem.p = Quaternion.Inverse(coreRot) * (bloc.trans.localPosition - coreOffset);
+                    // get rid of floating point errors
+                    mem.p.x = Mathf.RoundToInt(mem.p.x);
+                    mem.p.y = Mathf.RoundToInt(mem.p.y);
+                    mem.p.z = Mathf.RoundToInt(mem.p.z);
+                    //Get the rotation
+                    Quaternion outr =  bloc.cachedLocalRotation * Quaternion.Inverse(coreRot);
                     mem.r = new OrthoRotation(outr).rot;
                     if (!Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(bloc).Contains(mem.r))
                     {   // block cannot be saved - illegal rotation.
@@ -411,7 +358,7 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: " + JSONTech.ToString());
                 return JSONTech.ToString();
             }
-            public static List<BlockMemory> JSONToTechExternal(string toLoad)
+            public static List<BlockMemory> JSONToMemoryExternal(string toLoad)
             {   // Loading a Tech from the BlockMemory
                 StringBuilder RAW = new StringBuilder();
                 foreach (char ch in toLoad)
@@ -441,6 +388,7 @@ namespace TAC_AI.AI
         }
         private static Dictionary<string, BlockTypes> errorNames = new Dictionary<string, BlockTypes>();
 
+        // Get those blocks right!
         public static void ConstructErrorBlocksList()
         {
             errorNames.Clear();
@@ -771,7 +719,7 @@ namespace TAC_AI.AI
                 TechMemor.ranOutOfParts = false;
 
                 TankBlock foundBlock = null;
-                foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (AIECore.Extremes(tank.blockBounds.extents) + 25)), Quaternion.identity, out bool worked);
+                foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * 128), Quaternion.identity, out bool worked);
                 if (!worked)
                 {
                     Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");

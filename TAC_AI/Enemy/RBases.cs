@@ -742,6 +742,107 @@ namespace TAC_AI.AI.Enemy
 
 
         // Utilities
+        internal static bool IsLocationGridEmpty(Vector3 expansionCenter, bool ignoreNeutrals = true)
+        {
+            bool chained = false;
+            if (!IsLocationValid(expansionCenter + (Vector3.forward * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            if (!IsLocationValid(expansionCenter - (Vector3.forward * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            if (!IsLocationValid(expansionCenter - (Vector3.right * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            if (!IsLocationValid(expansionCenter + (Vector3.right * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            if (!IsLocationValid(expansionCenter + ((Vector3.right + Vector3.forward) * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            if (!IsLocationValid(expansionCenter - ((Vector3.right + Vector3.forward) * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            if (!IsLocationValid(expansionCenter + ((Vector3.right - Vector3.forward) * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            if (!IsLocationValid(expansionCenter - ((Vector3.right - Vector3.forward) * 64), ref chained, false, ignoreNeutrals))
+                return false;
+            return true;
+        }
+
+        internal static bool TryFindExpansionLocationGrid(Vector3 expansionCenter, out Vector3 pos)
+        {
+            bool chained = false;
+            int MaxPossibleLocations = 7;
+            List<int> location = new List<int>();
+            for (int step = 0; step < MaxPossibleLocations; step++)
+            {
+                location.Add(step);
+            }
+
+            int locationsCount = MaxPossibleLocations;
+            while (locationsCount > 0)
+            {
+                int choice = location.GetRandomEntry();
+                location.Remove(choice);
+                switch (choice)
+                {
+                    case 0:
+                        if (IsLocationValid(expansionCenter + (Vector3.forward * 64), ref chained))
+                        {
+                            pos = expansionCenter + (Vector3.forward * 64);
+                            return true;
+                        }
+                        break;
+                    case 1:
+                        if (IsLocationValid(expansionCenter - (Vector3.forward * 64), ref chained))
+                        {
+                            pos = expansionCenter - (Vector3.forward * 64);
+                            return true;
+                        }
+                        break;
+                    case 2:
+                        if (IsLocationValid(expansionCenter - (Vector3.right * 64), ref chained))
+                        {
+                            pos = expansionCenter - (Vector3.right * 64);
+                            return true;
+                        }
+                        break;
+                    case 3:
+                        if (IsLocationValid(expansionCenter + (Vector3.right * 64), ref chained))
+                        {
+                            pos = expansionCenter + (Vector3.right * 64);
+                            return true;
+                        }
+                        break;
+                    case 4:
+                        if (IsLocationValid(expansionCenter + ((Vector3.right + Vector3.forward) * 64), ref chained))
+                        {
+                            pos = expansionCenter + ((Vector3.right + Vector3.forward) * 64);
+                            return true;
+                        }
+                        break;
+                    case 5:
+                        if (IsLocationValid(expansionCenter - ((Vector3.right + Vector3.forward) * 64), ref chained))
+                        {
+                            pos = expansionCenter - ((Vector3.right + Vector3.forward) * 64);
+                            return true;
+                        }
+                        break;
+                    case 6:
+                        if (IsLocationValid(expansionCenter + ((Vector3.right - Vector3.forward) * 64), ref chained))
+                        {
+                            pos = expansionCenter + ((Vector3.right - Vector3.forward) * 64);
+                            return true;
+                        }
+                        break;
+                    case 7:
+                        if (IsLocationValid(expansionCenter - ((Vector3.right - Vector3.forward) * 64), ref chained))
+                        {
+                            pos = expansionCenter - ((Vector3.right - Vector3.forward) * 64);
+                            return true;
+                        }
+                        break;
+                }
+                locationsCount--;
+            }
+            pos = expansionCenter;
+            return false;
+        }
         private static bool TryFindExpansionLocation(Tank tank, Vector3 expansionCenter, out Vector3 pos)
         {
             bool chained = false;
@@ -800,15 +901,27 @@ namespace TAC_AI.AI.Enemy
                 return false;
             }
         }
-        private static bool IsLocationValid(Vector3 pos, ref bool ChainCancel)
+        private static bool IsLocationValid(Vector3 pos, ref bool ChainCancel, bool resourcesToo = true, bool IgnoreNeutral = false)
         {
             if (ChainCancel)
                 return false;
             bool validLocation = true;
-            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, 32, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle })))
+            if (!Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out _))
             {
+                return false;
+            }
+
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, 32, new Bitfield<ObjectTypes>()))
+            {
+                if (resourcesToo && vis.resdisp.IsNotNull())
+                {
+                    if (vis.isActive)
+                        validLocation = false;
+                }
                 if (vis.tank.IsNotNull())
                 {
+                    if (IgnoreNeutral && vis.tank.Team == -2)
+                        continue;
                     var helper = vis.tank.GetComponent<AIECore.TankAIHelper>();
                     if (helper.TechMemor)
                     {

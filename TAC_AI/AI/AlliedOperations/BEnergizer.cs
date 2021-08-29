@@ -8,6 +8,8 @@ namespace TAC_AI.AI.AlliedOperations
 {
     public static class BEnergizer
     {
+        const float FindBaseExtension = 500;
+
         public static void MotivateCharge(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Energizer) what to do movement-wise
@@ -17,6 +19,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             BGeneral.ResetValues(thisInst);
 
+            // No running here - this is a combat case!
 
             EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
             if (thisInst.areWeFull)
@@ -37,7 +40,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (!thisInst.areWeFull)
             {
-                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Searching for nearest charger!");
@@ -133,7 +136,7 @@ namespace TAC_AI.AI.AlliedOperations
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Scanning for low batteries...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);

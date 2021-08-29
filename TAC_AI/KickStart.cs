@@ -57,7 +57,6 @@ namespace TAC_AI
 
         //public static bool DestroyTreesInWater = false;
 
-
         internal static bool isWaterModPresent = false;
         internal static bool isControlBlocksPresent = false;
         internal static bool isTougherEnemiesPresent = false;

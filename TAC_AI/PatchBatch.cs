@@ -931,32 +931,41 @@ namespace TAC_AI
 
         // Resources/Collection
         [HarmonyPatch(typeof(ResourceDispenser))]
-        [HarmonyPatch("OnSpawn")]//On World Spawn
+        [HarmonyPatch("InitState")]//On World Spawn
         private static class PatchResourcesToHelpAI
         {
             private static void Prefix(ResourceDispenser __instance)
             {
-                //Debug.Log("TACtical_AI: Added resource to list (OnSpawn)");
-                if (!AI.AIECore.Minables.Contains(__instance.visible))
-                    AI.AIECore.Minables.Add(__instance.visible);
-                else
-                    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (OnSpawn)");
+                //Debug.Log("TACtical_AI: Added resource to list (InitState)");
+                if (!AIECore.Minables.Contains(__instance.visible))
+                    AIECore.Minables.Add(__instance.visible);
+                //else
+                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (InitState)");
             }
         }
 
         [HarmonyPatch(typeof(ResourceDispenser))]
-        [HarmonyPatch("Regrow")]//On World Spawn
-        private static class PatchResourceRegrowToHelpAI
+        [HarmonyPatch("Restore")]//On World reload
+        private static class PatchResourceRestoreToHelpAI
         {
-            private static void Prefix(ResourceDispenser __instance)
+            private static void Prefix(ResourceDispenser __instance, ref ResourceDispenser.PersistentState state)
             {
-                //Debug.Log("TACtical_AI: Added resource to list (OnSpawn)");
-                if (!AI.AIECore.Minables.Contains(__instance.visible))
-                    AI.AIECore.Minables.Add(__instance.visible);
+                //Debug.Log("TACtical_AI: Added resource to list (Restore)");
+                if (!state.removedFromWorld)
+                {
+                    if (!AIECore.Minables.Contains(__instance.visible))
+                        AIECore.Minables.Add(__instance.visible);
+                }
+                else
+                {
+                    if (AIECore.Minables.Contains(__instance.visible))
+                        AIECore.Minables.Remove(__instance.visible);
+                }
                 //else
-                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (OnSpawn)");
+                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (Restore)");
             }
         }
+
 
         [HarmonyPatch(typeof(ResourceDispenser))]
         [HarmonyPatch("Die")]//On resource destruction
@@ -981,9 +990,9 @@ namespace TAC_AI
             private static void Prefix(ResourceDispenser __instance)
             {
                 //Debug.Log("TACtical_AI: Removed resource from list (OnRecycle)");
-                if (AI.AIECore.Minables.Contains(__instance.visible))
+                if (AIECore.Minables.Contains(__instance.visible))
                 {
-                    AI.AIECore.Minables.Remove(__instance.visible);
+                    AIECore.Minables.Remove(__instance.visible);
                 }
                 //else
                 //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (OnRecycle)");
@@ -1505,6 +1514,24 @@ namespace TAC_AI
             }
         }
 
+        [HarmonyPatch(typeof(ModuleHeart))]
+        [HarmonyPatch("OnAttach")]//On Game start
+        private static class SpawnTraderTroll
+        {
+            private static void Postfix(ModuleHeart __instance)
+            {
+                if (__instance.block.tank.IsNull())
+                    return;
+                // Setup trolls if Population Injector is N/A
+                if (KickStart.enablePainMode && KickStart.AllowEnemiesToStartBases && SpecialAISpawner.thisActive && Singleton.Manager<ManWorld>.inst.Vendors.IsVendorSCU(__instance.block.BlockType))
+                {
+                    if (Singleton.Manager<ManWorld>.inst.GetTerrainHeight(__instance.transform.position, out _))
+                    {
+                        SpecialAISpawner.TrySpawnTraderTroll(__instance.transform.position);
+                    }
+                }
+            }
+        }
 
         // Multi-Player
         [HarmonyPatch(typeof(ManNetwork))]

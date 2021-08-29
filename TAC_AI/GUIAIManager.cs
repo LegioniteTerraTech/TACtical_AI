@@ -333,7 +333,7 @@ namespace TAC_AI
             fetchAI = lastTank.DediAI;
             isCurrentlyOpen = true;
             HotWindow = new Rect(xMenu, yMenu, 200, 250);
-            windowTimer = 120;
+            windowTimer = 240;
             GUIWindow.SetActive(true);
         }
         public static void CloseSubMenuClickable()
