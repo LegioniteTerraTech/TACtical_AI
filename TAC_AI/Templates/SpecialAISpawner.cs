@@ -364,7 +364,7 @@ namespace TAC_AI.Templates
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return;
 
-            if (UnityEngine.Random.Range(1, 100) > KickStart.UpperDifficulty)
+            if (UnityEngine.Random.Range(-50, 150) > KickStart.Difficulty)
                 return;
 
             if (!RBases.IsLocationGridEmpty(pos))
