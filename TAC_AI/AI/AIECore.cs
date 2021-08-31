@@ -242,7 +242,12 @@ namespace TAC_AI.AI
             target = targetIn;
             if (target != null)
             {
-                if ((target.tank.boundsCentreWorldNoCheck - scanCenter).magnitude > TargetRange)
+                if (target.tank == null)
+                {
+                    target = null;
+                    return false;
+                }    
+                else if ((target.tank.boundsCentreWorldNoCheck - scanCenter).magnitude > TargetRange)
                     target = null;
             }
 

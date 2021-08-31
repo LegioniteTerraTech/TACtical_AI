@@ -44,6 +44,7 @@ namespace TAC_AI
         public static bool DisplayEnemyEvents = true;
         public static bool AllowOverleveledBlockDrops { get { return EnemyBlockDropChance == 100; } } // Obsolete - true when 
         public static bool enablePainMode = true;
+        public static bool EnemyEradicators = false;
         public static bool EnemiesHaveCreativeInventory = false;
         public static bool AllowEnemiesToStartBases = true;
         public static bool AllowEnemyBaseExpand = true;
@@ -126,6 +127,7 @@ namespace TAC_AI
         public static OptionRange diff;
         public static OptionRange landEnemyChangeChance;
         public static OptionRange blockRecoveryChance;
+        public static OptionToggle permitEradication;
         public static OptionToggle infEnemySupplies;
         public static OptionToggle enemyBaseSpawn;
         public static OptionToggle enemyBaseExpand;
@@ -190,6 +192,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "difficulty");
             thisModConfig.BindConfig<KickStart>(null, "LandEnemyReplaceChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
+            thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");
             thisModConfig.BindConfig<KickStart>(null, "AllowEnemyBaseExpand");
@@ -258,6 +261,8 @@ namespace TAC_AI
                 enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemiesPop, AllowSeaEnemiesToSpawn);
                 enemySeaSpawn.onValueSaved.AddListener(() => { AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                permitEradication = new OptionToggle("Huge Enemy Spawns - Requires Beefy Computer", TACAIEnemiesPop, EnemyEradicators);
+                permitEradication.onValueSaved.AddListener(() => { EnemyEradicators = permitEradication.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 ragnarok = new OptionToggle("<b>Ragnarok - Death To All</b> - Requires Beefy Computer", TACAIEnemiesPop, CommitDeathMode);
                 ragnarok.onValueSaved.AddListener(() => {
                     CommitDeathMode = ragnarok.SavedValue;

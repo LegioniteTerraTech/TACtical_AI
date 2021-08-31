@@ -1523,7 +1523,7 @@ namespace TAC_AI
                 if (__instance.block.tank.IsNull())
                     return;
                 // Setup trolls if Population Injector is N/A
-                if (KickStart.enablePainMode && KickStart.AllowEnemiesToStartBases && SpecialAISpawner.thisActive && Singleton.Manager<ManWorld>.inst.Vendors.IsVendorSCU(__instance.block.BlockType))
+                if (KickStart.enablePainMode && KickStart.AllowEnemiesToStartBases && SpecialAISpawner.thisActive && Singleton.Manager<ManPop>.inst.IsSpawningEnabled && Singleton.Manager<ManWorld>.inst.Vendors.IsVendorSCU(__instance.block.BlockType))
                 {
                     if (Singleton.Manager<ManWorld>.inst.GetTerrainHeight(__instance.transform.position, out _))
                     {

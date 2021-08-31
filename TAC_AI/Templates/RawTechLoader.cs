@@ -681,7 +681,7 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
+                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
                         return false;
                     if (cand.purposes.Count == 0)
                         return false;
@@ -766,7 +766,7 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
+                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
                         return false;
                     if (cand.purposes.Count == 0)
                         return false;
@@ -1294,7 +1294,7 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
+                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
                         return false;
                     if (cand.Value.purposes.Count == 0)
                         return false;
@@ -1395,7 +1395,7 @@ namespace TAC_AI.Templates
                         return false;
                     if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
+                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
                         return false;
                     if (cand.Value.purposes.Count == 0)
                         return false;
