@@ -19,6 +19,7 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             }
             BGeneral.ResetValues(thisInst);
+            thisInst.AvoidStuff = true;
 
             if (thisInst.lastPlayer == null)
                 return;

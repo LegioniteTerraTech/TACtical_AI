@@ -14,7 +14,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);
 
-            
+
             thisInst.Attempt3DNavi = true;
             thisInst.Retreat = true;    //Prevent the auto-driveaaaa
 

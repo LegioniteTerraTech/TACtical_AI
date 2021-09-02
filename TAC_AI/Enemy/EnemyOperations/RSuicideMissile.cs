@@ -13,6 +13,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         public static void RamTillDeath(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             BGeneral.ResetValues(thisInst);
+            thisInst.AvoidStuff = true;
             thisInst.Attempt3DNavi = false;
             if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy.IsNotNull())
             {

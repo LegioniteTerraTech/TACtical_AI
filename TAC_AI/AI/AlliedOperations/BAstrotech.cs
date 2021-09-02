@@ -15,6 +15,7 @@ namespace TAC_AI.AI.AlliedOperations
         {
             //The Handler that tells the ship (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst);
+            thisInst.AvoidStuff = true;
 
             if (thisInst.lastPlayer == null)
                 return;

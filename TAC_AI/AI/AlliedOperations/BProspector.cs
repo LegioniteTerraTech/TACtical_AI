@@ -15,11 +15,12 @@ namespace TAC_AI.AI.AlliedOperations
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
+            thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);
 
             if (thisInst.AdvancedAI && thisInst.lastEnemy != null)
-            {   //RUN!!!!!!!!
+            {   // BRANCH - RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
                     thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
@@ -56,6 +57,8 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             }
 
+
+            // VALIDATION CHECKS OF TRACTOR BED FILL STATUS
             if (thisInst.areWeFull)
             {
                 thisInst.areWeFull = false;
@@ -84,8 +87,9 @@ namespace TAC_AI.AI.AlliedOperations
                 }
             }
 
+            // Our Chunk-Carrying tractor pads are filled to the brim with Chunks
             if (thisInst.areWeFull || thisInst.ActionPause > 10)
-            {
+            {   // BRANCH - Head back to base
                 thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
@@ -107,51 +111,48 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
 
-                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
-                {
+                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents)
+                {   // Final approach - turn off avoidence
                     thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                    thisInst.AvoidStuff = false;
                     if (thisInst.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                        thisInst.AvoidStuff = false;
                         thisInst.DriveVar = -1;
                         //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
                     }
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and unloading!");
-                        thisInst.AvoidStuff = false;
+                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                        thisInst.Yield = true;
+                        thisInst.SettleDown();
+                    }
+                }
+                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 4)
+                {   // almost at the the base receiver - fine-tune and yield if nesseary for approach
+                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(); 
+                    thisInst.AvoidStuff = false;
+                    if (thisInst.recentSpeed < 3)
+                    {
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
+                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                    }
+                    else if (thisInst.recentSpeed < 8)
+                    {
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
+                        thisInst.Yield = true;
+                    }
+                    else
+                    {
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
                 }
                 else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
-                {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
-                    if (thisInst.recentSpeed < 3)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                        thisInst.AvoidStuff = false;
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
-                    }
-                    else if (thisInst.recentSpeed < 8)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
-                        thisInst.AvoidStuff = false;
-                        thisInst.Yield = true;
-                    }
-                    else
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
-                        thisInst.AvoidStuff = false;
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
-                        thisInst.Yield = true;
-                        thisInst.SettleDown();
-                    }
-                }
-                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
-                {
+                {   // Near the base, but not quite at the receiver 
                     thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                     if (thisInst.recentSpeed < 3)
                     {
@@ -182,9 +183,9 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.DriveVar = -1;
             }
             else
-            {
+            {   // BRANCH - Go look for resources
                 if (!thisInst.foundGoal)
-                {
+                {   
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");

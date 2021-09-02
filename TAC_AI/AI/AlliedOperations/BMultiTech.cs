@@ -44,7 +44,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    //dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
+                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
                 else
                 {
@@ -59,10 +59,11 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     thisInst.LastCloseAlly = hostTech;
                     vis = thisInst.LastCloseAlly;
-                    //dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
+                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
-                float range = AIECore.Extremes(tank.blockBounds.extents) + AIECore.Extremes(vis.blockBounds.extents);
+                //float range = thisInst.lastTechExtents + AIECore.Extremes(vis.blockBounds.extents);
+                float range = thisInst.IdealRangeCombat;
                 if (!thisInst.MTMimicHostAvail)
                 {
                     thisInst.MTMimicHostAvail = true;
@@ -70,6 +71,10 @@ namespace TAC_AI.AI.AlliedOperations
                 else if (thisInst.MTMimicHostAvail && dist > range)
                 {
                     thisInst.MTMimicHostAvail = false;
+                    // Make sure the player did not force the tech under the ground on release
+                    if (Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float height))
+                        if (tank.boundsCentreWorldNoCheck.y < height)
+                            tank.visible.MoveAboveGround();
                 }
                 if (!thisInst.MTLockedToTechBeam && vis.beam.IsActive && dist < range)
                 {

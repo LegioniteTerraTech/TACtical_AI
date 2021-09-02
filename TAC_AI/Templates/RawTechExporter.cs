@@ -203,7 +203,7 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total RAW Techs found in " + GetNameDirectory(Dir) + ": " + names.Count());
                 foreach (string name in names)
                 {
-                    BuilderExternal ext = LoadEnemyTech(name);
+                    BuilderExternal ext = LoadEnemyTech(name, Dir);
                     BaseTemplate temp = new BaseTemplate();
 
                     temp.techName = ext.Name;
@@ -593,9 +593,9 @@ namespace TAC_AI.Templates
             string loaded = LoadTechFromFile(TechName, altFolderName);
             return JsonUtility.FromJson<BuilderExternal>(loaded);
         }
-        internal static BuilderExternal LoadEnemyTech(string TechName)
+        internal static BuilderExternal LoadEnemyTech(string TechName, string altDirect = "")
         {
-            string loaded = LoadEnemyTechFromFile(TechName);
+            string loaded = LoadEnemyTechFromFile(TechName, altDirect);
             return JsonUtility.FromJson<BuilderExternal>(loaded);
         }
         internal static int GetBBCost(Tank tank)
@@ -733,56 +733,82 @@ namespace TAC_AI.Templates
                 return;
             }
         }
-        private static string LoadEnemyTechFromFile(string TechName)
+        private static string LoadEnemyTechFromFile(string TechName, string AltDirectory = "")
         {
-            string destination = RawTechsDirectory + "\\Enemies";
-            if (!Directory.Exists(RawTechsDirectory))
+            string destination;
+            if (AltDirectory == "")
             {
-                Debug.Log("TACtical_AI: Generating Raw Techs folder.");
+                destination = RawTechsDirectory + "\\Enemies";
+                if (!Directory.Exists(RawTechsDirectory))
+                {
+                    Debug.Log("TACtical_AI: Generating Raw Techs folder.");
+                    try
+                    {
+                        Directory.CreateDirectory(RawTechsDirectory);
+                        Debug.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                        return null;
+                    }
+
+                }
+                if (!Directory.Exists(destination))
+                {
+                    Debug.Log("TACtical_AI: Generating Enemies folder.");
+                    try
+                    {
+                        Directory.CreateDirectory(destination);
+                        Debug.Log("TACtical_AI: Made new Enemies folder successfully.");
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                        return null;
+                    }
+
+                }
                 try
                 {
-                    Directory.CreateDirectory(RawTechsDirectory);
-                    Debug.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                    string output;
+                    if (File.Exists(destination + "\\" + TechName + ".JSON"))
+                    {
+                        output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
+                        Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                    }
+                    else
+                    {
+                        output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
+                        Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                    }
+                    return output;
                 }
                 catch
                 {
-                    Debug.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    Debug.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                     return null;
                 }
-
             }
-            if (!Directory.Exists(destination))
+            else
             {
-                Debug.Log("TACtical_AI: Generating Enemies folder.");
+                destination = AltDirectory;
                 try
                 {
-                    Directory.CreateDirectory(destination);
-                    Debug.Log("TACtical_AI: Made new Enemies folder successfully.");
+                    string output;
+                    if (File.Exists(destination + "\\" + TechName + ".JSON"))
+                    {
+                        output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
+                        Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                    }
+                    else
+                    {
+                        output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
+                        Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                    }
+                    return output;
                 }
-                catch
-                {
-                    Debug.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
-                    return null;
-                }
-
-            }
-            try
-            {
-                string output;
-                if (File.Exists(destination + "\\" + TechName + ".JSON"))
-                {
-                    output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
-                    Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
-                }
-                else
-                {
-                    output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
-                    Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
-                }
-                return output;
-            }
-            catch
-            {
+                catch { }
                 Debug.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                 return null;
             }
@@ -821,6 +847,23 @@ namespace TAC_AI.Templates
 
             return final.ToString();
         }
+        private static string GetDirectoryPathOnly(string FolderDirectory)
+        {
+            StringBuilder final = new StringBuilder();
+            int offsetRemove = 0;
+            foreach (char ch in FolderDirectory)
+            {
+                if (ch == '\\')
+                {
+                    offsetRemove = 1;
+                }
+                else
+                    offsetRemove++;
+                final.Append(ch);
+            }
+            final.Remove(final.Length - offsetRemove, offsetRemove);
+            return final.ToString();
+        }
         private static List<string> GetALLDirectoriesInFolder(string directory)
         {   // 
             List<string> final = new List<string>();
@@ -831,6 +874,7 @@ namespace TAC_AI.Templates
                 final.Add(Dir);
                 final.AddRange(GetALLDirectoriesInFolder(Dir));
             }
+            final = final.Distinct().ToList();
             return final;
         }
         private static FactionSubTypes GetTopCorp(Tank tank)

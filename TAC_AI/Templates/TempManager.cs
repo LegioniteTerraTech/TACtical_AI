@@ -24,7 +24,7 @@ namespace TAC_AI.Templates
             techBases = new Dictionary<SpawnBaseTypes, BaseTemplate>();
             foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in TempStorage.techBasesAll)
             {
-                if (ValidateBlocksInTech(pair.Value.savedTech))
+                if (ValidateBlocksInTech(ref pair.Value.savedTech))
                 {
                     techBases.Add(pair.Key, pair.Value);
                 }
@@ -48,7 +48,7 @@ namespace TAC_AI.Templates
                 List<BaseTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
                 foreach (BaseTemplate raw in ExternalTechsRaw)
                 {
-                    if (ValidateBlocksInTech(raw.savedTech))
+                    if (ValidateBlocksInTech(ref raw.savedTech))
                     {
                         ExternalEnemyTechs.Add(raw);
                     }
@@ -61,7 +61,7 @@ namespace TAC_AI.Templates
             }
         }
 
-        public static bool ValidateBlocksInTech(string toLoad)
+        public static bool ValidateBlocksInTech(ref string toLoad)
         {
             StringBuilder RAW = new StringBuilder();
             foreach (char ch in toLoad)
@@ -89,8 +89,16 @@ namespace TAC_AI.Templates
             {
                 BlockTypes type = AIERepair.StringToBlockType(bloc.t);
                 if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
+                {
                     valid = false;
+                    continue;
+                }
+                bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
             }
+
+            // Rebuild in workable format
+            toLoad = AIERepair.DesignMemory.MemoryToJSONExternal(mem);
+
             return valid;
         }
 

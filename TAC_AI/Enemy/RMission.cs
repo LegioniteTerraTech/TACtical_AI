@@ -130,6 +130,7 @@ namespace TAC_AI.AI.Enemy
             }
             else if (name == "DPS Target")
             {   // R&D Target
+                mind.AIControl.Hibernate = true;
                 mind.StartedAnchored = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
                 mind.CommanderAttack = EnemyAttack.Coward;

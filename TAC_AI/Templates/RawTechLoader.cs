@@ -345,7 +345,7 @@ namespace TAC_AI.Templates
             Tank outTank;
             if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, unProvoked: unProvoked))
             {
-                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, maxPrice: maxPrice, unProvoked: unProvoked)], unProvoked, AutoTerrain);
+                outTank = SpawnEnemyTechExt(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, maxPrice: maxPrice, unProvoked: unProvoked)], unProvoked, AutoTerrain);
             }
             else
             {
@@ -358,7 +358,7 @@ namespace TAC_AI.Templates
         {   // This will try to spawn player-made enemy techs as well
             if (ShouldUseCustomTechs(factionType, purposes, terrainType, false, maxGrade, maxPrice, unProvoked))
             {
-                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, purposes, terrainType, maxGrade: maxGrade, maxPrice: maxPrice, unProvoked: unProvoked)], unProvoked, AutoTerrain);
+                outTank = SpawnEnemyTechExt(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, purposes, terrainType, maxGrade: maxGrade, maxPrice: maxPrice, unProvoked: unProvoked)], unProvoked, AutoTerrain);
             }
             else
             {
@@ -378,7 +378,7 @@ namespace TAC_AI.Templates
 
             if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, unProvoked: unProvoked, maxPrice: maxPrice))
             {
-                outTank = SpawnEnemyTechExternal(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, unProvoked: unProvoked, maxPrice: maxPrice)], unProvoked, AutoTerrain);
+                outTank = SpawnEnemyTechExt(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, unProvoked: unProvoked, maxPrice: maxPrice)], unProvoked, AutoTerrain);
             }
             else
             {
@@ -444,7 +444,7 @@ namespace TAC_AI.Templates
         {
             if (ShouldUseCustomTechs(faction, BasePurpose.NotStationary, terrainType, true))
             {
-                return SpawnEnemyTechExternal(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, true)]);
+                return SpawnEnemyTechExt(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, true)]);
             }
             else
             {
@@ -500,7 +500,7 @@ namespace TAC_AI.Templates
         {
             if (ShouldUseCustomTechs(faction, purposes, terrainType, true))
             {
-                return SpawnEnemyTechExternal(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, ManGameMode.inst.IsCurrent<ModeAttract>(), maxGrade, maxPrice, unProvoked)], unProvoked, AutoTerrain, forceInstant, isPopulation);
+                return SpawnEnemyTechExt(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, ManGameMode.inst.IsCurrent<ModeAttract>(), maxGrade, maxPrice, unProvoked)], unProvoked, AutoTerrain, forceInstant, isPopulation);
             }
             else
             {
@@ -531,9 +531,19 @@ namespace TAC_AI.Templates
                 bool MustBeAnchored = !ContainsPurpose(toSpawn, BasePurpose.NotStationary);
 
                 Tank theTech;
-                if (!forceInstant && MustBeAnchored)
+                if (MustBeAnchored)
                 {
-                    theTech = null; //InstantTech does not handle this correctly 
+                    //theTech = null; //InstantTech does not handle this correctly 
+                    bool storeBB = ContainsPurpose(toSpawn, BasePurpose.Harvesting) || ContainsPurpose(toSpawn, BasePurpose.TechProduction);
+
+                    if (storeBB)
+                    {
+                        theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn) + " ¥¥" + 5000000, baseBlueprint, AutoTerrain, MustBeAnchored, isPopulation);
+                    }
+                    else
+                    {
+                        theTech = InstantTech(pos, facingDirect, Team, GetEnglishName(toSpawn), baseBlueprint, AutoTerrain, MustBeAnchored, isPopulation);
+                    }
                 }
                 else
                 {
@@ -584,7 +594,7 @@ namespace TAC_AI.Templates
 
 
         // imported ENEMY cases
-        internal static Tank SpawnEnemyTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BaseTemplate Blueprint, bool unProvoked = false, bool AutoTerrain = true, bool forceInstant = false, bool pop = false)
+        internal static Tank SpawnEnemyTechExt(Vector3 pos, int Team, Vector3 facingDirect, BaseTemplate Blueprint, bool unProvoked = false, bool AutoTerrain = true, bool forceInstant = false, bool pop = false)
         {
             string baseBlueprint = Blueprint.savedTech;
 
@@ -594,7 +604,17 @@ namespace TAC_AI.Templates
 
             if (!forceInstant && MustBeAnchored)
             {
-                theTech = null; //InstantTech does not handle this correctly 
+                //theTech = null; //InstantTech does not handle this correctly 
+                bool storeBB = Blueprint.purposes.Contains(BasePurpose.Harvesting) || Blueprint.purposes.Contains(BasePurpose.TechProduction);
+
+                if (storeBB)
+                {
+                    theTech = InstantTech(pos, facingDirect, Team, Blueprint.techName + " ¥¥" + 5000000, baseBlueprint, AutoTerrain, MustBeAnchored, pop);
+                }
+                else
+                {
+                    theTech = InstantTech(pos, facingDirect, Team, Blueprint.techName, baseBlueprint, AutoTerrain, MustBeAnchored, pop);
+                }
             }
             else
             {
@@ -619,7 +639,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
                 if (!worked)
                 {
-                    Debug.Log("TACtical_AI: SpawnEnemyTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                    Debug.Log("TACtical_AI: SpawnEnemyTechExt - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return null;
                 }
                 bool storeBB = !Blueprint.purposes.Contains(BasePurpose.NotStationary) && (Blueprint.purposes.Contains(BasePurpose.Harvesting) || Blueprint.purposes.Contains(BasePurpose.TechProduction));
@@ -1043,7 +1063,13 @@ namespace TAC_AI.Templates
             {
                 worked = true;
 
-                return Singleton.Manager<ManLooseBlocks>.inst.HostSpawnBlock(type, position, quat, true);
+                TankBlock block = Singleton.Manager<ManLooseBlocks>.inst.HostSpawnBlock(type, position, quat, false);
+                if (block.GetComponent<Damageable>())
+                {
+                    if (!block.GetComponent<Damageable>().IsAtFullHealth)
+                        block.InitNew();
+                }
+                return block;
             }
             try
             {
@@ -1079,6 +1105,10 @@ namespace TAC_AI.Templates
             data.m_CreationData = new TechData.CreationData();
             data.m_BlockSpecs = new List<TankPreset.BlockSpec>();
             List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
+
+            bool skinChaotic = UnityEngine.Random.Range(0, 100) < 2;
+            byte skinset = (byte)UnityEngine.Random.Range(0, 2);
+            byte skinset2 = (byte)UnityEngine.Random.Range(0, 1);
             foreach (BlockMemory mem in mems)
             {
                 BlockTypes type = AIERepair.StringToBlockType(mem.t);
@@ -1094,7 +1124,38 @@ namespace TAC_AI.Templates
                 spec.position = mem.p;
                 spec.saveState = new Dictionary<int, Module.SerialData>();
                 spec.textSerialData = new List<string>();
-                spec.m_SkinID = 0;
+                FactionSubTypes factType = ManSpawn.inst.GetCorporation(type);
+                if (skinChaotic)
+                {
+                    byte rand = (byte)UnityEngine.Random.Range(0, 2);
+                    if (factType == FactionSubTypes.GSO && rand != 0)
+                        rand += 3;
+                    if (!ManDLC.inst.IsSkinDLC(rand, factType))
+                        spec.m_SkinID = rand;
+                    else
+                        spec.m_SkinID = 0;
+                }
+                else
+                {
+                    if (factType == FactionSubTypes.GSO)
+                    {
+                        if (!ManDLC.inst.IsSkinDLC(skinset + (skinset != 0 ? 3 : 0), factType))
+                            spec.m_SkinID = (byte)(skinset + (skinset != 0 ? 3 : 0));
+                        else if (!ManDLC.inst.IsSkinDLC(skinset2 + (skinset2 != 0 ? 3 : 0), factType))
+                            spec.m_SkinID = (byte)(skinset2 + (skinset2 != 0 ? 3 : 0));
+                        else
+                            spec.m_SkinID = 0;
+                    }
+                    else
+                    {
+                        if (!ManDLC.inst.IsSkinDLC(skinset, factType))
+                            spec.m_SkinID = skinset;
+                        else if (!ManDLC.inst.IsSkinDLC(skinset2, factType))
+                            spec.m_SkinID = skinset2;
+                        else
+                            spec.m_SkinID = 0;
+                    }
+                }
 
                 data.m_BlockSpecs.Add(spec);
             }
@@ -1139,6 +1200,7 @@ namespace TAC_AI.Templates
                 if (!theTech.IsAnchored)
                     Debug.Log("TACtical_AI: InstantTech - Game is being stubborn - repeated attempts to anchor failed");
             }
+
             ReconstructConveyorSequencing(theTech);
 
             return theTech;
@@ -1726,11 +1788,33 @@ namespace TAC_AI.Templates
         {
             try
             {
-                /*
+                if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
+                    return;
+
+                List<BlockMemory> mems = new List<BlockMemory>();
+                List<TankBlock> blocs = new List<TankBlock>();
                 foreach (ModuleItemConveyor chain in tank.blockman.IterateBlockComponents<ModuleItemConveyor>())
-                {   // Reconstruct
-                    chain.FlipLoopDirection(backward: false);
-                }*/
+                {   // intel
+                    BlockMemory mem = new BlockMemory();
+                    mem.r = chain.block.cachedLocalRotation.rot;
+                    mem.p = chain.block.cachedLocalPosition;
+                    mems.Add(mem);
+                    blocs.Add(chain.block);
+                }
+
+                foreach (TankBlock block in blocs)
+                {   // detach
+                    block.Separate();
+                }
+
+                foreach (BlockMemory mem in mems)
+                {   // reconstruct
+                    try
+                    {
+                        AIERepair.AttemptBlockAttachS(tank, mem, blocs[mems.IndexOf(mem)]);
+                    }
+                    catch { }
+                }
             }
             catch { }
         }

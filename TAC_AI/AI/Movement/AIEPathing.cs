@@ -47,7 +47,7 @@ namespace TAC_AI.AI.Movement
         {
             //What actually does the avoidence
             Vector3 inputOffset = tank.transform.position - vis.centrePosition;
-            float inputSpacing = vis.Radius + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            float inputSpacing = vis.Radius + thisInst.lastTechExtents + thisInst.DodgeStrength;
             Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
@@ -119,7 +119,7 @@ namespace TAC_AI.AI.Movement
         {
             //What actually does the avoidence
             Vector3 inputOffset = tank.transform.position - vis.centrePosition;
-            float inputSpacing = vis.Radius + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            float inputSpacing = vis.Radius + thisInst.lastTechExtents + thisInst.DodgeStrength;
             Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
@@ -260,14 +260,14 @@ namespace TAC_AI.AI.Movement
         public static Vector3 ObstOtherDirSetPiece(Tank tank, AIECore.TankAIHelper thisInst, Vector3 pos, TerrainSetPiece vis)
         {   //What actually does the avoidence
             Vector3 inputOffset = tank.transform.position - pos;
-            float inputSpacing = vis.GetApproxCellRadius() + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            float inputSpacing = vis.GetApproxCellRadius() + thisInst.lastTechExtents + thisInst.DodgeStrength;
             Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
         public static Vector3 ObstDirSetPiece(Tank tank, AIECore.TankAIHelper thisInst, Vector3 pos, TerrainSetPiece vis)
         {   //What actually does the avoidence
             Vector3 inputOffset = tank.transform.position - pos;
-            float inputSpacing = vis.GetApproxCellRadius() + thisInst.lastTechExtents + AIECore.TankAIHelper.DodgeStrength;
+            float inputSpacing = vis.GetApproxCellRadius() + thisInst.lastTechExtents + thisInst.DodgeStrength;
             Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
@@ -854,20 +854,20 @@ namespace TAC_AI.AI.Movement
                         //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is jammed on land!");
                         if (thisInst.AdviseAway)
                         { // Reverse
-                            final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                            final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
                         }
                         else
-                            final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                            final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
                     }
                     else if (vecCount > 0)
                     {
                         //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is trying to avoid terrain");
                         if (thisInst.AdviseAway)
                         { // Reverse
-                            final = thisInst.tank.boundsCentreWorldNoCheck - ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * AIECore.TankAIHelper.DodgeStrength);
+                            final = thisInst.tank.boundsCentreWorldNoCheck - ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * thisInst.DodgeStrength);
                         }
                         else
-                            final = thisInst.tank.boundsCentreWorldNoCheck + ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * AIECore.TankAIHelper.DodgeStrength);
+                            final = thisInst.tank.boundsCentreWorldNoCheck + ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * thisInst.DodgeStrength);
                     }
                 }
             }
@@ -933,10 +933,10 @@ namespace TAC_AI.AI.Movement
                     {
                         if (thisInst.AdviseAway)
                         { // Reverse
-                            final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                            final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
                         }
                         else
-                            final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * AIECore.TankAIHelper.DodgeStrength);
+                            final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
                     }
                 }
                 else

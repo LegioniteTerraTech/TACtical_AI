@@ -434,7 +434,7 @@ namespace TAC_AI.AI.Enemy
                 else
                     toSet.EvilCommander = EnemyHandling.Chopper;
             }
-            else if (KickStart.isWaterModPresent && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 + FoilCount || modHoverCount > 1))
+            else if (KickStart.isWaterModPresent && modGyroCount > 0 && modBoostCount > 0 && modWheelCount < 4 + FoilCount)
             {
                 toSet.EvilCommander = EnemyHandling.Naval;
             }

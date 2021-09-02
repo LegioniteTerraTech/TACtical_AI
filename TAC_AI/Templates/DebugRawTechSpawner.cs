@@ -247,11 +247,11 @@ namespace TAC_AI.Templates
             BaseTemplate val = TempManager.ExternalEnemyTechs[index];
             if (val.purposes.Contains(BasePurpose.NotStationary))
             {
-                RawTechLoader.SpawnEnemyTechExternal(GetPlayerPos(), -1, Vector3.forward, val);
+                RawTechLoader.SpawnEnemyTechExt(GetPlayerPos(), -1, Vector3.forward, val);
             }
             else
             {
-                RawTechLoader.SpawnEnemyTechExternal(GetPlayerPos(), -1, Vector3.forward, val);
+                RawTechLoader.SpawnEnemyTechExt(GetPlayerPos(), -1, Vector3.forward, val);
                 /*
                 if (val.purposes.Contains(BasePurpose.Defense))
                     RawTechLoader.spa(GetPlayerPos(), -1, type, false);

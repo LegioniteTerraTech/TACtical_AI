@@ -22,6 +22,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         {
             BGeneral.ResetValues(thisInst);
             thisInst.Attempt3DNavi = false;
+            thisInst.AvoidStuff = true;
 
             if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy != null)
             {

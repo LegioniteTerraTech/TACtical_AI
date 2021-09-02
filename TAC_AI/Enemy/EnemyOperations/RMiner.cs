@@ -15,6 +15,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
+            thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);
 
@@ -60,7 +61,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
 
-                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
+                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents)
                 {
                     if (thisInst.recentSpeed == 1)
                     {
@@ -77,7 +78,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.SettleDown();
                     }
                 }
-                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
+                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 4)
                 {
                     if (thisInst.recentSpeed == 1)
                     {
@@ -100,7 +101,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.SettleDown();
                     }
                 }
-                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
+                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
                 {
                     if (thisInst.recentSpeed < 2)
                     {

@@ -24,6 +24,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         {
             BGeneral.ResetValues(thisInst);
             thisInst.Attempt3DNavi = false;
+            thisInst.AvoidStuff = true;
 
             //Singleton.Manager<ManTechs>.inst.
             if (tank.rbody.IsNull())
@@ -349,7 +350,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 //}
                 //else
                 //{   // Normal Dogfighting
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.4f || thisInst.Urgency >= 30)
+                    if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.4f || thisInst.Urgency >= 30)
                     {
                         thisInst.DANGER = true;
                         //thisInst.Urgency = 50;

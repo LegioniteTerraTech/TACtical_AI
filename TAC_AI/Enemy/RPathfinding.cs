@@ -34,14 +34,14 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (lastAuxVal < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
                         {
-                            IntVector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst2, true, dodgeLargeStatics);
+                            Vector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst2, true, dodgeLargeStatics);
                             if (obst2)
                                 return (targetIn + ProccessedVal2) / 4;
                             else
                                 return (targetIn + ProccessedVal2) / 3;
 
                         }
-                        IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, true, dodgeLargeStatics);
+                        Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, true, dodgeLargeStatics);
                         if (obst)
                             return (targetIn + ProccessedVal) / 3;
                         else
@@ -57,7 +57,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
                 {
-                    IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 3;
                     else
@@ -91,14 +91,14 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (lastAuxVal < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
                         {
-                            IntVector3 ProccessedVal2 = thisInst.GetDir(lastCloseAlly) + thisInst.GetDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst2, true, dodgeLargeStatics);
+                            Vector3 ProccessedVal2 = thisInst.GetDir(lastCloseAlly) + thisInst.GetDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst2, true, dodgeLargeStatics);
                             if (obst2)
                                 return (targetIn + ProccessedVal2) / 4;
                             else
                                 return (targetIn + ProccessedVal2) / 3;
 
                         }
-                        IntVector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, true, dodgeLargeStatics);
+                        Vector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, true, dodgeLargeStatics);
                         if (obst)
                             return (targetIn + ProccessedVal) / 3;
                         else
@@ -114,7 +114,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
                 {
-                    IntVector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    Vector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 3;
                     else
@@ -157,13 +157,13 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (lastAuxVal < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                         {
-                            IntVector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst2, true, true);
+                            Vector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst2, true, true);
                             if (obst2)
                                 return (targetIn + ProccessedVal2) / 4;
                             else
                                 return (targetIn + ProccessedVal2) / 3;
                         }
-                        IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, true, true);
+                        Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, true, true);
                         if (obst)
                             return (targetIn + ProccessedVal) / 3;
                         else
@@ -179,7 +179,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
-                    IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
+                    Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
                     if (obst)
                         return (targetIn + ProccessedVal) / 3;
                     else

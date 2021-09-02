@@ -57,8 +57,6 @@ namespace TAC_AI
             
             if (!savedOverlay)
             {
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 1");
-
                 textStor = new GameObject("NewTextEnemy", typeof(RectTransform));
 
                 RectTransform rTrans = textStor.GetComponent<RectTransform>();
@@ -69,7 +67,6 @@ namespace TAC_AI
 
 
                 //texter = (Text)textInput.GetValue(refer.m_PanelPrefab);
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 2");
 
                 texter.fontStyle = textRefer.fontStyle;
                 texter.material = textRefer.material;
@@ -82,7 +79,6 @@ namespace TAC_AI
                 FloatingTextPanel panel = textStor.AddComponent<FloatingTextPanel>();
 
                 //panel = refer.m_PanelPrefab;
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 3.5");
                 //canGroup = (CanvasGroup)canvas.GetValue(refer.m_PanelPrefab);
 
                 try
@@ -102,11 +98,9 @@ namespace TAC_AI
                 sScale.SetValue(panel, Vector3.one * 2.5f);
                 scale.SetValue(panel, 2.5f);
 
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 3");
                 textInput.SetValue(panel, texter);
 
 
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 4");
                 overlayEdit = textStor.AddComponent<FloatingTextOverlayData>();
                 overlayEdit.m_HiddenInModes = new List<ManGameMode.GameType>
                 {
@@ -123,7 +117,6 @@ namespace TAC_AI
                 overlayEdit.m_AboveDist = refer.m_AboveDist;
                 overlayEdit.m_PanelPrefab = panel;
 
-                Debug.Log("TACtical_AI: PopupEnemyInfo - 5");
                 savedOverlay = true;
             }
 
@@ -137,9 +130,9 @@ namespace TAC_AI
                 List<Overlay> over = (List<Overlay>)listOverlays.GetValue(ManOverlay.inst);
                 over.Add(fOverlay);
                 listOverlays.SetValue(ManOverlay.inst, over);
-                Debug.Log("TACtical_AI: PopupEnemyInfo - Force inserted popup");
+                //Debug.Log("TACtical_AI: PopupEnemyInfo - Force inserted popup");
             }
-            Debug.Log("TACtical_AI: PopupEnemyInfo - Threw popup \"" + text + "\"");
+            //Debug.Log("TACtical_AI: PopupEnemyInfo - Threw popup \"" + text + "\"");
             
 
            // ManOverlay.inst.AddFloatingTextOverlay(text, pos);
@@ -200,7 +193,7 @@ namespace TAC_AI
                                     __instance.block.tank.Anchors.UnanchorAll(true);
                                 __instance.block.tank.control.BoostControlJets = true;
                                 __result = true;
-                                return false;
+                                //return false;
                             }
                             else if ((KickStart.testEnemyAI || KickStart.isTougherEnemiesPresent) && KickStart.enablePainMode && tank.IsEnemy() && !ManSpawn.IsPlayerTeam(tank.Team))
                             {
@@ -1366,7 +1359,7 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade)], AutoTerrain: false);
+                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade)], AutoTerrain: false);
                                     replacementBote.SetTeam(tv.TeamID, wasPop);
 
                                     Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
@@ -1458,7 +1451,7 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    Tank replacementTech = RawTechLoader.SpawnEnemyTechExternal(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
+                                    Tank replacementTech = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorp(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
                                     replacementTech.SetTeam(tv.TeamID, wasPop);
 
                                     Debug.Log("TACtical_AI:  Tech " + previousTechName + " has been swapped out for land tech " + replacementTech.name + " instead");

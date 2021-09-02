@@ -11,6 +11,7 @@ namespace TAC_AI.AI.AlliedOperations
         public static void MotivateFly(AIECore.TankAIHelper thisInst, Tank tank)
         {   // Will have to account for the different types of flight methods available
             BGeneral.ResetValues(thisInst);
+            thisInst.AvoidStuff = true;
 
             if (thisInst.lastPlayer == null)
                 return;
@@ -74,7 +75,7 @@ namespace TAC_AI.AI.AlliedOperations
                 /*
                 if (KickStart.isWeaponAimModPresent && thisInst.SideToThreat && (pilot.LargeAircraft || pilot.BankOnly))
                 {   // AC-130 broadside attack
-                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.25f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.25f || thisInst.Urgency >= 30)
+                    if ( Mathf.Abs(Vector3.Dot(tank.rootBlockTrans.right, aimTo)) > 0.25f || thisInst.Urgency >= 30)
                     {
                         thisInst.DANGER = true;
                         //thisInst.Urgency = 50;
@@ -83,7 +84,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else
                 {  */ // Normal Dogfighting
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.25f || thisInst.Urgency >= 30)
+                if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.25f || thisInst.Urgency >= 30)
                     {
                         thisInst.DANGER = true;
                         //thisInst.Urgency = 50;

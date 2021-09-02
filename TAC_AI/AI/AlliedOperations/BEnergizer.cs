@@ -16,6 +16,7 @@ namespace TAC_AI.AI.AlliedOperations
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
+            thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);
 
@@ -39,7 +40,7 @@ namespace TAC_AI.AI.AlliedOperations
             }
 
             if (!thisInst.areWeFull)
-            {
+            {   // BRANCH - Not Charged: Recharge!
                 thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
@@ -128,7 +129,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.DriveVar = -1;
             }
             else
-            {
+            {   // BRANCH - Charged: Find a chargeable target
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
