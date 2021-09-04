@@ -1203,6 +1203,8 @@ namespace TAC_AI.Templates
 
             ReconstructConveyorSequencing(theTech);
 
+            Debug.Log("TACtical_AI: InstantTech - Built " + name);
+
             return theTech;
         }
 
@@ -1793,30 +1795,50 @@ namespace TAC_AI.Templates
 
                 List<BlockMemory> mems = new List<BlockMemory>();
                 List<TankBlock> blocs = new List<TankBlock>();
-                foreach (ModuleItemConveyor chain in tank.blockman.IterateBlockComponents<ModuleItemConveyor>())
+                foreach (TankBlock chain in tank.blockman.IterateBlocks())
                 {   // intel
-                    BlockMemory mem = new BlockMemory();
-                    mem.r = chain.block.cachedLocalRotation.rot;
-                    mem.p = chain.block.cachedLocalPosition;
-                    mems.Add(mem);
-                    blocs.Add(chain.block);
+                    if (chain.GetComponent<ModuleItemConveyor>())
+                    {
+                        BlockMemory mem = new BlockMemory();
+                        mem.r = chain.cachedLocalRotation.rot;
+                        mem.p = chain.cachedLocalPosition;
+                        mems.Add(mem);
+                        blocs.Add(chain);
+                    }
                 }
+                if (mems.Count() == 0)
+                    return;
 
                 foreach (TankBlock block in blocs)
                 {   // detach
-                    block.Separate();
+                    try
+                    {
+                        if (block.IsAttached)
+                            tank.blockman.Detach(block, false, false, false);
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: ReconstructConveyorSequencing - error 1");
+                    }
                 }
 
                 foreach (BlockMemory mem in mems)
                 {   // reconstruct
                     try
                     {
-                        AIERepair.AttemptBlockAttachS(tank, mem, blocs[mems.IndexOf(mem)]);
+                        if (!tank.blockman.AddBlockToTech(blocs[mems.IndexOf(mem)], mem.p, new OrthoRotation(mem.r)))
+                            Debug.Log("TACtical_AI: ReconstructConveyorSequencing - error 3");
                     }
-                    catch { }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: ReconstructConveyorSequencing - error 2");
+                    }
                 }
             }
-            catch { }
+            catch
+            {
+                Debug.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
+            }
         }
     }
 }

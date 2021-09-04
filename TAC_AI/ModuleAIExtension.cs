@@ -19,13 +19,13 @@ namespace TAC_AI
         //   PRETTY MUCH ALL OF THE BELOW - except the ones with '>' by them for now.
         // COMBAT
         Escort,     // Good ol' player defender                     (Classic player defense numbnut)
-        >Assault,    // Run off and attack the enemies on your radar (Runs off (beyond radar range!) to attack enemies)
-        >Aegis,      // Protects the nearest non-player allied Tech  (Follows nearest ally, will chase enemy some distance)
+        Assault,    // Run off and attack the enemies on your radar (Runs off (beyond radar range!) to attack enemies)
+        Aegis,      // Protects the nearest non-player allied Tech  (Follows nearest ally, will chase enemy some distance)
 
         // RESOURCES
         Prospector, // Harvest Chunks and return them to base       (Returns chunks when full to nearest receiver)
         >Scrapper,   // Grab loose blocks but avoid combat           (Return to nearest base when threatened)
-        >Energizer,  // Charges up and/or heals other techs          (Return to nearest base when out of power)
+        Energizer,  // Charges up and/or heals other techs          (Return to nearest base when out of power)
 
         // MULTECH  // Enabled for all                              (MultiTech) - BuildBeam disabled, will fire at any angle.
         MTTurret,   // Only turns to aim at enemy                     Also will follow nearest tech that's Build Beaming

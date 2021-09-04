@@ -208,7 +208,10 @@ namespace TAC_AI.Templates
                     foreach (FactionSubTypes faction in factionsAvail)
                     {
                         if (!Licences.GetLicense(faction).HasReachedMaxLevel)
+                        {
                             hasAllDone = false;
+                            break;
+                        }
                     }
                 }
                 else

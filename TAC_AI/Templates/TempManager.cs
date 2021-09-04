@@ -84,6 +84,7 @@ namespace TAC_AI.Templates
                 else
                     blockCase.Append(ch);
             }
+            mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
             bool valid = true;
             foreach (BlockMemory bloc in mem)
             {

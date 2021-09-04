@@ -39,7 +39,7 @@ namespace TAC_AI.Templates
     {
         public static GameObject inst;
         public static GameObject GUIWindow;
-        private static Rect HotWindow = new Rect(0, 0, 200, 100);   // the "window"
+        private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
         public static bool isOpen;
         public static bool pendingInGameReload;
 
@@ -83,7 +83,7 @@ namespace TAC_AI.Templates
             {
                 if (isOpen)
                 {
-                    HotWindow = GUI.Window(846321, HotWindow, GUIHandler, "<b>Save Current Tech</b>");
+                    HotWindow = GUI.Window(846321, HotWindow, GUIHandler, "<b>RAW Tech Saving</b>");
                 }
             }
         }
@@ -145,10 +145,20 @@ namespace TAC_AI.Templates
 
         private static void GUIHandler(int ID)
         {
-            if (GUI.Button(new Rect(20, 40, 160, 40), "<b>SAVE RAW</b>"))
+            bool snapsAvail = SnapsAvailable();
+            if (GUI.Button(new Rect(20, 30, 160, 40), new GUIContent("<b>SAVE CURRENT</b>", "Save current Tech to the Raw Techs directory")))
             {
                 SaveTechToRawJSON(Singleton.playerTank);
             }
+            if (GUI.Button(new Rect(20, 70, 160, 40), new GUIContent("<b>+ ENEMY POP</b>", "Save current Tech to Raw Enemies pop in eLocal.")))
+            {
+                SaveEnemyTechToRawJSON(Singleton.playerTank);
+            }
+            if (GUI.Button(new Rect(20, 110, 160, 40), new GUIContent("<b>+ ALL SNAPS</b>", snapsAvail ? "Save ALL snapshots to Raw Enemies pop in eBulk." : "Open the snapshots menu at least once first!")))
+            {
+                SaveEnemyTechsToRawBLK();
+            }
+            GUI.Label(new Rect(20, 160, 150, 40), GUI.tooltip);
             GUI.DragWindow();
         }
         public static void LaunchSubMenu()
@@ -203,20 +213,27 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total RAW Techs found in " + GetNameDirectory(Dir) + ": " + names.Count());
                 foreach (string name in names)
                 {
-                    BuilderExternal ext = LoadEnemyTech(name, Dir);
-                    BaseTemplate temp = new BaseTemplate();
+                    try
+                    {
+                        BuilderExternal ext = LoadEnemyTech(name, Dir);
+                        BaseTemplate temp = new BaseTemplate();
 
-                    temp.techName = ext.Name;
-                    temp.savedTech = ext.Blueprint;
-                    temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
-                    FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
-                    temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
-                    temp.IntendedGrade = minCorpGrade;
-                    temp.faction = MainCorp;
-                    temp.terrain = terra;
+                        temp.techName = ext.Name;
+                        temp.savedTech = ext.Blueprint;
+                        temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
+                        FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
+                        temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
+                        temp.IntendedGrade = minCorpGrade;
+                        temp.faction = MainCorp;
+                        temp.terrain = terra;
 
-                    temps.Add(temp);
-                    Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
+                        temps.Add(temp);
+                        Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: Could not deploy " + name + " as an enemy tech!  Corrupted BuilderExternal!!");
+                    }
                 }
             }
             return temps;
@@ -572,6 +589,50 @@ namespace TAC_AI.Templates
             }
         }
 
+        // Snapshot to RawTech
+        public static bool SnapsAvailable()
+        {
+            try
+            {
+                List<Binding.SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
+                if (Snaps.Count > 0)
+                    return true;
+            }
+            catch
+            {
+                // error
+                return false;
+            }
+            // No snaps loaded.
+            return false;
+        }
+        public static void SaveEnemyTechsToRawBLK()
+        {
+            List<Binding.SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
+            if (Snaps.Count == 0)
+                return;
+            foreach (Binding.SnapshotLiveData snap in Snaps)
+            {
+                try
+                {
+                    SaveEnemyTechToRawJSONBLK(snap.m_Snapshot.techData);
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: SaveEnemyTechsToRawBLK - Export Failure reported!");
+                    try
+                    {
+                        Debug.Log("TACtical_AI: Error tech name " + snap.m_Snapshot.techData.Name);
+                    }
+                    catch
+                    {
+                        Debug.Log("TACtical_AI: SaveEnemyTechsToRawBLK - COULD NOT FETCH TECHDATA!!!");
+                    }
+                }
+            }
+            ReloadExternal();
+        }
+
 
         // JSON Handlers
         public static void SaveTechToRawJSON(Tank tank)
@@ -587,6 +648,36 @@ namespace TAC_AI.Templates
             builder.Cost = GetBBCost(tank);
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveTechToFile(tank.name, builderJSON);
+        }
+        public static void SaveEnemyTechToRawJSON(Tank tank)
+        {
+            BuilderExternal builder = new BuilderExternal();
+            builder.Name = tank.name;
+            builder.Faction = GetTopCorp(tank);
+            builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
+            builder.InfBlocks = false;
+            builder.IsAnchored = tank.IsAnchored;
+            builder.NonAggressive = !IsLethal(tank);
+            builder.Eradicator = tank.blockman.IterateBlocks().Count() >= KickStart.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18;
+            builder.Cost = GetBBCost(tank);
+            string builderJSON = JsonUtility.ToJson(builder, true);
+            SaveEnemyTechToFile(tank.name, builderJSON);
+            ReloadExternal();
+        }
+        public static void SaveEnemyTechToRawJSONBLK(TechData tank)
+        {
+            BuilderExternal builder = new BuilderExternal();
+            string bluep = BlockSpecToJSONExternal(tank.m_BlockSpecs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount);
+            builder.Name = tank.Name;
+            builder.Faction = tank.GetMainCorporations().FirstOrDefault();
+            builder.Blueprint = bluep;
+            builder.InfBlocks = false;
+            builder.IsAnchored = tank.CheckIsAnchored();
+            builder.NonAggressive = lethal;
+            builder.Eradicator = blockCount >= KickStart.LethalTechSize || weapGCount > 48 || hoveCount > 18;
+            builder.Cost = tank.GetValue();
+            string builderJSON = JsonUtility.ToJson(builder, true);
+            SaveEnemyTechToFileBLK(tank.Name, builderJSON);
         }
         public static BuilderExternal LoadTechFromRawJSON(string TechName, string altFolderName = "")
         {
@@ -691,7 +782,7 @@ namespace TAC_AI.Templates
         }
         private static void SaveEnemyTechToFile(string TechName, string RawBaseTechJSON)
         {
-            string destination = RawTechsDirectory + "\\Enemies";
+            string destination = RawTechsDirectory + "\\Enemies\\eLocal";
             if (!Directory.Exists(RawTechsDirectory))
             {
                 Debug.Log("TACtical_AI: Generating Raw Techs folder.");
@@ -707,17 +798,91 @@ namespace TAC_AI.Templates
                 }
 
             }
-            if (!Directory.Exists(destination))
+            if (!Directory.Exists(RawTechsDirectory + "\\Enemies"))
             {
                 Debug.Log("TACtical_AI: Generating Enemies folder.");
                 try
                 {
-                    Directory.CreateDirectory(destination);
+                    Directory.CreateDirectory(RawTechsDirectory + "\\Enemies");
                     Debug.Log("TACtical_AI: Made new Enemies folder successfully.");
                 }
                 catch
                 {
                     Debug.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    return;
+                }
+
+            }
+            if (!Directory.Exists(destination))
+            {
+                Debug.Log("TACtical_AI: Generating eLocal folder.");
+                try
+                {
+                    Directory.CreateDirectory(destination);
+                    Debug.Log("TACtical_AI: Made new eLocal folder successfully.");
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: Could not create new eLocal folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    return;
+                }
+
+            }
+            try
+            {
+                File.WriteAllText(destination + "\\" + TechName + ".JSON", RawBaseTechJSON);
+                Debug.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: Could not edit RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                return;
+            }
+        }
+        private static void SaveEnemyTechToFileBLK(string TechName, string RawBaseTechJSON)
+        {
+            string destination = RawTechsDirectory + "\\Enemies\\eBulk";
+            if (!Directory.Exists(RawTechsDirectory))
+            {
+                Debug.Log("TACtical_AI: Generating Raw Techs folder.");
+                try
+                {
+                    Directory.CreateDirectory(RawTechsDirectory);
+                    Debug.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    return;
+                }
+
+            }
+            if (!Directory.Exists(RawTechsDirectory + "\\Enemies"))
+            {
+                Debug.Log("TACtical_AI: Generating Enemies folder.");
+                try
+                {
+                    Directory.CreateDirectory(RawTechsDirectory + "\\Enemies");
+                    Debug.Log("TACtical_AI: Made new Enemies folder successfully.");
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    return;
+                }
+
+            }
+            if (!Directory.Exists(destination))
+            {
+                Debug.Log("TACtical_AI: Generating eBulk folder.");
+                try
+                {
+                    Directory.CreateDirectory(destination);
+                    Debug.Log("TACtical_AI: Made new eBulk folder successfully.");
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: Could not create new eBulk folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
@@ -816,6 +981,60 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        public static string BlockSpecToJSONExternal(List<TankPreset.BlockSpec> specs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount)
+        {   // Saving a Tech from the BlockMemory
+            blockCount = 0;
+            int ctrlCount = 0;
+            int weapCount = 0;
+            weapGCount = 0;
+            hoveCount = 0;
+            lethal = false;
+            if (specs.Count == 0)
+                return null;
+            List<BlockMemory> mem = new List<BlockMemory>();
+            foreach (TankPreset.BlockSpec spec in specs)
+            {
+                BlockMemory mem1 = new BlockMemory();
+                mem1.t = spec.block;
+                mem1.p = spec.position;
+                mem1.r = new OrthoRotation(spec.orthoRotation).rot;
+
+                TankBlock block = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(spec.GetBlockType());
+                if (block.GetComponent<ModuleHover>())
+                    hoveCount++;
+                if (block.GetComponent<ModuleWeapon>())
+                    weapCount++;
+                if (block.GetComponent<ModuleWeaponGun>())
+                    weapGCount++;
+                if (block.GetComponent<ModuleTechController>())
+                    ctrlCount++;
+                mem.Add(mem1);
+            }
+
+            lethal =  weapCount > ctrlCount;
+            blockCount = mem.Count;
+
+            StringBuilder JSONTechRAW = new StringBuilder();
+            JSONTechRAW.Append(JsonUtility.ToJson(mem.First()));
+            for (int step = 1; step < mem.Count; step++)
+            {
+                JSONTechRAW.Append("|");
+                JSONTechRAW.Append(JsonUtility.ToJson(mem.ElementAt(step)));
+            }
+            string JSONTechRAWout = JSONTechRAW.ToString();
+            StringBuilder JSONTech = new StringBuilder();
+            foreach (char ch in JSONTechRAWout)
+            {
+                if (ch == '"')
+                {
+                    JSONTech.Append(ch);
+                }
+                else
+                    JSONTech.Append(ch);
+            }
+            //Debug.Log("TACtical_AI: " + JSONTech.ToString());
+            return JSONTech.ToString();
+        }
         private static Sprite LoadSprite(string pngName)
         {
             string destination = DLLDirectory + "\\AI_Icons\\" + pngName;
