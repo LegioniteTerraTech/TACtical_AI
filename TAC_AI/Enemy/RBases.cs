@@ -13,7 +13,7 @@ namespace TAC_AI.AI.Enemy
     {
         const int MinimumBBRequired = 10000; // Before expanding
         private static int MaxSingleBaseType { get { return KickStart.MaxBasesPerTeam / 3; } }
-        private static int MaxDefenses { get { return KickStart.MaxBasesPerTeam * (2 / 3); } }
+        private static int MaxDefenses { get { return (int)(KickStart.MaxBasesPerTeam * (float)(2f / 3f)); } }
         private static int MaxAutominers { get { return KickStart.MaxBasesPerTeam / 2; } }
 
 
@@ -61,6 +61,12 @@ namespace TAC_AI.AI.Enemy
                 return 0;
             }
             return funder.BuildBucks;
+        }
+        public static bool PurchasePossible(int BBCost, int Team)
+        {
+            if (BBCost <= GetTeamFunds(Team))
+                return true;
+            return false;
         }
         public static bool PurchasePossible(BlockTypes bloc, int Team)
         {
@@ -142,19 +148,8 @@ namespace TAC_AI.AI.Enemy
         }
         public static void AllTeamTechsBuildRequest(int Team)
         {
-            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
-            {
-                if (tech.Team == Team)
-                {
-                    if (tech.GetComponent<AIECore.TankAIHelper>())
-                    {
-                        if (tech.GetComponent<AIECore.TankAIHelper>().TechMemor)
-                        {
-                            tech.GetComponent<AIECore.TankAIHelper>().PendingSystemsCheck = true;
-                        }
-                    }
-                }
-            }
+            if (!BaseFunderManager.TeamsBuildRequested.Contains(Team))
+                BaseFunderManager.TeamsBuildRequested.Add(Team);
         }
         public static void PoolTeamMoney(int Team)
         {
@@ -178,7 +173,81 @@ namespace TAC_AI.AI.Enemy
             funder.AddBuildBucks(moneyPool);
         }
 
+        public static void EmergencyMoveMoney(Tank tank)
+        {
+            int Team = tank.Team;
+            EnemyBaseFunder funder = GetTeamFunder(Team);
+            var funds = tank.GetComponent<EnemyBaseFunder>();
+            if (funder.IsNull())
+                return;
+            if (!(bool)funds)
+                return;
 
+            if (funder == funds)
+            {   // Get the next in line
+                int baseSize = 0;
+                EnemyBaseFunder funderChange = funds;
+                List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
+                foreach (EnemyBaseFunder fundC in baseFunders)
+                {
+                    int blockC = fundC.Tank.blockman.IterateBlocks().Count();
+                    if (baseSize < blockC)
+                    {
+                        baseSize = blockC;
+                        funderChange = fundC;
+                    }
+                }
+                if (funderChange == funds)
+                    return;
+
+                // Transfer the BB
+                funderChange.AddBuildBucks(funds.GetBuildBucksFromName());
+                funds.SetBuildBucks(0);
+
+                // Change positioning
+                EnemyBases.Remove(funderChange);
+                EnemyBases.Insert(0, funderChange);
+            }
+        }
+        public static void RequestFocusFire(Tank tank, Visible Target)
+        {
+            if (Target.IsNull())
+                return;
+            if (Target.tank.IsNull())
+                return;
+            int Team = tank.Team;
+            AIECore.AIMessage(tank, tank.name + " is under attack!  Concentrate all fire on " + Target.tank.name + "!");
+            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
+            {
+                if (tech.Team == Team)
+                {
+                    var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                    if ((bool)helper)
+                    {
+                        var baseFunds = tech.GetComponent<EnemyBaseFunder>();
+                        if (!tech.IsAnchored)
+                        {
+                            var mind = tech.GetComponent<EnemyMind>();
+                            if ((bool)mind)
+                            {
+                                mind.Provoked = true;
+                                mind.TempAggro(Target);
+                                helper.lastDestination = Target.tank.boundsCentreWorldNoCheck;
+                            }
+                        }
+                        else if ((bool)baseFunds)
+                        {
+                            var mind = tech.GetComponent<EnemyMind>();
+                            if ((bool)mind && baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                            {
+                                if (helper.lastEnemy.IsNotNull() && RBolts.AllyCostCount(tech) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tech, mind.TechMemor))
+                                    RBolts.BlowBolts(tech, mind);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         public static bool HasTooMuchOfType(int Team, BasePurpose purpose)
         {
             List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
@@ -228,6 +297,89 @@ namespace TAC_AI.AI.Enemy
             return thisIsTrue;
         }
 
+        public class BaseFunderManager : MonoBehaviour
+        {
+            public static BaseFunderManager inst;
+
+            public static List<int> TeamsBuildRequested = new List<int>();
+            private int timeStep = 0;
+
+            public static void Initiate()
+            {
+                inst = new GameObject("BaseFunderManagerMain").AddComponent<BaseFunderManager>();
+                Debug.Log("TACtical_AI: Initiated BaseFunderManager");
+            }
+            public void Update()
+            {
+                if (timeStep <= 0)
+                {
+                    DelayedUpdate();
+                    timeStep = 120;
+                }
+                RunBuildRequests();
+                timeStep--;
+            }
+            public void DelayedUpdate()
+            {
+                PeriodicBuildRequest();
+            }
+            public void RunBuildRequests()
+            {
+                if (TeamsBuildRequested.Count < 1)
+                    return;
+
+                foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
+                {
+                    if (TeamsBuildRequested.Contains(tech.Team))
+                    {
+                        var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                        if (helper)
+                        {
+                            helper.PendingSystemsCheck = true;
+                        }
+                        else if (tech.IsAnchored)
+                        {
+                            if (tech.GetComponent<EnemyBaseFunder>())
+                                Debug.Log("TACtical_AI: Tech " + tech.name + " is a funder base but contains no DesignMemory?!?");
+                        }
+                        Debug.Log("TACtical_AI: Team " + tech.Team + " has been issued a team-wide build request!");
+                    }
+                }
+                TeamsBuildRequested.Clear();
+            }
+            public void PeriodicBuildRequest()
+            {
+                List<int> teamsFunded = new List<int>();
+                if (EnemyBases.Count < 1)
+                    return;
+
+                foreach (EnemyBaseFunder funds in EnemyBases)
+                {
+                    if (!teamsFunded.Contains(funds.Team))
+                    {
+                        teamsFunded.Add(funds.Team);
+                    }
+                }
+                foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
+                {
+                    if (teamsFunded.Contains(tech.Team))
+                    {
+                        var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                        if (helper)
+                        {
+                            helper.PendingSystemsCheck = true;
+                        }
+                        else if (tech.IsAnchored)
+                        {
+                            if (tech.GetComponent<EnemyBaseFunder>())
+                                Debug.Log("TACtical_AI: Tech " + tech.name + " is a funder base but contains no DesignMemory?!?");
+                        }
+                        //Debug.Log("TACtical_AI: Team " + Team + " has been issued a team-wide build request!");
+                    }
+                }
+                Debug.Log("TACtical_AI: BaseFunderManager - Sent worldwide build request");
+            }
+        }
         public class EnemyBaseFunder : MonoBehaviour
         {
             public Tank Tank;
@@ -246,9 +398,11 @@ namespace TAC_AI.AI.Enemy
                     buildBucks = GetBuildBucksFromName();
                 EnemyBases.Add(this);
                 PoolTeamMoney(tank.Team);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " Initiated EnemyBaseFunder");
             }
             public void OnRecycle(Tank tank)
             {
+                Debug.Log("TACtical_AI: Tech " + tank.name + " Recycled EnemyBaseFunder");
                 tank.TankRecycledEvent.Unsubscribe(OnRecycle);
                 EnemyBases.Remove(this);
                 Destroy(this);
@@ -371,6 +525,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                     mind.TechMemor.Initiate();
+                    Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - BookmarkBuilder)");
                 }
                 mind.TechMemor.SetupForNewTechConstruction(thisInst, builder.blueprint);
                 tank.MainCorps = new List<FactionSubTypes> { builder.faction };
@@ -402,6 +557,13 @@ namespace TAC_AI.AI.Enemy
                 if (name.Contains("#"))
                 {
                     //It's not a base
+                    if (tank.IsAnchored)
+                    {   // It's a fragment of the base - prevent unwanted mess from getting in the way
+                        if (!ManNetwork.IsNetworked || ManNetwork.IsHost)
+                            tank.blockman.Disintegrate();
+                        return true;
+                    }
+
                     StringBuilder nameNew = new StringBuilder();
                     char lastIn = 'n';
                     foreach (char ch in name)
@@ -418,9 +580,20 @@ namespace TAC_AI.AI.Enemy
                     nameNew.Append(" Minion");
                     tank.SetName(nameNew.ToString());
                     // it's a minion of the base
+
+                    // Charge the new Tech and send it on it's way!
+                    RawTechLoader.ChargeAndClean(tank);
                 }
                 else
                 {
+                    mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
+                    if (mind.TechMemor.IsNull())
+                    {
+                        mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                        mind.TechMemor.Initiate(false);
+                        Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Base)");
+                    }
+
                     var funds = tank.gameObject.GetComponent<EnemyBaseFunder>(); 
                     if (funds.IsNull())
                     {
@@ -429,12 +602,6 @@ namespace TAC_AI.AI.Enemy
                     }
                     funds.SetBuildBucks(funds.GetBuildBucksFromName(name), true);
 
-                    mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
-                    if (mind.TechMemor.IsNull())
-                    {
-                        mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
-                        mind.TechMemor.Initiate();
-                    }
                     try
                     {
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(funds.GetActualName(name));
@@ -446,12 +613,13 @@ namespace TAC_AI.AI.Enemy
                     catch { }
                     if (!tank.IsAnchored)
                         tank.Anchors.TryAnchorAll(true);
-                    if (!tank.IsAnchored)
-                        tank.TryToggleTechAnchor();
+                    //if (!tank.IsAnchored)
+                        //tank.TryToggleTechAnchor();
                     if (!tank.IsAnchored)
                     {
                         tank.Anchors.RetryAnchorOnBeam = true;
-                        tank.TryToggleTechAnchor();
+                        tank.Anchors.TryAnchorAll(true);
+                        //tank.TryToggleTechAnchor();
                     }
                     MakeMinersMineUnlimited(tank);
                     AllTeamTechsBuildRequest(tank.Team);
@@ -476,6 +644,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                         mind.TechMemor.Initiate();
+                        Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Defense)");
                     }
                     try
                     {
@@ -566,10 +735,6 @@ namespace TAC_AI.AI.Enemy
 
                 Tank tech = mind.AIControl.tank;
 
-                if (UnityEngine.Random.Range(1, 100) < 7)
-                {
-                    AllTeamTechsBuildRequest(tech.Team);
-                }
 
                 if (GetTeamBaseCount(tech.Team) >= KickStart.MaxBasesPerTeam)
                     return;

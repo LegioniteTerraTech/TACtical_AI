@@ -21,6 +21,7 @@ namespace TAC_AI.AI.Enemy
         internal static FieldInfo charge = typeof(ModuleShieldGenerator).GetField("m_EnergyDeficit", BindingFlags.NonPublic | BindingFlags.Instance);
         internal static FieldInfo charge2 = typeof(ModuleShieldGenerator).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);
         internal static FieldInfo charge3 = typeof(ModuleShieldGenerator).GetField("m_Shield", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo generator = typeof(ModuleEnergy).GetField("m_OutputConditions", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Main host of operations
 
@@ -80,7 +81,21 @@ namespace TAC_AI.AI.Enemy
             else
                 Mind.AIControl.anchorAttempts = 0;
 
+            if (Mind.Provoked)
+            {
+                if (Mind.Tank.IsAnchored)
+                {
+                    // Execute remote orders to allied units - Attack that threat!
+                    RBases.RequestFocusFire(Mind.Tank, Mind.AIControl.lastEnemy);
+
+                    // Make sure the money is safe
+                    RBases.EmergencyMoveMoney(Mind.Tank);
+                }
+                Mind.Provoked = false;
+            }
+
             RBolts.ManageBolts(thisInst, tank, Mind);
+            TestShouldCommitDie(tank);
             if (Mind.AllowRepairsOnFly && Mind.TechMemor)
             {
                 bool venPower = false;
@@ -180,6 +195,8 @@ namespace TAC_AI.AI.Enemy
             bool isMissionTech = RMission.SetupMissionAI(thisInst, tank, toSet);
             if (isMissionTech)
             {
+                if (!(bool)tank)
+                    return;
                 FinalCleanup(thisInst, toSet, tank);
                 return;
             }
@@ -214,9 +231,9 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderSmarts = EnemySmarts.Smrt;
             else
                 toSet.CommanderSmarts = EnemySmarts.IntAIligent;
-            if (randomNum > 98)
+            if (randomNum > 92)
             {
-                toSet.AllowRepairsOnFly = true;//top 2
+                toSet.AllowRepairsOnFly = true;
                 toSet.InvertBullyPriority = true;
             }
         }
@@ -388,6 +405,12 @@ namespace TAC_AI.AI.Enemy
                     shield.SetTargetScale(buubles.m_Radius);
                 }
 
+                if (bloc.GetComponent<ModuleEnergy>())
+                {
+                    ModuleEnergy.OutputConditionFlags flagG = (ModuleEnergy.OutputConditionFlags)generator.GetValue(bloc.GetComponent<ModuleEnergy>());
+                    toSet.SolarsAvail = flagG.HasFlag(ModuleEnergy.OutputConditionFlags.Anchored) && flagG.HasFlag(ModuleEnergy.OutputConditionFlags.DayTime);
+                }
+
                 if (bloc.GetComponent<ModulePacemaker>())
                     tank.Holders.SetHeartbeatSpeed(TechHolders.HeartbeatSpeed.Fast);
 
@@ -405,7 +428,7 @@ namespace TAC_AI.AI.Enemy
                         modTeslaCount++;
                 }
 
-                HandleUnsetControlBlock(toSet, bloc);
+                CheckAndHandleControlBlocks(toSet, bloc);
             }
             Debug.Log("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
 
@@ -434,11 +457,15 @@ namespace TAC_AI.AI.Enemy
                 else
                     toSet.EvilCommander = EnemyHandling.Chopper;
             }
+            else if (modBoostCount > 2 &&  modAGCount > 0)
+            {
+                toSet.EvilCommander = EnemyHandling.Starship;
+            }
             else if (KickStart.isWaterModPresent && modGyroCount > 0 && modBoostCount > 0 && modWheelCount < 4 + FoilCount)
             {
                 toSet.EvilCommander = EnemyHandling.Naval;
             }
-            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
+            else if (modBoostCount > 2 && modHoverCount > 2)
             {
                 toSet.EvilCommander = EnemyHandling.Starship;
             }
@@ -527,8 +554,11 @@ namespace TAC_AI.AI.Enemy
             {
                 toSet.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (toSet.TechMemor.IsNull())
+                {
                     toSet.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
-                toSet.TechMemor.Initiate();
+                    toSet.TechMemor.Initiate();
+                    Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (FinalCleanup)");
+                }
                 toSet.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
             }
             thisInst.TestForFlyingAIRequirement();
@@ -602,6 +632,11 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
+                if (toSet.EvilCommander == EnemyHandling.Starship && toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks hoverships... for now.
+                {
+                    toSet.CommanderAttack = EnemyAttack.Bully;
+                    toSet.InvertBullyPriority = true;
+                }
                 if (toSet.CommanderMind == EnemyAttitude.Miner)
                 {
                     thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
@@ -805,34 +840,57 @@ namespace TAC_AI.AI.Enemy
                         {
                             if (RBases.TryBribeTech(mind.AIControl.lastEnemy.tank, mind.Tank.Team))
                             {
-                                mind.AIControl.lastEnemy.tank.SetTeam(mind.Tank.Team);
-                                Debug.Log("TACtical_AI: Tech " + mind.AIControl.lastEnemy.tank.name + " was purchased by " + mind.Tank.name + ".");
+                                Tank lastTankGrab = mind.AIControl.lastEnemy.tank;
+                                lastTankGrab.SetTeam(mind.Tank.Team);
+                                Debug.Log("TACtical_AI: Tech " + lastTankGrab.name + " was purchased by " + mind.Tank.name + ".");
                                 try
                                 {
                                     if (KickStart.DisplayEnemyEvents)
                                     {
-                                        WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(mind.AIControl.lastEnemy);
+                                        WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTankGrab.visible);
                                         Patches.PopupEnemyInfo("Bribed!", pos2);
 
-                                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + mind.AIControl.lastEnemy.tank.name + " was bribed by " + mind.Tank.name + "!");
+                                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + lastTankGrab.name + " was bribed by " + mind.Tank.name + "!");
                                     }
                                 }
                                 catch { }
                             }
                         }
                     }
-                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (RBases.GetTeamFunds(mind.Tank.Team) / 50000))
+                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (RBases.GetTeamFunds(mind.Tank.Team) / 100000))
                         RBases.ImTakingThatExpansion(mind, mind.GetComponent<RBases.EnemyBaseFunder>());
+                    //if (UnityEngine.Random.Range(1, 100) < 7)
+                    //{
+                    //    RBases.AllTeamTechsBuildRequest(mind.Tank.Team);
+                    //}
                 }
             }
             catch { }
         }
 
 
-        public static void HandleUnsetControlBlock(EnemyMind mind, TankBlock block)
+        public static void TestShouldCommitDie(Tank tank)
+        {
+            if (!tank.IsPopulation && !tank.name.Contains("Minion"))
+                return;
+            if(tank.blockman.IterateBlocks().Count() < 3)
+            {
+                foreach (TankBlock lastBlock in tank.blockman.IterateBlocks())
+                {
+                    if (!lastBlock.damage.AboutToDie)
+                        lastBlock.damage.SelfDestruct(2f);
+                }
+            }
+        }
+        public static void CheckAndHandleControlBlocks(EnemyMind mind, TankBlock block)
         {
             if (!KickStart.isControlBlocksPresent)
                 return;
+            else
+                HandleUnsetControlBlocks(mind, block);
+        }
+        public static void HandleUnsetControlBlocks(EnemyMind mind, TankBlock block)
+        {
             try
             {
                 FieldInfo wasSet = typeof(ModuleBlockMover).GetField("Deserialized", BindingFlags.NonPublic | BindingFlags.Instance);

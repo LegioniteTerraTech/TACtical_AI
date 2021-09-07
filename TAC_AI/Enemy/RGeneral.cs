@@ -23,11 +23,11 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (energy.storageTotal > 500)
                     {
-                        if (mind.SolarsAvail && tank.Anchors.NumPossibleAnchors > 0 && !tank.IsAnchored)
+                        if (mind.SolarsAvail && !Singleton.Manager<ManTimeOfDay>.inst.NightTime && tank.Anchors.NumPossibleAnchors > 0 && !tank.IsAnchored)
                         {
                             if (thisInst.anchorAttempts < 6)
                             {
-                                tank.TryToggleTechAnchor();
+                                tank.Anchors.TryAnchorAll();
                                 thisInst.anchorAttempts++;
                             }
                             else
@@ -52,12 +52,12 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (mind.CommanderSmarts == EnemySmarts.Smrt)
                 {
-                    if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs < 3)
+                    if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 3)
                     {
                         bool venPower = false;
                         if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                         thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
-                        thisInst.AttemptedRepairs++;
+                        //thisInst.AttemptedRepairs++;
                         Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
@@ -66,20 +66,20 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (mind.CommanderSmarts >= EnemySmarts.IntAIligent)
                 {
-                    if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs < 4)
+                    if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 4)
                     {
                         if ((energy.storageTotal - energy.spareCapacity) / energy.storageTotal > 0.5)
                         {
                             //flex yee building speeds on them players
                             thisInst.PendingSystemsCheck = !RRepair.EnemyInstaRepair(tank, mind);
-                            thisInst.AttemptedRepairs++;
+                            //thisInst.AttemptedRepairs++;
                         }
                         else
                         {
                             bool venPower = false;
                             if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                             thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, 6, Super: venPower);
-                            thisInst.AttemptedRepairs++;
+                            //thisInst.AttemptedRepairs++;
                         }
                         //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;

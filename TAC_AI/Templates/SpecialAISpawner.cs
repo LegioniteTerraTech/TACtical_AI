@@ -119,6 +119,14 @@ namespace TAC_AI.Templates
         private static void TrySpawnAirborneAIInAir()
         {   //  Spawns airborneAI even when the parts required aren't available, but they will not
             //      attack unless provoked by the player or another enemy, which is unlikely.
+            // MAKE SURE licences are grabbed!!!
+            Licences = Singleton.Manager<ManLicenses>.inst;
+            if (Licences.IsNull() && ManGameMode.inst.IsCurrentModeCampaign())
+            {   // The game tried to enable creative spawns whilist no licences were active!?!?
+                Debug.Log("TACtical_AI: TrySpawnAirborneAIInAir - It's campaign mode but no licences were found?!?");
+                return;
+            }
+
             if (playerTank.IsNull())
                 return;
             if (AirPool.Count >= MaxAirborneAIAllowed)
@@ -656,7 +664,7 @@ namespace TAC_AI.Templates
         }
         private static Vector3 GetAirOffsetFromPosition(Vector3 pos, Vector3 angleHeading)
         {   // 
-            return AI.Movement.AIEPathing.OffsetFromGroundAAlt(pos + -(angleHeading * AirSpawnDist) + (Singleton.cameraTrans.forward * 25), 50);
+            return AI.Movement.AIEPathing.OffsetFromGroundAAlt(pos + -(angleHeading * AirSpawnDist) + (Singleton.cameraTrans.forward * 25), 75);
         }
         private static int GetRANDTeam()
         {   // 

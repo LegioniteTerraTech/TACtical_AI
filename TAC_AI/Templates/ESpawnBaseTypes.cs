@@ -29,43 +29,53 @@ namespace TAC_AI.Templates
         GSOSeller,
         GSOMidBase,
         GSOMinerCluster,
-        GSOAIMinerProduction,
+        GSOAIMinerProduction,// To-Do [Mining drone spawner]
         GSOTechFactory,
-        GSOStarport,
+        GSOHVYTankFactory,
+        GSOStarport,// To-Do [Starfighter spawner]
+        GSOMacrocosmGantry,// To-Do [heavy spaceship spawner]
         //-HQs
-        GSOsHQ,
-        GSOMilitaryBase,
+        GSOMilitaryBase,// To-Do
 
         // GeoCorp
         GCMiningRig,
         GCTerraBore,
-        GCProspectorHub,
-        GCMiningLaser,
+        GCProspectorHub,// To-Do [Heavy Mining drone spawner]
+        GCMiningLaser,// To-Do
         //-HQs
-        GCsHQ,
         GCHeadquarters,
 
         // Venture
-        VENRallyHost,
+        VENTuningShop,
         VENGasStation,
         VENPitStop,
-        VENTuningShop,
-        VENGasSilo,
+        VENRallyHost,// To-Do [large racer Tech spawner]
+        VENAviationCenter,// To-Do [Multi-Aircraft spawner]
+        VENGasSilo,// To-Do
         //-HQs
-        VENsHQ,
         VENSpeedac,
 
         // Hawkeye
         HECombatStation,
         HEOilDerrick,
-        HEComsat,
-        HETankFactory,
+        HEComsat, // To-Do [sends allies to attack really far]
+        HEMunitionsDepot,// To-Do [Bike factory]
+        HETankFactory,// To-Do [Light tank spawner]
+        HEAAFactory, // To-Do [AA spawner]
         HEXLTankFactory,
-        HEMunitionsDepot,
         HEAircraftGarrison,
         //-HQs
-        HEsHQ,
         HECommandCentre,
+
+
+        // Better Future
+        BFGains,
+        BFExtractor,
+        BFShampoo,// To-Do [small ground Tech spawner]
+        BFElectroysis,
+        BFSporkFabricator,// To-Do [medium spaceship spawner]
+        //-HQs
+        BFNoleusAutoworks,
 
         // The Defenses
         GSOLightDefense,
@@ -75,6 +85,7 @@ namespace TAC_AI.Templates
         VENDeputyTurret,
         HEPerimeterDefense,
         HECapitalDefense,
+        BFOrbitarGuard, // To-Do
 
 
 

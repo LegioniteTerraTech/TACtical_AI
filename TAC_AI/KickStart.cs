@@ -6,6 +6,7 @@ using UnityEngine;
 using ModHelper.Config;
 using Nuterra.NativeOptions;
 using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 
 
@@ -30,8 +31,17 @@ namespace TAC_AI
 
 
         internal static bool testEnemyAI = true;
-        internal static int EnemyTeamTechLimit = 26;// How many techs that can exist for each team before giving up on splitting?
-        internal static int MaxEnemyWorldCapacity { get { return AIPopMaxLimit + (AIPopMaxLimit / 2); } }// How many techs that can exist brfore giving up?
+        internal static int EnemyTeamTechLimit { get { return 6 + MaxBasesPerTeam; } }// Allow the bases plus 6 additional capacity of the AIs' choosing
+
+        internal static int MaxEnemyWorldCapacity { 
+            get {
+                if ((1 / Time.deltaTime) <= 20)
+                {   // game lagging too much - hold back
+                    return AIPopMaxLimit + MaxEnemyBaseLimit;
+                }
+                return (AIPopMaxLimit * (MaxEnemyBaseLimit + 1)) + (MaxBasesPerTeam * MaxEnemyBaseLimit); 
+            } 
+        }// How many techs that can exist before giving up tech splitting?
         internal static int MaxEnemyBaseLimit = 3;  // How many different enemy team bases are allowed to exist in one instance
         internal static int MaxEnemyHQLimit = 1;    // How many HQs are allowed to exist in one instance
         internal static int MaxBasesPerTeam = 6;    // How many base expansions can a single team perform?
@@ -177,6 +187,7 @@ namespace TAC_AI
             AIECore.TankAIManager.Initiate();
             GUIAIManager.Initiate();
             RawTechExporter.Initiate();
+            RBases.BaseFunderManager.Initiate();
 
 
             GetActiveMods();

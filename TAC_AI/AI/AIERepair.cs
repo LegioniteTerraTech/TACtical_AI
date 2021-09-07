@@ -52,6 +52,7 @@ namespace TAC_AI.AI
                 Tank = gameObject.GetComponent<Tank>();
                 thisInst = gameObject.GetComponent<AIECore.TankAIHelper>();
                 thisInst.TechMemor = this;
+                rejectSaveAttempts = false;
                 if (DoFirstSave)
                     SaveTech();
             }
@@ -236,6 +237,7 @@ namespace TAC_AI.AI
             public void SetupForNewTechConstruction(AIECore.TankAIHelper thisInst, string JSON)
             {
                 JSONToTech(JSON);
+                CheckGameTamperedWith(Tank, this);
                 thisInst.PendingSystemsCheck = true;
             }
 
@@ -476,6 +478,9 @@ namespace TAC_AI.AI
                 success = BlockAttachNetworkOverride(tank, template, canidate);
             if (success)
             {
+                if (canidate.visible.InBeam)
+                    canidate.visible.SetHolder(null);
+
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
                 if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
                 {
@@ -619,32 +624,28 @@ namespace TAC_AI.AI
         }
         public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, DesignMemory TechMemor, int Delay = 25, bool Super = false)
         {
-            if (thisInst.PendingSystemsCheck && thisInst.AttemptedRepairs == 0)
+            if (thisInst.repairStepperClock == 1)
             {
-                List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, tank.blockman.IterateBlocks().ToList());
+                //thisInst.AttemptedRepairs = 0;
+                thisInst.repairStepperClock = 0;
+            }
+            else if (thisInst.repairStepperClock == 0)
+            {
+                if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs == 0)
+                {
+                    List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, tank.blockman.IterateBlocks().ToList());
 
-                RepairLerp(tank, TechMemor, thisInst, ref typesMissing);
-                thisInst.PendingSystemsCheck = SystemsCheck(tank, TechMemor);
-                thisInst.AttemptedRepairs = 1;
+                    RepairLerp(tank, TechMemor, thisInst, ref typesMissing);
+                    thisInst.PendingSystemsCheck = SystemsCheck(tank, TechMemor);
+                    //thisInst.AttemptedRepairs = 1;
+                }
+                if (!Super)
+                    thisInst.repairStepperClock = Delay;
+                else
+                    thisInst.repairStepperClock = Delay / 4;
             }
             else
-            {
-                if (thisInst.repairStepperClock == 1)
-                {
-                    thisInst.AttemptedRepairs = 0;
-                    thisInst.repairStepperClock = 0;
-                }
-                else if (thisInst.repairStepperClock == 0)
-                {
-                    if (!Super)
-                        thisInst.repairStepperClock = Delay;
-                    else
-                        thisInst.repairStepperClock = Delay / 4;
-
-                }
-                else
-                    thisInst.repairStepperClock--;
-            }
+                thisInst.repairStepperClock--;
             return thisInst.PendingSystemsCheck;
         }
 
@@ -684,9 +685,9 @@ namespace TAC_AI.AI
             List <TankBlock> fBlocks = new List<TankBlock>();
             foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, radius, new Bitfield<ObjectTypes>()))//new ObjectTypes[1]{ObjectTypes.Block})
             {
-                if (foundBlock.block.IsNotNull() && foundBlock.GetComponent<WorldSpaceObject>().IsEnabled)
+                if ((bool)foundBlock.block && foundBlock.GetComponent<WorldSpaceObject>().IsEnabled)
                 {
-                    if (!foundBlock.block.tank && foundBlock.holderStack == null && Singleton.Manager<ManPointer>.inst.DraggingItem != foundBlock)
+                    if (!(bool)foundBlock.block.tank && (!foundBlock.InBeam || (foundBlock.InBeam && foundBlock.holderStack.myHolder.block.LastTechTeam == tank.Team)) && Singleton.Manager<ManPointer>.inst.DraggingItem != foundBlock)
                     {
                         if (!includeSD)
                         {
@@ -715,8 +716,9 @@ namespace TAC_AI.AI
                 bool attemptW = false;
                 // if we are smrt, run heavier operation
                 List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.name; });
+                int count = posBlocks.Count;
                 //Debug.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
-                for (int step2 = 0; step2 < foundBlocks.Count; step2++)
+                for (int step2 = 0; step2 < count; step2++)
                 {
                     BlockMemory template = posBlocks.ElementAt(step2);
                     attemptW = AttemptBlockAttach(tank, template, foundBlock, TechMemor);
@@ -762,15 +764,18 @@ namespace TAC_AI.AI
                 bool attemptW = false;
 
                 List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.name; });
-                int count = posBlocks.Count;
+                int count = posBlocks.Count();
                 if (count == 0)
                 {
+                    if (playerInventory)
+                        IsBlockStoredInInventory(tank, bType, true);
+                    foundBlock.transform.Recycle();
                     typesMissing.RemoveAt(step);
                     attachAttempts--;
                     step--;
                     continue;
                 }
-                //Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
+                //Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < count; step2++)
                 {
                     BlockMemory template = posBlocks.ElementAt(step2);
@@ -1134,5 +1139,14 @@ namespace TAC_AI.AI
 
 
         // Util
+        private static void CheckGameTamperedWith(Tank tank, DesignMemory mem)
+        {
+            string blockCurrent = tank.blockman.GetBlockAtPosition(new IntVector3(0, 0, 0)).name;
+            string blockSaved = mem.ReturnContents().First().t;
+            if (blockCurrent != blockSaved)
+            {
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  Expected " + blockSaved + " at 0,0,0 local blockman, found " + blockCurrent + " instead.");
+            }
+        }
     }
 }

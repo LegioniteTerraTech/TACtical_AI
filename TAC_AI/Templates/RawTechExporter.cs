@@ -51,6 +51,7 @@ namespace TAC_AI.Templates
 
         // AI Icons
         public static Dictionary<AIType, Sprite> aiIcons;
+        public static Dictionary<EnemySmarts, Sprite> aiIconsEnemy;
         public static AIECore.TankAIHelper lastTech;
 
         // GUI
@@ -63,14 +64,22 @@ namespace TAC_AI.Templates
             GUIWindow.SetActive(false);
             SetupWorkingDirectories();
             aiIcons = new Dictionary<AIType, Sprite> {
+                {AIType.Escort,  LoadSprite("AI_Tank.png") },
                 {AIType.MTMimic,  LoadSprite("AI_MT.png") },
                 {AIType.MTSlave,  LoadSprite("AI_MT.png") },
                 {AIType.MTTurret,  LoadSprite("AI_MT.png") },
+                {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
                 {AIType.Assault,  LoadSprite("AI_Assault.png") },
                 {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
                 {AIType.Aviator,  LoadSprite("AI_Pilot.png") },
                 {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
                 {AIType.Astrotech,  LoadSprite("AI_Space.png") },
+            };
+            aiIconsEnemy = new Dictionary<EnemySmarts, Sprite> {
+                {EnemySmarts.Mild,  LoadSprite("E_Mild.png") },
+                {EnemySmarts.Meh,  LoadSprite("E_Meh.png") },
+                {EnemySmarts.Smrt,  LoadSprite("E_Smrt.png") },
+                {EnemySmarts.IntAIligent,  LoadSprite("E_Intel.png") },
             };
 
 #if DEBUG

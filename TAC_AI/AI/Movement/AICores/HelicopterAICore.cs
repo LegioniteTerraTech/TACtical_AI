@@ -39,6 +39,8 @@ namespace TAC_AI.AI.Movement.AICores
             if (tank.beam.IsActive)
             {   // BEAMING
                 pilot.MainThrottle = 0;
+                pilot.AdvisedThrottle = 0;
+                pilot.CurrentThrottle = 0;
                 HelicopterUtils.UpdateThrottleCopter(pilot, thisInst, thisControl);
                 HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, pilot.AirborneDest, true);
             }
@@ -50,7 +52,7 @@ namespace TAC_AI.AI.Movement.AICores
                 HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, pilot.AirborneDest, true);
             }
             else
-            {
+            {   // Normal flight
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, pilot.AirborneDest);
                 HelicopterUtils.UpdateThrottleCopter(pilot, thisInst, thisControl);
                 HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
@@ -98,8 +100,8 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 32);
-            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = this.AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
+            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
 
             if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
             {

@@ -162,6 +162,9 @@ namespace TAC_AI.AI.Enemy
             string name = tank.name;
             // Don't worry the bases are sorted based on if they are valid or not
             bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
+            if (!(bool)tank)
+                return true;
+
             tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree1);
             Debug.Log("TACtical_AI: AI " + tank.name + ":  AI Tree is " + tree1.ToString());
 

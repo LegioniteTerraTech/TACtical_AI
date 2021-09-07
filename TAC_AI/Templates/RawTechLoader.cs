@@ -31,7 +31,7 @@ namespace TAC_AI.Templates
         // Main initiation function
         internal static void TrySpawnBase(Tank tank, AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
         {
-            if (!KickStart.AllowEnemiesToStartBases)
+            if (!KickStart.enablePainMode || !KickStart.AllowEnemiesToStartBases)
                 return;
             if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && !Singleton.Manager<ManNetwork>.inst.IsServer)
                 return; // no want each client to have enemies spawn in new bases - stacked base incident!
@@ -146,18 +146,22 @@ namespace TAC_AI.Templates
             }
 
             // Now spawn teh main host
+            SpawnBaseTypes type;
             if (spawnerTank.GetComponent<AIControllerAir>())
             {
-                return SpawnAirBase(Vector3.forward, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air, maxGrade: grade), haveBB, extraBB);
+                type = GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air, maxGrade: grade);
+                return SpawnAirBase(Vector3.forward, pos, Team, type, haveBB, GetBaseStartingFunds(type) + extraBB);
             }
             else if (KickStart.isWaterModPresent)
             {
                 if (AIEPathing.AboveTheSea(pos))
                 {
-                    return SpawnSeaBase(Vector3.forward, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea, maxGrade: grade), haveBB, extraBB);
+                    type = GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea, maxGrade: grade);
+                    return SpawnSeaBase(Vector3.forward, pos, Team, type, haveBB, GetBaseStartingFunds(type) + extraBB);
                 }
             }
-            return SpawnLandBase(Vector3.forward, pos, Team, GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Land, maxGrade: grade), haveBB, extraBB);
+            type = GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Land, maxGrade: grade);
+            return SpawnLandBase(Vector3.forward, pos, Team, type, haveBB, GetBaseStartingFunds(type) + extraBB);
         }
         internal static bool SpawnBaseExpansion(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes type)
         {   // All bases are off-set rotated right to prevent the base from being built diagonally
@@ -182,7 +186,7 @@ namespace TAC_AI.Templates
             }
             else
             {   // Defense
-                if (!RBases.TryMakePurchase(GetBaseBBCost(GetBlueprint(type)), Team))
+                if (!RBases.PurchasePossible(GetBaseBBCost(GetBlueprint(type)), Team))
                     return false;
                 if (spawnerTank.GetComponent<AIControllerAir>())
                 {
@@ -232,7 +236,7 @@ namespace TAC_AI.Templates
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
         }
-        private static int SpawnLandBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
+        private static int SpawnLandBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int SpawnBB = 0)
         {
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             string baseBlueprint = GetBlueprint(toSpawn);
@@ -249,7 +253,7 @@ namespace TAC_AI.Templates
 
             Tank theBase;
             if (storeBB)
-                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + (GetBaseStartingFunds(toSpawn) + ExtraBB));
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + SpawnBB);
             else
             {
                 theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " â");
@@ -265,10 +269,10 @@ namespace TAC_AI.Templates
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
         }
-        private static int SpawnSeaBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
+        private static int SpawnSeaBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int SpawnBB = 0)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnSeaBase: Tried to launch unfinished function - falling back to existing");
-            return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, ExtraBB);
+            return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, SpawnBB);
             /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
@@ -300,10 +304,10 @@ namespace TAC_AI.Templates
             return GetBaseBBCost(baseBlueprint);
             */
         }
-        private static int SpawnAirBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
+        private static int SpawnAirBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int SpawnBB = 0)
         {   // N/A!!! WIP!!!
             Debug.Log("TACtical_AI: - SpawnAirBase: Tried to launch unfinished function - falling back to existing");
-            return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, ExtraBB);
+            return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, SpawnBB);
             /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
@@ -695,13 +699,13 @@ namespace TAC_AI.Templates
                     }
                     if (purpose != BasePurpose.NotStationary && cand.purposes.Contains(BasePurpose.NotStationary))
                         return false;
-                    if (!searchAttract && cand.purposes.Contains(BasePurpose.NoAutoSearch))
+                    if (!searchAttract && cand.purposes.Contains(BasePurpose.AttractTech))
                         return false;
                     if (searchAttract && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
                     if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
+                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.purposes.Contains(BasePurpose.NANI))
                         return false;
                     if (cand.purposes.Count == 0)
                         return false;
@@ -780,13 +784,13 @@ namespace TAC_AI.Templates
                     }
                     if (!purposes.Contains(BasePurpose.NotStationary) && cand.purposes.Contains(BasePurpose.NotStationary))
                         return false;
-                    if (!searchAttract && cand.purposes.Contains(BasePurpose.NoAutoSearch))
+                    if (!searchAttract && cand.purposes.Contains(BasePurpose.AttractTech))
                         return false;
                     if (searchAttract && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
                     if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.purposes.Contains(BasePurpose.NANI))
+                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.purposes.Contains(BasePurpose.NANI))
                         return false;
                     if (cand.purposes.Count == 0)
                         return false;
@@ -1201,6 +1205,7 @@ namespace TAC_AI.Templates
                     Debug.Log("TACtical_AI: InstantTech - Game is being stubborn - repeated attempts to anchor failed");
             }
 
+            ForceAllBubblesUp(theTech);
             ReconstructConveyorSequencing(theTech);
 
             Debug.Log("TACtical_AI: InstantTech - Built " + name);
@@ -1352,14 +1357,18 @@ namespace TAC_AI.Templates
                     }
                     if (purpose != BasePurpose.NotStationary && cand.Value.purposes.Contains(BasePurpose.NotStationary))
                         return false;
-                    if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.NoAutoSearch))
+                    if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.AttractTech))
                         return false;
                     if (searchAttract && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
                     if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
+                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.Value.purposes.Contains(BasePurpose.NANI))
                         return false;
+
+                    if (purpose == BasePurpose.Harvesting && cand.Value.purposes.Contains(BasePurpose.NotStationary))
+                        return false;
+
                     if (cand.Value.purposes.Count == 0)
                         return false;
                     return cand.Value.purposes.Contains(purpose);
@@ -1453,14 +1462,18 @@ namespace TAC_AI.Templates
                     }
                     if (!purposes.Contains(BasePurpose.NotStationary) && cand.Value.purposes.Contains(BasePurpose.NotStationary))
                         return false;
-                    if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.NoAutoSearch))
+                    if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.AttractTech))
                         return false;
                     if (searchAttract && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return false;
                     if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if (KickStart.EnemyEradicators && SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs && cand.Value.purposes.Contains(BasePurpose.NANI))
+                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.Value.purposes.Contains(BasePurpose.NANI))
                         return false;
+
+                    if (purposes.Contains(BasePurpose.Harvesting) && cand.Value.purposes.Contains(BasePurpose.NotStationary) && !purposes.Contains(BasePurpose.NotStationary))
+                        return false;
+
                     if (cand.Value.purposes.Count == 0)
                         return false;
 
@@ -1838,6 +1851,45 @@ namespace TAC_AI.Templates
             catch
             {
                 Debug.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
+            }
+        }
+
+        internal static FieldInfo charge = typeof(ModuleShieldGenerator).GetField("m_EnergyDeficit", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo charge2 = typeof(ModuleShieldGenerator).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo charge3 = typeof(ModuleShieldGenerator).GetField("m_Shield", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static void ForceAllBubblesUp(Tank tank)
+        {
+            try
+            {
+                if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
+                    return;
+
+                foreach (ModuleShieldGenerator buubles in tank.blockman.IterateBlockComponents<ModuleShieldGenerator>())
+                {   
+                    if ((bool)buubles)
+                    {
+                        charge.SetValue(buubles, 0);
+                        charge2.SetValue(buubles, 2);
+                        BubbleShield shield = (BubbleShield)charge3.GetValue(buubles);
+                        shield.SetTargetScale(buubles.m_Radius);
+                    }
+                }
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: ForceAllBubblesUp - error");
+            }
+        }
+        public static void ChargeAndClean(Tank tank)
+        {
+            try
+            {
+                tank.EnergyRegulator.SetAllStoresAmount(1);
+                ForceAllBubblesUp(tank);
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: ChargeAndClean - error");
             }
         }
     }

@@ -217,7 +217,7 @@ namespace TAC_AI
         }
 
         [HarmonyPatch(typeof(TankDescriptionOverlay))]
-        [HarmonyPatch("RefreshMarker")]//On icon update
+        [HarmonyPatch("RefreshMarker")]//Change the Icon to something more appropreate
         private static class SendUpdateAIDisp
         {
             static FieldInfo tech = typeof(TankDescriptionOverlay).GetField("m_Tank", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -229,7 +229,6 @@ namespace TAC_AI
                 {
                     try
                     {
-
                         Tank tank = (Tank)tech.GetValue(__instance);
                         //RawTechExporter.lastTech = tank.GetComponent<AIECore.TankAIHelper>();
                         
@@ -239,14 +238,81 @@ namespace TAC_AI
                             AIECore.TankAIHelper lastTech = tank.GetComponent<AIECore.TankAIHelper>();
                             if (lastTech.IsNotNull())
                             {
-                                if (lastTech.AIState == 1)
-                                {
+                                if (tank.IsAnchored)
+                                {   // Use anchor icon
+
+                                }
+                                else if (lastTech.AIState == 1)
+                                {   // Allied AI
                                     if (RawTechExporter.aiIcons.TryGetValue(lastTech.DediAI, out Sprite sprite))
                                     {
                                         //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                         Image cache = (Image)icon.GetValue(Panel);
                                         cache.sprite = sprite;
                                         icon.SetValue(Panel, cache);
+                                    }
+                                }
+                                else if (lastTech.AIState == 2)
+                                {   // Enemy AI
+                                    if (KickStart.enablePainMode)
+                                    {
+                                        var mind = lastTech.GetComponent<EnemyMind>();
+                                        if ((bool)mind)
+                                        {
+                                            if (mind.CommanderSmarts < EnemySmarts.Smrt)
+                                            {
+                                                switch (mind.EvilCommander)
+                                                {
+                                                    case EnemyHandling.Airplane:
+                                                    case EnemyHandling.Chopper:
+                                                        if (RawTechExporter.aiIcons.TryGetValue(AIType.Aviator, out Sprite sprite1))
+                                                        {
+                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            Image cache = (Image)icon.GetValue(Panel);
+                                                            cache.sprite = sprite1;
+                                                            icon.SetValue(Panel, cache);
+                                                        }
+                                                        break;
+                                                    case EnemyHandling.Naval:
+                                                        if (RawTechExporter.aiIcons.TryGetValue(AIType.Buccaneer, out Sprite sprite2))
+                                                        {
+                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            Image cache = (Image)icon.GetValue(Panel);
+                                                            cache.sprite = sprite2;
+                                                            icon.SetValue(Panel, cache);
+                                                        }
+                                                        break;
+                                                    case EnemyHandling.Starship:
+                                                        if (RawTechExporter.aiIcons.TryGetValue(AIType.Astrotech, out Sprite sprite3))
+                                                        {
+                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            Image cache = (Image)icon.GetValue(Panel);
+                                                            cache.sprite = sprite3;
+                                                            icon.SetValue(Panel, cache);
+                                                        }
+                                                        break;
+                                                    default:
+                                                        if (RawTechExporter.aiIconsEnemy.TryGetValue(mind.CommanderSmarts, out Sprite sprite))
+                                                        {
+                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            Image cache = (Image)icon.GetValue(Panel);
+                                                            cache.sprite = sprite;
+                                                            icon.SetValue(Panel, cache);
+                                                        }
+                                                        break;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                if (RawTechExporter.aiIconsEnemy.TryGetValue(mind.CommanderSmarts, out Sprite sprite))
+                                                {
+                                                    //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                    Image cache = (Image)icon.GetValue(Panel);
+                                                    cache.sprite = sprite;
+                                                    icon.SetValue(Panel, cache);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -435,8 +501,8 @@ namespace TAC_AI
             private static bool Prefix(ModeAttract __instance)
             {
                 // Testing
-                bool caseOverride = false;
-                AttractType outNum = AttractType.Harvester;
+                bool caseOverride = true;
+                AttractType outNum = AttractType.Dogfight;
 
 #if DEBUG
 #else

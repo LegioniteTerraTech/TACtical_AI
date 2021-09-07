@@ -954,7 +954,7 @@ namespace TAC_AI.AI.Movement
             {
                 if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight + Singleton.playerPos.y)
                 {
-                    moderate = OffsetFromGroundA(moderate, thisInst, 1);
+                    moderate = ForceOffsetFromGroundA(moderate, thisInst);
                 }
             }
             else
@@ -963,7 +963,7 @@ namespace TAC_AI.AI.Movement
                 {
                     if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight)
                     {
-                        moderate = OffsetFromGroundA(moderate, thisInst, 1);
+                        moderate = ForceOffsetFromGroundA(moderate, thisInst);
                     }
                 }
                 catch { }

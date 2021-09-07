@@ -143,6 +143,39 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
+        public void TempAggro(Visible target = null)
+        {
+            try
+            {
+                if (CommanderMind == EnemyAttitude.Miner && Tank.blockman.IterateBlockComponents<ModuleItemHolderBeam>().Count() == 0)
+                    CommanderMind = EnemyAttitude.Homing;
+                if (CommanderAttack == EnemyAttack.Coward)
+                    CommanderAttack = EnemyAttack.Grudge;
+                if ((bool)target)
+                {
+                    if ((bool)target.tank)
+                        AIControl.lastEnemy = target;
+                }
+                if (Range == KickStart.DefaultEnemyRange)
+                {
+                    Range = 500;
+
+                    Invoke("EndAggro", 2);
+                }
+            }
+            catch { }
+        }
+        public void EndAggro()
+        {
+            try
+            {
+                if (Range == 500)
+                {
+                    Range = KickStart.DefaultEnemyRange;
+                }
+            }
+            catch { }
+        }
 
 
         /// <summary>

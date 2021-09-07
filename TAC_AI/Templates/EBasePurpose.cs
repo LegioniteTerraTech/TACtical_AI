@@ -39,7 +39,7 @@ namespace TAC_AI.Templates
         MPUnsafe,       // MP blocked crafting blocks
         HasReceivers,   // Has receivers
         NotStationary,  // Mobile Tech
-        NoAutoSearch,   // Reserved for Attract
+        AttractTech,    // Reserved for Attract (or an endgame spawn)
         NoWeapons,      // unarmed
         Fallback,       // run out of other options
         NANI,           // Incomprehensibly powerful Tech spawn

@@ -74,7 +74,7 @@ namespace TAC_AI.AI.Enemy
                         AllyCount++;
                         if (!tech.IsAnchored)
                         {
-                            AllyCount += 2;
+                            AllyCount++;
                         }
                     }
                 }

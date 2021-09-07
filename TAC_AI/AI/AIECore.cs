@@ -292,6 +292,14 @@ namespace TAC_AI.AI
             }
             return hasMessaged;
         }
+        public static void AIMessage(Tank tech, string message)
+        {
+            if (KickStart.isAnimeAIPresent)
+            {   // we send the action commentary to Anime AI mod
+                AnimeAI.TransmitStatus(tech, message);
+            }
+            Debug.Log("TACtical_AI: AI " + message);
+        }
 
         public class TankAIManager : MonoBehaviour
         {
@@ -478,7 +486,7 @@ namespace TAC_AI.AI
             /// Repairs requested?
             /// </summary>
             public bool PendingSystemsCheck;    // Is this tech damaged?
-            public int AttemptedRepairs = 0;    // How many times have we tried fix
+            //public int AttemptedRepairs = 0;    // How many times have we tried fix
             public float DamageThreshold = 0;   // How much damage have we taken? (100 is total destruction)
             //internal float Oops = 0;
 
@@ -674,7 +682,7 @@ namespace TAC_AI.AI
                 {
                     //Debug.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnSpawn");
                     if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
-                        this.ResetAll(tankInfo);
+                        ResetAll(tankInfo);
                 }
             }
             public void OnDeathOrRemoval(Tank tankInfo, ManDamage.DamageInfo damage)
@@ -739,6 +747,7 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI: Resetting all for " + tank.name);
                 this.Hibernate = false;
                 this.AIState = 0;
+                this.repairStepperClock = 0;
                 this.AvoidStuff = true;
                 this.lastAIType = AITreeType.AITypes.Idle;
                 this.EstTopSped = 1;
@@ -987,7 +996,12 @@ namespace TAC_AI.AI
                 if (allowAutoRepair)
                 {
                     if (TechMemor.IsNull())
-                        tank.gameObject.AddComponent<AIERepair.DesignMemory>().Initiate();
+                    {
+                        TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                        TechMemor.Initiate();
+
+                        Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (RefreshAI)");
+                    }
                 }
                 else
                 {
