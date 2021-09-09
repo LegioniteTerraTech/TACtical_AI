@@ -21,8 +21,6 @@ namespace TAC_AI.AI.Enemy
         {
             //if (tank.IsSleeping)
             //    return;
-            if (AtWorldTechMax())
-                return; // world is too stressed to handle more
             switch (mind.CommanderBolts)
             {
                 case EnemyBolts.Default:        // Blow up like default - first enemy sighting on spacebar
@@ -50,6 +48,8 @@ namespace TAC_AI.AI.Enemy
         }
         public static void BlowBolts(Tank tank, EnemyMind mind)
         {
+            if (AtWorldTechMax())
+                return; // world is too stressed to handle more
             if (mind.TechMemor)
             {
                 mind.TechMemor.ReserveSuperGrabs = -256;

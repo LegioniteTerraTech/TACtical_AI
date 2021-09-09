@@ -99,7 +99,7 @@ namespace TAC_AI.Templates
         public int TimeStep = 0;
         public void Update()
         {
-            CheckKeyCombo();
+            CheckKeyCombos();
             if (TimeStep > 30)
             {
                 if (Singleton.Manager<ManPauseGame>.inst.IsPaused)
@@ -114,7 +114,7 @@ namespace TAC_AI.Templates
             }
             TimeStep++;
         }
-        public void CheckKeyCombo()
+        public void CheckKeyCombos()
         {
             if (Input.GetKey(KeyCode.LeftShift) && Input.GetKey(KeyCode.LeftAlt))
             {
@@ -128,7 +128,20 @@ namespace TAC_AI.Templates
                     if (!SpecialAISpawner.thisActive)
                         pendingInGameReload = true;
                 }
+                if (Input.GetKeyDown(KeyCode.B))
+                {
+                    Invoke("DelayedReloadRawTechLoader", 0);
+                }
             }
+        }
+        public void DelayedReloadRawTechLoader()
+        {
+            float timeDelay = Time.time;
+            Debug.Log("TACtical_AI: Rebuilding Raw Tech Loader!");
+            AIERepair.ConstructErrorBlocksList();
+            TempManager.ValidateAndAddAllExternalTechs();
+            timeDelay = Time.time - timeDelay;
+            Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
         }
         public static void Reload()
         {
@@ -241,7 +254,7 @@ namespace TAC_AI.Templates
                     }
                     catch
                     {
-                        Debug.Log("TACtical_AI: Could not deploy " + name + " as an enemy tech!  Corrupted BuilderExternal!!");
+                        Debug.Log("TACtical_AI: Could not deploy " + name + " as an enemy tech!  Corrupted BuilderExternal(Or tech too small)!!");
                     }
                 }
             }

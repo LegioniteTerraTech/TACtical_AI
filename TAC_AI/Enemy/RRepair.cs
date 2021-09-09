@@ -55,6 +55,8 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool EnemyInstaRepair(Tank tank, EnemyMind mind, int RepairAttempts = 0)
         {
+            if (!KickStart.AllowAISelfRepair)
+                return true;
             bool success = false;
 
             try
@@ -85,6 +87,8 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, int Delay = 25, bool Super = false)
         {
+            if (!KickStart.AllowAISelfRepair)
+                return false;
             if (!(bool)mind.TechMemor)
             {
                 Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Tried to call EnemyRepairStepper when TechMemor is NULL");
@@ -139,12 +143,22 @@ namespace TAC_AI.AI.Enemy
                     thisInst.repairStepperClock = 1;
                     thisInst.TechMemor.ReserveSuperGrabs = 9;
                 }
-                else if (tank.IsAnchored && !mind.Hurt)
+                else if (tank.IsAnchored)
                 {
-                    if (!Super)
-                        thisInst.repairStepperClock = Delay / Mathf.Max(((int)mind.CommanderSmarts * 2) + 1, 1);
+                    if (mind.Provoked == 0)
+                    {
+                        if (!Super)
+                            thisInst.repairStepperClock = Delay / KickStart.BaseDifficulty;
+                        else
+                            thisInst.repairStepperClock = (Delay / 2) / KickStart.BaseDifficulty;
+                    }
                     else
-                        thisInst.repairStepperClock = (Delay / 2) / Mathf.Max(((int)mind.CommanderSmarts * 2) + 1, 1);
+                    {
+                        if (!Super)
+                            thisInst.repairStepperClock = Delay / (KickStart.BaseDifficulty / 3);
+                        else
+                            thisInst.repairStepperClock = (Delay / 2) / (KickStart.BaseDifficulty / 3);
+                    }
                 }
                 else
                 {

@@ -134,7 +134,51 @@ namespace TAC_AI.Templates
                     break;
             }
 
-            int extraBB = 100000; // Extras for new bases
+            int extraBB; // Extras for new bases
+            if (spawnerTank.GetMainCorp() == FactionSubTypes.GSO)
+            {
+                switch (grade)
+                {
+                    case 0: // Really early game
+                        extraBB = 500;
+                        break;
+                    case 1:
+                        extraBB = 25000;
+                        break;
+                    case 2: // Tech builders active
+                        extraBB = 50000;
+                        break;
+                    case 3:
+                        extraBB = 75000;
+                        break;
+                    default:
+                        extraBB = 100000;
+                        break;
+                }
+            }
+            else
+            {
+                switch (grade)
+                {
+                    case 0:
+                        extraBB = 10000;
+                        break;
+                    case 1: // Tech builders active
+                        extraBB = 50000;
+                        break;
+                    default:
+                        extraBB = 75000;
+                        break;
+                }
+            }
+            try
+            {
+                float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel;
+                extraBB = (int)(extraBB / divider);
+            }
+            catch { }
+
+
             // Are we a defended HQ?
             if (purpose == BasePurpose.Headquarters)
             {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
@@ -203,6 +247,16 @@ namespace TAC_AI.Templates
             }
         }
 
+
+        /// <summary>
+        /// For loading bases from Debug
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <param name="Team"></param>
+        /// <param name="toSpawn"></param>
+        /// <param name="storeBB"></param>
+        /// <param name="ExtraBB"></param>
+        /// <returns></returns>
         internal static int SpawnBase(Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int ExtraBB = 0)
         {
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
@@ -236,6 +290,16 @@ namespace TAC_AI.Templates
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
         }
+        /// <summary>
+        /// For loading bases for natural enemy spawns
+        /// </summary>
+        /// <param name="spawnerForwards"></param>
+        /// <param name="pos"></param>
+        /// <param name="Team"></param>
+        /// <param name="toSpawn"></param>
+        /// <param name="storeBB"></param>
+        /// <param name="SpawnBB"></param>
+        /// <returns></returns>
         private static int SpawnLandBase(Vector3 spawnerForwards, Vector3 pos, int Team, SpawnBaseTypes toSpawn, bool storeBB, int SpawnBB = 0)
         {
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);

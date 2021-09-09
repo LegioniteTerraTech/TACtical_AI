@@ -58,7 +58,7 @@ namespace TAC_AI.Templates
         private int updateTimer = 0;
 
         const int MaxAirborneAIAllowed = 4;
-        const int AirborneAISpawnOdds = 15;   // Out of 100
+        const int AirborneAISpawnOdds = 30;   // Out of 300 (dynamically changed based on difficulty)
         const int SpaceshipChance = 2;     // Out of 100
         const float AirSpawnDist = 400;
         const float AirDespawnDist = 475;
@@ -571,11 +571,17 @@ namespace TAC_AI.Templates
             }
             else
             {
-                foreach (TankBlock block in tech.blockman.IterateBlocks())
-                {
-                    block.damage.SelfDestruct(0.5f);
-                }
+                List<TankBlock> toDestroy = tech.blockman.IterateBlocks().ToList();
                 tech.blockman.Disintegrate();
+                foreach (TankBlock block in toDestroy)
+                {
+                    try
+                    {
+                        if (!block.damage.AboutToDie)
+                            block.damage.SelfDestruct(0.5f);
+                    }
+                    catch { }
+                }
             }
         }
 
@@ -621,7 +627,7 @@ namespace TAC_AI.Templates
                 //Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
                 if (KickStart.EnableBetterAI && KickStart.enablePainMode)
                 {
-                    if (KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(-1, 101) < AirborneAISpawnOdds)
+                    if (KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(-1, 301 - (KickStart.difficulty + 50)) < AirborneAISpawnOdds)
                         TrySpawnAirborneAIInAir();
                     if (KickStart.CommitDeathMode)
                     { // endless enemy havoc

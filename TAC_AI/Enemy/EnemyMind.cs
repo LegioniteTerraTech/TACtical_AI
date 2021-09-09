@@ -33,8 +33,9 @@ namespace TAC_AI.AI.Enemy
         public bool LikelyMelee = false;        // Can we melee?
 
         public bool SolarsAvail = false;        // Do we currently have solar panels
-        public bool Provoked = false;           // Were we hit from afar?
+        public int Provoked = 0;           // Were we hit from afar?
         public bool Hurt = false;               // Are we damaged?
+        public bool PursuingTarget = false;     // Chasing specified target?
         public int Range = KickStart.DefaultEnemyRange;// Aggro range
         public int TargetLockDuration = 0;      // For pesterer's random target swatching
         public Vector3 HoldPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
@@ -48,7 +49,10 @@ namespace TAC_AI.AI.Enemy
 
         public void Initiate()
         {
-            queueRemove = false;
+            if (GetComponents<EnemyMind>().Count() > 1)
+                Debug.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
+
+                queueRemove = false;
             Tank = gameObject.GetComponent<Tank>();
             //Debug.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
             AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
@@ -57,6 +61,7 @@ namespace TAC_AI.AI.Enemy
             Tank.DetachEvent.Subscribe(OnBlockLoss);
             AIControl.MovementController.UpdateEnemyMind(this);
             AIControl.AvoidStuff = true;
+            PursuingTarget = false;
             try
             {
                 MainFaction = Tank.GetMainCorp();   //Will help determine their Attitude
@@ -83,14 +88,17 @@ namespace TAC_AI.AI.Enemy
         {
             if (dingus.Damage > 100)
             {
-                //Tank.visible.KeepAwake();
                 Hurt = true;
-                Provoked = true;
+                Provoked = 20;
                 AIControl.FIRE_NOW = true;
                 try
                 {
-                    AIControl.lastEnemy = dingus.SourceTank.visible;
-                    AIControl.lastDestination = dingus.SourceTank.boundsCentreWorldNoCheck;
+                    if ((bool)dingus.SourceTank)
+                    {
+                        GetRevengeOn(dingus.SourceTank.visible);
+                        if (CommanderSmarts == EnemySmarts.IntAIligent && RBases.GetTeamBaseCount(Tank.Team) > 0)
+                            RBases.RequestFocusFire(Tank, dingus.SourceTank.visible);
+                    }
                 }
                 catch { }//cant always get dingus source
             }
@@ -102,6 +110,7 @@ namespace TAC_AI.AI.Enemy
                 var mind = tonk.GetComponent<EnemyMind>();
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
+                mind.Provoked = 20;
                 mind.AIControl.PendingSystemsCheck = true;
                 if (mind.BoltsQueued == 0)
                 {   // do NOT destroy blocks on split Techs!
@@ -143,23 +152,40 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public void TempAggro(Visible target = null)
+        public void GetRevengeOn(Visible target = null, bool forced = false)
         {
             try
             {
-                if (CommanderMind == EnemyAttitude.Miner && Tank.blockman.IterateBlockComponents<ModuleItemHolderBeam>().Count() == 0)
-                    CommanderMind = EnemyAttitude.Homing;
-                if (CommanderAttack == EnemyAttack.Coward)
-                    CommanderAttack = EnemyAttack.Grudge;
-                if ((bool)target)
+                if (!PursuingTarget && (forced || CommanderAttack == EnemyAttack.Coward))
                 {
-                    if ((bool)target.tank)
-                        AIControl.lastEnemy = target;
-                }
-                if (Range == KickStart.DefaultEnemyRange)
-                {
-                    Range = 500;
+                    if (forced)
+                    {
+                        if (CommanderAttack == EnemyAttack.Coward) // no time for chickens
+                            CommanderAttack = EnemyAttack.Grudge;
 
+                        switch (CommanderMind)
+                        {
+                            case EnemyAttitude.Default:
+                            case EnemyAttitude.Homing:
+                                break;
+                            default:
+                            CommanderMind = EnemyAttitude.Default;
+                            break;
+                        }
+                    }
+                    if ((bool)target)
+                    {
+                        if ((bool)target.tank)
+                        {
+                            AIControl.lastEnemy = target;
+                            AIControl.lastDestination = target.tank.boundsCentreWorldNoCheck;
+                        }
+                    }
+                    if (Range == KickStart.DefaultEnemyRange)
+                    {
+                        Range = 500;
+                    }
+                    PursuingTarget = true;
                     Invoke("EndAggro", 2);
                 }
             }
@@ -169,9 +195,15 @@ namespace TAC_AI.AI.Enemy
         {
             try
             {
-                if (Range == 500)
+                if (PursuingTarget)
                 {
-                    Range = KickStart.DefaultEnemyRange;
+                    if (Tank.blockman.IterateBlockComponents<ModuleItemHolderBeam>().Count() != 0)
+                        CommanderMind = EnemyAttitude.Miner;
+                    if (Range == 500)
+                    {
+                        Range = KickStart.DefaultEnemyRange;
+                    }
+                    PursuingTarget = false;
                 }
             }
             catch { }
@@ -190,6 +222,10 @@ namespace TAC_AI.AI.Enemy
             //    return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
+            if (PursuingTarget) // Carry on chasing the target
+                return target;
+
+            // We begin the search
             if (CommanderAttack == EnemyAttack.Spyper) inRange = SpyperMaxRange;
             else if (inRange <= 0) inRange = Range;
             float TargetRange = inRange;
@@ -341,6 +377,10 @@ namespace TAC_AI.AI.Enemy
             //    return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
+            if (PursuingTarget) // Carry on chasing the target
+                return target;
+
+            // We begin the search
             if (CommanderAttack == EnemyAttack.Spyper) inRange = SpyperMaxRange;
             else if (inRange <= 0) inRange = 500;
             float TargetRange = inRange;

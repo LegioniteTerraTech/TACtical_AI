@@ -469,6 +469,16 @@ namespace TAC_AI.AI
         //COMPLICATED MESS that re-attaches loose blocks for AI techs, does not apply to allied Techs FOR NOW.
         public static bool AttemptBlockAttach(Tank tank, BlockMemory template, TankBlock canidate, DesignMemory TechMemor, bool useLimitedSupplies = false)
         {
+            if (!tank.visible.isActive)
+            {
+                // If we try to attach to a tech that doesn't exist, it corrupts and breaks ALL future techs that spawn.
+                //   The game breaks, yadda yadda, ManUpdate looses it's marbles, causing bullets and wheels to freak out.
+                //   In other words, *Unrecoverable crash*
+                //
+                //      So we end the madness here
+                return false;
+            }
+
             TechMemor.ranOutOfParts = false;
             bool success;
             //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);

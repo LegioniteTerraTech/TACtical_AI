@@ -209,9 +209,10 @@ namespace TAC_AI.AI.Enemy
             {
                 for (int stepper = 0; techCount > stepper; stepper++)
                 {
-                    if (techs.ElementAt(stepper).IsFriendly(tank.Team) && techs.ElementAt(stepper) != tank)
+                    Tank tech = techs.ElementAt(stepper);
+                    if (tech.IsFriendly(tank.Team) && tech != tank)
                     {
-                        AllyList.Add(techs.ElementAt(stepper));
+                        AllyList.Add(tech);
                     }
                 }
             }

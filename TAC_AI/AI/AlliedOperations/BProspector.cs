@@ -201,7 +201,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (thisInst.theResource != null)
                 {
-                    if (thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated || thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
+                    if (!thisInst.theResource.isActive || thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated || thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
                     {
                         AIECore.Minables.Remove(thisInst.theResource);
                         thisInst.theResource = null;

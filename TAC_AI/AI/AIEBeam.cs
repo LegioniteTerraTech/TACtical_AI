@@ -84,7 +84,7 @@ namespace TAC_AI.AI
                 }
                 else if (!thisInst.IsMultiTech && IsTechTippedOver(tank, thisInst) && thisInst.RequestBuildBeam)
                 {
-                    if (thisInst.DediAI == AIType.Astrotech)
+                    if (thisInst.Attempt3DNavi)
                     {
                         //reduce build beam spam when aiming
                         thisInst.ActionPause++;
@@ -94,7 +94,7 @@ namespace TAC_AI.AI
                         else if (thisInst.ActionPause > 80)
                         {
                             thisInst.beamTimeoutClock = 1;
-                            thisInst.ActionPause--;
+                            //thisInst.ActionPause--;
                         }
                         else if (thisInst.ActionPause == 80)
                             thisInst.ActionPause = 0;
@@ -106,7 +106,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (thisInst.DediAI == AIType.Astrotech)
+                    if (thisInst.Attempt3DNavi)
                         thisInst.ActionPause = 0;
                     if (thisInst.MTLockedToTechBeam && thisInst.IsMultiTech)
                     {   //Override and disable most driving abilities - We are going to follow the host tech!

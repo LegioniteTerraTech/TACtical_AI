@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Reflection;
 using UnityEngine;
 using TAC_AI.Templates;
+using TAC_AI.AI.Movement;
 using Control_Block;
 
 namespace TAC_AI.AI.Enemy
@@ -81,27 +82,27 @@ namespace TAC_AI.AI.Enemy
             else
                 Mind.AIControl.anchorAttempts = 0;
 
-            if (Mind.Provoked)
-            {
-                if (Mind.Tank.IsAnchored)
-                {
-                    // Execute remote orders to allied units - Attack that threat!
-                    RBases.RequestFocusFire(Mind.Tank, Mind.AIControl.lastEnemy);
-
-                    // Make sure the money is safe
-                    RBases.EmergencyMoveMoney(Mind.Tank);
-                }
-                Mind.Provoked = false;
-            }
 
             RBolts.ManageBolts(thisInst, tank, Mind);
-            TestShouldCommitDie(tank);
+            TestShouldCommitDie(tank, Mind);
             if (Mind.AllowRepairsOnFly && Mind.TechMemor)
             {
                 bool venPower = false;
                 if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                 RRepair.EnemyRepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
             }
+            if (Mind.Provoked == 20)
+            {
+                if (Mind.Tank.IsAnchored)
+                {
+                    // Execute remote orders to allied units - Attack that threat!
+                    RBases.RequestFocusFire(Mind.Tank, Mind.AIControl.lastEnemy);
+                }
+            }
+            if (Mind.Provoked >= 0)
+                Mind.Provoked = 0;
+            else 
+                Mind.Provoked -= KickStart.AIClockPeriod;
 
             if (Mind.EvilCommander == EnemyHandling.Airplane)
             {
@@ -665,7 +666,7 @@ namespace TAC_AI.AI.Enemy
 
                 if (RawTechLoader.ShouldDetonateBoltsNow(toSet) && tank.FirstUpdateAfterSpawn)
                 {
-                    tank.control.DetonateExplosiveBolt();
+                    RBolts.BlowBolts(tank, toSet);
                 }
             }
         }
@@ -833,6 +834,12 @@ namespace TAC_AI.AI.Enemy
             {
                 if (mind.GetComponent<RBases.EnemyBaseFunder>() && (bool)mind.TechMemor)
                 {
+                    if (!KickStart.AllowEnemiesToStartBases && !mind.Tank.FirstUpdateAfterSpawn)
+                    {
+                        SpecialAISpawner.Eradicate(mind.Tank);
+                        return;
+                    }
+
                     // Bribe
                     if ((bool)mind.AIControl.lastEnemy)
                     {
@@ -841,8 +848,6 @@ namespace TAC_AI.AI.Enemy
                             if (RBases.TryBribeTech(mind.AIControl.lastEnemy.tank, mind.Tank.Team))
                             {
                                 Tank lastTankGrab = mind.AIControl.lastEnemy.tank;
-                                lastTankGrab.SetTeam(mind.Tank.Team);
-                                Debug.Log("TACtical_AI: Tech " + lastTankGrab.name + " was purchased by " + mind.Tank.name + ".");
                                 try
                                 {
                                     if (KickStart.DisplayEnemyEvents)
@@ -852,8 +857,10 @@ namespace TAC_AI.AI.Enemy
 
                                         Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + lastTankGrab.name + " was bribed by " + mind.Tank.name + "!");
                                     }
+                                    Debug.Log("TACtical_AI: Tech " + lastTankGrab.name + " was purchased by " + mind.Tank.name + ".");
                                 }
                                 catch { }
+                                lastTankGrab.SetTeam(mind.Tank.Team);
                             }
                         }
                     }
@@ -869,9 +876,10 @@ namespace TAC_AI.AI.Enemy
         }
 
 
-        public static void TestShouldCommitDie(Tank tank)
+        public static void TestShouldCommitDie(Tank tank, EnemyMind mind)
         {
-            if (!tank.IsPopulation && !tank.name.Contains("Minion"))
+            bool minion = tank.name.Contains("Minion");
+            if (!tank.IsPopulation && !minion)
                 return;
             if(tank.blockman.IterateBlocks().Count() < 3)
             {
@@ -879,6 +887,14 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (!lastBlock.damage.AboutToDie)
                         lastBlock.damage.SelfDestruct(2f);
+                }
+            }
+            if (KickStart.isWaterModPresent && minion && mind.EvilCommander == EnemyHandling.Wheeled)
+            {
+                if (!tank.grounded && RBases.GetTeamBaseCount(tank.Team) > 0 && AIEPathing.AboveTheSea(tank.boundsCentreWorldNoCheck))
+                {
+                    Debug.Log("TACtical_AI: Recycling " + tank.name + " back to team " + tank.Team + " because it was stuck in the water");
+                    RBases.RecycleTechToTeam(tank);
                 }
             }
         }

@@ -32,6 +32,7 @@ namespace TAC_AI.Templates
         GSOAIMinerProduction,// To-Do [Mining drone spawner]
         GSOTechFactory,
         GSOHVYTankFactory,
+        GSOAirbase,// To-Do [aircraft spawner]
         GSOStarport,// To-Do [Starfighter spawner]
         GSOMacrocosmGantry,// To-Do [heavy spaceship spawner]
         //-HQs
@@ -49,7 +50,7 @@ namespace TAC_AI.Templates
         VENTuningShop,
         VENGasStation,
         VENPitStop,
-        VENRallyHost,// To-Do [large racer Tech spawner]
+        VENRallyHost,
         VENAviationCenter,// To-Do [Multi-Aircraft spawner]
         VENGasSilo,// To-Do
         //-HQs
@@ -67,15 +68,22 @@ namespace TAC_AI.Templates
         //-HQs
         HECommandCentre,
 
-
         // Better Future
         BFGains,
         BFExtractor,
         BFShampoo,// To-Do [small ground Tech spawner]
-        BFElectroysis,
+        BFHoverFactory,
         BFSporkFabricator,// To-Do [medium spaceship spawner]
         //-HQs
         BFNoleusAutoworks,
+
+        // Reticule Research
+        RRDecanter,
+        RRSampler,
+        RRFactory,// To-Do - RR Light tank spawner
+        RRHeavyFactory,
+        RRScienceVessel,// To-Do - RR spaceship spawner
+
 
         // The Defenses
         GSOLightDefense,

@@ -10,7 +10,7 @@ namespace TAC_AI.Templates
     {
         //All incredible community contributions are stored here!
 
-        private static string  NotAvailableTech = "{\"t\":\"GSOAnchorFixed_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}";
+        //private static string  NotAvailableTech = "{\"t\":\"GSOAnchorFixed_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}";
 
         public static List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> ReturnAllCommunityStored()
         {

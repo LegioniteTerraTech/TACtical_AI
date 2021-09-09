@@ -68,6 +68,7 @@ namespace TAC_AI
 
                 //texter = (Text)textInput.GetValue(refer.m_PanelPrefab);
 
+                texter.horizontalOverflow = HorizontalWrapMode.Overflow;
                 texter.fontStyle = textRefer.fontStyle;
                 texter.material = textRefer.material;
                 texter.alignment = textRefer.alignment;

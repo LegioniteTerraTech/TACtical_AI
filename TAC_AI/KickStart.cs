@@ -23,6 +23,7 @@ namespace TAC_AI
         public const float AirMaxHeight = 150;
         public const float AirPromoteHeight = 200;
         public const int DefaultEnemyRange = 150;
+        public const int EnemyBaseMiningMaxRange = 250;
         public const int EnemyExtendActionRange = 450;
 
         // EPIC TECH HANDLER
@@ -56,6 +57,7 @@ namespace TAC_AI
         public static bool enablePainMode = true;
         public static bool EnemyEradicators = false;
         public static bool EnemiesHaveCreativeInventory = false;
+        public static bool AllowAISelfRepair = true;
         public static bool AllowEnemiesToStartBases = true;
         public static bool AllowEnemyBaseExpand = true;
         public static bool AllowLandOverrideEnemies = true;
@@ -107,6 +109,18 @@ namespace TAC_AI
         public static int LastRawTechCount = 0;
         public static int LowerDifficulty { get { return Mathf.Clamp(Difficulty - 50, 0, 99); } }
         public static int UpperDifficulty { get { return Mathf.Clamp(Difficulty + 50, 1, 100); } }
+        public static int BaseDifficulty
+        {
+            get
+            {
+                if (CommitDeathMode)
+                    return 9;
+                else
+                {
+                    return 6 + (int)(Difficulty / 50);
+                }
+            }
+        }
 
         public static int lastPlayerTechPrice = 0;
         public static int EnemySpawnPriceMatching {
@@ -244,15 +258,15 @@ namespace TAC_AI
             var TACAIEnemies = ModName + " - Enemies General";
             painfulEnemies = new OptionToggle("<b>Rebuilt Enemies</b>", TACAIEnemies, enablePainMode);
             painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            infEnemySupplies = new OptionToggle("Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
+            infEnemySupplies = new OptionToggle("All Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
             enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            enemyBaseCount = new OptionRange("Max Enemy Bases", TACAIEnemies, MaxEnemyBaseLimit, 1, 6, 1);
+            enemyBaseCount = new OptionRange("Max Different Enemy Base Teams [1-6]", TACAIEnemies, MaxEnemyBaseLimit, 1, 6, 1);
             enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             enemyBaseExpand = new OptionToggle("Enemy Bases Can Expand", TACAIEnemies, AllowEnemyBaseExpand);
             enemyBaseExpand.onValueSaved.AddListener(() => { AllowEnemyBaseExpand = enemyBaseExpand.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-            enemyExpandLim = new OptionRange("Max Enemy Base Expansions", TACAIEnemies, MaxBasesPerTeam, 3, 12, 3);
+            enemyExpandLim = new OptionRange("Max Enemy Base Expansions [3-12]", TACAIEnemies, MaxBasesPerTeam, 3, 12, 3);
             enemyExpandLim.onValueSaved.AddListener(() => { MaxBasesPerTeam = (int)enemyExpandLim.SavedValue; thisModConfig.WriteConfigJsonFile(); });
 
             if (!isPopInjectorPresent)

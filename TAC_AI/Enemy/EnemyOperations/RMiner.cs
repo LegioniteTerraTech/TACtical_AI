@@ -150,7 +150,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (thisInst.theResource != null)
                 {
-                    if (thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated || thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
+                    if (!thisInst.theResource.isActive || thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated || thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
                     {
                         AIECore.Minables.Remove(thisInst.theResource);
                         thisInst.theResource = null;
@@ -163,7 +163,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.trans.position);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     if (!thisInst.FullMelee)
@@ -178,13 +178,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (dist < thisInst.lastTechExtents + 12)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.centrePosition);
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.trans.position);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                     thisInst.RemoveObstruction();
                 }
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition);
+                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.trans.position + "|| Current pos " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
             }

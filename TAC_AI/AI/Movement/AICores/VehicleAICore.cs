@@ -140,7 +140,7 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveType.Forwards;
-                            help.lastDestination = help.theResource.centrePosition;
+                            help.lastDestination = help.theResource.trans.position;
                             help.MinimumRad = 0;
                         }
                         else
@@ -149,7 +149,7 @@ namespace TAC_AI.AI.Movement.AICores
                             {
                                 help.Steer = true;
                                 help.DriveDir = EDriveType.Forwards;
-                                help.lastDestination = help.AvoidAssistPrecise(help.theResource.centrePosition);
+                                help.lastDestination = help.AvoidAssistPrecise(help.theResource.trans.position);
                                 help.MinimumRad = 0;
                             }
                             else
@@ -268,7 +268,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     help.Steer = true;
                     help.DriveDir = EDriveType.Forwards;
-                    help.lastDestination = help.theResource.centrePosition;
+                    help.lastDestination = help.theResource.trans.position;
                     help.MinimumRad = 0;
                 }
                 else
@@ -277,14 +277,14 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.theResource.centrePosition, this.controller.Helper, mind);
+                        help.lastDestination = RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.theResource.trans.position, this.controller.Helper, mind);
                         help.MinimumRad = 0;
                     }
                     else
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveType.Forwards;
-                        help.lastDestination = Enemy.RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.theResource.centrePosition, this.controller.Helper, mind);
+                        help.lastDestination = RPathfinding.AvoidAssistEnemy(this.controller.Tank, help.theResource.trans.position, this.controller.Helper, mind);
                         help.MinimumRad = help.lastTechExtents + 2;
                     }
                 }

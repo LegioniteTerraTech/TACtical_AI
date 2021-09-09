@@ -72,7 +72,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8) || 10 < thisInst.FrustrationMeter)
                     thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                 {

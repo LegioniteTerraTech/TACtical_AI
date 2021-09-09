@@ -76,46 +76,84 @@ namespace TAC_AI.Templates
             int HoriPosOff = 0;
             bool MaxExtensionY = false;
             int index = 0;
+            if (TempManager.ExternalEnemyTechs == null)
+            {
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Dump Your Folder!"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                VertPosOff += 30;
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Fatal Error Tech"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                VertPosOff += 30;
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Encountered!!!"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                VertPosOff += 30;
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "---------------"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                VertPosOff += 30;
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Send log to"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                VertPosOff += 30;
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Legionite!"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                return;
+            }
+
             int Entries = TempManager.ExternalEnemyTechs.Count();
             for (int step = 0; step < Entries; step++)
             {
-                BaseTemplate temp = TempManager.ExternalEnemyTechs[step];
-                if (VertPosOff > 600)
+                try
                 {
-                    VertPosOff = 0;
-                    HoriPosOff += 200;
-                    MaxExtensionY = true;
-                }
-                string disp;
-                if (temp.purposes.Contains(BasePurpose.NotStationary))
-                {
-                    switch (temp.terrain)
+                    BaseTemplate temp = TempManager.ExternalEnemyTechs[step];
+                    if (VertPosOff > 600)
                     {
-                        case BaseTerrain.Land:
-                            disp = "<color=#90ee90ff>" + temp.techName.ToString() + "</color>";
-                            break;
-                        case BaseTerrain.Air:
-                            disp = "<color=#ffa500ff>" + temp.techName.ToString() + "</color>";
-                            break;
-                        case BaseTerrain.Sea:
-                            disp = "<color=#add8e6ff>" + temp.techName.ToString() + "</color>";
-                            break;
-                        case BaseTerrain.Space:
-                            disp = "<color=#ffff00ff>" + temp.techName.ToString() + "</color>";
-                            break;
-                        default:
-                            disp = temp.techName.ToString();
-                            break;
+                        VertPosOff = 0;
+                        HoriPosOff += 200;
+                        MaxExtensionY = true;
                     }
+                    string disp;
+                    if (temp.purposes.Contains(BasePurpose.NotStationary))
+                    {
+                        switch (temp.terrain)
+                        {
+                            case BaseTerrain.Land:
+                                disp = "<color=#90ee90ff>" + temp.techName.ToString() + "</color>";
+                                break;
+                            case BaseTerrain.Air:
+                                disp = "<color=#ffa500ff>" + temp.techName.ToString() + "</color>";
+                                break;
+                            case BaseTerrain.Sea:
+                                disp = "<color=#add8e6ff>" + temp.techName.ToString() + "</color>";
+                                break;
+                            case BaseTerrain.Space:
+                                disp = "<color=#ffff00ff>" + temp.techName.ToString() + "</color>";
+                                break;
+                            default:
+                                disp = temp.techName.ToString();
+                                break;
+                        }
+                    }
+                    else
+                        disp = temp.techName.ToString();
+                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), disp))
+                    {
+                        index = step;
+                        clicked = true;
+                    }
+                    VertPosOff += 30;
                 }
-                else
-                    disp = temp.techName.ToString();
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), disp))
-                {
-                    index = step;
-                    clicked = true;
-                }
-                VertPosOff += 30;
+                catch { }// error on handling something
             }
             if (VertPosOff > 600)
             {
@@ -300,35 +338,36 @@ namespace TAC_AI.Templates
                 else
                 {
                     if (val.purposes.Contains(BasePurpose.Defense))
-                        RawTechLoader.SpawnBase(GetPlayerPos(), -1, type, false);
+                        RawTechLoader.SpawnBase(GetPlayerPos(), UnityEngine.Random.Range(5, 365), type, false);
                     else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
+                        int team = UnityEngine.Random.Range(5, 365);
                         int extraBB = 0;
                         SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
                         if (TempManager.techBases.TryGetValue(type2, out _))
                         {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.forward * 64), 90, type2, false);
+                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.forward * 64), team, type2, false);
                         }
                         type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
                         if (TempManager.techBases.TryGetValue(type2, out _))
                         {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.forward * 64), 90, type2, false);
+                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.forward * 64), team, type2, false);
                         }
                         type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
                         if (TempManager.techBases.TryGetValue(type2, out _))
                         {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.right * 64), 90, type2, false);
+                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.right * 64), team, type2, false);
                         }
                         type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
                         if (TempManager.techBases.TryGetValue(type2, out _))
                         {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), 90, type2, false);
+                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), team, type2, false);
                         }
-                        RawTechLoader.SpawnBase(GetPlayerPos(), 90, type, true, extraBB);
+                        RawTechLoader.SpawnBase(GetPlayerPos(), team, type, true, extraBB);
                         Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                     else
-                        RawTechLoader.SpawnBase(GetPlayerPos(), -1, type, true);
+                        RawTechLoader.SpawnBase(GetPlayerPos(), UnityEngine.Random.Range(5, 365), type, true);
                 }
             }
 

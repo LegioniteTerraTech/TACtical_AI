@@ -845,6 +845,7 @@ namespace TAC_AI.AI.Movement
                             {
                                 posAll += wow;
                                 vecCount++;
+                                thisInst.Yield = true;
                             }
                         }
                     }
@@ -886,64 +887,60 @@ namespace TAC_AI.AI.Movement
             if (!KickStart.isWaterModPresent)
                 return input;
             float heightTank;
+            // The below is far too inaccurate for this duty - I will have to do it the old way
+            //Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.rbody.velocity, out heightTank);
             if (tank.rbody != null)
-                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.rbody.velocity, out heightTank);
+                heightTank = tank.rbody.velocity.y + tank.boundsCentreWorldNoCheck.y - (thisInst.lastTechExtents / 2);
             else
-                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out heightTank);
+                heightTank = tank.boundsCentreWorldNoCheck.y - (thisInst.lastTechExtents / 2);
             Vector3 final = input;
-            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
-            if (terrain)
+            if (heightTank < KickStart.WaterHeight)// avoid sea pathing!
             {
-                if (height < KickStart.WaterHeight || heightTank < KickStart.WaterHeight)// avoid sea pathing!
+                // Iterate closest terrain spots
+                int stepxM = 3;
+                int stepzM = 3;
+                float highestHeight = KickStart.WaterHeight;
+                Vector3 posBest = Vector3.zero;
+                for (int stepz = 0; stepz < stepzM; stepz++)
                 {
-                    // Iterate closest terrain spots
-                    int stepxM = 3;
-                    int stepzM = 3;
-                    float highestHeight = KickStart.WaterHeight;
-                    Vector3 posBest = Vector3.zero;
-                    for (int stepz = 0; stepz < stepzM; stepz++)
+                    for (int stepx = 0; stepx < stepxM; stepx++)
                     {
-                        for (int stepx = 0; stepx < stepxM; stepx++)
+                        Vector3 wow = tank.boundsCentreWorldNoCheck;
+                        wow.x -= 45;
+                        wow.z -= 45;
+                        wow.x += stepx * 30;
+                        wow.z += stepz * 30;
+                        if (!Singleton.Manager<ManWorld>.inst.GetTerrainHeight(wow, out float heightC))
+                            continue;
+                        if (heightC > highestHeight)
                         {
-                            Vector3 wow = tank.boundsCentreWorldNoCheck;
-                            wow.x -= 45;
-                            wow.z -= 45;
-                            wow.x += stepx * 30;
-                            wow.z += stepz * 30;
-                            if (!Singleton.Manager<ManWorld>.inst.GetTerrainHeight(wow, out float heightC))
-                                continue;
-                            if (heightC > highestHeight)
-                            {
-                                highestHeight = heightC;
-                                posBest = wow;
-                            }
+                            highestHeight = heightC;
+                            posBest = wow;
+                            thisInst.Yield = true;
                         }
-                    }
-                    if (highestHeight > KickStart.WaterHeight)
-                    {
-                        //Debug.Log("TACtical_AI: highest terrain  of depth " + highestHeight + " found at " + posBest);
-                        if (thisInst.AdviseAway)
-                        { // Reverse
-                            final = thisInst.tank.boundsCentreWorldNoCheck + (thisInst.tank.boundsCentreWorldNoCheck - posBest);
-                        }
-                        else
-                            final = posBest;
-                    }
-                    else
-                    {
-                        if (thisInst.AdviseAway)
-                        { // Reverse
-                            final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
-                        }
-                        else
-                            final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
                     }
                 }
+                if (highestHeight > KickStart.WaterHeight)
+                {
+                    //Debug.Log("TACtical_AI: highest terrain  of depth " + highestHeight + " found at " + posBest);
+                    if (thisInst.AdviseAway)
+                    { // Reverse
+                        final = thisInst.tank.boundsCentreWorldNoCheck + (thisInst.tank.boundsCentreWorldNoCheck - posBest);
+                    }
+                    else
+                        final = posBest;
+                }
                 else
-                    final.y = height;
+                {
+                    if (thisInst.AdviseAway)
+                    { // Reverse
+                        final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
+                    }
+                    else
+                        final = thisInst.tank.boundsCentreWorldNoCheck - ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
+                }
             }
-            else
-                final.y = height;
+
             return final;
         }
 

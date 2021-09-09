@@ -10,9 +10,38 @@ using AnimeAI;
 
 namespace TAC_AI
 {
+    public enum AOffenseReact
+    {   //Attempt hook with the AnimeAI sub-mod 
+        Hurt,       // Taken damage
+        Damaged,    // Block chipped off
+        Destroyed   // Tech destroyed
+    }
+    public enum ALossReact
+    {   //Attempt hook with the AnimeAI sub-mod 
+        Land,     
+        Sea,
+        Air,
+        Space,   
+        Base,   
+    }
     public static class AnimeAI
     {   //Attempt hook with the AnimeAI sub-mod
         //  WIP
+        const bool UseErrorChecking = false;
+
+        public static void RespondToOffense(Tank tech, Tank assailant, AOffenseReact damage)
+        {
+            if (!AnimeAIBackupValidation())
+                return;
+
+        }
+        public static void RespondToLoss(Tank tech, ALossReact damage)
+        {
+            if (!AnimeAIBackupValidation())
+                return;
+
+        }
+
         public static void TransmitStatus(Tank tech, string message)
         {
             if (!AnimeAIBackupValidation())
@@ -44,9 +73,9 @@ namespace TAC_AI
 
         private static bool AnimeAIBackupValidation()
         {
-            if (!KickStart.isAnimeAIPresent)
+            if (UseErrorChecking && !KickStart.isAnimeAIPresent)
             {
-                Debug.Log("TACtical_AI: Tried to run AnimeAI without proper validation \n" + StackTraceUtility.ExtractStackTrace());
+                Debug.Log("TACtical_AI: Tried to run AnimeAI \n" + StackTraceUtility.ExtractStackTrace());
             }
             return KickStart.isAnimeAIPresent;
         }
