@@ -56,7 +56,7 @@ namespace TAC_AI.AI
         public const float minimumChargeFractionToConsider = 0.75f;
 
         // legdev
-        internal const bool Feedback = true;// set this to true to get AI feedback testing
+        internal const bool Feedback = false;// set this to true to get AI feedback testing
 
 
         // Mining
