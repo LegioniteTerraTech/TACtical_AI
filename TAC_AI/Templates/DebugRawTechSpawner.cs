@@ -78,6 +78,16 @@ namespace TAC_AI.Templates
             int index = 0;
             if (TempManager.ExternalEnemyTechs == null)
             {
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "There's Nothing In"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                VertPosOff += 30;
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "The Enemies Folder!"))
+                {
+                    SpawnTech(SpawnBaseTypes.NotAvail);
+                }
+                /*
                 if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Dump Your Folder!"))
                 {
                     SpawnTech(SpawnBaseTypes.NotAvail);
@@ -106,7 +116,7 @@ namespace TAC_AI.Templates
                 if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Legionite!"))
                 {
                     SpawnTech(SpawnBaseTypes.NotAvail);
-                }
+                }*/
                 return;
             }
 
