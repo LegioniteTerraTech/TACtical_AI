@@ -35,6 +35,7 @@ namespace TAC_AI.Templates
         Harvesting,     // Has Delivery cannons
         Autominer,      // Can mine unlimited BB (DO NOT ATTACH THIS TAG TO HQs!!!)
         TechProduction, // Base with Explosive Bolts attached
+                        //   As of Update 1.8.3, this is now considered a Garrison
         Headquarters,   // Calls in techs from orbit using funds
         MPUnsafe,       // MP blocked crafting blocks
         HasReceivers,   // Has receivers

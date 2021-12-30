@@ -23,7 +23,8 @@ namespace TAC_AI.AI.AlliedOperations
             }
 
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
-            float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
+            float range = (thisInst.RangeToStopRush * 4) + AIECore.Extremes(tank.blockBounds.extents);
+            // The range is nearly quadrupled here due to dogfighting conditions
             thisInst.lastRange = dist;
 
             float playerExt = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
@@ -37,17 +38,18 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
             }
 
-            if (dist < ((thisInst.lastTechExtents + playerExt) * 2) + 5)
+            float spacing = thisInst.lastTechExtents + playerExt;
+            if (dist < ((spacing) * 2) + 5)
             {   // TOO CLOSE!!! WE DODGE!!!
-                if (thisInst.lastEnemy != null)
+                if (thisInst.lastEnemy != null && !thisInst.Retreat)
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 else
                     thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
                 thisInst.MoveFromObjective = true;
             }
-            else if (dist > thisInst.lastTechExtents + playerExt && dist < range)
+            else if (dist > spacing && dist < range)
             {   // Follow the leader
-                if (thisInst.lastEnemy != null)
+                if (thisInst.lastEnemy != null && !thisInst.Retreat)
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 else
                     thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;

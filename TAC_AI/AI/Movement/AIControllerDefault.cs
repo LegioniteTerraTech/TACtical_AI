@@ -62,6 +62,32 @@ namespace TAC_AI.AI
                 this.AICore.DriveDirectorEnemy(this.EnemyMind);
             }
         }
+        public void DriveDirectorRTS()
+        {
+            if (this.Helper == null)
+            {
+                string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
+                Debug.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                return;
+            }
+
+            this.Helper.Steer = false;
+            this.Helper.DriveDir = EDriveType.Forwards;
+            if (this.Helper.AIState == 1)// Allied
+            {
+                if (this.AICore == null)
+                {
+                    string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
+                    Debug.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
+                    return;
+                }
+                this.AICore.DriveDirectorRTS();
+            }
+            else//ENEMY
+            {
+                this.AICore.DriveDirectorEnemy(this.EnemyMind);
+            }
+        }
 
         public void DriveMaintainer(TankControl thisControl)
         {

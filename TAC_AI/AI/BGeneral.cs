@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TAC_AI.AI
@@ -19,8 +18,6 @@ namespace TAC_AI.AI
             thisInst.forceDrive = false;
             thisInst.featherBoost = false;
 
-            //thisInst.OverrideAim = false;
-            thisInst.Retreat = false;
             thisInst.MoveFromObjective = false;
             thisInst.ProceedToObjective = false;
             thisInst.ProceedToBase = false;
@@ -37,14 +34,14 @@ namespace TAC_AI.AI
             // Determines the weapons actions and aiming of the AI
             if (thisInst.lastEnemy != null)
             {
-                thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                thisInst.lastEnemy = GetTarget(thisInst, tank);
                 //Fire even when retreating - the AI's life depends on this!
                 thisInst.DANGER = true;
             }
             else
             {
                 thisInst.DANGER = false;
-                thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                thisInst.lastEnemy = GetTarget(thisInst, tank);
             }
         }
 
@@ -57,7 +54,7 @@ namespace TAC_AI.AI
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             thisInst.DANGER = false;
-            thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            thisInst.lastEnemy = GetTarget(thisInst, tank);
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
@@ -86,17 +83,46 @@ namespace TAC_AI.AI
             }
         }
 
-        /// <summary>
-        /// Prioritize removal of obsticles over attacking enemy
-        /// </summary>
-        /// <param name="thisInst"></param>
-        /// <param name="tank"></param>
+        public static Visible GetTarget(AIECore.TankAIHelper thisInst, Tank tank)
+        {
+            Visible target = null;
+            if ((bool)thisInst.lastPlayer)
+            {
+                target = thisInst.lastPlayer.tank.Weapons.GetManualTarget();
+            }
+            if (target == null)
+                return tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            return target;
+        }
         public static void SelfDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Alternative of the above - does not aim at enemies while mining
             if (thisInst.Obst == null)
             {
                 AidDefend(thisInst, tank);
+            }
+        }
+
+        /// <summary>
+        /// Stay focused on first target if the unit is order to focus-fire
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        public static void RTSCombat(AIECore.TankAIHelper thisInst, Tank tank)
+        {
+            // Determines the weapons actions and aiming of the AI
+            if (thisInst.lastEnemy != null)
+            {
+                if (thisInst.RTSDestination != Vector3.zero)
+                    thisInst.lastEnemy = GetTarget(thisInst, tank);
+                // else we focus fire
+                thisInst.DANGER = true;
+            }
+            else
+            {
+                thisInst.DANGER = false;
+                if (thisInst.RTSDestination != Vector3.zero)
+                    thisInst.lastEnemy = GetTarget(thisInst, tank);
             }
         }
 

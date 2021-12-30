@@ -20,9 +20,9 @@ namespace TAC_AI.AI.Enemy
         /// <returns></returns>
         public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 targetIn, AIECore.TankAIHelper thisInst, EnemyMind mind, bool dodgeLargeStatics = false)
         {   //WIP
-            List<Tank> Allies = AllyList(tank);
-            if (!thisInst.AvoidStuff)
+            if (!thisInst.AvoidStuff || tank.IsAnchored) //Because the enemy AI uses the advanced AI when anchored, unlike the player AI.
                 return targetIn;
+            List<Tank> Allies = AllyList(tank);
             try
             {
                 Tank lastCloseAlly;
@@ -53,7 +53,11 @@ namespace TAC_AI.AI.Enemy
                 if (lastCloseAlly == null)
                 {
                     //Debug.Log("TACtical_AI: ALLY IS NULL");
-                    return targetIn;
+                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    if (obst)
+                        return (targetIn + ProccessedVal) / 2;
+                    else
+                        return targetIn;
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
                 {
@@ -77,9 +81,9 @@ namespace TAC_AI.AI.Enemy
         }
         public static Vector3 AvoidAssistEnemyInv(Tank tank, Vector3 targetIn, AIECore.TankAIHelper thisInst, EnemyMind mind, bool dodgeLargeStatics = false)
         {   //WIP
-            List<Tank> Allies = AllyList(tank);
-            if (!thisInst.AvoidStuff)
+            if (!thisInst.AvoidStuff || tank.IsAnchored)
                 return targetIn;
+            List<Tank> Allies = AllyList(tank);
             try
             {
                 Tank lastCloseAlly;
@@ -110,7 +114,11 @@ namespace TAC_AI.AI.Enemy
                 if (lastCloseAlly == null)
                 {
                     //Debug.Log("TACtical_AI: ALLY IS NULL");
-                    return targetIn;
+                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    if (obst)
+                        return (targetIn + ProccessedVal) / 2;
+                    else
+                        return targetIn;
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12)
                 {
@@ -143,9 +151,9 @@ namespace TAC_AI.AI.Enemy
         /// <returns></returns>
         public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 targetIn, Vector3 predictionOffset, AIECore.TankAIHelper thisInst, EnemyMind mind)
         {   //WIP
-            List<Tank> Allies = AllyList(tank);
-            if (!thisInst.AvoidStuff)
+            if (!thisInst.AvoidStuff || tank.IsAnchored)
                 return targetIn;
+            List<Tank> Allies = AllyList(tank);
             try
             {
                 Tank lastCloseAlly;
@@ -173,9 +181,13 @@ namespace TAC_AI.AI.Enemy
                 }
                 lastCloseAlly = ClosestAllyE(predictionOffset, out lastAllyDist, Allies);
                 if (lastCloseAlly == null)
-                { 
+                {
                     //Debug.Log("TACtical_AI: ALLY IS NULL");
-                    return targetIn;
+                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, targetIn, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
+                    if (obst)
+                        return (targetIn + ProccessedVal) / 2;
+                    else
+                        return targetIn;
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
@@ -201,6 +213,8 @@ namespace TAC_AI.AI.Enemy
 
         public static List<Tank> AllyList(Tank tank)
         {
+            return AIECore.TankAIManager.GetAlliedTanks(tank.Team);
+            /*
             List<Tank> AllyList = new List<Tank>();
             var allTechs = Singleton.Manager<ManTechs>.inst.CurrentTechs;
             int techCount = allTechs.Count();
@@ -221,7 +235,7 @@ namespace TAC_AI.AI.Enemy
                 Debug.Log("TACtical_AI: Error on ally counting");
                 Debug.Log(e);
             }
-            return AllyList;
+            return AllyList;*/
         }
 
         public static Tank ClosestAllyE(Vector3 tankPos, out float bestValue, List<Tank> Allies)

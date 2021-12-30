@@ -93,6 +93,10 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.Networking.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.ParticleSystemModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.PhysicsModule.dll</HintPath>
       <Private>False</Private>
@@ -141,6 +145,7 @@
     <Compile Include="AI\Movement\AICores\IMovementAICore.cs" />
     <Compile Include="AI\Movement\AICores\VehicleAICore.cs" />
     <Compile Include="AI\Movement\AICores\VtolAICore.cs" />
+    <Compile Include="FactionTypesExt.cs" />
     <Compile Include="EDriveType.cs" />
     <Compile Include="AI\AlliedOperations\BAstrotech.cs" />
     <Compile Include="AI\AlliedOperations\BEscort.cs" />
@@ -167,6 +172,7 @@
     <Compile Include="Enemy\EnemyOperations\RWheeled.cs" />
     <Compile Include="Enemy\RMission.cs" />
     <Compile Include="Enemy\RCore.cs" />
+    <Compile Include="Enemy\RWeapSetup.cs" />
     <Compile Include="GUIAIManager.cs" />
     <Compile Include="ReverseCache.cs" />
     <Compile Include="ModuleAIExtension.cs" />
@@ -177,6 +183,7 @@
     <Compile Include="PatchBatch.cs" />
     <Compile Include="AnimeAI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="World\PlayerRTSControl.cs" />
     <Compile Include="Templates\CommunityStorage.cs" />
     <Compile Include="Templates\DebugRawTechSpawner.cs" />
     <Compile Include="Templates\EBasePurpose.cs" />
@@ -189,6 +196,13 @@
     <Compile Include="Templates\TempManager.cs" />
     <Compile Include="Templates\TempStorage.cs" />
     <Compile Include="UnityEngineExtensions.cs" />
+    <Compile Include="World\EnemyBaseUnloaded.cs" />
+    <Compile Include="World\EnemyBaseWorld.cs" />
+    <Compile Include="World\EnemyPresence.cs" />
+    <Compile Include="World\EnemyTechUnit.cs" />
+    <Compile Include="World\EnemyWorldManager.cs" />
+    <Compile Include="World\PlayerRTSUI.cs" />
+    <Compile Include="World\TileMoveCommand.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig">
@@ -236,6 +250,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>del *.pdb

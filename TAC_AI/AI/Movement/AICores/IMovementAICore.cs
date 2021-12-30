@@ -16,6 +16,8 @@ namespace TAC_AI.AI.Movement.AICores
 
         bool DriveDirector();
 
+        bool DriveDirectorRTS(); // FOR RTS CONTROL
+
         bool DriveDirectorEnemy(Enemy.EnemyMind mind);
 
         bool TryAdjustForCombat();

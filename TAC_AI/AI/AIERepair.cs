@@ -36,12 +36,59 @@ namespace TAC_AI.AI
         /// <summary>
         /// Auto-repair handler for both enemy and allied AIs
         /// </summary>
+
+        // The Delay in how long 
+        public static float RepairDelayMulti = 5;
+        public static float RepairDelayCombatMulti = 3;
+        public static float RepairDelayCombatMultiBase = 5;
+        // ALLIED
+        // Basic AIs
+        public static short DelayNormal = 60;
+        // Smarter AIs
+        public static short DelaySmart = 25;
+        // ENEMY
+        // General Enemy AIs
+        public static short DelayEnemy = 60;
+        // Enemy Base AIs
+        public static short DelayBase = 30;
+
+
+        // -- Calculated --
+        // Basic AIs
+        internal static short delaySafe;
+        internal static short delayCombat;
+        // Smarter AIs
+        internal static short sDelaySafe;
+        internal static short sDelayCombat;
+        // Enemy Mobile AIs
+        internal static short eDelaySafe;
+        internal static short eDelayCombat;
+        // Enemy Base AIs
+        internal static short bDelaySafe;
+        internal static short bDelayCombat;
+
+        public static void RefreshDelays()
+        {
+            delaySafe = (short)(DelayNormal * RepairDelayMulti);
+            delayCombat = (short)(DelayNormal * RepairDelayMulti * RepairDelayCombatMulti);
+
+            sDelaySafe = (short)(DelaySmart * RepairDelayMulti);
+            sDelayCombat = (short)(DelaySmart * RepairDelayMulti * RepairDelayCombatMulti);
+
+            eDelaySafe = (short)(DelayEnemy * RepairDelayMulti);
+            eDelayCombat = (short)(DelayEnemy * RepairDelayMulti * RepairDelayCombatMulti);
+
+            bDelaySafe = (short)((DelayBase * RepairDelayMulti) / KickStart.BaseDifficulty);
+            bDelayCombat = (short)((DelayBase * RepairDelayMulti) / (KickStart.BaseDifficulty / RepairDelayCombatMultiBase));
+        }
+
         public class DesignMemory : MonoBehaviour
         {   // Save the design on load!
             private Tank Tank;
             public AIECore.TankAIHelper thisInst;
             public bool rejectSaveAttempts = false;
             public bool ranOutOfParts = false;
+            public List<TankBlock> GrabbedBlocks = new List<TankBlock>();
             public int ReserveSuperGrabs = 0;
 
             public List<BlockMemory> SavedTech = new List<BlockMemory>();
@@ -148,13 +195,27 @@ namespace TAC_AI.AI
             // Advanced
             public bool ChanceGrabBackBlock(TankBlock blockLoss)
             {
-                if (UnityEngine.Random.Range(0, 500) < KickStart.Difficulty)
+                if (KickStart.CommitDeathMode)
                 {
-                    //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
-                    ReserveSuperGrabs++;
-                    if (KickStart.EnemyBlockDropChance == 0)
-                        blockLoss.damage.SelfDestruct(0.75f);
-                    return true;
+                    if (UnityEngine.Random.Range(0, 500) < 150)
+                    {
+                        //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
+                        ReserveSuperGrabs++;
+                        if (KickStart.EnemyBlockDropChance == 0)
+                            blockLoss.damage.SelfDestruct(0.75f);
+                        return true;
+                    }
+                }
+                else
+                {
+                    if (UnityEngine.Random.Range(0, 500) < KickStart.Difficulty)
+                    {
+                        //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
+                        ReserveSuperGrabs++;
+                        if (KickStart.EnemyBlockDropChance == 0)
+                            blockLoss.damage.SelfDestruct(0.75f);
+                        return true;
+                    }
                 }
                 return false;
             }
@@ -197,7 +258,7 @@ namespace TAC_AI.AI
                 {
                     if (ch == '"')
                     {
-                        JSONTech.Append("\\");
+                        JSONTech.Append(Templates.RawTechExporter.up);
                         JSONTech.Append(ch);
                     }
                     else
@@ -325,8 +386,7 @@ namespace TAC_AI.AI
                     mem.p.y = Mathf.RoundToInt(mem.p.y);
                     mem.p.z = Mathf.RoundToInt(mem.p.z);
                     //Get the rotation
-                    Quaternion outr =  bloc.cachedLocalRotation * Quaternion.Inverse(coreRot);
-                    mem.r = new OrthoRotation(outr).rot;
+                    mem.r = SetCorrectRotation(bloc.cachedLocalRotation, Quaternion.Inverse(coreRot)).rot;
                     if (!Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(bloc).Contains(mem.r))
                     {   // block cannot be saved - illegal rotation.
                         Debug.Log("TACtical_AI:  DesignMemory - " + tank.name + ": could not save " + bloc.name + " in blueprint due to illegal rotation.");
@@ -395,6 +455,35 @@ namespace TAC_AI.AI
                 //Debug.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
                 return mem;
             }
+        }
+        public static OrthoRotation SetCorrectRotation(Quaternion blockRot, Quaternion changeRot)
+        {
+            Quaternion qRot2 = default;
+            Vector3 foA = blockRot * (changeRot * Vector3.forward);
+            Vector3 upA = blockRot * (changeRot * Vector3.up);
+            qRot2.SetLookRotation(foA, upA);
+            OrthoRotation rot = new OrthoRotation(qRot2);
+            if (rot != qRot2)
+            {
+                bool worked = false;
+                for (int step = 0; step < OrthoRotation.NumDistinctRotations; step++)
+                {
+                    OrthoRotation rotT = new OrthoRotation(OrthoRotation.AllRotations[step]);
+                    bool isForeMatch = rotT * Vector3.forward == qRot2 * Vector3.forward;
+                    bool isUpMatch = rotT * Vector3.up == qRot2 * Vector3.up;
+                    if (isForeMatch && isUpMatch)
+                    {
+                        rot = rotT;
+                        worked = true;
+                        break;
+                    }
+                }
+                if (!worked)
+                {
+                    Debug.Log("RandomAdditions: ReplaceBlock - Matching failed - OrthoRotation is incompetent");
+                }
+            }
+            return rot;
         }
         private static Dictionary<int, BlockTypes> errorNames = new Dictionary<int, BlockTypes>();
 
@@ -567,10 +656,10 @@ namespace TAC_AI.AI
             }
             return attached;
         }
-        
+
 
         // Other respective repair operations
-        public static bool RepairLerp(Tank tank, DesignMemory TechMemor, AIECore.TankAIHelper thisInst, ref List<BlockTypes> typesMissing, bool overrideChecker = false)
+        private static bool PreRepairPrep(Tank tank, DesignMemory TechMemor, bool overrideChecker = false)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             if (TechMemor.IsNull())
@@ -592,77 +681,129 @@ namespace TAC_AI.AI
             }
             if (savedBCount != cBCount)
             {
-                //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
+                return true;
+            }
+            return false;
+        }
+        private static bool RepairLerp(Tank tank, DesignMemory TechMemor, AIECore.TankAIHelper thisInst, ref List<TankBlock> fBlocks, ref List<BlockTypes> typesMissing, bool overrideChecker = false)
+        {
+            //Debug.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
 
-                List<TankBlock> fBlocks = FindBlocksNearbyTank(tank, thisInst.RangeToChase / 4);
-                fBlocks = fBlocks.OrderBy((blok) => (blok.centreOfMassWorld - tank.boundsCentreWorld).sqrMagnitude).ToList();
-
-                if (TryAttachExistingBlockFromList(tank, TechMemor, fBlocks))
+            if (TryAttachExistingBlockFromList(tank, TechMemor, ref fBlocks))
+                return true;
+            if (thisInst.useInventory)
+            {
+                //Debug.Log("TACtical AI: RepairLerp - Attempting to repair from inventory");
+                if (TrySpawnAndAttachBlockFromList(tank, TechMemor, ref typesMissing, true))
                     return true;
-                if (thisInst.useInventory)
-                {
-                    //Debug.Log("TACtical AI: RepairLerp - Attempting to repair from inventory");
-                    if (TrySpawnAndAttachBlockFromList(tank, TechMemor, ref typesMissing, true))
-                        return true;
-                }
             }
             return false;
         }
         public static bool InstaRepair(Tank tank, DesignMemory TechMemor, int RepairAttempts = 0)
         {
             bool success = false;
-
-            BlockManager.TableCache techCache = tank.blockman.GetTableCacheForPlacementCollection();
-            List<TankBlock> cBlocks = techCache.blockTable.Cast<TankBlock>().ToList();
-            if (RepairAttempts == 0)
-                RepairAttempts = TechMemor.ReturnContents().Count();
-
-            List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, tank.blockman.IterateBlocks().ToList());
-            while (RepairAttempts > 0)
+            if (SystemsCheck(tank, TechMemor) && PreRepairPrep(tank, TechMemor))
             {
-                if (!SystemsCheck(tank, TechMemor))
+                List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+                if (RepairAttempts == 0)
+                    RepairAttempts = TechMemor.ReturnContents().Count();
+
+                AIECore.TankAIHelper help = tank.GetComponent<AIECore.TankAIHelper>();
+
+                List<TankBlock> fBlocks = FindBlocksNearbyTank(tank, help.RangeToChase / 4);
+                List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, tank.blockman.IterateBlocks().ToList());
+                while (RepairAttempts > 0)
                 {
-                    success = true;
-                    break;
+                    bool worked = RepairLerp(tank, TechMemor, help, ref fBlocks, ref typesMissing, true);
+                    if (!worked)
+                        break;
+                    if (!SystemsCheck(tank, TechMemor))
+                    {
+                        success = true;
+                        break;
+                    }
+                    RepairAttempts--;
                 }
-                bool worked = RepairLerp(tank, TechMemor, tank.GetComponent<AIECore.TankAIHelper>(), ref typesMissing, true);
-                if (!worked)
-                    break;
-                RepairAttempts--;
             }
             return success;
         }
-        public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, DesignMemory TechMemor, int Delay = 25, bool Super = false)
+        public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, DesignMemory TechMemor, bool AdvancedAI = false, bool Combat = false)
         {
-            if (thisInst.repairStepperClock == 1)
+            if (thisInst.repairStepperClock >= 0)
             {
-                //thisInst.AttemptedRepairs = 0;
-                thisInst.repairStepperClock = 0;
-            }
-            else if (thisInst.repairStepperClock == 0)
-            {
+                int prevVal = thisInst.repairStepperClock;
+                if (Combat)
+                {
+                    if (AdvancedAI)
+                        thisInst.repairStepperClock = sDelayCombat;
+                    else
+                        thisInst.repairStepperClock = delayCombat;
+                }
+                else
+                {
+                    if (AdvancedAI)
+                        thisInst.repairStepperClock = sDelaySafe;
+                    else
+                        thisInst.repairStepperClock = delaySafe;
+                }
                 if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs == 0)
                 {
-                    List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, tank.blockman.IterateBlocks().ToList());
+                    if (thisInst.repairStepperClock < 1)
+                        thisInst.repairStepperClock = 1;
+                    int OverdueTime = Mathf.Abs(prevVal / thisInst.repairStepperClock);
+                    if (OverdueTime > 1)
+                    {
+                        thisInst.PendingSystemsCheck = !InstaRepair(tank, TechMemor, OverdueTime);
+                    }
+                    else if (SystemsCheck(tank, TechMemor) && PreRepairPrep(tank, TechMemor))
+                    {   // Cheaper to check twice than to use GetMissingBlockTypes when not needed.
+                        List<TankBlock> fBlocks = FindBlocksNearbyTank(tank, thisInst.RangeToChase / 4);
+                        List<BlockTypes> typesMissing = GetMissingBlockTypes(TechMemor, tank.blockman.IterateBlocks().ToList());
 
-                    RepairLerp(tank, TechMemor, thisInst, ref typesMissing);
-                    thisInst.PendingSystemsCheck = SystemsCheck(tank, TechMemor);
-                    //thisInst.AttemptedRepairs = 1;
+                        RepairLerp(tank, TechMemor, thisInst, ref fBlocks, ref typesMissing);
+                        thisInst.PendingSystemsCheck = SystemsCheck(tank, TechMemor);
+                        //thisInst.AttemptedRepairs = 1;
+                    }
+                    else
+                        thisInst.PendingSystemsCheck = false;
                 }
-                if (!Super)
-                    thisInst.repairStepperClock = Delay;
-                else
-                    thisInst.repairStepperClock = Delay / 4;
             }
-            else
-                thisInst.repairStepperClock--;
+            thisInst.repairStepperClock -= KickStart.AIClockPeriod;
             return thisInst.PendingSystemsCheck;
         }
+        
+        /*// Abandoned - Too Technical!
+        public static void AssistedRepair(Tank tank)
+        {
+            List<Binding.SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
+            if (Snaps.Count == 0)
+                return;
+            foreach (Binding.SnapshotLiveData snap in Snaps)
+            {
+                try
+                {
+                    snap.m_Snapshot.
+                }
+                catch
+                {
+                }
+            }
+        }*/
 
 
         // Repair Utilities
         public static List<BlockTypes> GetMissingBlockTypes(DesignMemory TechMemor, List<TankBlock> cBlocks)
         {
+            if (cBlocks == null)
+            {
+                Debug.Log("TACtical AI: GetMissingBlockTypes - Called with null cBlocks!");
+                cBlocks = new List<TankBlock>();
+            }
+            if (!(bool)TechMemor)
+            {
+                Debug.Log("TACtical AI: GetMissingBlockTypes - Called with null TechMemor!" + StackTraceUtility.ExtractStackTrace());
+                return null;
+            }
             List<BlockTypes> typesToRepair = new List<BlockTypes>();
             List<BlockMemory> mem = TechMemor.ReturnContents();
             int toFilter = mem.Count();
@@ -714,9 +855,10 @@ namespace TAC_AI.AI
                     }
                 }
             }
+            fBlocks = fBlocks.OrderBy((blok) => (blok.centreOfMassWorld - tank.boundsCentreWorld).sqrMagnitude).ToList();
             return fBlocks;
         }
-        public static bool TryAttachExistingBlockFromList(Tank tank, DesignMemory TechMemor, List<TankBlock> foundBlocks, bool denySD = false)
+        public static bool TryAttachExistingBlockFromList(Tank tank, DesignMemory TechMemor, ref List<TankBlock> foundBlocks, bool denySD = false)
         {
             int attachAttempts = foundBlocks.Count();
             //Debug.Log("TACtical AI: RepairLerp - Found " + attachAttempts + " loose blocks to use");
@@ -738,6 +880,7 @@ namespace TAC_AI.AI
                         {
                             foundBlock.damage.AbortSelfDestruct();
                         }
+                        foundBlocks.RemoveAt(step);
                         return true;
                     }
                 }
@@ -808,6 +951,7 @@ namespace TAC_AI.AI
             }
             return false;
         }
+       
 
 
         // Booleenssd

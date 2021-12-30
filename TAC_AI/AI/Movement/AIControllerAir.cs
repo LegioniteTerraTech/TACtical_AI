@@ -393,6 +393,44 @@ namespace TAC_AI.AI
             }
             return;
         }
+        public void DriveDirectorRTS()
+        {
+            AIECore.TankAIHelper thisInst = this.Helper;
+            Tank tank = this.Tank;
+
+            if (thisInst == null)
+            {
+                Debug.Log("TACtical_AI: AI " + tank.name + ":  FIRED FlightDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                return;
+            }
+
+            this.TestForMayday(thisInst, tank);
+
+            if (thisInst.AIState == 1)
+            {
+                this.ForcePitchUp = false;
+                if (this.Grounded)
+                {   //Become a ground vehicle for now
+                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                    {
+                        return;
+                    }
+                    //Try fighting the controls to land safely
+                    return;
+                }
+                thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.RTSDestination, thisInst);
+                this.AICore.DriveDirector();
+            }
+            else if (thisInst.AIState == 2) //enemy
+            {
+                Enemy.EnemyMind mind = tank.GetComponent<Enemy.EnemyMind>();
+                if (!this.TargetGrounded)
+                    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
+
+                this.AICore.DriveDirectorEnemy(mind);
+            }
+            return;
+        }
 
         //Flight Maintainer - handle the flight between airborne positions
         public void DriveMaintainer(TankControl thisControl)

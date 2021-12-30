@@ -468,6 +468,32 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobal, Color color)
+        {
+            GameObject gO;
+            var line = obj.transform.Find("DebugLine " + num);
+            if (!(bool)line)
+            { 
+                gO = Instantiate(new GameObject("DebugLine " + num), obj.transform, false);
+            }
+            else
+                gO = line.gameObject;
+
+            var lr = gO.GetComponent<LineRenderer>();
+            if (!(bool)lr)
+            {
+                lr = gO.AddComponent<LineRenderer>();
+                lr.material = new Material(Shader.Find("Sprites/Default"));
+                lr.positionCount = 2;
+                lr.startWidth = 0.5f;
+            }
+            lr.startColor = color;
+            lr.endColor = color;
+            Vector3 pos = obj.transform.position;
+            Vector3[] vecs = new Vector3[2] { pos, (endPosGlobal * 3) + pos };
+            lr.SetPositions(vecs);
+            Destroy(gO, Time.deltaTime);
+        }
         private static bool CheckValidMode()
         {
             if (EnabledAllModes)
@@ -482,13 +508,14 @@ namespace TAC_AI.Templates
         {
             try
             {
-                PlayerLoc = Singleton.playerTank.boundsCentreWorld;
-                return Singleton.playerTank.boundsCentreWorld + (Vector3.forward * 64);
+                PlayerLoc = Singleton.camera.transform.position;
+                return Singleton.camera.transform.position + (Singleton.camera.transform.forward * 64);
             }
             catch 
             {
                 return PlayerLoc + (Vector3.forward * 64);
             }
         }
+
     }
 }

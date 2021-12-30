@@ -158,11 +158,11 @@ namespace TAC_AI.Templates
             {
                 if (spawnSpace)
                 {
-                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false);
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionTypesExt.NULL, BaseTerrain.Space, AutoTerrain: false);
                     IsSpace = true;
                 }
                 else
-                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionSubTypes.NULL, BaseTerrain.Air, AutoTerrain: false);
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionTypesExt.NULL, BaseTerrain.Air, AutoTerrain: false);
             }
             else
             {
@@ -194,28 +194,28 @@ namespace TAC_AI.Templates
         {   // 
             try
             {
-                List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
+                List<FactionTypesExt> factionsAvail = new List<FactionTypesExt>();
                 
-                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 0)// flight grade is 2 but random spawns start at 0
-                    factionsAvail.Add(FactionSubTypes.GSO);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel >= 0)// flight grade is 2 but random spawns start at 0
+                    factionsAvail.Add(FactionTypesExt.GSO);
                 // GC literally can't fly an airborneAI
-                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 2)
-                    factionsAvail.Add(FactionSubTypes.GC);
-                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 0)// flight grade is 1 but random spawns start at 0
-                    factionsAvail.Add(FactionSubTypes.VEN);
-                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
-                    factionsAvail.Add(FactionSubTypes.HE);
-                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
-                    factionsAvail.Add(FactionSubTypes.BF);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).CurrentLevel >= 2)
+                    factionsAvail.Add(FactionTypesExt.GC);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).CurrentLevel >= 0)// flight grade is 1 but random spawns start at 0
+                    factionsAvail.Add(FactionTypesExt.VEN);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.HE)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.HE)).CurrentLevel >= 1)
+                    factionsAvail.Add(FactionTypesExt.HE);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.BF)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.BF)).CurrentLevel >= 0)
+                    factionsAvail.Add(FactionTypesExt.BF);
                 if (factionsAvail.Count == 0)
                     return null;
 
                 bool hasAllDone = true;
                 if (factionsAvail.Count > 5)
                 {
-                    foreach (FactionSubTypes faction in factionsAvail)
+                    foreach (FactionTypesExt faction in factionsAvail)
                     {
-                        if (!Licences.GetLicense(faction).HasReachedMaxLevel)
+                        if (!Licences.GetLicense(KickStart.CorpExtToCorp(faction)).HasReachedMaxLevel)
                         {
                             hasAllDone = false;
                             break;
@@ -224,41 +224,41 @@ namespace TAC_AI.Templates
                 }
                 else
                     hasAllDone = false;
-                if (factionsAvail.Contains(FactionSubTypes.GC))
-                    factionsAvail.Remove(FactionSubTypes.GC);
-                if (factionsAvail.Contains(FactionSubTypes.EXP))
-                    factionsAvail.Remove(FactionSubTypes.EXP);
+                if (factionsAvail.Contains(FactionTypesExt.GC))
+                    factionsAvail.Remove(FactionTypesExt.GC);
+                if (factionsAvail.Contains(FactionTypesExt.EXP))
+                    factionsAvail.Remove(FactionTypesExt.EXP);
 
                 // spawn and return the airborneAI
                 if (hasAllDone) // all corps unlocked by player
-                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air, maxPrice: KickStart.EnemySpawnPriceMatching);
+                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionTypesExt.NULL, BaseTerrain.Air, maxPrice: KickStart.EnemySpawnPriceMatching);
 
                 // if we don't have all corps possible maxed, we do the normal spawn
 
                 // determine corp
                 factionsAvail.Shuffle();
-                FactionSubTypes finalFaction = factionsAvail.First();
+                FactionTypesExt finalFaction = factionsAvail.First();
 
                 bool unProvoked = true;
                 switch (finalFaction)
                 {   // contains minimum grades (index) needed before flying parts become available
-                    case FactionSubTypes.GSO:
-                        if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
+                    case FactionTypesExt.GSO:
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel >= 2)
                             unProvoked = false;
                         break;
-                    case FactionSubTypes.VEN:
-                        if (Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
+                    case FactionTypesExt.VEN:
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).CurrentLevel >= 1)
                             unProvoked = false;
                         break;
-                    case FactionSubTypes.HE:
-                        if (Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
+                    case FactionTypesExt.HE:
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.HE)).CurrentLevel >= 1)
                             unProvoked = false;
                         break;
-                    case FactionSubTypes.BF:
+                    case FactionTypesExt.BF:
                         unProvoked = false;
                         break;
                     default:
-                        if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel == 4)
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel == 4)
                             unProvoked = false;
                         break;
                 }
@@ -271,85 +271,85 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 if (unProvoked)
                 {
-                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.NoWeapons }, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching))
+                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.NoWeapons }, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching))
                         return finalTank;
                     else
                         return null;
                 }
                 // else we do default spawn
-                return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
+                return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
             }
             catch { }
             Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Air, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionTypesExt.NULL, BaseTerrain.Air, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
         private static Tank SpawnPrefabSpaceship(Vector3 pos, Vector3 forwards, out bool worked)
         {   // 
             worked = false;
             try
             {
-                List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
+                List<FactionTypesExt> factionsAvail = new List<FactionTypesExt>();
 
-                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
-                    factionsAvail.Add(FactionSubTypes.GSO);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel >= 2)
+                    factionsAvail.Add(FactionTypesExt.GSO);
                 // GC literally can't fly an airborneAI
-                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 2)
-                    factionsAvail.Add(FactionSubTypes.GC);
-                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
-                    factionsAvail.Add(FactionSubTypes.VEN);
-                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
-                    factionsAvail.Add(FactionSubTypes.HE);
-                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
-                    factionsAvail.Add(FactionSubTypes.BF);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).CurrentLevel >= 2)
+                    factionsAvail.Add(FactionTypesExt.GC);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).CurrentLevel >= 1)
+                    factionsAvail.Add(FactionTypesExt.VEN);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.HE)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.HE)).CurrentLevel >= 1)
+                    factionsAvail.Add(FactionTypesExt.HE);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.BF)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.BF)).CurrentLevel >= 0)
+                    factionsAvail.Add(FactionTypesExt.BF);
                 if (factionsAvail.Count == 0)
                     return null;
 
                 bool hasAllDone = true;
                 if (factionsAvail.Count > 5)
                 {
-                    foreach (FactionSubTypes faction in factionsAvail)
+                    foreach (FactionTypesExt faction in factionsAvail)
                     {
-                        if (!Licences.GetLicense(faction).HasReachedMaxLevel)
+                        if (!Licences.GetLicense(KickStart.CorpExtToCorp(faction)).HasReachedMaxLevel)
                             hasAllDone = false;
                     }
                 }
                 else
                     hasAllDone = false;
-                if (factionsAvail.Contains(FactionSubTypes.GC))
-                    factionsAvail.Remove(FactionSubTypes.GC);
-                if (factionsAvail.Contains(FactionSubTypes.EXP))
-                    factionsAvail.Remove(FactionSubTypes.EXP);
+                if (factionsAvail.Contains(FactionTypesExt.GC))
+                    factionsAvail.Remove(FactionTypesExt.GC);
+                if (factionsAvail.Contains(FactionTypesExt.EXP))
+                    factionsAvail.Remove(FactionTypesExt.EXP);
 
                 // spawn and return the airborneAI
                 if (hasAllDone) // all corps unlocked by player
-                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space, maxPrice: KickStart.EnemySpawnPriceMatching);
+                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionTypesExt.NULL, BaseTerrain.Space, maxPrice: KickStart.EnemySpawnPriceMatching);
 
                 // if we don't have all corps possible maxed, we do the normal spawn
 
                 // determine corp
                 factionsAvail.Shuffle();
-                FactionSubTypes finalFaction = factionsAvail.First();
+                FactionTypesExt finalFaction = factionsAvail.First();
 
                 bool unProvoked = true;
                 switch (finalFaction)
                 {   // contains minimum grades (index) needed before flying parts become available
-                    case FactionSubTypes.GSO:
-                        if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
+                    case FactionTypesExt.GSO:
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel >= 2)
                             unProvoked = false;
                         break;
-                    case FactionSubTypes.VEN:
-                        if (Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
+                    case FactionTypesExt.VEN:
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).CurrentLevel >= 1)
                             unProvoked = false;
                         break;
-                    case FactionSubTypes.HE:
-                        if (Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
+                    case FactionTypesExt.HE:
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.HE)).CurrentLevel >= 1)
                             unProvoked = false;
                         break;
-                    case FactionSubTypes.BF:
+                    case FactionTypesExt.BF:
                         unProvoked = false;
                         break;
                     default:
-                        if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel == 4)
+                        if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel == 4)
                             unProvoked = false;
                         break;
                 }
@@ -360,13 +360,13 @@ namespace TAC_AI.Templates
                 }
                 catch { }
                 Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene"); 
-                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
+                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
                 return tech;
             }
             catch { }
             Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             worked = true;
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionSubTypes.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, FactionTypesExt.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
 
         public static void TrySpawnTraderTroll(Vector3 pos)
@@ -383,28 +383,28 @@ namespace TAC_AI.Templates
 
             try
             {
-                List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
+                List<FactionTypesExt> factionsAvail = new List<FactionTypesExt>();
 
-                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
-                    factionsAvail.Add(FactionSubTypes.GSO);
-                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.GC);
-                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.VEN);
-                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.HE);
-                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.BF);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel >= 2)
+                    factionsAvail.Add(FactionTypesExt.GSO);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).IsDiscovered)
+                    factionsAvail.Add(FactionTypesExt.GC);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).IsDiscovered)
+                    factionsAvail.Add(FactionTypesExt.VEN);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.HE)).IsDiscovered)
+                    factionsAvail.Add(FactionTypesExt.HE);
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.BF)).IsDiscovered)
+                    factionsAvail.Add(FactionTypesExt.BF);
                 if (factionsAvail.Count == 0)
                     return;
-                FactionSubTypes factionSelect = factionsAvail.GetRandomEntry();
+                FactionTypesExt factionSelect = factionsAvail.GetRandomEntry();
 
                 //pos = GetOffsetPosAngle(pos); 
 
                 if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos3))
                     return;
 
-                if (RawTechLoader.SpawnSpecificTypeTech(pos3, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(factionSelect).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true))
+                if (RawTechLoader.SpawnSpecificTypeTech(pos3, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true))
                 {
                     Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
                     try
@@ -420,7 +420,7 @@ namespace TAC_AI.Templates
 
             if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos2))
                 return;
-            if (RawTechLoader.SpawnSpecificTypeTech(pos2, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionSubTypes.NULL, forceInstant: true, isPopulation: true))
+            if (RawTechLoader.SpawnSpecificTypeTech(pos2, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, forceInstant: true, isPopulation: true))
             {
                 Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
                 try

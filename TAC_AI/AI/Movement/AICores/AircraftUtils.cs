@@ -61,6 +61,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             //Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
 
+
             if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 1.25f))
                 return Vector3.up;
             Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(Navi3DDirect);
@@ -102,7 +103,7 @@ namespace TAC_AI.AI.Movement.AICores
                         rFlat = -tank.rootBlockTrans.right;
                     rFlat.y = 0;
                     rFlat.Normalize();
-                    rFlat.y = -pilot.RollStrength;
+                    rFlat.y = -pilot.RollStrength / 2;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
                 else if (Heading.x < 0f && Heading.z < 0.925f - (0.2f / pilot.RollStrength))
@@ -115,7 +116,7 @@ namespace TAC_AI.AI.Movement.AICores
                         rFlat = -tank.rootBlockTrans.right;
                     rFlat.y = 0;
                     rFlat.Normalize();
-                    rFlat.y = pilot.RollStrength;
+                    rFlat.y = pilot.RollStrength / 2;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
             }
@@ -149,7 +150,12 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             //Debug.Log("TACtical_AI: upwards direction " + tank.name + "  is " + direct.y);
-            return direct;
+
+            // Blue is the target destination, Red is up  
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, Navi3DDirect * pilot.Helper.lastTechExtents, new Color(0, 0, 1));
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, direct * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
+
+            return direct; // IS IN WORLD SPACE
         }
         public static void AngleTowards(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
         {

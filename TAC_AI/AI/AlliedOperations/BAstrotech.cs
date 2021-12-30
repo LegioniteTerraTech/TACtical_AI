@@ -20,7 +20,8 @@ namespace TAC_AI.AI.AlliedOperations
             if (thisInst.lastPlayer == null)
                 return;
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
-            float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
+            float range = (thisInst.RangeToStopRush * 2) + AIECore.Extremes(tank.blockBounds.extents);
+            // The range is doubled here due to flight conditions
             bool hasMessaged = false;
             thisInst.lastRange = dist;
 
@@ -129,11 +130,11 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                if (dist >= range + playerExt + 10 && !thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
-                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 2))
+                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");

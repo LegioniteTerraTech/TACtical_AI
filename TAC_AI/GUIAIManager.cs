@@ -9,6 +9,55 @@ using TAC_AI.AI;
 
 namespace TAC_AI
 {
+    public class AIManagerTechEntry
+    {   // Abandoned UI control system for AI - not enough room on HUD 
+        internal Tank tank;
+        private Texture2D image;
+        private int previousBlockCount;
+        private int Health { get { return (int)(RHealth / 50); } }
+        private long RHealth;
+        private int FullHealth { get { return (int)(RHealth / 50); } }
+        private long RFullHealth;
+
+        public AIManagerTechEntry(Tank tech)
+        {
+            tank = tech;
+            Singleton.Manager<ManScreenshot>.inst.RenderTechImage(tech, new IntVector2(1, 1), false, delegate (TechData TD, Texture2D Tex) 
+            {
+                if (Tex.IsNotNull())
+                    image = Tex;
+            });
+            previousBlockCount = tech.blockman.blockCount;
+            tech.AttachEvent.Subscribe(AddBlock);
+            tech.DetachEvent.Subscribe(RemoveBlock);
+            tech.TankRecycledEvent.Subscribe(OnRecycledTank);
+        }
+
+        public void AddBlock(TankBlock bloc, Tank tonk)
+        {
+            if (tonk == tank)
+            {
+                RFullHealth += bloc.damage.maxHealth;
+            }
+        }
+        public void RemoveBlock(TankBlock bloc, Tank tonk)
+        {
+            if (tonk == tank)
+            {
+                RFullHealth -= bloc.damage.maxHealth;
+            }
+        }
+        public void OnRecycledTank(Tank tonk)
+        {
+            if (tonk == tank)
+            {
+                tank.AttachEvent.Unsubscribe(AddBlock);
+                tank.DetachEvent.Unsubscribe(RemoveBlock);
+                tank.TankRecycledEvent.Unsubscribe(OnRecycledTank);
+                tank = null;
+            }
+        }
+    }
     public class GUIAIManager : MonoBehaviour
     {
         //Handles the display that's triggered on AI change 
@@ -20,10 +69,13 @@ namespace TAC_AI
         private static AIType changeAI = AIType.Escort;
         internal static AIECore.TankAIHelper lastTank;
 
+        // Mode - Setting
         private static GameObject GUIWindow;
         private static Rect HotWindow = new Rect(0, 0, 200, 240);   // the "window"
         private static float xMenu = 0;
         private static float yMenu = 0;
+
+        // Tech Tracker
 
 
         private static int windowTimer = 0;
@@ -291,7 +343,7 @@ namespace TAC_AI
             //GUI.DragWindow();
         }
 
-        static FieldInfo bubble = typeof(Tank).GetField("m_Overlay", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static FieldInfo bubble = typeof(Tank).GetField("m_Overlay", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void SetOption(AIType dediAI)
         {
             if (ManNetwork.IsNetworked)

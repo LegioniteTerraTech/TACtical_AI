@@ -29,7 +29,7 @@ namespace TAC_AI.Templates
         public string Blueprint;
         public bool InfBlocks;
         public bool IsAnchored;
-        public FactionSubTypes Faction;
+        public FactionTypesExt Faction;
         public bool NonAggressive = false;
         public bool Eradicator = false;
         public int Cost = 0;
@@ -42,6 +42,7 @@ namespace TAC_AI.Templates
         private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
         public static bool isOpen;
         public static bool pendingInGameReload;
+        public static string up = "\\";
 
         public static bool ExportJSONInsteadOfRAWTECH = false;
 
@@ -57,6 +58,10 @@ namespace TAC_AI.Templates
         // GUI
         public static void Initiate()
         {
+            if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
+            {
+                up = "/";
+            }
             inst = new GameObject();
             inst.AddComponent<RawTechExporter>();
             GUIWindow = new GameObject();
@@ -215,9 +220,11 @@ namespace TAC_AI.Templates
             di = di.Parent; // out of the DLL folder
             di = di.Parent; // out of QMods
             BaseDirectory = di.ToString();
-            RawTechsDirectory = di.ToString() + "\\Raw Techs";
+            RawTechsDirectory = di.ToString() + up + "Raw Techs";
+#if DEBUG
             Debug.Log("TACtical_AI: DLL folder is at: " + DLLDirectory);
             Debug.Log("TACtical_AI: Raw Techs is at: " + RawTechsDirectory);
+#endif
             ValidateEnemyFolder();
         }
 
@@ -225,7 +232,7 @@ namespace TAC_AI.Templates
         // Operations
         public static List<BaseTemplate> LoadAllEnemyTechs()
         {
-            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + "\\Enemies");
+            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
             List<BaseTemplate> temps = new List<BaseTemplate>();
             List<string> names = new List<string>();
             Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
@@ -243,7 +250,7 @@ namespace TAC_AI.Templates
                         temp.techName = ext.Name;
                         temp.savedTech = ext.Blueprint;
                         temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
-                        FactionSubTypes MainCorp = Singleton.Manager<ManSpawn>.inst.GetCorporation(AIERepair.JSONToFirstBlock(ext.Blueprint));
+                        FactionTypesExt MainCorp = KickStart.GetCorpExtended(AIERepair.JSONToFirstBlock(ext.Blueprint));
                         temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                         temp.IntendedGrade = minCorpGrade;
                         temp.faction = MainCorp;
@@ -285,11 +292,11 @@ namespace TAC_AI.Templates
             List<string> Cleaned;
             if (altDirectoryFromBaseDirectory == null)
             {
-                search = RawTechsDirectory + "\\Enemies";
+                search = RawTechsDirectory + up + "Enemies";
             }
             else
             {
-                search = BaseDirectory + "\\" + altDirectoryFromBaseDirectory;
+                search = BaseDirectory + up + altDirectoryFromBaseDirectory;
             }
             List<string> toClean = Directory.GetFiles(search).ToList();
             Cleaned = CleanNames(toClean, false);
@@ -297,7 +304,7 @@ namespace TAC_AI.Templates
         }
         internal static int GetTechCounts()
         {
-            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + "\\Enemies");
+            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
             int techCount = 0;
             foreach (string Dir in Dirs)
             {
@@ -322,7 +329,7 @@ namespace TAC_AI.Templates
             StringBuilder final = new StringBuilder();
             foreach (char ch in FolderDirectory)
             {
-                if (ch == '\\')
+                if (ch == up.ToCharArray()[0])
                 {
                     final.Clear();
                 }
@@ -346,7 +353,7 @@ namespace TAC_AI.Templates
             return true;
         }
         private static FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
-        public static List<BasePurpose> GetHandler(string blueprint, FactionSubTypes factionType, bool Anchored, out BaseTerrain terra, out int minCorpGrade)
+        public static List<BasePurpose> GetHandler(string blueprint, FactionTypesExt factionType, bool Anchored, out BaseTerrain terra, out int minCorpGrade)
         {
             List<TankBlock> blocs = new List<TankBlock>();
             List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
@@ -387,7 +394,7 @@ namespace TAC_AI.Templates
             minCorpGrade = 0;
 
             BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
-            int gradeM = blockList.GetMaxGrade(factionType);
+            int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(factionType));
             //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
@@ -453,7 +460,7 @@ namespace TAC_AI.Templates
                     }*/
 
                     int tier = Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetBlockTier(type, true);
-                    if (Singleton.Manager<ManSpawn>.inst.GetCorporation(type) == factionType)
+                    if (KickStart.GetCorpExtended(type) == factionType)
                     {
                         if (tier > minCorpGrade)
                         {
@@ -578,7 +585,7 @@ namespace TAC_AI.Templates
 
         private static void ValidateEnemyFolder()
         {
-            string destination = RawTechsDirectory + "\\Enemies";
+            string destination = RawTechsDirectory + up + "Enemies";
             if (!Directory.Exists(RawTechsDirectory))
             {
                 Debug.Log("TACtical_AI: Generating Raw Techs folder.");
@@ -691,7 +698,7 @@ namespace TAC_AI.Templates
             BuilderExternal builder = new BuilderExternal();
             string bluep = BlockSpecToJSONExternal(tank.m_BlockSpecs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount);
             builder.Name = tank.Name;
-            builder.Faction = tank.GetMainCorporations().FirstOrDefault();
+            builder.Faction = tank.GetMainCorpExt();
             builder.Blueprint = bluep;
             builder.InfBlocks = false;
             builder.IsAnchored = tank.CheckIsAnchored();
@@ -757,12 +764,12 @@ namespace TAC_AI.Templates
             {
                 if (ExportJSONInsteadOfRAWTECH)
                 {
-                    File.WriteAllText(RawTechsDirectory + "\\" + TechName + ".JSON", RawTechJSON);
+                    File.WriteAllText(RawTechsDirectory + up + TechName + ".JSON", RawTechJSON);
                     Debug.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
                 }
                 else
                 {
-                    File.WriteAllText(RawTechsDirectory + "\\" + TechName + ".RAWTECH", RawTechJSON);
+                    File.WriteAllText(RawTechsDirectory + up + TechName + ".RAWTECH", RawTechJSON);
                     Debug.Log("TACtical_AI: Saved RawTech.RAWTECH for " + TechName + " successfully.");
                 }
             }
@@ -778,18 +785,18 @@ namespace TAC_AI.Templates
             if (altFolderName == "")
                 destination = RawTechsDirectory;
             else
-                destination = BaseDirectory + "\\" + altFolderName;
+                destination = BaseDirectory + up + altFolderName;
             try
             {
                 string output;
-                if (File.Exists(destination + "\\" + TechName + ".JSON"))
+                if (File.Exists(destination + up + TechName + ".JSON"))
                 {
-                    output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
+                    output = File.ReadAllText(destination + up + TechName + ".JSON");
                     Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
                 }
                 else
                 {
-                    output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
+                    output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
                     Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                 }
                 return output;
@@ -798,13 +805,13 @@ namespace TAC_AI.Templates
             {
                 Debug.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
 
-                Debug.Log("TACtical_AI: Attempted directory - |" + destination + "\\" + TechName + ".JSON");
+                Debug.Log("TACtical_AI: Attempted directory - |" + destination + up + TechName + ".JSON");
                 return null;
             }
         }
         private static void SaveEnemyTechToFile(string TechName, string RawBaseTechJSON)
         {
-            string destination = RawTechsDirectory + "\\Enemies\\eLocal";
+            string destination = RawTechsDirectory + up + "Enemies" + up + "eLocal";
             if (!Directory.Exists(RawTechsDirectory))
             {
                 Debug.Log("TACtical_AI: Generating Raw Techs folder.");
@@ -820,12 +827,12 @@ namespace TAC_AI.Templates
                 }
 
             }
-            if (!Directory.Exists(RawTechsDirectory + "\\Enemies"))
+            if (!Directory.Exists(RawTechsDirectory + up + "Enemies"))
             {
                 Debug.Log("TACtical_AI: Generating Enemies folder.");
                 try
                 {
-                    Directory.CreateDirectory(RawTechsDirectory + "\\Enemies");
+                    Directory.CreateDirectory(RawTechsDirectory + up + "Enemies");
                     Debug.Log("TACtical_AI: Made new Enemies folder successfully.");
                 }
                 catch
@@ -852,7 +859,7 @@ namespace TAC_AI.Templates
             }
             try
             {
-                File.WriteAllText(destination + "\\" + TechName + ".JSON", RawBaseTechJSON);
+                File.WriteAllText(destination + up + TechName + ".JSON", RawBaseTechJSON);
                 Debug.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
             }
             catch
@@ -863,7 +870,7 @@ namespace TAC_AI.Templates
         }
         private static void SaveEnemyTechToFileBLK(string TechName, string RawBaseTechJSON)
         {
-            string destination = RawTechsDirectory + "\\Enemies\\eBulk";
+            string destination = RawTechsDirectory + up + "Enemies" + up + "eBulk";
             if (!Directory.Exists(RawTechsDirectory))
             {
                 Debug.Log("TACtical_AI: Generating Raw Techs folder.");
@@ -879,12 +886,12 @@ namespace TAC_AI.Templates
                 }
 
             }
-            if (!Directory.Exists(RawTechsDirectory + "\\Enemies"))
+            if (!Directory.Exists(RawTechsDirectory + up + "Enemies"))
             {
                 Debug.Log("TACtical_AI: Generating Enemies folder.");
                 try
                 {
-                    Directory.CreateDirectory(RawTechsDirectory + "\\Enemies");
+                    Directory.CreateDirectory(RawTechsDirectory + up + "Enemies");
                     Debug.Log("TACtical_AI: Made new Enemies folder successfully.");
                 }
                 catch
@@ -911,7 +918,7 @@ namespace TAC_AI.Templates
             }
             try
             {
-                File.WriteAllText(destination + "\\" + TechName + ".JSON", RawBaseTechJSON);
+                File.WriteAllText(destination + up + TechName + ".JSON", RawBaseTechJSON);
                 Debug.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
             }
             catch
@@ -925,7 +932,7 @@ namespace TAC_AI.Templates
             string destination;
             if (AltDirectory == "")
             {
-                destination = RawTechsDirectory + "\\Enemies";
+                destination = RawTechsDirectory + up + "Enemies";
                 if (!Directory.Exists(RawTechsDirectory))
                 {
                     Debug.Log("TACtical_AI: Generating Raw Techs folder.");
@@ -959,14 +966,14 @@ namespace TAC_AI.Templates
                 try
                 {
                     string output;
-                    if (File.Exists(destination + "\\" + TechName + ".JSON"))
+                    if (File.Exists(destination + up + TechName + ".JSON"))
                     {
-                        output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
+                        output = File.ReadAllText(destination + up + TechName + ".JSON");
                         Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
                     }
                     else
                     {
-                        output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
+                        output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
                         Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                     }
                     return output;
@@ -983,14 +990,14 @@ namespace TAC_AI.Templates
                 try
                 {
                     string output;
-                    if (File.Exists(destination + "\\" + TechName + ".JSON"))
+                    if (File.Exists(destination + up + TechName + ".JSON"))
                     {
-                        output = File.ReadAllText(destination + "\\" + TechName + ".JSON");
+                        output = File.ReadAllText(destination + up + TechName + ".JSON");
                         Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
                     }
                     else
                     {
-                        output = File.ReadAllText(destination + "\\" + TechName + ".RAWTECH");
+                        output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
                         Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                     }
                     return output;
@@ -1059,7 +1066,7 @@ namespace TAC_AI.Templates
         }
         private static Sprite LoadSprite(string pngName)
         {
-            string destination = DLLDirectory + "\\AI_Icons\\" + pngName;
+            string destination = DLLDirectory + up + "AI_Icons" + up + pngName;
             try
             {
                 Texture2D tex = FileUtils.LoadTexture(destination);
@@ -1078,7 +1085,7 @@ namespace TAC_AI.Templates
             StringBuilder final = new StringBuilder();
             foreach (char ch in FolderDirectory)
             {
-                if (ch == '\\')
+                if (ch == up.ToCharArray()[0])
                 {
                     final.Clear();
                 }
@@ -1094,7 +1101,7 @@ namespace TAC_AI.Templates
             int offsetRemove = 0;
             foreach (char ch in FolderDirectory)
             {
-                if (ch == '\\')
+                if (ch == up.ToCharArray()[0])
                 {
                     offsetRemove = 1;
                 }
@@ -1118,17 +1125,17 @@ namespace TAC_AI.Templates
             final = final.Distinct().ToList();
             return final;
         }
-        private static FactionSubTypes GetTopCorp(Tank tank)
+        private static FactionTypesExt GetTopCorp(Tank tank)
         {   // 
-            FactionSubTypes final = tank.GetMainCorp();
+            FactionTypesExt final = tank.GetMainCorpExt();
             if (!(bool)Singleton.Manager<ManLicenses>.inst)
                 return final;
-            int corps = Enum.GetNames(typeof(FactionSubTypes)).Length;
+            int corps = Enum.GetNames(typeof(FactionTypesExt)).Length;
             int[] corpCounts = new int[corps];
 
             foreach (TankBlock block in tank.blockman.IterateBlocks())
             {
-                corpCounts[(int)Singleton.Manager<ManSpawn>.inst.GetCorporation(block.BlockType)]++;
+                corpCounts[(int)KickStart.GetCorpExtended(block.BlockType)]++;
             }
             int blockCounts = 0;
             int bestCorpIndex = 0;
@@ -1141,7 +1148,7 @@ namespace TAC_AI.Templates
                     blockCounts = num;
                 }
             }
-            final = (FactionSubTypes)bestCorpIndex;
+            final = (FactionTypesExt)bestCorpIndex;
             return final;
         }
         private static bool IsLethal(Tank tank)

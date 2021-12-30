@@ -9,7 +9,7 @@ namespace TAC_AI.Templates
     public class BaseTemplate
     {
         public string techName = "!!!!null!!!!";
-        public FactionSubTypes faction = FactionSubTypes.NULL;
+        public FactionTypesExt faction = FactionTypesExt.NULL;
         public List<BasePurpose> purposes;
         public int IntendedGrade = -1;
         public BaseTerrain terrain = BaseTerrain.Land;
@@ -29,7 +29,7 @@ namespace TAC_AI.Templates
             // -- Fallback
             { SpawnBaseTypes.NotAvail, new BaseTemplate {
                 techName = "ErrorTech",
-                faction = FactionSubTypes.NULL,
+                faction = FactionTypesExt.NULL,
                 purposes = new List<BasePurpose>{ BasePurpose.Harvesting },
                 IntendedGrade = 0,
                 startingFunds = 500000,
@@ -38,7 +38,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.GSO0Base, new BaseTemplate {
                 techName = "Hoarder",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{ BasePurpose.Fallback },
                 IntendedGrade = 0,
                 startingFunds = 25000,
@@ -46,7 +46,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GCTotum, new BaseTemplate {
                 techName = "F^bron Shrine",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 purposes = new List<BasePurpose>{ BasePurpose.Fallback },
                 IntendedGrade = 0,
                 startingFunds = 17500,
@@ -54,7 +54,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENPipperoni, new BaseTemplate {
                 techName = "Pipperoni",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 purposes = new List<BasePurpose>{ BasePurpose.Fallback },
                 IntendedGrade = 0,
                 startingFunds = 12500,
@@ -62,7 +62,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HERelay, new BaseTemplate {
                 techName = "Relay Post",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>{ BasePurpose.Fallback },
                 IntendedGrade = 0,
                 startingFunds = 80000,
@@ -70,7 +70,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.BFCyberFlote, new BaseTemplate {
                 techName = "Quantum Flote",
-                faction = FactionSubTypes.BF,
+                faction = FactionTypesExt.BF,
                 purposes = new List<BasePurpose>{ BasePurpose.Fallback },
                 IntendedGrade = 0,
                 startingFunds = 90000,
@@ -78,7 +78,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.RRSideswipe, new BaseTemplate {
                 techName = "Sideswipe",
-                faction = FactionSubTypes.EXP,
+                faction = FactionTypesExt.EXP,
                 purposes = new List<BasePurpose>{ BasePurpose.Fallback },
                 IntendedGrade = 0,
                 startingFunds = 125000,
@@ -89,7 +89,7 @@ namespace TAC_AI.Templates
             // -- Harvesting
             { SpawnBaseTypes.GSOSeller, new BaseTemplate {
                 techName = "GSO Seller",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{
                     BasePurpose.Harvesting, 
                     BasePurpose.HasReceivers
@@ -100,7 +100,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOMidBase, new BaseTemplate {
                 techName = "GSO Furlough Base",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{
                     BasePurpose.Harvesting,
                     BasePurpose.MPUnsafe,
@@ -112,7 +112,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOMinerCluster, new BaseTemplate {
                 techName = "Reaping Base",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{
                     BasePurpose.Harvesting,
                     BasePurpose.MPUnsafe,
@@ -124,7 +124,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GCMiningRig, new BaseTemplate {  //WIP
                 techName = "GeoCorp Mining Rig",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -137,7 +137,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GCTerraBore, new BaseTemplate {  //WIP
                 techName = "Anvil Operations",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -151,7 +151,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENGasStation, new BaseTemplate {  
                 techName = "Gas Station",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -164,7 +164,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENTuningShop, new BaseTemplate {  //WIP
                 techName = "Podium Base",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -177,7 +177,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HECombatStation, new BaseTemplate {  //WIP
                 techName = "OpSlide Base",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -190,7 +190,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEOilDerrick, new BaseTemplate {  //WIP
                 techName = "Democracy Derricks",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -203,7 +203,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.BFGains, new BaseTemplate {  
                 techName = "Gains",
-                faction = FactionSubTypes.BF,
+                faction = FactionTypesExt.BF,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -216,7 +216,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.BFExtractor, new BaseTemplate {
                 techName = "Extractor",
-                faction = FactionSubTypes.BF,
+                faction = FactionTypesExt.BF,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -229,7 +229,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.RRDecanter, new BaseTemplate {
                 techName = "Decanter",
-                faction = FactionSubTypes.EXP,
+                faction = FactionTypesExt.EXP,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -243,7 +243,7 @@ namespace TAC_AI.Templates
             /*
             { SpawnBaseTypes.RRSampler, new BaseTemplate { // Broken - will need to rebuild down the line
                 techName = "Sampler",
-                faction = FactionSubTypes.EXP,
+                faction = FactionTypesExt.EXP,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Harvesting,
@@ -259,7 +259,7 @@ namespace TAC_AI.Templates
             /*
             { SpawnBaseTypes.GSOAIMinerProduction, new BaseTemplate {  //WIP
                 techName = "AI Assembler",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{BasePurpose.TechProduction},
                 IntendedGrade = 2,
                 startingFunds = 125000,
@@ -267,7 +267,7 @@ namespace TAC_AI.Templates
             } },*/
             { SpawnBaseTypes.GSOTechFactory, new BaseTemplate {  //WIP
                 techName = "Marco Production",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{BasePurpose.TechProduction},
                 IntendedGrade = 2,
                 startingFunds = 115000,
@@ -275,7 +275,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOHVYTankFactory, new BaseTemplate {  //WIP
                 techName = "Muddy Kennel",//Factoriolissimo
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{BasePurpose.TechProduction},
                 IntendedGrade = 4,
                 startingFunds = 361000,
@@ -283,7 +283,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENPitStop, new BaseTemplate {  //WIP
                 techName = "Pit Stop",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 purposes = new List<BasePurpose>{
                     BasePurpose.TechProduction,
                     BasePurpose.MPUnsafe,
@@ -295,7 +295,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENRallyHost, new BaseTemplate {  //WIP
                 techName = "Rally Host",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 purposes = new List<BasePurpose>{
                     BasePurpose.TechProduction,
                 },
@@ -305,7 +305,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEAircraftGarrison, new BaseTemplate {  //WIP
                 techName = "Hawkeye Aircraft Garrison",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>{
                     BasePurpose.TechProduction
                 },
@@ -315,7 +315,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEXLTankFactory, new BaseTemplate {
                 techName = "Archilles Factory",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>{BasePurpose.TechProduction},
                 IntendedGrade = 2,
                 startingFunds = 1100000,
@@ -323,7 +323,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.BFHoverFactory, new BaseTemplate {
                 techName = "Electroysis",
-                faction = FactionSubTypes.BF,
+                faction = FactionTypesExt.BF,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.TechProduction,
@@ -334,7 +334,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.RRFactory, new BaseTemplate {
                 techName = "Labricator",
-                faction = FactionSubTypes.EXP,
+                faction = FactionTypesExt.EXP,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.TechProduction,
@@ -345,7 +345,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.RRHeavyFactory, new BaseTemplate {
                 techName = "Natural Select",
-                faction = FactionSubTypes.EXP,
+                faction = FactionTypesExt.EXP,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.TechProduction,
@@ -359,7 +359,7 @@ namespace TAC_AI.Templates
             /*
             { SpawnBaseTypes.GSOMilitaryBase, new BaseTemplate {  //WIP
                 techName = "Factoriolissimo",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.TechProduction,
@@ -372,7 +372,7 @@ namespace TAC_AI.Templates
             } },*/
             { SpawnBaseTypes.GCHeadquarters, new BaseTemplate {  //WIP
                 techName = "GeoCorp Overlord Complex",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Headquarters
@@ -384,7 +384,7 @@ namespace TAC_AI.Templates
             /*
             { SpawnBaseTypes.HECommandCentre, new BaseTemplate {  //WIP
                 techName = "Hawkeye Command Station",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.TechProduction,
@@ -400,7 +400,7 @@ namespace TAC_AI.Templates
             // -- Defenses
             { SpawnBaseTypes.GSOLightDefense, new BaseTemplate {  //WIP
                 techName = "GSO Light Defense",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Defense,
@@ -411,7 +411,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOTowerDefense, new BaseTemplate {  //WIP
                 techName = "GSO Tower Turret",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Defense,
@@ -422,7 +422,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GCMiningLaserLite, new BaseTemplate {  //WIP
                 techName = "GC Light Laser",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Defense,
@@ -433,7 +433,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENDeputyTurret, new BaseTemplate {  //WIP
                 techName = "VEN Deputy Turret",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Defense,
@@ -444,7 +444,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEPerimeterDefense, new BaseTemplate {  //WIP
                 techName = "Hawkeye Defense",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Defense,
@@ -455,7 +455,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HECapitalDefense, new BaseTemplate {  //WIP
                 techName = "Hawkeye HVY Defense",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>
                 {
                     BasePurpose.Defense,
@@ -474,7 +474,7 @@ namespace TAC_AI.Templates
             /*
             { SpawnBaseTypes.TACInvaderAttract, new BaseTemplate {
                 techName = "TAC InvaderAttract",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.AttractTech },// not a base lol
                 IntendedGrade = 2,
@@ -483,7 +483,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.TACInvaderAttract2, new BaseTemplate {
                 techName = "TAC InvaderAttract2",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.AttractTech },// not a base lol
                 IntendedGrade = 2,
                 startingFunds = -1,
@@ -491,7 +491,7 @@ namespace TAC_AI.Templates
             } },*/
             { SpawnBaseTypes.AttractServo, new BaseTemplate {
                 techName = "TAC Attract Servo",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },// , BasePurpose.AttractTech 
                 IntendedGrade = 2,
@@ -500,7 +500,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOTonyTeam, new BaseTemplate {
                 techName = "Tony Team",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Land,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.AttractTech },// not a base lol
                 IntendedGrade = 2,// can't get the bolts under most cases anyways
@@ -509,7 +509,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOHarvesterTech, new BaseTemplate {
                 techName = "GSO Harvester",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Land,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.AttractTech, BasePurpose.Harvesting },// not a base lol
                 IntendedGrade = 2,
@@ -518,7 +518,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GCHarvesterTech, new BaseTemplate {
                 techName = "GC Harvester",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 terrain = BaseTerrain.Land,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.AttractTech, BasePurpose.Harvesting },// not a base lol
                 IntendedGrade = 1,
@@ -530,7 +530,7 @@ namespace TAC_AI.Templates
             // Aircraft Techs - spawn randomly every now and then but do not attack the player until they are above a certain grade (or when provoked/hit)
             { SpawnBaseTypes.GSOLiftOff, new BaseTemplate {
                 techName = "GSO Lift Off",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NoWeapons },
                 IntendedGrade = 0, // unarmed
@@ -539,7 +539,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOAirdropSquad, new BaseTemplate {
                 techName = "Dropper",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 3,
@@ -548,7 +548,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOHammer, new BaseTemplate {
                 techName = "GSO Hammer",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 4,
@@ -558,7 +558,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.VENLiftOff, new BaseTemplate {
                 techName = "VEN Lift Off",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NoWeapons },
                 IntendedGrade = 0, // unarmed
@@ -567,7 +567,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENPuffPlane, new BaseTemplate {
                 techName = "Puff",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1, 
@@ -576,7 +576,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENZephrPlane, new BaseTemplate {
                 techName = "Zephr",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -585,7 +585,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENMachinator, new BaseTemplate {
                 techName = "Machinator",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -595,7 +595,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.HEPeanutJet, new BaseTemplate {
                 techName = "Peanut",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -604,7 +604,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEProx, new BaseTemplate {
                 techName = "Prox",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -613,7 +613,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEVengence, new BaseTemplate {
                 techName = "Vengence",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -625,7 +625,7 @@ namespace TAC_AI.Templates
             //Chopper Techs
             { SpawnBaseTypes.GSOQuadGale, new BaseTemplate {
                 techName = "Quad Gale",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -634,7 +634,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOQuadGaleM, new BaseTemplate {
                 techName = "Quad Gale MK2",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 3,
@@ -644,7 +644,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.HESheertail, new BaseTemplate {
                 techName = "Sheertail",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -653,7 +653,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEPocketApache, new BaseTemplate {
                 techName = "Pocket Apache",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -662,7 +662,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HESmashApache, new BaseTemplate {
                 techName = "Smash's Apache",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -672,7 +672,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.BFeClipse, new BaseTemplate {
                 techName = "e Clipse",
-                faction = FactionSubTypes.BF,
+                faction = FactionTypesExt.BF,
                 terrain = BaseTerrain.Air,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -685,7 +685,7 @@ namespace TAC_AI.Templates
             //Player Spawns
             { SpawnBaseTypes.FTUEGSOGrade1Bote, new BaseTemplate {
                 techName = "FTUE GSO Grade 1",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 0,
@@ -694,7 +694,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.FTUEGSOGrade2Bote, new BaseTemplate {
                 techName = "FTUE GSO Grade 2",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -703,7 +703,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.FTUEGSOGrade3Bote, new BaseTemplate {
                 techName = "FTUE GSO Grade 3",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -712,7 +712,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.FTUEGSOGrade4Bote, new BaseTemplate {
                 techName = "FTUE GSO Grade 4",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 3,
@@ -721,7 +721,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.FTUEGSOGrade5Bote, new BaseTemplate {
                 techName = "FTUE GSO Grade 5",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary},
                 IntendedGrade = 4,
@@ -733,7 +733,7 @@ namespace TAC_AI.Templates
             //Enemy Spawns
             { SpawnBaseTypes.GSOShallowWaterGuard, new BaseTemplate {
                 techName = "GSO Shallow WaterGuard",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 3,
@@ -743,7 +743,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.GCPlasmaDredge, new BaseTemplate {
                 techName = "GC Plasma Dredge",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -752,7 +752,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GCYukonCharleyDredge, new BaseTemplate {
                 techName = "GC Yukon-Charley Dredge",
-                faction = FactionSubTypes.GC,
+                faction = FactionTypesExt.GC,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -762,7 +762,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.VENScurry, new BaseTemplate {
                 techName = "Scurry",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 0,
@@ -771,7 +771,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.VENNautilus, new BaseTemplate {
                 techName = "Nautilus",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -781,7 +781,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.HESwaddleBoat, new BaseTemplate {
                 techName = "HE Swaddle Boat",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -790,7 +790,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEDreadnaught, new BaseTemplate {
                 techName = "CattleShip",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -799,7 +799,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEBattleSwivels, new BaseTemplate {
                 techName = "CattleSwivel",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -809,7 +809,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.BFLuxYacht, new BaseTemplate {
                 techName = "BF Lux Yacht",
-                faction = FactionSubTypes.BF,
+                faction = FactionTypesExt.BF,
                 terrain = BaseTerrain.Sea,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 1,
@@ -820,7 +820,7 @@ namespace TAC_AI.Templates
             // Space Techs - Excessively rare spawn, one in 50 aircraft Techs (at the right grade) will spawn one of these instead
             { SpawnBaseTypes.GSOSpaceshipMini, new BaseTemplate {
                 techName = "GSO Corvette",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 4,
@@ -829,7 +829,7 @@ namespace TAC_AI.Templates
             } }, 
             { SpawnBaseTypes.GSOSpaceshipCompact, new BaseTemplate {
                 techName = "GSO Microcosm",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 4,
@@ -838,7 +838,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.GSOSpaceship, new BaseTemplate {
                 techName = "GSO Macrocosm",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NANI },
                 IntendedGrade = 4,
@@ -848,7 +848,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.HECroc, new BaseTemplate {
                 techName = "Desert Croc",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NANI },
                 IntendedGrade = 2,
@@ -857,7 +857,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.HEClatoe, new BaseTemplate {
                 techName = "Clatoe Cruiser",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NANI },
                 IntendedGrade = 2,
@@ -867,7 +867,7 @@ namespace TAC_AI.Templates
 
             { SpawnBaseTypes.BFTrident, new BaseTemplate {
                 techName = "Trident Cruiser",
-                faction = FactionSubTypes.BF,
+                faction = FactionTypesExt.BF,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NANI },
                 IntendedGrade = 2,

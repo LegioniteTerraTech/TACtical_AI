@@ -7,6 +7,7 @@ using UnityEngine;
 using TAC_AI.AI;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy;
+using TAC_AI.World;
 
 namespace TAC_AI.Templates
 {
@@ -14,7 +15,7 @@ namespace TAC_AI.Templates
     {
         public string blueprint;
         public bool infBlocks;
-        public FactionSubTypes faction;
+        public FactionTypesExt faction;
         public bool unprovoked = false;
         public bool instant = true;
     }
@@ -135,7 +136,7 @@ namespace TAC_AI.Templates
             }
 
             int extraBB; // Extras for new bases
-            if (spawnerTank.GetMainCorp() == FactionSubTypes.GSO)
+            if (spawnerTank.GetMainCorpExt() == FactionTypesExt.GSO)
             {
                 switch (grade)
                 {
@@ -173,7 +174,7 @@ namespace TAC_AI.Templates
             }
             try
             {
-                float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel;
+                float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel;
                 extraBB = (int)(extraBB / divider);
             }
             catch { }
@@ -193,18 +194,18 @@ namespace TAC_AI.Templates
             SpawnBaseTypes type;
             if (spawnerTank.GetComponent<AIControllerAir>())
             {
-                type = GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Air, maxGrade: grade);
+                type = GetEnemyBaseType(spawnerTank.GetMainCorpExt(), purpose, BaseTerrain.Air, maxGrade: grade);
                 return SpawnAirBase(Vector3.forward, pos, Team, type, haveBB, GetBaseStartingFunds(type) + extraBB);
             }
             else if (KickStart.isWaterModPresent)
             {
                 if (AIEPathing.AboveTheSea(pos))
                 {
-                    type = GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Sea, maxGrade: grade);
+                    type = GetEnemyBaseType(spawnerTank.GetMainCorpExt(), purpose, BaseTerrain.Sea, maxGrade: grade);
                     return SpawnSeaBase(Vector3.forward, pos, Team, type, haveBB, GetBaseStartingFunds(type) + extraBB);
                 }
             }
-            type = GetEnemyBaseType(spawnerTank.GetMainCorp(), purpose, BaseTerrain.Land, maxGrade: grade);
+            type = GetEnemyBaseType(spawnerTank.GetMainCorpExt(), purpose, BaseTerrain.Land, maxGrade: grade);
             return SpawnLandBase(Vector3.forward, pos, Team, type, haveBB, GetBaseStartingFunds(type) + extraBB);
         }
         internal static bool SpawnBaseExpansion(Tank spawnerTank, Vector3 pos, int Team, SpawnBaseTypes type)
@@ -246,8 +247,9 @@ namespace TAC_AI.Templates
                 return SpawnLandBase(spawnerTank.rootBlockTrans.right, pos, Team, type, haveBB) > 0;
             }
         }
+        
 
-
+        // LOADED
         /// <summary>
         /// For loading bases from Debug
         /// </summary>
@@ -285,7 +287,7 @@ namespace TAC_AI.Templates
             var namesav = theBase.gameObject.GetOrAddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-            namesav.faction = GetMainCorp(toSpawn);
+            namesav.faction = GetMainCorpExt(toSpawn);
             namesav.unprovoked = false;
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
@@ -328,7 +330,7 @@ namespace TAC_AI.Templates
             var namesav = theBase.gameObject.GetOrAddComponent<BookmarkBuilder>();
             namesav.blueprint = baseBlueprint;
             namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-            namesav.faction = GetMainCorp(toSpawn);
+            namesav.faction = GetMainCorpExt(toSpawn);
             namesav.unprovoked = false;
             namesav.instant = false;
             return GetBaseBBCost(baseBlueprint);
@@ -403,11 +405,62 @@ namespace TAC_AI.Templates
             return GetBaseBBCost(baseBlueprint);
             */
         }
-        
+
+        // UNLOADED
+        internal static TechData GetBaseExpansionUnloaded(Vector3 pos, EnemyPresence EP, SpawnBaseTypes type, out int[] bIDs)
+        {   // All bases are off-set rotated right to prevent the base from being built diagonally
+            TryClearAreaForBase(pos);
+
+            bool haveBB = (ContainsPurpose(type, BasePurpose.Harvesting) || ContainsPurpose(type, BasePurpose.TechProduction)) && !ContainsPurpose(type, BasePurpose.NotStationary);
+            bIDs = new int[1] { 1 };
+            if (haveBB)
+            {
+                return SpawnUnloadedBase(type, haveBB, out bIDs);
+            }
+            else
+            {   // Defense
+                if (!RBases.PurchasePossible(GetBaseBBCost(GetBlueprint(type)), EP.Team))
+                    return null;
+                return SpawnUnloadedBase(type, haveBB, out bIDs);
+            }
+        }
+        private static TechData SpawnUnloadedBase(SpawnBaseTypes toSpawn, bool storeBB, out int[] blocIDs, int SpawnBB = 0)
+        {
+            string baseBlueprint = GetBlueprint(toSpawn);
+            string name;
+
+            if (storeBB)
+                name = GetEnglishName(toSpawn) + " ¥¥" + SpawnBB;
+            else
+            {
+                name = GetEnglishName(toSpawn) + " â";
+            }
+            return ExportRawTechToTechData(name, baseBlueprint, out blocIDs);
+            /*
+            ManSaveGame.StoredTech ST = new ManSaveGame.StoredTech();
+            ST.m_TeamID = EP.Team;
+            ST.m_Velocity = new V3Serial();
+            ST.m_Rotation = new QuatSerial(Quaternion.LookRotation(spawnerForwards, Vector3.up));
+            ST.m_WorldPosition = new WorldPosition(tilePos, pos);
+            ST.m_AngularVelocity = new V3Serial();
+            ST.m_Asleep = true;
+            ST.m_HasBeenSpawned = false;
+            ST.m_ID = ManVisible.
+            ST.m_ShouldExplodeDetachingBlocks = false;
+            ST.m_TechData = ExportRawTechToTechData(name, baseBlueprint);
+            */
+            //return ST;
+        }
+        internal static TechData SpawnUnloadedTech(SpawnBaseTypes toSpawn, out int[] blocIDs)
+        {
+            string baseBlueprint = GetBlueprint(toSpawn);
+            string name = GetEnglishName(toSpawn);
+            return ExportRawTechToTechData(name, baseBlueprint, out blocIDs);
+        }
 
 
         // Mobile Enemy Techs
-        internal static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
+        internal static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, FactionTypesExt factionType = FactionTypesExt.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
         {   // This will try to spawn player-made enemy techs as well
 
             Tank outTank;
@@ -422,7 +475,7 @@ namespace TAC_AI.Templates
 
             return outTank;
         }
-        internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, List<BasePurpose> purposes, out Tank outTank, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
+        internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, List<BasePurpose> purposes, out Tank outTank, FactionTypesExt factionType = FactionTypesExt.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
         {   // This will try to spawn player-made enemy techs as well
             if (ShouldUseCustomTechs(factionType, purposes, terrainType, false, maxGrade, maxPrice, unProvoked))
             {
@@ -441,7 +494,7 @@ namespace TAC_AI.Templates
 
             return true;
         }
-        internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, out Tank outTank, FactionSubTypes factionType = FactionSubTypes.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
+        internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, out Tank outTank, FactionTypesExt factionType = FactionTypesExt.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
         {   // This will try to spawn player-made enemy techs as well
 
             if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, unProvoked: unProvoked, maxPrice: maxPrice))
@@ -500,7 +553,7 @@ namespace TAC_AI.Templates
                 var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
                 namesav.blueprint = baseBlueprint;
                 namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-                namesav.faction = GetMainCorp(toSpawn);
+                namesav.faction = GetMainCorpExt(toSpawn);
                 namesav.unprovoked = unProvoked;
             }
 
@@ -508,7 +561,7 @@ namespace TAC_AI.Templates
 
             return theTech;
         }
-        internal static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotStationary, bool silentFail = true)
+        internal static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionTypesExt faction = FactionTypesExt.NULL, BasePurpose purpose = BasePurpose.NotStationary, bool silentFail = true)
         {
             if (ShouldUseCustomTechs(faction, BasePurpose.NotStationary, terrainType, true))
             {
@@ -557,14 +610,14 @@ namespace TAC_AI.Templates
                     var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
                     namesav.blueprint = baseBlueprint;
                     namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-                    namesav.faction = GetMainCorp(toSpawn);
+                    namesav.faction = GetMainCorpExt(toSpawn);
                 }
 
                 Debug.Log("TACtical_AI: SpawnAttractTech - Spawned " + GetEnglishName(toSpawn));
                 return true;
             }
         }
-        internal static bool SpawnSpecificTypeTech(Vector3 pos, int Team, Vector3 facingDirect, List<BasePurpose> purposes, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, bool silentFail = true, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0, bool forceInstant = false, bool isPopulation = false)
+        internal static bool SpawnSpecificTypeTech(Vector3 pos, int Team, Vector3 facingDirect, List<BasePurpose> purposes, BaseTerrain terrainType = BaseTerrain.Land, FactionTypesExt faction = FactionTypesExt.NULL, bool silentFail = true, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0, bool forceInstant = false, bool isPopulation = false)
         {
             if (ShouldUseCustomTechs(faction, purposes, terrainType, true))
             {
@@ -652,7 +705,7 @@ namespace TAC_AI.Templates
                     var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
                     namesav.blueprint = baseBlueprint;
                     namesav.infBlocks = GetEnemyBaseSupplies(toSpawn);
-                    namesav.faction = GetMainCorp(toSpawn);
+                    namesav.faction = GetMainCorpExt(toSpawn);
                 }
 
                 Debug.Log("TACtical_AI: SpawnSpecificTypeTech - Spawned " + GetEnglishName(toSpawn));
@@ -737,13 +790,13 @@ namespace TAC_AI.Templates
             return theTech;
         }
         
-        internal static List<int> GetExternalIndexes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static List<int> GetExternalIndexes(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
                 // Filters
                 List<BaseTemplate> canidates;
-                if (faction == FactionSubTypes.NULL)
+                if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.ExternalEnemyTechs;
                 }
@@ -753,11 +806,12 @@ namespace TAC_AI.Templates
                         (delegate (BaseTemplate cand) { return cand.faction == faction; });
                 }
 
+                bool canSpawnErad = (!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs);
                 canidates = canidates.FindAll(delegate (BaseTemplate cand)
                 {
                     if (purpose == BasePurpose.AnyNonHQ)
                     {
-                        if (cand.purposes.Contains(BasePurpose.Headquarters))
+                        if (cand.purposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
                             return false;
                         return true;
                     }
@@ -765,11 +819,12 @@ namespace TAC_AI.Templates
                         return false;
                     if (!searchAttract && cand.purposes.Contains(BasePurpose.AttractTech))
                         return false;
-                    if (searchAttract && cand.purposes.Contains(BasePurpose.NoWeapons))
+                    bool noWeaps = cand.purposes.Contains(BasePurpose.NoWeapons);
+                    if (searchAttract && noWeaps)
                         return false;
-                    if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
+                    if (unProvoked && noWeaps)
                         return true;
-                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.purposes.Contains(BasePurpose.NANI))
+                    if (canSpawnErad && cand.purposes.Contains(BasePurpose.NANI))
                         return false;
                     if (cand.purposes.Count == 0)
                         return false;
@@ -822,13 +877,13 @@ namespace TAC_AI.Templates
 
             return new List<int> { -1 };
         }
-        internal static List<int> GetExternalIndexes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static List<int> GetExternalIndexes(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
                 // Filters
                 List<BaseTemplate> canidates;
-                if (faction == FactionSubTypes.NULL)
+                if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.ExternalEnemyTechs;
                 }
@@ -913,7 +968,7 @@ namespace TAC_AI.Templates
             return new List<int> { -1 };
         }
         
-        internal static int GetExternalIndex(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static int GetExternalIndex(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
@@ -923,7 +978,7 @@ namespace TAC_AI.Templates
 
             return -1;
         }
-        internal static int GetExternalIndex(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static int GetExternalIndex(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
@@ -934,7 +989,7 @@ namespace TAC_AI.Templates
             return -1;
         }
 
-        internal static bool ShouldUseCustomTechs(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static bool ShouldUseCustomTechs(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             int CustomTechs = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
             int PrefabTechs = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
@@ -960,7 +1015,7 @@ namespace TAC_AI.Templates
             }
             return false;
         }
-        internal static bool ShouldUseCustomTechs(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static bool ShouldUseCustomTechs(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             int CustomTechs = GetExternalIndexes(faction, purposes, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
             int PrefabTechs = GetEnemyBaseTypes(faction, purposes, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
@@ -1192,33 +1247,33 @@ namespace TAC_AI.Templates
                 spec.position = mem.p;
                 spec.saveState = new Dictionary<int, Module.SerialData>();
                 spec.textSerialData = new List<string>();
-                FactionSubTypes factType = ManSpawn.inst.GetCorporation(type);
+                FactionTypesExt factType = KickStart.GetCorpExtended(type);
                 if (skinChaotic)
                 {
                     byte rand = (byte)UnityEngine.Random.Range(0, 2);
-                    if (factType == FactionSubTypes.GSO && rand != 0)
+                    if (factType == FactionTypesExt.GSO && rand != 0)
                         rand += 3;
-                    if (!ManDLC.inst.IsSkinDLC(rand, factType))
+                    if (!ManDLC.inst.IsSkinDLC(rand, KickStart.CorpExtToCorp(factType)))
                         spec.m_SkinID = rand;
                     else
                         spec.m_SkinID = 0;
                 }
                 else
                 {
-                    if (factType == FactionSubTypes.GSO)
+                    if (factType == FactionTypesExt.GSO)
                     {
-                        if (!ManDLC.inst.IsSkinDLC(skinset + (skinset != 0 ? 3 : 0), factType))
+                        if (!ManDLC.inst.IsSkinDLC(skinset + (skinset != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
                             spec.m_SkinID = (byte)(skinset + (skinset != 0 ? 3 : 0));
-                        else if (!ManDLC.inst.IsSkinDLC(skinset2 + (skinset2 != 0 ? 3 : 0), factType))
+                        else if (!ManDLC.inst.IsSkinDLC(skinset2 + (skinset2 != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
                             spec.m_SkinID = (byte)(skinset2 + (skinset2 != 0 ? 3 : 0));
                         else
                             spec.m_SkinID = 0;
                     }
                     else
                     {
-                        if (!ManDLC.inst.IsSkinDLC(skinset, factType))
+                        if (!ManDLC.inst.IsSkinDLC(skinset, KickStart.CorpExtToCorp(factType)))
                             spec.m_SkinID = skinset;
-                        else if (!ManDLC.inst.IsSkinDLC(skinset2, factType))
+                        else if (!ManDLC.inst.IsSkinDLC(skinset2, KickStart.CorpExtToCorp(factType)))
                             spec.m_SkinID = skinset2;
                         else
                             spec.m_SkinID = 0;
@@ -1232,8 +1287,8 @@ namespace TAC_AI.Templates
             tankSpawn.blockIDs = null;
             tankSpawn.teamID = Team;
             tankSpawn.position = pos;
-            tankSpawn.rotation = Quaternion.LookRotation(forward);
-            tankSpawn.ignoreSceneryOnSpawnProjection = true;
+            tankSpawn.rotation = Quaternion.LookRotation(Singleton.cameraTrans.position - pos, Vector3.up);
+            tankSpawn.ignoreSceneryOnSpawnProjection = false;
             tankSpawn.forceSpawn = true;
             tankSpawn.isPopulation = population;
             if (ForceAnchor)
@@ -1276,6 +1331,82 @@ namespace TAC_AI.Templates
 
             return theTech;
         }
+        
+        internal static TechData ExportRawTechToTechData(string name, string blueprint, out int[] blockIDs)
+        {
+            TechData data = new TechData();
+            data.Name = name;
+            data.m_Bounds = new IntVector3(new Vector3(18, 18, 18));
+            data.m_SkinMapping = new Dictionary<uint, string>();
+            data.m_TechSaveState = new Dictionary<int, TechComponent.SerialData>();
+            data.m_CreationData = new TechData.CreationData();
+            data.m_BlockSpecs = new List<TankPreset.BlockSpec>();
+            List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
+            List<int> BTs = new List<int>();
+
+            bool skinChaotic = UnityEngine.Random.Range(0, 100) < 2;
+            byte skinset = (byte)UnityEngine.Random.Range(0, 2);
+            byte skinset2 = (byte)UnityEngine.Random.Range(0, 1);
+            foreach (BlockMemory mem in mems)
+            {
+                BlockTypes type = AIERepair.StringToBlockType(mem.t);
+                if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) || !TechDataAvailValidation.IsBlockAvailableInMode(type))
+                {
+                    Debug.Log("TACtical_AI: InstantTech - Removed " + mem.t + " as it was invalidated");
+                    continue;
+                }
+                if (!BTs.Contains((int)type))
+                {
+                    BTs.Add((int)type);
+                }
+
+                TankPreset.BlockSpec spec = default;
+                spec.block = mem.t;
+                spec.m_BlockType = type;
+                spec.orthoRotation = new OrthoRotation(mem.r);
+                spec.position = mem.p;
+                spec.saveState = new Dictionary<int, Module.SerialData>();
+                spec.textSerialData = new List<string>();
+                FactionTypesExt factType = KickStart.GetCorpExtended(type);
+                if (skinChaotic)
+                {
+                    byte rand = (byte)UnityEngine.Random.Range(0, 2);
+                    if (factType == FactionTypesExt.GSO && rand != 0)
+                        rand += 3;
+                    if (!ManDLC.inst.IsSkinDLC(rand, KickStart.CorpExtToCorp(factType)))
+                        spec.m_SkinID = rand;
+                    else
+                        spec.m_SkinID = 0;
+                }
+                else
+                {
+                    if (factType == FactionTypesExt.GSO)
+                    {
+                        if (!ManDLC.inst.IsSkinDLC(skinset + (skinset != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
+                            spec.m_SkinID = (byte)(skinset + (skinset != 0 ? 3 : 0));
+                        else if (!ManDLC.inst.IsSkinDLC(skinset2 + (skinset2 != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
+                            spec.m_SkinID = (byte)(skinset2 + (skinset2 != 0 ? 3 : 0));
+                        else
+                            spec.m_SkinID = 0;
+                    }
+                    else
+                    {
+                        if (!ManDLC.inst.IsSkinDLC(skinset, KickStart.CorpExtToCorp(factType)))
+                            spec.m_SkinID = skinset;
+                        else if (!ManDLC.inst.IsSkinDLC(skinset2, KickStart.CorpExtToCorp(factType)))
+                            spec.m_SkinID = skinset2;
+                        else
+                            spec.m_SkinID = 0;
+                    }
+                }
+
+                data.m_BlockSpecs.Add(spec);
+            }
+            //Debug.Log("TACtical_AI: ExportRawTechToTechData - Exported " + name);
+
+            blockIDs = BTs.ToArray();
+            return data;
+        }
 
 
         private static FieldInfo forceInsert = typeof(ManPop).GetField("m_SpawnedTechs", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -1298,7 +1429,7 @@ namespace TAC_AI.Templates
                 try
                 {
                     TrackedVisible tracked = ManVisible.inst.GetTrackedVisible(tank.visible.ID);
-                    ManVisible.inst.StopTrackingVisible(tank.visible.ID);
+                    //ManVisible.inst.StopTrackingVisible(tank.visible.ID);
                     List<TrackedVisible> visT = (List<TrackedVisible>)forceInsert.GetValue(ManPop.inst);
                     visT.Remove(tracked);
                     forceInsert.SetValue(ManPop.inst, visT);
@@ -1383,13 +1514,13 @@ namespace TAC_AI.Templates
             return TempManager.techBases.ElementAtOrDefault(1).Value;
         }
 
-        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
                 // Filters
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
-                if (faction == FactionSubTypes.NULL)
+                if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.techBases.ToList();
                 }
@@ -1399,6 +1530,7 @@ namespace TAC_AI.Templates
                         (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
                 }
 
+                bool canSpawnErad = (!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs);
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
                     if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
@@ -1415,22 +1547,24 @@ namespace TAC_AI.Templates
                     }
                     if (purpose == BasePurpose.AnyNonHQ)
                     {
-                        if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
+                        if (cand.Value.purposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
                             return false;
                         return true;
                     }
-                    if (purpose != BasePurpose.NotStationary && cand.Value.purposes.Contains(BasePurpose.NotStationary))
+                    bool notStationary = cand.Value.purposes.Contains(BasePurpose.NotStationary);
+                    if (purpose != BasePurpose.NotStationary && notStationary)
                         return false;
                     if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.AttractTech))
                         return false;
-                    if (searchAttract && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
+                    bool noWeapons = cand.Value.purposes.Contains(BasePurpose.NoWeapons);
+                    if (searchAttract && noWeapons)
                         return false;
-                    if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
+                    if (unProvoked && noWeapons)
                         return true;
-                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.Value.purposes.Contains(BasePurpose.NANI))
+                    if (canSpawnErad && cand.Value.purposes.Contains(BasePurpose.NANI))
                         return false;
 
-                    if (purpose == BasePurpose.Harvesting && cand.Value.purposes.Contains(BasePurpose.NotStationary))
+                    if (purpose == BasePurpose.Harvesting && notStationary)
                         return false;
 
                     if (cand.Value.purposes.Count == 0)
@@ -1488,13 +1622,13 @@ namespace TAC_AI.Templates
             catch { }
             return FallbackHandler(faction);
         }
-        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
             {
                 // Filters
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
-                if (faction == FactionSubTypes.NULL)
+                if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.techBases.ToList();
                 }
@@ -1600,13 +1734,13 @@ namespace TAC_AI.Templates
             catch { } // we resort to legacy
             return FallbackHandler(faction);
         }
-        internal static List<SpawnBaseTypes> FallbackHandler(FactionSubTypes faction)
+        internal static List<SpawnBaseTypes> FallbackHandler(FactionTypesExt faction)
         {
             try
             {
                 // Filters
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
-                if (faction == FactionSubTypes.NULL)
+                if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.techBases.ToList();
                 }
@@ -1648,7 +1782,7 @@ namespace TAC_AI.Templates
             return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
         }
 
-        internal static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static SpawnBaseTypes GetEnemyBaseType(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             if (ForceSpawn && !searchAttract)
                 return forcedBaseSpawn;
@@ -1661,22 +1795,22 @@ namespace TAC_AI.Templates
 
             int lowerRANDRange = 1;
             int higherRANDRange = 20;
-            if (faction == FactionSubTypes.GSO)
+            if (faction == FactionTypesExt.GSO)
             {
                 lowerRANDRange = 1;
                 higherRANDRange = 6;
             }
-            else if (faction == FactionSubTypes.GC)
+            else if (faction == FactionTypesExt.GC)
             {
                 lowerRANDRange = 7;
                 higherRANDRange = 10;
             }
-            else if (faction == FactionSubTypes.VEN)
+            else if (faction == FactionTypesExt.VEN)
             {
                 lowerRANDRange = 11;
                 higherRANDRange = 14;
             }
-            else if (faction == FactionSubTypes.HE)
+            else if (faction == FactionTypesExt.HE)
             {
                 lowerRANDRange = 15;
                 higherRANDRange = 20;
@@ -1684,7 +1818,7 @@ namespace TAC_AI.Templates
 
             return (SpawnBaseTypes)UnityEngine.Random.Range(lowerRANDRange, higherRANDRange);
         }
-        internal static SpawnBaseTypes GetEnemyBaseType(FactionSubTypes faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static SpawnBaseTypes GetEnemyBaseType(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             if (ForceSpawn && !searchAttract)
                 return forcedBaseSpawn;
@@ -1719,6 +1853,10 @@ namespace TAC_AI.Templates
             return GetBaseTemplate(toSpawn).techName;
         }
         internal static FactionSubTypes GetMainCorp(SpawnBaseTypes toSpawn)
+        {
+            return KickStart.CorpExtToCorp(GetBaseTemplate(toSpawn).faction);
+        }
+        internal static FactionTypesExt GetMainCorpExt(SpawnBaseTypes toSpawn)
         {
             return GetBaseTemplate(toSpawn).faction;
         }

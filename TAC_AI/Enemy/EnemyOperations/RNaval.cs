@@ -37,7 +37,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             float range = EnemyMind.SpacingRange + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
             float spacer = thisInst.lastTechExtents + enemyExt;
-            if (mind.MainFaction == FactionSubTypes.GC && mind.CommanderAttack != EnemyAttack.Coward)
+            if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EnemyAttack.Coward)
                 spacer = -32;// ram no matter what, or get close for snipers
 
             thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;

@@ -242,7 +242,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 3)
                     {
                         bool venPower = false;
-                        if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
+                        if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
                         thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                         //thisInst.AttemptedRepairs++;
                         Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
@@ -264,8 +264,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                         {
                             bool venPower = false;
-                            if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, 6, Super: venPower);
+                            if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
+                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                             //thisInst.AttemptedRepairs++;
                         }
                         //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");

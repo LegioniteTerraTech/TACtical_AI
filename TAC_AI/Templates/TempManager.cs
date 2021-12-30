@@ -66,7 +66,7 @@ namespace TAC_AI.Templates
             StringBuilder RAW = new StringBuilder();
             foreach (char ch in toLoad)
             {
-                if (ch != '\\')
+                if (ch != RawTechExporter.up.ToCharArray()[0])
                 {
                     RAW.Append(ch);
                 }

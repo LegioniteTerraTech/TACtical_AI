@@ -152,7 +152,7 @@ namespace TAC_AI.AI.Movement.AICores
                             //Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
                             pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
-                            Vector3 AwayFlat = -(pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized;
+                            Vector3 AwayFlat = (tank.boundsCentreWorldNoCheck - pilot.AirborneDest).normalized;
                             AwayFlat.y = 0;
                             AwayFlat.Normalize();
                             AwayFlat.y = 0.25f;
@@ -240,6 +240,52 @@ namespace TAC_AI.AI.Movement.AICores
                         pilot.AirborneDest = this.pilot.Helper.lastDestination;
                     }
                 }
+            }
+
+            if (!pilot.TargetGrounded)
+                pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
+            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
+            pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
+            AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
+
+            if (pilot.LargeAircraft || pilot.BankOnly)
+            {
+                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
+                {
+                    pilot.ForcePitchUp = true;
+                    pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                }
+            }
+            else
+            {
+                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime), pilot.AerofoilSluggishness + 25))
+                {
+                    pilot.ForcePitchUp = true;
+                    pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                }
+            }
+            return true;
+        }
+        public bool DriveDirectorRTS()
+        {
+            pilot.AdvisedThrottle = -1;
+            bool combat = this.TryAdjustForCombat();
+            if (combat)
+            {
+                pilot.LowerEngines = true;
+            }
+            else
+            {
+                pilot.LowerEngines = false;
+            }
+            pilot.AirborneDest = this.pilot.Helper.RTSDestination;
+            if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
+            {   //We are at target
+                pilot.AirborneDest += (-this.pilot.Tank.rootBlockTrans.right * 50);
+            }
+            else
+            {
+                pilot.AirborneDest = this.pilot.Helper.lastDestination;
             }
 
             if (!pilot.TargetGrounded)
@@ -559,7 +605,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (targetIn.IsNaN())
             {
                 Debug.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
-                AIECore.TankAIManager.FetchAllAllies();
+                //AIECore.TankAIManager.FetchAllAllies();
             }
             return targetIn;
         }

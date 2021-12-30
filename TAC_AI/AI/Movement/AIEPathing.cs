@@ -30,7 +30,7 @@ namespace TAC_AI.AI.Movement
             {
                 foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(posWorld, thisInst.lastTechExtents + 12, new Bitfield<ObjectTypes>()))
                 {
-                    if (vis.resdisp.IsNotNull())
+                    if (vis.resdisp.IsNotNull() && vis.isActive)
                     {
                         ObstList.Add(vis);
                     }
@@ -876,9 +876,14 @@ namespace TAC_AI.AI.Movement
             return final;
         }
         public static Vector3 ForceOffsetToSea(Vector3 input)
-        {
+        {   // Lowest ground or sea
             Vector3 final = input;
             final.y = KickStart.WaterHeight;
+            if (Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height))
+            {
+                if (height > final.y)
+                    final.y = height;
+            }
 
             return final;
         }

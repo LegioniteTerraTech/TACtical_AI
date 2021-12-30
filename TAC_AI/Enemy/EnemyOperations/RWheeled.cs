@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using UnityEngine;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
@@ -14,9 +14,11 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             thisInst.Attempt3DNavi = false;
             thisInst.AvoidStuff = true;
 
+            float distToTarget = 0;
             if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy.IsNotNull())
             {
-                if ((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude > mind.Range)
+                distToTarget = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude;
+                if (distToTarget > mind.Range)
                 {
                     bool isMending = RGeneral.LollyGag(thisInst, tank, mind);
                     if (isMending)
@@ -30,12 +32,15 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             RGeneral.Engadge(thisInst, tank, mind);
 
+            if (distToTarget == 0)
+                distToTarget = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude;
+
             float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
+            float dist = distToTarget - enemyExt;
             float range = EnemyMind.SpacingRange + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
             float spacer = thisInst.lastTechExtents + enemyExt;
-            if (mind.MainFaction == FactionSubTypes.GC && mind.CommanderAttack != EnemyAttack.Coward)
+            if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EnemyAttack.Coward)
                 spacer = -32;// ram no matter what, or get close for snipers
 
             if (mind.CommanderAttack == EnemyAttack.Coward)
@@ -94,7 +99,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else if (mind.CommanderAttack == EnemyAttack.Spyper)
             {
-                thisInst.SideToThreat = true;
+                thisInst.SideToThreat = false;
                 thisInst.Retreat = false;
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 if (dist < spacer + (range / 2))
@@ -140,7 +145,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 if (dist < spacer - 2)
                 {   // too close?
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8) && mind.LikelyMelee)
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {

@@ -17,7 +17,6 @@ namespace TAC_AI.AI.Enemy
             RELIES ON EVERYTHING IN THE "AI" FOLDER TO FUNCTION PROPERLY!!!  
                 [excluding the Designators in said folder]
         */
-        const int BaseExpandChance = 8;
 
         internal static FieldInfo charge = typeof(ModuleShieldGenerator).GetField("m_EnergyDeficit", BindingFlags.NonPublic | BindingFlags.Instance);
         internal static FieldInfo charge2 = typeof(ModuleShieldGenerator).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -88,10 +87,10 @@ namespace TAC_AI.AI.Enemy
             if (Mind.AllowRepairsOnFly && Mind.TechMemor)
             {
                 bool venPower = false;
-                if (Mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                RRepair.EnemyRepairStepper(thisInst, tank, Mind, 50, venPower);// longer while fighting
+                if (Mind.MainFaction == FactionTypesExt.VEN) venPower = true;
+                RRepair.EnemyRepairStepper(thisInst, tank, Mind, venPower);// longer while fighting
             }
-            if (Mind.Provoked == 20)
+            if (Mind.Provoked == EnemyMind.ProvokeTime)
             {
                 if (Mind.Tank.IsAnchored)
                 {
@@ -99,7 +98,7 @@ namespace TAC_AI.AI.Enemy
                     RBases.RequestFocusFire(Mind.Tank, Mind.AIControl.lastEnemy);
                 }
             }
-            if (Mind.Provoked >= 0)
+            if (Mind.Provoked <= 0)
                 Mind.Provoked = 0;
             else 
                 Mind.Provoked -= KickStart.AIClockPeriod;
@@ -154,8 +153,6 @@ namespace TAC_AI.AI.Enemy
                 }
             }
 
-            TryBaseOperations(Mind);
-
             //CommanderMind is handled in each seperate class
             Mind.EnemyOpsController.Execute();
         }
@@ -186,7 +183,7 @@ namespace TAC_AI.AI.Enemy
             var toSet = tank.gameObject.GetComponent<EnemyMind>();
             toSet.HoldPos = tank.boundsCentreWorldNoCheck;
             toSet.Initiate();
-            toSet.Range = 250;
+            toSet.Range = 100;
             try
             {
                 toSet.Range = (int)tank.Radar.Range + 50;
@@ -245,6 +242,21 @@ namespace TAC_AI.AI.Enemy
             //Determine driving method
             BlockSetEnemyHandling(tank, toSet);
 
+            // CHECK before burning processing
+            if (SpecialAISpawner.IsAttract)
+            {
+                return false;
+            }
+            else if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeSumo>())
+            {
+                Debug.Log("TACtical_AI: Tech " + tank.name + " is a sumo brawler");
+                toSet.CommanderSmarts = EnemySmarts.Default;
+                toSet.CommanderMind = EnemyAttitude.Homing;
+                toSet.EvilCommander = EnemyHandling.Wheeled;
+                toSet.CommanderAttack = EnemyAttack.Grudge;
+                return true;
+            }
+
             //Determine Attitude
             if (BM.IterateBlockComponents<ModuleWeapon>().Count() + BM.IterateBlockComponents<ModuleDrill>().Count() <= BM.IterateBlockComponents<ModuleTechController>().Count())
             {   // Unarmed - Runner
@@ -263,13 +275,14 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderAttack = EnemyAttack.Spyper;
                 fired = true;
             }
-            else if (BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0 || toSet.MainFaction == FactionSubTypes.GC || UnityEngine.Random.Range(0, 100) <= 17)
+            else if (BM.IterateBlockComponents<ModuleItemHolder>().Count() > 0 || toSet.MainFaction == FactionTypesExt.GC || UnityEngine.Random.Range(0, 100) <= 17)
             {   // Miner
                 switch (UnityEngine.Random.Range(0, 3))
                 {
                     case 0:
                         toSet.CommanderMind = EnemyAttitude.Miner;
-                        toSet.CommanderAttack = EnemyAttack.Pesterer;
+                        //toSet.CommanderAttack = EnemyAttack.Pesterer;
+                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
                         toSet.Range = 64;
                         break;
                     default:
@@ -277,7 +290,8 @@ namespace TAC_AI.AI.Enemy
                             toSet.CommanderMind = EnemyAttitude.Miner;
                         else
                             toSet.CommanderMind = EnemyAttitude.Default;
-                        toSet.CommanderAttack = EnemyAttack.Bully;
+                        //toSet.CommanderAttack = EnemyAttack.Bully;
+                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
                         toSet.Range = 64;
                         toSet.InvertBullyPriority = true;
                         break;
@@ -287,19 +301,22 @@ namespace TAC_AI.AI.Enemy
             else if (BM.IterateBlockComponents<ModuleWeapon>().Count() > 50)
             {   // Over-armed
                 toSet.CommanderMind = EnemyAttitude.Homing;
-                toSet.CommanderAttack = EnemyAttack.Bully;
+                //toSet.CommanderAttack = EnemyAttack.Bully;
+                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
                 fired = true;
             }
-            else if (toSet.MainFaction == FactionSubTypes.VEN)
+            else if (toSet.MainFaction == FactionTypesExt.VEN)
             {   // Ven
-                toSet.CommanderMind = EnemyAttitude.Default;
-                toSet.CommanderAttack = EnemyAttack.Circle;
+                toSet.CommanderMind = EnemyAttitude.Default; 
+                //toSet.CommanderAttack = EnemyAttack.Circle;
+                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
                 fired = true;
             }
-            else if (toSet.MainFaction == FactionSubTypes.HE)
+            else if (toSet.MainFaction == FactionTypesExt.HE)
             {   // Assault
                 toSet.CommanderMind = EnemyAttitude.Homing;
-                toSet.CommanderAttack = EnemyAttack.Grudge;
+                //toSet.CommanderAttack = EnemyAttack.Grudge;
+                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
                 fired = true;
             }
             if (BM.IterateBlocks().Count() >= KickStart.LethalTechSize)
@@ -477,7 +494,7 @@ namespace TAC_AI.AI.Enemy
             else
                 toSet.EvilCommander = EnemyHandling.Wheeled;
 
-            if (modDrillCount + (modTeslaCount * 25) > modGunCount|| toSet.MainFaction == FactionSubTypes.GC)
+            if (modDrillCount + (modTeslaCount * 25) > modGunCount|| toSet.MainFaction == FactionTypesExt.GC)
                 toSet.LikelyMelee = true;
 
             if (modGunCount > 48 || modHoverCount > 18)
@@ -521,6 +538,8 @@ namespace TAC_AI.AI.Enemy
                 }
             }
             //add Attack
+            toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
+            /*
             int randomNum3 = UnityEngine.Random.Range(1, 6);
             switch (randomNum3)
             {
@@ -547,7 +566,7 @@ namespace TAC_AI.AI.Enemy
                     }
                     toSet.CommanderAttack = EnemyAttack.Spyper;
                     break;
-            }
+            }*/
         }
         public static void FinalCleanup(AIECore.TankAIHelper thisInst, EnemyMind toSet, Tank tank)
         {
@@ -564,12 +583,6 @@ namespace TAC_AI.AI.Enemy
             }
             thisInst.TestForFlyingAIRequirement();
 
-            if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeSumo>())
-            {
-                Debug.Log("TACtical_AI: Tech " + tank.name + " is a sumo brawler");
-                toSet.CommanderSmarts = EnemySmarts.Default;
-                toSet.EvilCommander = EnemyHandling.Wheeled;
-            }
             if (toSet.CommanderSmarts == EnemySmarts.Default && toSet.CommanderMind != EnemyAttitude.Miner && toSet.EvilCommander == EnemyHandling.Wheeled)
             {
                 thisInst.Hibernate = true;// enable the default AI
@@ -610,16 +623,18 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (toSet.StartedAnchored)
                     {
+                        /*
                         tank.FixupAnchors(true);
                         toSet.CommanderMind = EnemyAttitude.Default;
                         toSet.EvilCommander = EnemyHandling.Stationary;
-                        toSet.CommanderBolts = EnemyBolts.MissionTrigger;
+                        toSet.CommanderBolts = EnemyBolts.AtFull;
                         if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0)
                         {
                             tank.TryToggleTechAnchor();
-                        }
+                        }*/
+                        RBases.SetupBaseAI(thisInst, tank, toSet);
                         RBases.MakeMinersMineUnlimited(tank);
-                        Debug.Log("TACtical_AI: Tech " + tank.name + " is is a base Tech");
+                         Debug.Log("TACtical_AI: Tech " + tank.name + " is is a base Tech");
                     }
                     if (toSet.EvilCommander != EnemyHandling.Wheeled)
                         toSet.CommanderAttack = EnemyAttack.Grudge;
@@ -633,11 +648,12 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
+                /*
                 if (toSet.EvilCommander == EnemyHandling.Starship && toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks hoverships... for now.
                 {
                     toSet.CommanderAttack = EnemyAttack.Bully;
                     toSet.InvertBullyPriority = true;
-                }
+                }*/
                 if (toSet.CommanderMind == EnemyAttitude.Miner)
                 {
                     thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
@@ -801,7 +817,7 @@ namespace TAC_AI.AI.Enemy
             {
                 return EnemyHandling.Stationary;
             }
-            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
+            else if ((modHoverCount > 3) || (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0)))
             {
                 return EnemyHandling.Starship;
             }
@@ -827,52 +843,6 @@ namespace TAC_AI.AI.Enemy
         public static bool IsUnarmed(Tank tank)
         {
             return tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() + tank.blockman.IterateBlockComponents<ModuleDrill>().Count();
-        }
-        public static void TryBaseOperations(EnemyMind mind)
-        {
-            try
-            {
-                if (mind.GetComponent<RBases.EnemyBaseFunder>() && (bool)mind.TechMemor)
-                {
-                    if (!KickStart.AllowEnemiesToStartBases && !mind.Tank.FirstUpdateAfterSpawn)
-                    {
-                        SpecialAISpawner.Eradicate(mind.Tank);
-                        return;
-                    }
-
-                    // Bribe
-                    if ((bool)mind.AIControl.lastEnemy)
-                    {
-                        if (mind.AIControl.lastEnemy.tank.IsPopulation)
-                        {
-                            if (RBases.TryBribeTech(mind.AIControl.lastEnemy.tank, mind.Tank.Team))
-                            {
-                                Tank lastTankGrab = mind.AIControl.lastEnemy.tank;
-                                try
-                                {
-                                    if (KickStart.DisplayEnemyEvents)
-                                    {
-                                        WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTankGrab.visible);
-                                        Patches.PopupEnemyInfo("Bribed!", pos2);
-
-                                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Tech " + lastTankGrab.name + " was bribed by " + mind.Tank.name + "!");
-                                    }
-                                    Debug.Log("TACtical_AI: Tech " + lastTankGrab.name + " was purchased by " + mind.Tank.name + ".");
-                                }
-                                catch { }
-                                lastTankGrab.SetTeam(mind.Tank.Team);
-                            }
-                        }
-                    }
-                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (RBases.GetTeamFunds(mind.Tank.Team) / 100000))
-                        RBases.ImTakingThatExpansion(mind, mind.GetComponent<RBases.EnemyBaseFunder>());
-                    //if (UnityEngine.Random.Range(1, 100) < 7)
-                    //{
-                    //    RBases.AllTeamTechsBuildRequest(mind.Tank.Team);
-                    //}
-                }
-            }
-            catch { }
         }
 
 

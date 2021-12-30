@@ -184,6 +184,10 @@ namespace TAC_AI.Templates
         U1T1M4T3P4RTYBUSSS,
         Kickball2,
 
+        // Air Techs
+        Midge,
+        Damselfly,
+
         // Space Techs
         Vette2,
 

@@ -47,7 +47,7 @@ namespace TAC_AI.Templates
             /*
             { SpawnBaseTypes.GSO0GExtractor, new BaseTemplate {
                 techName = "GSO 0G Extractor", // Altered a bit
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{ BasePurpose.Harvesting, BasePurpose.Autominer },
                 IntendedGrade = 2,
                 startingFunds = 93828,
@@ -55,7 +55,7 @@ namespace TAC_AI.Templates
             } },*/
             { SpawnBaseTypes.GSOQuickBuck, new BaseTemplate {
                 techName = "GSO Quick Buck",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{ BasePurpose.Harvesting, BasePurpose.HasReceivers },
                 IntendedGrade = 1,
                 startingFunds = 37635,
@@ -67,7 +67,7 @@ namespace TAC_AI.Templates
             // Firered-1987
             { SpawnBaseTypes.GSOPowerStation, new BaseTemplate {
                 techName = "GSO Power Station", // Altered a bit
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{ BasePurpose.TechProduction },
                 IntendedGrade = 2,
                 startingFunds = 144279,
@@ -86,7 +86,7 @@ namespace TAC_AI.Templates
             // Falchoin
             { SpawnBaseTypes.Kickball2, new BaseTemplate {
                 techName = "Kickball v2",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
                 startingFunds = 475995,
@@ -95,7 +95,7 @@ namespace TAC_AI.Templates
             // Firered-1987
             { SpawnBaseTypes.VENHarvester, new BaseTemplate {
                 techName = "VEN Harvester",
-                faction = FactionSubTypes.VEN,
+                faction = FactionTypesExt.VEN,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.Harvesting },
                 IntendedGrade = 1,
                 startingFunds = 12657,
@@ -104,7 +104,7 @@ namespace TAC_AI.Templates
             // Seth
             { SpawnBaseTypes.Chungmus, new BaseTemplate {
                 techName = "Chungmus",
-                faction = FactionSubTypes.NULL,
+                faction = FactionTypesExt.NULL,
                 purposes = new List<BasePurpose>{ BasePurpose.AttractTech, BasePurpose.NotStationary },
                 IntendedGrade = 0,
                 startingFunds = 1142847,
@@ -113,7 +113,7 @@ namespace TAC_AI.Templates
             // NotExactlyHero
             { SpawnBaseTypes.TidusJ, new BaseTemplate {
                 techName = "Tidus J",
-                faction = FactionSubTypes.GSO,
+                faction = FactionTypesExt.GSO,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 3,
                 startingFunds = 84159,
@@ -121,7 +121,7 @@ namespace TAC_AI.Templates
             } },
             { SpawnBaseTypes.U1T1M4T3P4RTYBUSSS, new BaseTemplate {
                 techName = "U1T1M4T3 P4RTYBUSSS",
-                faction = FactionSubTypes.EXP,
+                faction = FactionTypesExt.EXP,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
                 startingFunds = 750411,
@@ -132,7 +132,7 @@ namespace TAC_AI.Templates
             // Z_Theta_Z
             { SpawnBaseTypes.Invulnerable2, new BaseTemplate {
                 techName = "Invulnerable v2",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NANI },
                 IntendedGrade = 2,
                 startingFunds = 24666651,
@@ -144,7 +144,26 @@ namespace TAC_AI.Templates
 
         };
         public static Dictionary<SpawnBaseTypes, BaseTemplate> ComAirs = new Dictionary<SpawnBaseTypes, BaseTemplate>
-        {   
+        {
+            // Falchoin
+            { SpawnBaseTypes.Midge, new BaseTemplate {
+                techName = "Midge", 
+                faction = FactionTypesExt.GSO,
+                terrain = BaseTerrain.Air,
+                purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
+                IntendedGrade = 2,
+                startingFunds = 107724,
+                savedTech =   "{\"t\":\"GSO_Cab_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSO_Repair_Bubble_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":1.0},\"r\":0}|{\"t\":\"GSO_Shield_Bubble_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":2.0},\"r\":0}|{\"t\":\"GSO_Block_112\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSO_Block_112\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSO_Block_311\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-1.0},\"r\":17}|{\"t\":\"GSO_Battery_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-2.0},\"r\":0}|{\"t\":\"GSO_Battery_111\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-2.0},\"r\":0}|{\"t\":\"GSO_Battery_111\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-2.0},\"r\":0}|{\"t\":\"GSO_Wing_Left_312\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":1.0},\"r\":0}|{\"t\":\"GSO_Wing_Right_312\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":1.0},\"r\":0}|{\"t\":\"GSO_Mortar_Fixed_211\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":1.0},\"r\":4}|{\"t\":\"GSO_Mortar_Fixed_211\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":0.0},\"r\":4}|{\"t\":\"GSO_Mortar_Fixed_211\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":0.0},\"r\":4}|{\"t\":\"GSO_Mortar_Fixed_211\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":1.0},\"r\":4}|{\"t\":\"GSO_Block_112\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSO_Block_112\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":-2.0},\"r\":0}|{\"t\":\"GSO_Block_Half_111\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":2.0},\"r\":4}|{\"t\":\"GSO_Block_Half_111\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":2.0},\"r\":12}|{\"t\":\"GSO_Block_Half_111\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":2.0},\"r\":8}|{\"t\":\"GSO_Wheel_Stabiliser_111\",\"p\":{\"x\":0.0,\"y\":-2.0,\"z\":1.0},\"r\":20}|{\"t\":\"GSO_Repair_Bubble_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-3.0},\"r\":8}|{\"t\":\"GSO_Shield_Bubble_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-4.0},\"r\":0}|{\"t\":\"GSO_Wing_Tail_122\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":-3.0},\"r\":0}|{\"t\":\"GSO_Wing_Left_312\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-4.0},\"r\":0}|{\"t\":\"GSO_Wing_Right_312\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-4.0},\"r\":0}|{\"t\":\"GSO_Fan_221\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":-2.0},\"r\":12}|{\"t\":\"GSO_Fan_221\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":-1.0},\"r\":12}|{\"t\":\"GSO_Fan_221\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-1.0},\"r\":8}|{\"t\":\"GSO_Fan_221\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-2.0},\"r\":8}|{\"t\":\"GSO_Wing_Right_312\",\"p\":{\"x\":1.0,\"y\":1.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSO_Wing_Left_312\",\"p\":{\"x\":-1.0,\"y\":1.0,\"z\":0.0},\"r\":0}|{\"t\":\"GSO_ArmourPlate_Medium_211\",\"p\":{\"x\":1.0,\"y\":1.0,\"z\":-3.0},\"r\":11}|{\"t\":\"GSO_ArmourPlate_Medium_211\",\"p\":{\"x\":-1.0,\"y\":1.0,\"z\":-3.0},\"r\":11}|{\"t\":\"GSO_Fan_221\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-3.0},\"r\":4}|{\"t\":\"GSO_Fan_221\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-3.0},\"r\":4}|{\"t\":\"GSO_Block_Half_111\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":-2.0},\"r\":2}|{\"t\":\"GSO_Block_112\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":-1.0},\"r\":0}|{\"t\":\"GSO_Block_Half_111\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":1.0},\"r\":0}|{\"t\":\"GSO_ArmourPlate_Small_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":3.0},\"r\":0}|{\"t\":\"VEN_SteeringHover_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-5.0},\"r\":16}|{\"t\":\"VEN_SteeringHover_111\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":-3.0},\"r\":16}|{\"t\":\"VEN_SteeringHover_111\",\"p\":{\"x\":1.0,\"y\":-1.0,\"z\":-1.0},\"r\":8}|{\"t\":\"VEN_SteeringHover_111\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":-1.0},\"r\":12}|{\"t\":\"VEN_SteeringHover_111\",\"p\":{\"x\":-3.0,\"y\":0.0,\"z\":-3.0},\"r\":12}|{\"t\":\"VEN_SteeringHover_111\",\"p\":{\"x\":3.0,\"y\":0.0,\"z\":-3.0},\"r\":8}",
+            } },
+            { SpawnBaseTypes.Damselfly, new BaseTemplate {
+                techName = "Damselfly", 
+                faction = FactionTypesExt.BF,
+                terrain = BaseTerrain.Air,
+                purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
+                IntendedGrade = 2,
+                startingFunds = 289077,
+                savedTech =   "{\"t\":\"BF_Cab_114\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}|{\"t\":\"BF_Laser_Streamlined_113\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":1.0},\"r\":8}|{\"t\":\"BF_Laser_Streamlined_113\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":1.0},\"r\":4}|{\"t\":\"BF_Laser_Streamlined_113\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":1.0},\"r\":0}|{\"t\":\"BF_Laser_Streamlined_113\",\"p\":{\"x\":1.0,\"y\":-1.0,\"z\":1.0},\"r\":12}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-1.0},\"r\":0}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":-1.0},\"r\":8}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":0.0},\"r\":2}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":1.0,\"y\":-1.0,\"z\":0.0},\"r\":14}|{\"t\":\"BF_Skid_133\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":0.0},\"r\":0}|{\"t\":\"BF_Streamline_112\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":2.0},\"r\":4}|{\"t\":\"BF_Hover_Steering_112\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-2.0},\"r\":9}|{\"t\":\"BF_Wing_Small_212\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":-1.0},\"r\":6}|{\"t\":\"BF_Wing_Small_212\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":-1.0},\"r\":6}|{\"t\":\"BF_Hover_Steering_112\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":-2.0},\"r\":15}|{\"t\":\"BF_Wing_Small_212\",\"p\":{\"x\":-2.0,\"y\":-1.0,\"z\":-1.0},\"r\":2}|{\"t\":\"BF_Wing_Small_212\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-1.0},\"r\":2}|{\"t\":\"BF_Shield_Bubble_211\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-1.0},\"r\":8}|{\"t\":\"BF_Repair_Bubble_211\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-2.0},\"r\":8}|{\"t\":\"BF_Radar_111\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":-2.0},\"r\":0}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-3.0},\"r\":0}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-3.0},\"r\":0}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-3.0},\"r\":0}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":-3.0},\"r\":2}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":-3.0},\"r\":14}|{\"t\":\"BF_Streamline_Corner_Internal_111\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":-5.0},\"r\":5}|{\"t\":\"BF_Hover_Steering_112\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":-6.0},\"r\":9}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-6.0},\"r\":0}|{\"t\":\"BF_Block_111\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_Shield_Bubble_211\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":-7.0},\"r\":14}|{\"t\":\"BF_Wing_Medium_Outside_413\",\"p\":{\"x\":2.0,\"y\":1.0,\"z\":-8.0},\"r\":8}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":2.0,\"y\":-1.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_Light_111\",\"p\":{\"x\":3.0,\"y\":-1.0,\"z\":-8.0},\"r\":10}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":1.0,\"y\":-1.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_Skid_133\",\"p\":{\"x\":1.0,\"y\":-1.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_Repair_Bubble_211\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":-7.0},\"r\":10}|{\"t\":\"BF_IonDrive_Medium_212\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":-9.0},\"r\":8}|{\"t\":\"BF_Skid_133\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_Block_111\",\"p\":{\"x\":0.0,\"y\":-1.0,\"z\":-6.0},\"r\":0}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-6.0},\"r\":0}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":-5.0},\"r\":0}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-5.0},\"r\":0}|{\"t\":\"BF_Streamline_Corner_Internal_111\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":-5.0},\"r\":0}|{\"t\":\"BF_Wing_Medium_Outside_413\",\"p\":{\"x\":3.0,\"y\":0.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_Block_113\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-4.0},\"r\":17}|{\"t\":\"BF_MissilePod_323\",\"p\":{\"x\":-1.0,\"y\":1.0,\"z\":-3.0},\"r\":0}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-4.0},\"r\":0}|{\"t\":\"BF_Battery_112\",\"p\":{\"x\":-2.0,\"y\":-1.0,\"z\":-4.0},\"r\":8}|{\"t\":\"BF_Streamline_Corner_Internal_111\",\"p\":{\"x\":-2.0,\"y\":-1.0,\"z\":-5.0},\"r\":4}|{\"t\":\"BF_Wing_Medium_Outside_413\",\"p\":{\"x\":-3.0,\"y\":-1.0,\"z\":-7.0},\"r\":4}|{\"t\":\"BF_Shield_Bubble_211\",\"p\":{\"x\":-2.0,\"y\":-1.0,\"z\":-7.0},\"r\":10}|{\"t\":\"BF_Hover_Steering_112\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-6.0},\"r\":9}|{\"t\":\"BF_Wing_Medium_Outside_413\",\"p\":{\"x\":-3.0,\"y\":0.0,\"z\":-7.0},\"r\":4}|{\"t\":\"BF_Streamline_Corner_Internal_111\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-5.0},\"r\":3}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-5.0},\"r\":0}|{\"t\":\"BF_Block_Smooth_111\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-6.0},\"r\":0}|{\"t\":\"BF_Block_111\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":-1.0,\"y\":0.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":-2.0,\"y\":0.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_Light_111\",\"p\":{\"x\":-3.0,\"y\":0.0,\"z\":-8.0},\"r\":14}|{\"t\":\"BF_Altimeter_111\",\"p\":{\"x\":-1.0,\"y\":1.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_Wing_Medium_Outside_413\",\"p\":{\"x\":-2.0,\"y\":1.0,\"z\":-8.0},\"r\":8}|{\"t\":\"BF_MissilePod_323\",\"p\":{\"x\":1.0,\"y\":-1.0,\"z\":-3.0},\"r\":4}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":-1.0,\"y\":-1.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":-2.0,\"y\":-1.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_Light_111\",\"p\":{\"x\":-3.0,\"y\":-1.0,\"z\":-8.0},\"r\":14}|{\"t\":\"BF_Speedometer_111\",\"p\":{\"x\":0.0,\"y\":1.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":1.0,\"y\":0.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_IonDrive_Small_112\",\"p\":{\"x\":2.0,\"y\":0.0,\"z\":-9.0},\"r\":0}|{\"t\":\"BF_Light_111\",\"p\":{\"x\":3.0,\"y\":0.0,\"z\":-8.0},\"r\":10}|{\"t\":\"BF_Altimeter_111\",\"p\":{\"x\":1.0,\"y\":1.0,\"z\":-7.0},\"r\":0}|{\"t\":\"BF_Wing_Medium_Outside_413\",\"p\":{\"x\":3.0,\"y\":-1.0,\"z\":-7.0},\"r\":0}",
+            } },
 
         };
         public static Dictionary<SpawnBaseTypes, BaseTemplate> ComSpaces = new Dictionary<SpawnBaseTypes, BaseTemplate>
@@ -152,7 +171,7 @@ namespace TAC_AI.Templates
             // Falchoin
             { SpawnBaseTypes.Vette2, new BaseTemplate {
                 techName = "Vette V2", // Altered a bit
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary },
                 IntendedGrade = 2,
@@ -164,7 +183,7 @@ namespace TAC_AI.Templates
             // Falchoin
             { SpawnBaseTypes.Tyrant2, new BaseTemplate {
                 techName = "Tyrant",
-                faction = FactionSubTypes.HE,
+                faction = FactionTypesExt.HE,
                 terrain = BaseTerrain.Space,
                 purposes = new List<BasePurpose>{ BasePurpose.NotStationary, BasePurpose.NANI },
                 IntendedGrade = 2,

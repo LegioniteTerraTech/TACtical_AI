@@ -111,6 +111,23 @@ namespace TAC_AI.AI.Movement.AICores
             return true;
         }
 
+        public bool DriveDirectorRTS()
+        {
+            bool combat = this.TryAdjustForCombat();
+            pilot.AirborneDest = this.pilot.Helper.RTSDestination;
+
+            pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 32);
+            pilot.AirborneDest = this.AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
+            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
+
+            if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
+            {
+                //Debug.Log("TACtical_AI: Tech " + this.pilot.tank.name + "  Avoiding Ground!");
+                pilot.ForcePitchUp = true;
+            }
+            return true;
+        }
+
         public bool DriveDirectorEnemy(EnemyMind mind)
         {
             pilot.ForcePitchUp = false;
@@ -211,7 +228,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (targetIn.IsNaN())
             {
                 Debug.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
-                AIECore.TankAIManager.FetchAllAllies();
+                //AIECore.TankAIManager.FetchAllAllies();
             }
             return targetIn;
         }

@@ -88,6 +88,27 @@ namespace TAC_AI.AI.AlliedOperations
                     if (thisInst.UrgencyOverload > 0)
                         thisInst.UrgencyOverload -= KickStart.AIClockPeriod / 5;
                 }
+                //OBSTRUCTION MANAGEMENT
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                {
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    return;
+                }
+                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 2))
+                {
+                    // Moving a bit too slow for what we can do
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
+                    thisInst.forceDrive = true;
+                    thisInst.DriveVar = 1;
+                }
+                else
+                {
+                    //Things are going smoothly
+                    thisInst.AvoidStuff = true;
+                    thisInst.SettleDown();
+                }
+                /*
                 if (thisInst.UrgencyOverload > 50)
                 {
                     //Are we just randomly angry for too long? let's fix that
@@ -95,9 +116,9 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.EstTopSped = 1;
                     thisInst.AvoidStuff = true;
                     thisInst.UrgencyOverload = 0;
-                }
+                }*/
                 //URGENCY REACTION
-                if (thisInst.Urgency > 20)
+                if (thisInst.Urgency > 30)
                 {
                     //FARRR behind! BOOSTERS NOW!
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
@@ -105,7 +126,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
-                else if (thisInst.Urgency > 2)
+                else if (thisInst.Urgency > 10)
                 {
                     //Behind and we must catch up
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Wait for meeeeeeeeeee!");
@@ -125,25 +146,6 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.DriveVar = 0.5f;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
-                //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
-                }
-                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 2))
-                {
-                    // Moving a bit too slow for what we can do
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");
-                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
-                    thisInst.forceDrive = true;
-                    thisInst.DriveVar = 1;
-                }
-                else
-                {
-                    //Things are going smoothly
-                    thisInst.AvoidStuff = true;
-                    thisInst.SettleDown();
-                }
                 thisInst.lastMoveAction = 1;
             }
             else if (dist < (range / 4) + playerExt)
@@ -152,8 +154,14 @@ namespace TAC_AI.AI.AlliedOperations
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
                 //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
-                thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
+                if ((bool)thisInst.lastEnemy)
+                {
+                    thisInst.PivotOnly = true;
+                    thisInst.lastMoveAction = 1;
+                }
+                else
+                    thisInst.lastMoveAction = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
@@ -173,7 +181,13 @@ namespace TAC_AI.AI.AlliedOperations
                 //thisInst.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
-                thisInst.lastMoveAction = 0;
+                if ((bool)thisInst.lastEnemy)
+                {
+                    thisInst.PivotOnly = true;
+                    thisInst.lastMoveAction = 1;
+                }
+                else
+                    thisInst.lastMoveAction = 0;
                 //thisInst.DriveVar = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;

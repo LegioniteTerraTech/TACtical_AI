@@ -35,6 +35,8 @@ namespace TAC_AI.AI {
 
         void DriveDirector();
 
+        void DriveDirectorRTS();
+
         void DriveMaintainer(TankControl tankControl);
 
         void Recycle();

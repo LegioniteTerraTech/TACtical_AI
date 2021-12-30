@@ -13,6 +13,8 @@ namespace TAC_AI
         TankBlock TankBlock;
 
         public AIType SavedAI;
+        public bool WasRTS = false;
+        public Vector3 RTSPos = Vector3.zero;
 
         /*
         // What can this new AI do? 
@@ -132,6 +134,8 @@ namespace TAC_AI
         private new class SerialData : SerialData<SerialData>
         {
             public AIType savedMode;
+            public bool wasRTS;
+            public Vector3 RTSPos;
         }
 
         private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)
@@ -142,10 +146,24 @@ namespace TAC_AI
                 {   //Save to snap
                     if (KickStart.EnableBetterAI && !Singleton.Manager<ManScreenshot>.inst.TakingSnapshot)
                     {   //Allow resaving of Techs but not saving this to snapshot to prevent bugs
-                        SerialData serialData = new SerialData()
+                        var Helper = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                        SerialData serialData;
+                        if (Helper.RTSControlled)
                         {
-                            savedMode = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI
-                        };
+                            serialData = new SerialData()
+                            {
+                                savedMode = Helper.DediAI,
+                                wasRTS = Helper.RTSControlled,
+                                RTSPos = Helper.RTSDestination,
+                            };
+                        }
+                        else
+                        {
+                            serialData = new SerialData()
+                            {
+                                savedMode = Helper.DediAI,
+                            };
+                        }
                         serialData.Store(blockSpec.saveState);
                         //Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
                     }
@@ -166,6 +184,11 @@ namespace TAC_AI
                                     thisInst.TestForFlyingAIRequirement();
                             }
                             SavedAI = serialData2.savedMode;
+                            if (serialData2.wasRTS)
+                            {
+                                WasRTS = true;
+                                thisInst.RTSDestination = serialData2.RTSPos;
+                            }
                             //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                         }
                     }

@@ -58,8 +58,24 @@ namespace TAC_AI.AI.Enemy
             tank.control.DetonateExplosiveBolt();
         }
 
+        // Tech Accounting
+        private static Dictionary<int, int> teamTechs = new Dictionary<int, int>();
+        private static List<int> teamUnfiltered = new List<int>();
+        private static int lastTechsCount = 0;
         public static int AllyCostCount(Tank tank)
         {
+            if (Singleton.Manager<ManTechs>.inst.CurrentTechs.Count() == lastTechsCount)
+            {
+                if (teamTechs.TryGetValue(tank.Team, out int val))
+                {
+                    return val;
+                }
+            }
+            return GetAllyCostCounts(tank);
+        }
+        public static int GetAllyCostCounts(Tank tank)
+        {
+            teamTechs.Clear();
             int AllyCount = 0;
             var allTechs = Singleton.Manager<ManTechs>.inst.CurrentTechs;
             int techCount = allTechs.Count();
@@ -69,8 +85,13 @@ namespace TAC_AI.AI.Enemy
                 for (int stepper = 0; techCount > stepper; stepper++)
                 {
                     Tank tech = techs.ElementAt(stepper);
+                    teamUnfiltered.Add(tank.Team);
+                    if (!tech.IsAnchored)
+                    {
+                        teamUnfiltered.Add(tank.Team);
+                    }
                     if (tech.IsFriendly(tank.Team))
-                    { 
+                    {
                         AllyCount++;
                         if (!tech.IsAnchored)
                         {
@@ -78,12 +99,22 @@ namespace TAC_AI.AI.Enemy
                         }
                     }
                 }
+                foreach (int teamCase in teamUnfiltered)
+                {
+                    if (teamTechs.TryGetValue(teamCase, out int val))
+                    {
+                        continue;
+                    }
+                    int numOf = teamUnfiltered.FindAll(delegate (int cand) { return cand == teamCase; }).Count();
+                    teamTechs.Add(teamCase, numOf);
+                }
             }
             catch (Exception e)
             {
                 Debug.Log("TACtical_AI: AllyCostCount - Error on ally counting");
                 Debug.Log(e);
             }
+            teamUnfiltered.Clear();
             return AllyCount;
         }
         public static bool AtWorldTechMax()

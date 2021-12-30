@@ -146,6 +146,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
                     }
                     thisInst.ProceedToBase = true;
+                    StopByBase(thisInst, tank, dist, ref hasMessaged);
                     return; // There's no resources left!
                 }
                 else if (thisInst.theResource != null)
@@ -187,6 +188,31 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.trans.position + "|| Current pos " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
+            }
+        }
+        public static void StopByBase(AIECore.TankAIHelper thisInst, Tank tank, float dist, ref bool hasMessaged)
+        {
+            if (thisInst.theBase == null)
+                return; // There's no base!
+            float girth = thisInst.lastBaseExtremes + thisInst.lastTechExtents;
+            if (dist < girth + 3)
+            {   // We are at the base, stop moving and hold pos
+                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving room to base... |Tech is at " + tank.boundsCentreWorldNoCheck);
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.AvoidStuff = false;
+                thisInst.AdviseAway = true;
+                thisInst.forceDrive = true;
+                thisInst.DriveVar = -1;
+                thisInst.SettleDown();
+            }
+            else if (dist < girth + 7)
+            {   // We are at the base, stop moving and hold pos
+                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. |Tech is at " + tank.boundsCentreWorldNoCheck);
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.AvoidStuff = false;
+                thisInst.Yield = true;
+                thisInst.PivotOnly = true;
+                thisInst.SettleDown();
             }
         }
     }
