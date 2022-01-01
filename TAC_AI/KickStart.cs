@@ -300,7 +300,7 @@ namespace TAC_AI
             exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; thisModConfig.WriteConfigJsonFile(); });
 
             var TACAIRTS = ModName + " - Strategic Mode";
-            enemyStrategic = new OptionToggle("Enable Click Commander and Epic Enemy Base AI - Requires Restart  \nRandomAdditions and TweakTech highly advised for best experience", TACAIRTS, AllowStrategicAI);
+            enemyStrategic = new OptionToggle("Enable Click Commander and Epic Enemy Base AI - Requires Restart", TACAIRTS, AllowStrategicAI);//\nRandomAdditions and TweakTech highly advised for best experience
             enemyStrategic.onValueSaved.AddListener(() => { AllowStrategicAI = enemyStrategic.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             commandClassic = new OptionToggle("Use Classic RTS Controls", TACAIRTS, UseClassicRTSControls);
             commandClassic.onValueSaved.AddListener(() => { UseClassicRTSControls = commandClassic.SavedValue; thisModConfig.WriteConfigJsonFile(); });

@@ -965,10 +965,14 @@ namespace TAC_AI.AI
                         //Debug.Log("TACtical_AI: Anonymous sender error");
                         //return;
                     }
-                    if (sender.TechTeamID == tank.Team)
+                    if (sender.CurTech?.Team == tank.Team)
                     {
                         OnSwitchAI();
-                        DediAI = type;
+                        DediAI = type; 
+                        TestForFlyingAIRequirement();
+
+                        TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(tank);
+                        overlay.Update();
                     }
                     else
                         Debug.Log("TACtical_AI: TrySetAITypeRemote - Invalid request received - player tried to change AI of Tech that wasn't theirs");
@@ -1059,6 +1063,9 @@ namespace TAC_AI.AI
                 control3D.m_State.m_InputMovement = Vector3.zero;
                 control3D.m_State.m_InputRotation = Vector3.zero;
                 controlGet.SetValue(tank.control, control3D);
+
+                TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(tank);
+                overlay.Update();
             }
 
             public bool TestForFlyingAIRequirement()
@@ -1977,8 +1984,7 @@ namespace TAC_AI.AI
 
 
             public void RunRTSNavi(bool isPlayer = false)
-            {
-                // Alternative Operator for RTS
+            {   // Alternative Operator for RTS
                 lastRange = (tank.boundsCentreWorldNoCheck - lastDestination).magnitude;
 
                 //ProceedToObjective = true;

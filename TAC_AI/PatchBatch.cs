@@ -409,7 +409,7 @@ namespace TAC_AI
                         //RawTechExporter.lastTech = tank.GetComponent<AIECore.TankAIHelper>();
                         
                         LocatorPanel Panel = (LocatorPanel)panel.GetValue(__instance);
-                        if (tank.IsNotNull() && Panel.IsNotNull())
+                        if (KickStart.EnableBetterAI && tank.IsNotNull() && Panel.IsNotNull())
                         {
                             AIECore.TankAIHelper lastTech = tank.GetComponent<AIECore.TankAIHelper>();
                             if (lastTech.IsNotNull())
@@ -420,12 +420,15 @@ namespace TAC_AI
                                 }
                                 else if (lastTech.AIState == 1)
                                 {   // Allied AI
-                                    if (RawTechExporter.aiIcons.TryGetValue(lastTech.DediAI, out Sprite sprite))
+                                    if (lastTech.lastAIType == AITreeType.AITypes.Escort)
                                     {
-                                        //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
-                                        Image cache = (Image)icon.GetValue(Panel);
-                                        cache.sprite = sprite;
-                                        icon.SetValue(Panel, cache);
+                                        if (RawTechExporter.aiIcons.TryGetValue(lastTech.DediAI, out Sprite sprite))
+                                        {
+                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                            Image cache = (Image)icon.GetValue(Panel);
+                                            cache.sprite = sprite;
+                                            icon.SetValue(Panel, cache);
+                                        }
                                     }
                                 }
                                 else if (lastTech.AIState == 2)
