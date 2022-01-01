@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 
 namespace TAC_AI.Templates
-{
+{ 
     public class PlayerSpawnAid
     {   // if the player spawns in the water, we try to spawn them with a bote
 

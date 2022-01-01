@@ -254,18 +254,9 @@ namespace TAC_AI.AI.Movement.AICores
             try
             {
                 help.Steer = true;
-                help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
                 help.MinimumRad = 0.5f;
                 help.DriveDir = EDriveType.Forwards;
-                if (help.lastRange < 32 && help.recentSpeed < 10)
-                {
-                    help.PivotOnly = true;
-                    if (help.lastEnemy != null)
-                    {
-                        help.lastDestination = help.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    }
-                }
-                /* if (help.IsMultiTech)
+                if (help.IsMultiTech && help.DediAI != AIType.MTMimic)
                 {   //Override and disable most driving abilities
                     if (help.DediAI == AIType.MTSlave && help.lastEnemy != null)
                     {   // act like a trailer
@@ -291,30 +282,33 @@ namespace TAC_AI.AI.Movement.AICores
                             help.MinimumRad = 2;
                         }
                     }
-                    else if (help.DediAI == AIType.MTMimic)
-                    {
-                        //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
-                        help.MinimumRad = help.lastTechExtents + 2;
-                        help.forceDrive = false;
-                        //help.DriveVar = 0;
-                        help.Steer = true;
-                    }
+                    else
+                        help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
                 }
                 else
                 {
                     help.Steer = true;
-                    help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
-                    help.MinimumRad = 0.5f;
                     help.DriveDir = EDriveType.Forwards;
-                    if (help.lastRange < 32 && help.recentSpeed < 10)
+                    bool Combat = false;
+                    if (help.RTSDestination == Vector3.zero)
+                        Combat = TryAdjustForCombat(); //If we are set to chase then chase with proper AI
+                    if (!Combat)
                     {
-                        help.PivotOnly = true;
-                        if (help.lastEnemy != null)
+                        if (help.recentSpeed < 10 && help.lastRange < 32)
                         {
-                            help.lastDestination = help.lastEnemy.tank.boundsCentreWorldNoCheck;
+                            help.PivotOnly = true;
+                            if (help.lastEnemy != null)
+                            {
+                                help.lastDestination = help.lastEnemy.tank.boundsCentreWorldNoCheck;
+                            }
+                            else
+                                help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
                         }
+                        else
+                            help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
+
                     }
-                }*/
+                }
             }
             catch (Exception e)
             {

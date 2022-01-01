@@ -544,7 +544,7 @@ namespace TAC_AI.AI
             
             private void Update()
             {
-                if (Input.GetKeyDown(KickStart.RetreatHotkey))
+                if (!ManPauseGame.inst.IsPaused && Input.GetKeyDown(KickStart.RetreatHotkey))
                 {
                     ToggleTeamRetreat(Singleton.Manager<ManPlayer>.inst.PlayerTeam);
                 }
@@ -758,9 +758,24 @@ namespace TAC_AI.AI
             internal bool JustUnanchored = false;       // flag to switch the AI back to enabled on unanchor
             internal bool PendingHeightCheck = false;   // queue a driving depth check for a naval tech
             internal float LowestPointOnTech = 0;       // the lowest point in relation to the tech's block-based center
+            internal bool BoltsFired = false;
 
-            private bool isRTSControlled = false;          
-            public bool RTSControlled => isRTSControlled;          // force the tech to be controlled by RTS
+            /// <summary>
+            /// ONLY SET EXTERNALLY BY NETWORKING
+            /// </summary>
+            public bool isRTSControlled = false;
+            public bool RTSControlled {
+                get { return isRTSControlled; }
+                set 
+                {
+                    if (isRTSControlled != value)
+                    {
+                        if (ManNetwork.IsNetworked)
+                            NetworkHandler.TryBroadcastRTSControl(tank.netTech.netId.Value, value);
+                    }
+                    isRTSControlled = value;
+                }
+            } // force the tech to be controlled by RTS
             internal Vector3 RTSDestination {
                 get 
                 {
@@ -792,12 +807,16 @@ namespace TAC_AI.AI
             private Vector3 RTSDestInternal = Vector3.zero;
 
             /// <summary>
-            /// ONLY CALL FOR NETWORK HANDLER!
+            /// ONLY CALL FROM NETWORK HANDLER!
             /// </summary>
             /// <param name="Pos"></param>
             internal void DirectRTSDest(Vector3 Pos)
             {
                 RTSDestInternal = Pos;
+                foreach (ModuleAIExtension AIEx in AIList)
+                {
+                    AIEx.WasRTS = isRTSControlled;
+                }
             }
 
             public bool OverrideAllControls = false;    // force the tech to be controlled by external means
@@ -847,6 +866,8 @@ namespace TAC_AI.AI
             }
             public void OnDetach(TankBlock newBlock, Tank tank)
             {
+                if (this.tank != tank)
+                    return;
                 EstTopSped = 1;
                 recentSpeed = 1;
                 PendingHeightCheck = true;
@@ -869,7 +890,7 @@ namespace TAC_AI.AI
                             {
                                 PendingSystemsCheck = true;
                                 if ((bool)lastPlayer)
-                                    if (lastEnemy != null)// only save when not in combat
+                                    if (lastEnemy != null && !BoltsFired)// only save when not in combat Or exploding bolts
                                         TechMemor.SaveTech();
                             }
                         }
@@ -931,6 +952,9 @@ namespace TAC_AI.AI
                 ResetAll(tank);
             }
             */
+            /// <summary>
+            /// ONLY CALL FOR NETWORK HANDLER!
+            /// </summary>
             public void TrySetAITypeRemote(NetPlayer sender, AIType type)
             {
                 if (ManNetwork.IsNetworked)
@@ -955,8 +979,7 @@ namespace TAC_AI.AI
 
             public void SetRTSState(bool RTSEnabled)
             {
-                isRTSControlled = RTSEnabled;
-
+                RTSControlled = RTSEnabled;
                 foreach (ModuleAIExtension AIEx in AIList)
                 {
                     AIEx.WasRTS = isRTSControlled;
@@ -1263,7 +1286,7 @@ namespace TAC_AI.AI
                 }
             }
 
-            public void OnSwitchAI()
+            public void OnSwitchAI(bool ResetRTS = true)
             {
                 AvoidStuff = true;
                 EstTopSped = 1;
@@ -1276,16 +1299,50 @@ namespace TAC_AI.AI
                 theBase = null;
                 IsTryingToUnjam = false;
                 JustUnanchored = false;
-                isRTSControlled = false;
-                tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
-                World.PlayerRTSControl.ReleaseControl(this);
+                if (ResetRTS)
+                {
+                    isRTSControlled = false;
+                    tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
+                    World.PlayerRTSControl.ReleaseControl(this);
+                }
             }
-            public void ForceAllAIsToEscort()
+            public void ForceAllAIsToEscort(bool Do = true)
             {
                 //Needed to return AI mode back to Escort on unanchor as unanchoring causes it to go to idle
                 try
                 {
-                    tank.AI.SetBehaviorType(AITreeType.AITypes.Escort);
+                    if (Do)
+                    {
+                        if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && tank.netTech.IsNotNull())
+                        {
+                            Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.SetAIMode, new SetAIModeMessage
+                            {
+                                m_AIAction = AITreeType.AITypes.Escort
+                            }, tank.netTech.netId);
+                        }
+                        else
+                        {
+                            tank.AI.SetBehaviorType(AITreeType.AITypes.Escort);
+                            lastAIType = AITreeType.AITypes.Escort;
+                        }
+                        if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes type))
+                            Debug.Log("TACtical_AI: AI type is " + type.ToString());
+                    }
+                    else
+                    {
+                        if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && tank.netTech.IsNotNull())
+                        {
+                            Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.SetAIMode, new SetAIModeMessage
+                            {
+                                m_AIAction = AITreeType.AITypes.Idle
+                            }, tank.netTech.netId);
+                        }
+                        else
+                        {
+                            tank.AI.SetBehaviorType(AITreeType.AITypes.Idle);
+                            lastAIType = AITreeType.AITypes.Idle;
+                        }
+                    }
                 }
                 catch { }
             }
@@ -1824,19 +1881,22 @@ namespace TAC_AI.AI
             {
                 if (ManNetwork.IsNetworked)
                 {
-                    foreach (Visible thatTech in tank.Vision.IterateVisibles(ObjectTypes.Vehicle))
+                    try
                     {
-                        try
+                        Debug.Log("TACtical_AI: The Tech's Team: " + tank.Team + " | RTS Mode: " + RTSControlled);
+                        foreach (Tank thatTech in ManNetwork.inst.GetAllPlayerTechs())
                         {
-                            if (thatTech.tank.Team == tank.Team)
+                            Debug.Log("TACtical_AI: " + thatTech.name + " | of " + thatTech.netTech.Team);
+                        }
+                        foreach (Tank thatTech in ManNetwork.inst.GetAllPlayerTechs())
+                        {
+                            if (thatTech.Team == tank.Team)
                             {
-                                if (thatTech.tank.netTech.isLocalPlayer)
-                                    return thatTech;
-                                //if (thatTech.tank.netTech.NetPlayer.CurTech == tank.Team)
+                                return thatTech.visible;
                             }
                         }
-                        catch { }
                     }
+                    catch { }
                 }
                 else
                 {
@@ -1918,77 +1978,97 @@ namespace TAC_AI.AI
 
             public void RunRTSNavi(bool isPlayer = false)
             {
-                BGeneral.ResetValues(this);
-                lastRange = (tank.boundsCentreWorldNoCheck - RTSDestination).magnitude;
+                // Alternative Operator for RTS
+                lastRange = (tank.boundsCentreWorldNoCheck - lastDestination).magnitude;
 
-                ProceedToObjective = true;
-                if (lastRange < (lastTechExtents * 2) + 5)
+                //ProceedToObjective = true;
+                if (DediAI == AIType.Aviator)
                 {
-                    //Things are going smoothly
+                    Attempt3DNavi = true;
+                    BGeneral.ResetValues(this);
                     AvoidStuff = true;
-                    SettleDown();
-                    DelayedAnchorClock = 0;
-                    forceDrive = true;
-                    DriveVar = 0;
-                    PivotOnly = true;
-                    if (unanchorCountdown > 0)
-                        unanchorCountdown--;
-                    if ((AutoAnchor || isPlayer) && tank.Anchors.NumPossibleAnchors >= 1)
+
+                    float range = (RangeToStopRush * 4) + lastTechExtents;
+                    // The range is nearly quadrupled here due to dogfighting conditions
+
+                    if (tank.wheelGrounded)
                     {
-                        if (tank.Anchors.NumIsAnchored > 0)
-                        {
-                            unanchorCountdown = 15;
-                            tank.TryToggleTechAnchor();
-                            JustUnanchored = true;
-                        }
+                        if (!IsTechMoving(EstTopSped / 8))
+                            TryHandleObstruction(!Feedback, lastRange, true, true);
+                        else
+                            SettleDown();
+                    }
+
+                    if (lastRange > range)
+                    {   // Far behind, must catch up
+                        BOOST = true; // boost in forwards direction towards objective
                     }
                 }
                 else
-                {   // Time to go!
-                    anchorAttempts = 0;
-                    DelayedAnchorClock = 0;
-                    if (unanchorCountdown > 0)
-                        unanchorCountdown--;
-                    if ((AutoAnchor || isPlayer) && tank.Anchors.NumPossibleAnchors >= 1)
+                {
+                    Attempt3DNavi = DediAI == AIType.Astrotech;
+                    BGeneral.ResetValues(this);
+                    if (lastRange < (lastTechExtents * 2) + 5)
                     {
-                        if (tank.Anchors.NumIsAnchored > 0)
-                        {
-                            unanchorCountdown = 15;
-                            tank.TryToggleTechAnchor();
-                            JustUnanchored = true;
-                        }
-                    }
-                    if (!(AutoAnchor || isPlayer) && tank.IsAnchored)
-                    {
-                        BGeneral.RTSCombat(this, tank);
-                        return;
-                    }
-                    float driveVal = Mathf.Min(1, lastRange / 10);
-                    if (!IsTechMovingActual((EstTopSped * driveVal) / 6))
-                    {   //OBSTRUCTION MANAGEMENT
-                        Urgency += KickStart.AIClockPeriod / 2;
-                        if (Urgency > 10)
-                        {
-                            //Debug.Log("TACtical_AI: AI " + tank.name + ":  DOOR STUCK");
-                            TryHandleObstruction(true, lastRange, false, true);
-                        }
-                    }
-                    else if (!IsTechMovingActual((EstTopSped * driveVal) / 3))
-                    {
-                        // Moving a bit too slow for what we can do
-                        Urgency += KickStart.AIClockPeriod / 5;
-                        forceDrive = true;
-                        DriveVar = 1;
-                    }
-                    else
-                    {
-                        //var val = tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z;
-                        //Debug.Log("TACtical_AI: AI " + tank.name + ":  Output " + val + " | TopSpeed/2 " + (EstTopSped / 2) + " | TopSpeed/4 " + (EstTopSped / 4));
                         //Things are going smoothly
                         AvoidStuff = true;
-                        forceDrive = true;
-                        DriveVar = driveVal;
                         SettleDown();
+                        DelayedAnchorClock = 0;
+                        forceDrive = true;
+                        DriveVar = 0;
+                        PivotOnly = true;
+                        if (unanchorCountdown > 0)
+                            unanchorCountdown--;
+                        if ((AutoAnchor || isPlayer) && tank.Anchors.NumPossibleAnchors >= 1)
+                        {
+                            if (tank.Anchors.NumIsAnchored > 0)
+                            {
+                                unanchorCountdown = 15;
+                                tank.TryToggleTechAnchor();
+                                JustUnanchored = true;
+                            }
+                        }
+                    }
+                    else
+                    {   // Time to go!
+                        anchorAttempts = 0;
+                        DelayedAnchorClock = 0;
+                        if (unanchorCountdown > 0)
+                            unanchorCountdown--;
+                        if ((AutoAnchor || isPlayer) && tank.Anchors.NumPossibleAnchors >= 1)
+                        {
+                            if (tank.Anchors.NumIsAnchored > 0)
+                            {
+                                unanchorCountdown = 15;
+                                tank.TryToggleTechAnchor();
+                                JustUnanchored = true;
+                            }
+                        }
+                        if (!(AutoAnchor || isPlayer) && tank.IsAnchored)
+                        {
+                            BGeneral.RTSCombat(this, tank);
+                            return;
+                        }
+                        float driveVal = Mathf.Min(1, lastRange / 10);
+                        if (!IsTechMovingActual((EstTopSped * driveVal) / 6) && lastRange > 32)
+                        {   //OBSTRUCTION MANAGEMENT
+                            Urgency += KickStart.AIClockPeriod / 2;
+                            if (Urgency > 10)
+                            {
+                                //Debug.Log("TACtical_AI: AI " + tank.name + ":  DOOR STUCK");
+                                TryHandleObstruction(true, lastRange, false, true);
+                            }
+                        }
+                        else
+                        {
+                            //var val = tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z;
+                            //Debug.Log("TACtical_AI: AI " + tank.name + ":  Output " + val + " | TopSpeed/2 " + (EstTopSped / 2) + " | TopSpeed/4 " + (EstTopSped / 4));
+                            //Things are going smoothly
+                            AvoidStuff = true;
+                            forceDrive = true;
+                            DriveVar = driveVal;
+                            SettleDown();
+                        }
                     }
                 }
                 BGeneral.RTSCombat(this, tank);
@@ -1997,11 +2077,10 @@ namespace TAC_AI.AI
             {
                 var aI = tank.AI;
                 TryRepairAllied();
+                BoltsFired = false;
 
                 if (tank.PlayerFocused)
                 {
-                    Attempt3DNavi = false;
-
                     //updateCA = true;
                     if (ActionPause > 0)
                         ActionPause--;
@@ -2070,42 +2149,94 @@ namespace TAC_AI.AI
                 if (KickStart.EnableBetterAI)
                 {
                     var aI = tank.AI;
-                    if (ManSpawn.IsPlayerTeam(tank.Team))//aI.CheckAIAvailable()
-                    {   //MP is somewhat supported
-                        if (aI.CheckAIAvailable() || (World.PlayerRTSControl.PlayerIsInRTS && tank.PlayerFocused))
+                    if (ManNetwork.IsNetworked)
+                    {
+                        if (!ManNetwork.IsHost && tank != Singleton.playerTank)
+                            return;
+                        if (ManSpawn.IsPlayerTeam(tank.Team))
+                        {   //MP
+                            if (aI.CheckAIAvailable() || (World.PlayerRTSControl.PlayerIsInRTS && tank.PlayerFocused))
+                            {
+                                //Player-Allied AI
+                                if (AIState != 1)
+                                {
+                                    ResetAll(tank);
+                                    RemoveEnemyMatters();
+                                    AIState = 1;
+                                    RefreshAI();
+                                    if ((bool)TechMemor)
+                                        TechMemor.SaveTech();
+                                    Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
+                                }
+
+                                if (OverrideAllControls)
+                                    return;
+
+                                DirectorUpdateClock++;
+                                if (DirectorUpdateClock > KickStart.AIDodgeCheapness)
+                                {
+                                    updateCA = true;
+                                    DirectorUpdateClock = 0;
+                                }
+
+                                recentSpeed = tank.GetForwardSpeed();
+                                if (recentSpeed < 1)
+                                    recentSpeed = 1;
+                                OperationsUpdateClock++;
+                                if (OperationsUpdateClock > KickStart.AIClockPeriod)//Mathf.Max(25 / recentSpeed, 5)
+                                {
+                                    RunAlliedOperations();
+                                    OperationsUpdateClock = 0;
+                                    if (EstTopSped < recentSpeed)
+                                        EstTopSped = recentSpeed;
+                                }
+                            }
+                            else
+                            {   // Static tech
+                                DriveVar = 0;
+                                if (AIState > 0)
+                                {   // Reset and ready for static tech
+                                    Debug.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
+                                    ResetAll(tank);
+                                    RemoveEnemyMatters();
+                                    AIState = 0;
+                                }
+                            }
+                        }
+                        else if (KickStart.enablePainMode && tank.IsEnemy())
                         {
-                            //Player-Allied AI
-                            if (AIState != 1)
+                            //Enemy AI
+                            if (AIState != 2)
                             {
                                 ResetAll(tank);
-                                RemoveEnemyMatters();
-                                AIState = 1;
-                                RefreshAI();
-                                if ((bool)TechMemor)
-                                    TechMemor.SaveTech();
-                                Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
+                                AIState = 2;
+                                Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Ready to kick some Tech!");
+                                Enemy.RCore.RandomizeBrain(this, tank);
                             }
-
                             if (OverrideAllControls)
                                 return;
-
-                            DirectorUpdateClock++;
-                            if (DirectorUpdateClock > KickStart.AIDodgeCheapness)
+                            if (!Hibernate)
                             {
-                                updateCA = true;
-                                DirectorUpdateClock = 0;
-                            }
+                                DirectorUpdateClock++;
+                                if (DirectorUpdateClock > KickStart.AIDodgeCheapness)
+                                {
+                                    updateCA = true;
+                                    DirectorUpdateClock = 0;
+                                }
+                                else
+                                    updateCA = false;
 
-                            recentSpeed = tank.GetForwardSpeed();
-                            if (recentSpeed < 1)
-                                recentSpeed = 1;
-                            OperationsUpdateClock++;
-                            if (OperationsUpdateClock > KickStart.AIClockPeriod)//Mathf.Max(25 / recentSpeed, 5)
-                            {
-                                RunAlliedOperations();
-                                OperationsUpdateClock = 0;
-                                if (EstTopSped < recentSpeed)
-                                    EstTopSped = recentSpeed;
+                                recentSpeed = tank.GetForwardSpeed();
+                                if (recentSpeed < 1)
+                                    recentSpeed = 1;
+                                OperationsUpdateClock++;
+                                if (OperationsUpdateClock > KickStart.AIClockPeriod)
+                                {
+                                    RunEnemyOperations();
+                                    OperationsUpdateClock = 0;
+                                    if (EstTopSped < recentSpeed)
+                                        EstTopSped = recentSpeed;
+                                }
                             }
                         }
                         else
@@ -2120,51 +2251,104 @@ namespace TAC_AI.AI
                             }
                         }
                     }
-                    else if (KickStart.enablePainMode && tank.IsEnemy())
-                    {   //MP is NOT supported!
-                        //Enemy AI
-                        if (AIState != 2)
-                        {
-                            ResetAll(tank);
-                            AIState = 2;
-                            Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Ready to kick some Tech!");
-                            Enemy.RCore.RandomizeBrain(this, tank);
-                        }
-                        if (OverrideAllControls)
-                            return;
-                        if (!Hibernate)
-                        {
-                            DirectorUpdateClock++;
-                            if (DirectorUpdateClock > KickStart.AIDodgeCheapness)
+                    else
+                    {
+                        if (ManSpawn.IsPlayerTeam(tank.Team))//aI.CheckAIAvailable()
+                        {   //MP is somewhat supported
+                            if (aI.CheckAIAvailable() || (World.PlayerRTSControl.PlayerIsInRTS && tank.PlayerFocused))
                             {
-                                updateCA = true;
-                                DirectorUpdateClock = 0;
+                                //Player-Allied AI
+                                if (AIState != 1)
+                                {
+                                    ResetAll(tank);
+                                    RemoveEnemyMatters();
+                                    AIState = 1;
+                                    RefreshAI();
+                                    if ((bool)TechMemor)
+                                        TechMemor.SaveTech();
+                                    Debug.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
+                                }
+
+                                if (OverrideAllControls)
+                                    return;
+
+                                DirectorUpdateClock++;
+                                if (DirectorUpdateClock > KickStart.AIDodgeCheapness)
+                                {
+                                    updateCA = true;
+                                    DirectorUpdateClock = 0;
+                                }
+
+                                recentSpeed = tank.GetForwardSpeed();
+                                if (recentSpeed < 1)
+                                    recentSpeed = 1;
+                                OperationsUpdateClock++;
+                                if (OperationsUpdateClock > KickStart.AIClockPeriod)//Mathf.Max(25 / recentSpeed, 5)
+                                {
+                                    RunAlliedOperations();
+                                    OperationsUpdateClock = 0;
+                                    if (EstTopSped < recentSpeed)
+                                        EstTopSped = recentSpeed;
+                                }
                             }
                             else
-                                updateCA = false;
-
-                            recentSpeed = tank.GetForwardSpeed();
-                            if (recentSpeed < 1)
-                                recentSpeed = 1;
-                            OperationsUpdateClock++;
-                            if (OperationsUpdateClock > KickStart.AIClockPeriod)
-                            {
-                                RunEnemyOperations();
-                                OperationsUpdateClock = 0;
-                                if (EstTopSped < recentSpeed)
-                                    EstTopSped = recentSpeed;
+                            {   // Static tech
+                                DriveVar = 0;
+                                if (AIState > 0)
+                                {   // Reset and ready for static tech
+                                    Debug.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
+                                    ResetAll(tank);
+                                    RemoveEnemyMatters();
+                                    AIState = 0;
+                                }
                             }
                         }
-                    }
-                    else
-                    {   // Static tech
-                        DriveVar = 0;
-                        if (AIState > 0)
-                        {   // Reset and ready for static tech
-                            Debug.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
-                            ResetAll(tank);
-                            RemoveEnemyMatters();
-                            AIState = 0;
+                        else if (KickStart.enablePainMode && tank.IsEnemy())
+                        {   //MP is NOT supported!
+                            //Enemy AI
+                            if (AIState != 2)
+                            {
+                                ResetAll(tank);
+                                AIState = 2;
+                                Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Ready to kick some Tech!");
+                                Enemy.RCore.RandomizeBrain(this, tank);
+                            }
+                            if (OverrideAllControls)
+                                return;
+                            if (!Hibernate)
+                            {
+                                DirectorUpdateClock++;
+                                if (DirectorUpdateClock > KickStart.AIDodgeCheapness)
+                                {
+                                    updateCA = true;
+                                    DirectorUpdateClock = 0;
+                                }
+                                else
+                                    updateCA = false;
+
+                                recentSpeed = tank.GetForwardSpeed();
+                                if (recentSpeed < 1)
+                                    recentSpeed = 1;
+                                OperationsUpdateClock++;
+                                if (OperationsUpdateClock > KickStart.AIClockPeriod)
+                                {
+                                    RunEnemyOperations();
+                                    OperationsUpdateClock = 0;
+                                    if (EstTopSped < recentSpeed)
+                                        EstTopSped = recentSpeed;
+                                }
+                            }
+                        }
+                        else
+                        {   // Static tech
+                            DriveVar = 0;
+                            if (AIState > 0)
+                            {   // Reset and ready for static tech
+                                Debug.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
+                                ResetAll(tank);
+                                RemoveEnemyMatters();
+                                AIState = 0;
+                            }
                         }
                     }
                 }

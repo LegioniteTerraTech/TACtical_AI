@@ -34,13 +34,17 @@ namespace TAC_AI
         public const int MaxEradicatorTechs = 2;
 
 
-        internal static bool UseClassicRTSControls = false;//
+        public static bool UseClassicRTSControls = false;//
         internal static KeyCode RetreatHotkey = KeyCode.I;// The key to press to retreat!
-        internal static int RetreatHotkeySav = (int)RetreatHotkey;//
+        public static int RetreatHotkeySav = (int)RetreatHotkey;//
         internal static KeyCode CommandHotkey = KeyCode.K;// The key to press to toggle RTS
-        internal static int CommandHotkeySav = (int)CommandHotkey;//
+        public static int CommandHotkeySav = (int)CommandHotkey;//
+        internal static KeyCode CommandBoltsHotkey = KeyCode.X;// The key to press to toggle RTS
+        public static int CommandBoltsHotkeySav = (int)CommandBoltsHotkey;//
         internal static KeyCode MultiSelect = KeyCode.LeftShift;// The key to hold to select multiple
-        internal static int MultiSelectKeySav = (int)MultiSelect;//
+        public static int MultiSelectKeySav = (int)MultiSelect;//
+        internal static KeyCode ModeSelect = KeyCode.J;// The key to hold to select multiple
+        public static int ModeSelectKeySav = (int)ModeSelect;//
         //internal static bool testEnemyAI = true; // OBSOLETE
         internal static int EnemyTeamTechLimit { get { return 6 + MaxBasesPerTeam; } }// Allow the bases plus 6 additional capacity of the AIs' choosing
 
@@ -72,7 +76,11 @@ namespace TAC_AI
         public static bool AllowAISelfRepair = true;
         internal static bool AllowEnemiesToStartBases { get { return MaxEnemyBaseLimit != 0; } }
         internal static bool AllowEnemyBaseExpand { get { return MaxBasesPerTeam != 0; } }
-        public static bool AllowLandOverrideEnemies = true;
+        public static int LandEnemyOverrideChance { 
+            get { return LandEnemyOverrideChanceSav; }
+            private set { LandEnemyOverrideChanceSav = value; } 
+        }
+        public static int LandEnemyOverrideChanceSav = 10;
         public static bool AllowAirEnemiesToSpawn = true;
         public static bool AllowSeaEnemiesToSpawn = true;
         public static bool TryForceOnlyPlayerSpawns = false;
@@ -111,19 +119,7 @@ namespace TAC_AI
         // 50 means the full AI range is used
         // -50 means only the simpleton AI spawns
 
-        public static int LandEnemyOverrideChance
-        {
-            get
-            {
-                if (AllowLandOverrideEnemies)
-                {
-                    return LandEnemyReplaceChance;
-                }
-                else
-                    return 0;
-            }
-        }
-        private static int LandEnemyReplaceChance = 10;
+
         public static int EnemyBlockDropChance = 40;
 
         //Calculated
@@ -165,7 +161,9 @@ namespace TAC_AI
         // NativeOptions Parameters
         public static OptionKey retreatHotkey;
         public static OptionKey commandHotKey;
+        public static OptionKey commandBoltsHotKey;
         public static OptionKey groupSelectKey;
+        public static OptionKey modeSelectKey;
         public static OptionToggle commandClassic;
         public static OptionToggle betterAI;
         public static OptionRange dodgePeriod;
@@ -183,7 +181,7 @@ namespace TAC_AI
         //public static OptionToggle enemyBaseSpawn;
         //public static OptionToggle enemyBaseExpand;// OBSOLETE
         public static OptionRange enemyExpandLim;
-        public static OptionToggle enemyLandSpawn;
+        // public static OptionToggle enemyLandSpawn;
         public static OptionToggle enemyAirSpawn;
         public static OptionToggle enemySeaSpawn;
         public static OptionToggle playerMadeTechsOnly;
@@ -239,36 +237,39 @@ namespace TAC_AI
 
 
             ModConfig thisModConfig = new ModConfig();
-            thisModConfig.BindConfig<KickStart>(null, "UseClassicRTSControls");
-            thisModConfig.BindConfig<KickStart>(null, "RetreatHotkeySav");
-            thisModConfig.BindConfig<KickStart>(null, "CommandHotkeySav"); 
-            thisModConfig.BindConfig<KickStart>(null, "MultiSelectKeySav");
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
+            thisModConfig.BindConfig<KickStart>(null, "RetreatHotkeySav"); 
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
             thisModConfig.BindConfig<KickStart>(null, "AIClockPeriod");
             thisModConfig.BindConfig<KickStart>(null, "MuteNonPlayerRacket");
+            thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "DisplayEnemyEvents");
             thisModConfig.BindConfig<RawTechExporter>(null, "ExportJSONInsteadOfRAWTECH");
-            thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "difficulty");
-            thisModConfig.BindConfig<KickStart>(null, "LandEnemyReplaceChance");
+            thisModConfig.BindConfig<KickStart>(null, "LandEnemyOverrideChanceSav");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
             //thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");// OBSOLETE
             //thisModConfig.BindConfig<KickStart>(null, "AllowEnemyBaseExpand");    // OBSOLETE
             thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
-            thisModConfig.BindConfig<KickStart>(null, "AllowLandOverrideEnemies");
             thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
             thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
             //thisModConfig.BindConfig<KickStart>(null, "AllowOverleveledBlockDrops");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
             thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
-            thisModConfig.BindConfig<KickStart>(null, "TryForceOnlyPlayerSpawns");
+            thisModConfig.BindConfig<KickStart>(null, "TryForceOnlyPlayerSpawns"); 
             thisModConfig.BindConfig<KickStart>(null, "CommitDeathMode");
             thisModConfig.BindConfig<KickStart>(null, "EnemySellGainModifier");
-            thisModConfig.BindConfig<KickStart>(null, "AllowStrategicAI");
             thisModConfig.BindConfig<KickStart>(null, "CullFarEnemyBases");
+
+            // RTS
+            thisModConfig.BindConfig<KickStart>(null, "AllowStrategicAI");
+            thisModConfig.BindConfig<KickStart>(null, "UseClassicRTSControls"); 
+            thisModConfig.BindConfig<KickStart>(null, "CommandHotkeySav"); 
+            thisModConfig.BindConfig<KickStart>(null, "CommandBoltsHotkeySav");
+            thisModConfig.BindConfig<KickStart>(null, "MultiSelectKeySav");
+            thisModConfig.BindConfig<KickStart>(null, "ModeSelectKeySav");
 
 
             if (!isPopInjectorPresent)
@@ -276,6 +277,7 @@ namespace TAC_AI
 
             RetreatHotkey = (KeyCode)RetreatHotkeySav;
             CommandHotkey = (KeyCode)CommandHotkeySav;
+            CommandBoltsHotkey = (KeyCode)CommandBoltsHotkeySav;
             MultiSelect = (KeyCode)MultiSelectKeySav;
 
             var TACAI = ModName;
@@ -309,11 +311,25 @@ namespace TAC_AI
                 CommandHotkeySav = (int)CommandHotkey;
                 thisModConfig.WriteConfigJsonFile();
             }); 
+            commandBoltsHotKey = new OptionKey("Explode Bolts Order Button", TACAIRTS, CommandBoltsHotkey);
+            commandBoltsHotKey.onValueSaved.AddListener(() =>
+            {
+                CommandBoltsHotkey = commandBoltsHotKey.SavedValue;
+                CommandBoltsHotkeySav = (int)CommandBoltsHotkey;
+                thisModConfig.WriteConfigJsonFile();
+            });
             groupSelectKey = new OptionKey("Multi-Select Button", TACAIRTS, MultiSelect);
             groupSelectKey.onValueSaved.AddListener(() =>
             {
                 MultiSelect = groupSelectKey.SavedValue;
                 MultiSelectKeySav = (int)MultiSelect;
+                thisModConfig.WriteConfigJsonFile();
+            });
+            modeSelectKey = new OptionKey("AI Mode Button", TACAIRTS, ModeSelect);
+            modeSelectKey.onValueSaved.AddListener(() =>
+            {
+                ModeSelect = modeSelectKey.SavedValue;
+                ModeSelectKeySav = (int)ModeSelect;
                 thisModConfig.WriteConfigJsonFile();
             });
 
@@ -354,10 +370,8 @@ namespace TAC_AI
                     thisModConfig.WriteConfigJsonFile();
                     OverrideEnemyMax();
                 });
-                enemyLandSpawn = new OptionToggle("Custom Land Enemies", TACAIEnemiesPop, AllowLandOverrideEnemies);
-                enemyLandSpawn.onValueSaved.AddListener(() => { AllowLandOverrideEnemies = enemyLandSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                landEnemyChangeChance = new OptionRange("Custom Land Enemy Chance", TACAIEnemiesPop, LandEnemyReplaceChance, 0, 100, 5);
-                landEnemyChangeChance.onValueSaved.AddListener(() => { LandEnemyReplaceChance = (int)landEnemyChangeChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                landEnemyChangeChance = new OptionRange("Custom Land Enemy Chance", TACAIEnemiesPop, LandEnemyOverrideChance, 0, 100, 5);
+                landEnemyChangeChance.onValueSaved.AddListener(() => { LandEnemyOverrideChance = (int)landEnemyChangeChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemiesPop, AllowAirEnemiesToSpawn);
                 enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemiesPop, AllowSeaEnemiesToSpawn);

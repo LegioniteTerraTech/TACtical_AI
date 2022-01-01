@@ -113,8 +113,15 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool DriveDirectorRTS()
         {
-            bool combat = this.TryAdjustForCombat();
-            pilot.AirborneDest = this.pilot.Helper.RTSDestination;
+            bool combat = false;
+            if (pilot.Helper.RTSDestination == Vector3.zero)
+                combat = TryAdjustForCombat(); // When set to chase then chase
+            if (combat)
+            {
+                pilot.AirborneDest = this.pilot.Helper.lastDestination;
+            }
+            else
+                pilot.AirborneDest = this.pilot.Helper.RTSDestination;
 
             pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 32);
             pilot.AirborneDest = this.AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));

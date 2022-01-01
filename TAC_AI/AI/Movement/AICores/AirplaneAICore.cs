@@ -269,7 +269,9 @@ namespace TAC_AI.AI.Movement.AICores
         public bool DriveDirectorRTS()
         {
             pilot.AdvisedThrottle = -1;
-            bool combat = this.TryAdjustForCombat();
+            bool combat = false;
+            if (pilot.Helper.RTSDestination == Vector3.zero)
+                combat = TryAdjustForCombat();  // When set to chase then chase
             if (combat)
             {
                 pilot.LowerEngines = true;
@@ -277,15 +279,15 @@ namespace TAC_AI.AI.Movement.AICores
             else
             {
                 pilot.LowerEngines = false;
-            }
-            pilot.AirborneDest = this.pilot.Helper.RTSDestination;
-            if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
-            {   //We are at target
-                pilot.AirborneDest += (-this.pilot.Tank.rootBlockTrans.right * 50);
-            }
-            else
-            {
-                pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                pilot.AirborneDest = this.pilot.Helper.RTSDestination;
+                if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
+                {   //We are at target
+                    pilot.AirborneDest += (-this.pilot.Tank.rootBlockTrans.right * 50);
+                }
+                else
+                {
+                    pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                }
             }
 
             if (!pilot.TargetGrounded)

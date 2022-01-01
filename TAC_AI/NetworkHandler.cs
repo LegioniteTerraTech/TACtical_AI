@@ -6,20 +6,22 @@ using System.Threading.Tasks;
 using HarmonyLib;
 using UnityEngine;
 using TAC_AI.AI;
+using UnityEngine.Networking;
 
 namespace TAC_AI
 {
     internal static class NetworkHandler
     {
-        static UnityEngine.Networking.NetworkInstanceId Host;
+        static NetworkInstanceId Host;
         static bool HostExists = false;
 
         const TTMsgType AIADVTypeChange = (TTMsgType)4317;
         const TTMsgType AIRetreatRequest = (TTMsgType)4318;
         const TTMsgType AIRTSPosCommand = (TTMsgType)4319;
+        const TTMsgType AIRTSPosControl = (TTMsgType)4320;
 
 
-        public class AITypeChangeMessage : UnityEngine.Networking.MessageBase
+        public class AITypeChangeMessage : MessageBase
         {
             public AITypeChangeMessage() { }
             public AITypeChangeMessage(uint netTechID, AIType AIType)
@@ -27,22 +29,22 @@ namespace TAC_AI
                 this.netTechID = netTechID;
                 this.AIType = AIType;
             }
-            public override void Deserialize(UnityEngine.Networking.NetworkReader reader)
+            public override void Deserialize(NetworkReader reader)
             {
-                Vector2 output = reader.ReadVector2();
-                netTechID = (uint)output.x;
-                AIType = (AIType)(int)output.y;
+                netTechID = reader.ReadUInt32();
+                AIType = (AIType)reader.ReadInt32();
             }
 
-            public override void Serialize(UnityEngine.Networking.NetworkWriter writer)
+            public override void Serialize(NetworkWriter writer)
             {
-                writer.Write(new Vector2(netTechID, (int)AIType));
+                writer.Write(netTechID);
+                writer.Write((int)AIType);
             }
 
             public uint netTechID;
             public AIType AIType;
         }
-        public class AIRetreatMessage : UnityEngine.Networking.MessageBase
+        public class AIRetreatMessage : MessageBase
         {
             public AIRetreatMessage() { }
             public AIRetreatMessage(int team, bool retreat)
@@ -50,23 +52,23 @@ namespace TAC_AI
                 Team = team;
                 Retreat = retreat;
             }
-            public override void Deserialize(UnityEngine.Networking.NetworkReader reader)
+            public override void Deserialize(NetworkReader reader)
             {
-                Vector2 vec = reader.ReadVector2();
-                Team = (int)vec.x;
-                Retreat = vec.y > 0;
+                Team = reader.ReadInt32();
+                Retreat = reader.ReadBoolean();
             }
 
-            public override void Serialize(UnityEngine.Networking.NetworkWriter writer)
+            public override void Serialize(NetworkWriter writer)
             {
-                writer.Write(new Vector2(Team, Retreat ? 2 : 0));
+                writer.Write(Team);
+                writer.Write(Retreat);
             }
 
             public int Team;
             public bool Retreat;
         }
 
-        public class AIRTSCommandMessage : UnityEngine.Networking.MessageBase
+        public class AIRTSCommandMessage : MessageBase
         {
             public AIRTSCommandMessage() { }
             public AIRTSCommandMessage(uint netTechID, Vector3 PosIn)
@@ -74,36 +76,62 @@ namespace TAC_AI
                 this.netTechID = netTechID;
                 this.Position = PosIn;
             }
-            public override void Deserialize(UnityEngine.Networking.NetworkReader reader)
+            public override void Deserialize(NetworkReader reader)
             {
-                Vector4 output = reader.ReadVector4();
-                Position.x = output.x;
-                Position.y = output.y;
-                Position.z = output.z;
-                netTechID = (uint)output.w;
+                netTechID = reader.ReadUInt32();
+                Position = reader.ReadVector3();
             }
 
-            public override void Serialize(UnityEngine.Networking.NetworkWriter writer)
+            public override void Serialize(NetworkWriter writer)
             {
-                writer.Write(new Vector4(Position.x, Position.y, Position.z, netTechID));
+                writer.Write(netTechID);
+                writer.Write(Position);
             }
 
             public uint netTechID;
             public Vector3 Position = Vector3.zero;
         }
+        public class AIRTSControlMessage : MessageBase
+        {
+            public AIRTSControlMessage() { }
+            public AIRTSControlMessage(uint netTechID, bool isRTS)
+            {
+                this.netTechID = netTechID;
+                this.RTSControl = isRTS;
+            }
+            public override void Deserialize(NetworkReader reader)
+            {
+                netTechID = reader.ReadUInt32();
+                RTSControl = reader.ReadBoolean();
+            }
+
+            public override void Serialize(NetworkWriter writer)
+            {
+                writer.Write(netTechID);
+                writer.Write(RTSControl);
+            }
+
+            public uint netTechID;
+            public bool RTSControl = false;
+        }
+
+
+
+
+        private static int localConnectionID { get { return ManNetwork.inst.Client.connection.connectionId; } }
+
 
         // AIRTSCommandMessage
-
         public static void TryBroadcastRTSCommand(uint netTechID, Vector3 Pos)
         {
             if (HostExists) try
                 {
-                    Singleton.Manager<ManNetwork>.inst.SendToAllClients(AIRTSPosCommand, new AIRTSCommandMessage(netTechID, Pos), Host);
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRTSPosCommand, new AIRTSCommandMessage(netTechID, Pos), Host);
                     Debug.Log("Sent new TryBroadcastRTSCommand update to all");
                 }
                 catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSCommand!"); }
         }
-        public static void OnClientAcceptRTSCommand(UnityEngine.Networking.NetworkMessage netMsg)
+        public static void OnClientAcceptRTSCommand(NetworkMessage netMsg)
         {
             var reader = new AIRTSCommandMessage();
             netMsg.ReadMessage(reader);
@@ -119,17 +147,46 @@ namespace TAC_AI
             }
         }
 
-        // AITypeChangeMessage
-        public static void TryBroadcastNewAIState(uint netTechID, AIType AIType)
+        // AIRTSControlMessage
+        public static void TryBroadcastRTSControl(uint netTechID, bool isRTS)
         {
             if (HostExists) try
                 {
-                    Singleton.Manager<ManNetwork>.inst.SendToAllClients(AIADVTypeChange, new AITypeChangeMessage(netTechID, AIType), Host);
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRTSPosControl, new AIRTSControlMessage(netTechID, isRTS), Host);
+                    Debug.Log("Sent new TryBroadcastRTSCommand update to all");
+                }
+                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSCommand!"); }
+        }
+        public static void OnClientAcceptRTSControl(NetworkMessage netMsg)
+        {
+            var reader = new AIRTSControlMessage();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
+                find.tech.GetComponent<AIECore.TankAIHelper>().isRTSControlled = reader.RTSControl;
+                Debug.Log("TACtical_AI: Received new TryBroadcastRTSCommand update, RTS control is " + reader.RTSControl);
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: OnClientAcceptRTSCommand Receive failiure! Could not decode intake!?");
+            }
+        }
+
+        // AITypeChangeMessage
+        public static void TryBroadcastNewAIState(uint netTechID, AIType AIType)
+        {
+            if (HostExists)
+            {
+                try
+                {
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIADVTypeChange, new AITypeChangeMessage(netTechID, AIType), Host);
                     Debug.Log("Sent new AdvancedAI update to all");
                 }
                 catch { Debug.Log("TACtical_AI: Failed to send new AdvancedAI update, shouldn't be too bad in the long run"); }
+            }
         }
-        public static void OnClientChangeNewAIState(UnityEngine.Networking.NetworkMessage netMsg)
+        public static void OnClientChangeNewAIState(NetworkMessage netMsg)
         {
             var reader = new AITypeChangeMessage();
             netMsg.ReadMessage(reader);
@@ -150,12 +207,12 @@ namespace TAC_AI
         {
             if (HostExists) try
                 {
-                    Singleton.Manager<ManNetwork>.inst.SendToAllClients(AIRetreatRequest, new AIRetreatMessage(team, retreat), Host);
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRetreatRequest, new AIRetreatMessage(team, retreat), Host);
                     Debug.Log("Sent new AdvancedAI update to all");
                 }
                 catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastNewRetreatState update, shouldn't be too bad in the long run"); }
         }
-        public static void OnClientChangeNewRetreatState(UnityEngine.Networking.NetworkMessage netMsg)
+        public static void OnClientChangeNewRetreatState(NetworkMessage netMsg)
         {
             var reader = new AIRetreatMessage();
             netMsg.ReadMessage(reader);

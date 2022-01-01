@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using TAC_AI.AI;
+using TAC_AI.World;
 
 namespace TAC_AI
 {
@@ -63,6 +64,8 @@ namespace TAC_AI
         //Handles the display that's triggered on AI change 
         //  Circle hud wheel when the player assigns a new AI state
         //  TODO - add the hook needed to get the UI to pop up on Guard selection
+        // NOTE: HANDLES RTS SELECTED AIS AS WELL
+        private static GUIAIManager inst;
         public static Vector3 PlayerLoc = Vector3.zero;
         public static bool isCurrentlyOpen = false;
         private static AIType fetchAI = AIType.Escort;
@@ -83,7 +86,7 @@ namespace TAC_AI
 
         public static void Initiate()
         {
-            Instantiate(new GameObject()).AddComponent<GUIAIManager>();
+            inst = Instantiate(new GameObject()).AddComponent<GUIAIManager>();
             Singleton.Manager<ManTechs>.inst.TankDriverChangedEvent.Subscribe(OnPlayerSwap);
             GUIWindow = new GameObject();
             GUIWindow.AddComponent<GUIDisplay>();
@@ -346,11 +349,20 @@ namespace TAC_AI
         internal static FieldInfo bubble = typeof(Tank).GetField("m_Overlay", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void SetOption(AIType dediAI)
         {
+            bool isShiftNotHeld = !Input.GetKey(KickStart.MultiSelect);
             if (ManNetwork.IsNetworked)
             {
                 try
                 {
                     NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, dediAI);
+
+                    lastTank.OnSwitchAI(isShiftNotHeld);
+                    lastTank.DediAI = dediAI;
+                    fetchAI = dediAI;
+                    lastTank.TestForFlyingAIRequirement();
+
+                    TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
+                    overlay.Update();
                 }
                 catch (Exception e)
                 {
@@ -359,7 +371,7 @@ namespace TAC_AI
             }
             else
             {
-                lastTank.OnSwitchAI();
+                lastTank.OnSwitchAI(isShiftNotHeld);
                 lastTank.DediAI = dediAI;
                 fetchAI = dediAI;
                 lastTank.TestForFlyingAIRequirement();
@@ -367,18 +379,154 @@ namespace TAC_AI
                 TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
                 overlay.Update();
             }
+            inst.TrySetOptionRTS(dediAI, isShiftNotHeld);
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
             CloseSubMenuClickable();
         }
+        private void TrySetOptionRTS(AIType dediAI, bool ShiftNotHeld)
+        {
+            if (!(bool)PlayerRTSControl.inst)
+                return;
+            if (PlayerRTSControl.PlayerIsInRTS || PlayerRTSControl.PlayerRTSOverlay)
+            {
+                int select = 0;
+                int amount = PlayerRTSControl.inst.LocalPlayerTechsControlled.Count;
+                for (int step = 0; amount > step; )
+                {
+                    AIECore.TankAIHelper tankInst = PlayerRTSControl.inst.LocalPlayerTechsControlled.ElementAt(step);
+                    if (tankInst.IsNotNull() && tankInst != lastTank)
+                    {
+                        select++;
+                        SetOptionCase(tankInst, dediAI, ShiftNotHeld);
+                        if (ShiftNotHeld)
+                        {
+                            amount--;
+                            continue;
+                        }
+                    }
+                    step++;
+                }
+                if (select > 0)
+                    Invoke("DelayedExtraNoise", 0.15f);
+            }
+        }
+        private static void SetOptionCase(AIECore.TankAIHelper tankInst, AIType dediAI, bool ShiftNotHeld)
+        {
+            AIType locDediAI;
+            switch (dediAI)
+            {
+                case AIType.Aegis:
+                    if (tankInst.isAegisAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.Escort;
+                    break;
+                case AIType.Aviator:
+                    if (tankInst.isAviatorAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.Escort;
+                    break;
+                case AIType.Buccaneer:
+                    if (tankInst.isBuccaneerAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.Escort;
+                    break;
+                case AIType.Energizer:
+                    if (tankInst.isEnergizerAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.Escort;
+                    break;
+                case AIType.Prospector:
+                    if (tankInst.isProspectorAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.MTSlave;
+                    break;
+                case AIType.Scrapper:
+                    if (tankInst.isScrapperAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.MTSlave;
+                    break;
+                default:
+                    locDediAI = dediAI;
+                    break;
+            }
+            if (ManNetwork.IsNetworked)
+            {
+                try
+                {
+                    NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, locDediAI);
+                    tankInst.OnSwitchAI(ShiftNotHeld);
+                    tankInst.ForceAllAIsToEscort();
+                    tankInst.DediAI = locDediAI;
+                    tankInst.TestForFlyingAIRequirement();
 
+                    TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(tankInst.tank);
+                    overlay.Update();
+                }
+                catch (Exception e)
+                {
+                    Debug.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                }
+            }
+            else
+            {
+                tankInst.OnSwitchAI(ShiftNotHeld);
+                tankInst.ForceAllAIsToEscort();
+                tankInst.DediAI = locDediAI;
+                tankInst.TestForFlyingAIRequirement();
+
+                TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(tankInst.tank);
+                overlay.Update();
+            }
+        }
+        public void DelayedExtraNoise()
+        {
+            Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
+        }
 
         public static void LaunchSubMenuClickable()
         {
-            if (lastTank.IsNull() || !KickStart.EnableBetterAI)
+            if (!KickStart.EnableBetterAI)
             {
-                Debug.Log("TACtical_AI: TANK IS NULL!");
                 return;
+            }
+            if (lastTank.IsNull())
+            {
+                try
+                {
+                    if (PlayerRTSControl.inst.IsNotNull())
+                    {
+                        if (PlayerRTSControl.inst.LocalPlayerTechsControlled.Count > 0)
+                        {
+                            Vector3 Mous = Input.mousePosition;
+                            xMenu = Mous.x - 225;
+                            yMenu = Display.main.renderingHeight - Mous.y + 25;
+                            lastTank = PlayerRTSControl.inst.LocalPlayerTechsControlled.ElementAt(0);
+                        }
+                        else
+                        {
+                            Debug.Log("TACtical_AI: TANK IS NULL!");
+                            Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log("TACtical_AI: TANK IS NULL!");
+                        return;
+                    }
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: TANK IS NULL!");
+                    return;
+                }
             }
             lastTank.RefreshAI();
             Debug.Log("TACtical_AI: Opened AI menu!");
@@ -411,6 +559,8 @@ namespace TAC_AI
                 CloseSubMenuClickable();
                 windowTimer = -1;
             }
+            if (!ManPauseGame.inst.IsPaused && Input.GetKeyDown(KickStart.ModeSelect))
+                LaunchSubMenuClickable();
         }
     }
 }

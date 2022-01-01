@@ -247,61 +247,137 @@ namespace TAC_AI
                     {
                         var tank = __instance.transform.root.GetComponent<Tank>();
                         var aI = __instance.transform.root.GetComponent<Tank>().AI;
-                        bool IsPlayerRemoteControlled = false;
-                        try
-                        {
-                            IsPlayerRemoteControlled = (bool)tank.netTech.NetPlayer;
-                        }
-                        catch { }
-                        if ((!tank.PlayerFocused && !IsPlayerRemoteControlled) || PlayerRTSControl.PlayerIsInRTS)//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                        if (ManNetwork.IsNetworked)
                         {
                             var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
+                            if (ManNetwork.IsHost)
+                            {
+                                bool IsPlayerRemoteControlled = false;
+                                try
+                                {
+                                    IsPlayerRemoteControlled = ManNetwork.inst.GetAllPlayerTechs().Contains(tank);
+                                }
+                                catch { }
+                                if (IsPlayerRemoteControlled)
+                                {
+                                    if (Singleton.playerTank == tank && PlayerRTSControl.PlayerIsInRTS)
+                                    {
+                                        tankAIHelp.SetRTSState(true);
+                                        tankAIHelp.BetterAI(__instance.block.tank.control);
+                                        __result = true;
+                                        return false;
+                                    }
+                                }
+                                else
+                                {
+                                    if (tank.FirstUpdateAfterSpawn)
+                                    {
+                                        // let the icon update
+                                    }
+                                    else if ((aI.CheckAIAvailable() || tank.PlayerFocused) && ManSpawn.IsPlayerTeam(tank.Team))
+                                    {
+                                        //Debug.Log("TACtical_AI: AI Valid!");
+                                        //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
+                                        //tankAIHelp.AIState && 
+                                        if (tankAIHelp.JustUnanchored)
+                                        {
+                                            tankAIHelp.ForceAllAIsToEscort();
+                                            tankAIHelp.JustUnanchored = false;
+                                        }
+                                        else if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
+                                        {
+                                            //Debug.Log("TACtical_AI: Running BetterAI");
+                                            //Debug.Log("TACtical_AI: Patched Tank ExecuteControl(TankAIHelper)");
+                                            tankAIHelp.BetterAI(__instance.block.tank.control);
+                                            __result = true;
+                                            return false;
+                                        }
+                                    }
+                                    else if (tankAIHelp.OverrideAllControls)
+                                    {   // override EVERYTHING
+                                        if (__instance.block.tank.Anchors.NumIsAnchored > 0)
+                                            __instance.block.tank.Anchors.UnanchorAll(true);
+                                        __instance.block.tank.control.BoostControlJets = true;
+                                        __result = true;
+                                        //return false;
+                                    }
+                                    else if (KickStart.enablePainMode && tank.IsEnemy() && !ManSpawn.IsPlayerTeam(tank.Team))
+                                    {
+                                        if (!tankAIHelp.Hibernate)
+                                        {
+                                            tankAIHelp.BetterAI(__instance.block.tank.control);
+                                            __result = true;
+                                            return false;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (Singleton.playerTank == tank && PlayerRTSControl.PlayerIsInRTS)
+                                {
+                                    if (tank.PlayerFocused)
+                                    {
+                                        tankAIHelp.SetRTSState(true);
+                                        tankAIHelp.BetterAI(__instance.block.tank.control);
+                                        __result = true;
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (!tank.PlayerFocused || PlayerRTSControl.PlayerIsInRTS)//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                            {
+                                var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
 
-                            if (tank.FirstUpdateAfterSpawn)
-                            {
-                                // let the icon update
-                            }
-                            else if ((aI.CheckAIAvailable() || tank.PlayerFocused) && ManSpawn.IsPlayerTeam(tank.Team))
-                            {
-                                //Debug.Log("TACtical_AI: AI Valid!");
-                                //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
-                                //tankAIHelp.AIState && 
-                                if (tankAIHelp.JustUnanchored)
+                                if (tank.FirstUpdateAfterSpawn)
                                 {
-                                    tankAIHelp.ForceAllAIsToEscort();
-                                    tankAIHelp.JustUnanchored = false;
+                                    // let the icon update
                                 }
-                                else if (tank.PlayerFocused)
+                                else if ((aI.CheckAIAvailable() || tank.PlayerFocused) && ManSpawn.IsPlayerTeam(tank.Team))
                                 {
-                                    tankAIHelp.SetRTSState(true);
-                                    tankAIHelp.BetterAI(__instance.block.tank.control);
-                                    __result = true;
-                                    return false;
+                                    //Debug.Log("TACtical_AI: AI Valid!");
+                                    //Debug.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
+                                    //tankAIHelp.AIState && 
+                                    if (tankAIHelp.JustUnanchored)
+                                    {
+                                        tankAIHelp.ForceAllAIsToEscort();
+                                        tankAIHelp.JustUnanchored = false;
+                                    }
+                                    else if (tank.PlayerFocused)
+                                    {
+                                        tankAIHelp.SetRTSState(true);
+                                        tankAIHelp.BetterAI(__instance.block.tank.control);
+                                        __result = true;
+                                        return false;
+                                    }
+                                    else if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
+                                    {
+                                        //Debug.Log("TACtical_AI: Running BetterAI");
+                                        //Debug.Log("TACtical_AI: Patched Tank ExecuteControl(TankAIHelper)");
+                                        tankAIHelp.BetterAI(__instance.block.tank.control);
+                                        __result = true;
+                                        return false;
+                                    }
                                 }
-                                else if (tankAIHelp.lastAIType == AITreeType.AITypes.Escort)
-                                {
-                                    //Debug.Log("TACtical_AI: Running BetterAI");
-                                    //Debug.Log("TACtical_AI: Patched Tank ExecuteControl(TankAIHelper)");
-                                    tankAIHelp.BetterAI(__instance.block.tank.control);
+                                else if (tankAIHelp.OverrideAllControls)
+                                {   // override EVERYTHING
+                                    if (__instance.block.tank.Anchors.NumIsAnchored > 0)
+                                        __instance.block.tank.Anchors.UnanchorAll(true);
+                                    __instance.block.tank.control.BoostControlJets = true;
                                     __result = true;
-                                    return false;
+                                    //return false;
                                 }
-                            }
-                            else if (tankAIHelp.OverrideAllControls)
-                            {   // override EVERYTHING
-                                if (__instance.block.tank.Anchors.NumIsAnchored > 0)
-                                    __instance.block.tank.Anchors.UnanchorAll(true);
-                                __instance.block.tank.control.BoostControlJets = true;
-                                __result = true;
-                                //return false;
-                            }
-                            else if (KickStart.enablePainMode && tank.IsEnemy() && !ManSpawn.IsPlayerTeam(tank.Team))
-                            {
-                                if (!tankAIHelp.Hibernate)
+                                else if (KickStart.enablePainMode && tank.IsEnemy() && !ManSpawn.IsPlayerTeam(tank.Team))
                                 {
-                                    tankAIHelp.BetterAI(__instance.block.tank.control);
-                                    __result = true;
-                                    return false;
+                                    if (!tankAIHelp.Hibernate)
+                                    {
+                                        tankAIHelp.BetterAI(__instance.block.tank.control);
+                                        __result = true;
+                                        return false;
+                                    }
                                 }
                             }
                         }
@@ -1101,11 +1177,15 @@ namespace TAC_AI
                                         {
                                             if ((bool)playerTarg.tank)
                                             {
-                                                if (playerTarg.tank.CentralBlock && playerTarg.isActive)
-                                                {   // Relay position from player to allow artillery support
-                                                    targPos.SetValue(__instance, AICommand.lastPlayer.tank.control.TargetPositionWorld);
-                                                    return;
+                                                try
+                                                {
+                                                    if (playerTarg.tank.CentralBlock && playerTarg.isActive)
+                                                    {   // Relay position from player to allow artillery support
+                                                        targPos.SetValue(__instance, playerTarg.GetAimPoint(tank.boundsCentreWorldNoCheck));
+                                                        return;
+                                                    }
                                                 }
+                                                catch { }
                                             }
                                         }
                                     }
