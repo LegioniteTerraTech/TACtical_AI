@@ -191,7 +191,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    bool Combat = this.TryAdjustForCombat();
+                    bool Combat = TryAdjustForCombat();
                     if (!Combat)
                     {
                         if (help.MoveFromObjective && (bool)help.lastPlayer)

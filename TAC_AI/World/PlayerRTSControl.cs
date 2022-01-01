@@ -436,6 +436,7 @@ namespace TAC_AI.World
                 }
                 else
                 {
+                    PurgeAllNull();
                     if (grabbedTech.IsPlayer)
                     {   // Reset to working order
                         foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
@@ -592,6 +593,8 @@ namespace TAC_AI.World
             bool working = false;
             foreach (Tank tech in ManTechs.inst.CurrentTechs)
             {
+                if (!(bool)tech)
+                    continue;
                 try
                 {
                     if (tech.Team == ManPlayer.inst.PlayerTeam)

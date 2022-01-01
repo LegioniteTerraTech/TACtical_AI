@@ -349,6 +349,8 @@ namespace TAC_AI
         internal static FieldInfo bubble = typeof(Tank).GetField("m_Overlay", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void SetOption(AIType dediAI)
         {
+            if (lastTank.IsNull())
+                return;
             bool isShiftNotHeld = !Input.GetKey(KickStart.MultiSelect);
             if (ManNetwork.IsNetworked)
             {
@@ -390,12 +392,13 @@ namespace TAC_AI
                 return;
             if (PlayerRTSControl.PlayerIsInRTS || PlayerRTSControl.PlayerRTSOverlay)
             {
+                PlayerRTSControl.inst.PurgeAllNull();
                 int select = 0;
                 int amount = PlayerRTSControl.inst.LocalPlayerTechsControlled.Count;
                 for (int step = 0; amount > step; )
                 {
                     AIECore.TankAIHelper tankInst = PlayerRTSControl.inst.LocalPlayerTechsControlled.ElementAt(step);
-                    if (tankInst.IsNotNull() && tankInst != lastTank)
+                    if ((bool)tankInst && tankInst != lastTank)
                     {
                         select++;
                         SetOptionCase(tankInst, dediAI, ShiftNotHeld);
@@ -413,6 +416,8 @@ namespace TAC_AI
         }
         private static void SetOptionCase(AIECore.TankAIHelper tankInst, AIType dediAI, bool ShiftNotHeld)
         {
+            if (tankInst.IsNull())
+                return;
             AIType locDediAI;
             switch (dediAI)
             {
