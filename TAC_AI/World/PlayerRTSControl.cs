@@ -638,6 +638,14 @@ namespace TAC_AI.World
             if (LocalPlayerTechsControlled.Count > 0)
                 Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.SendToInventory);
         }
+        public void SetVisOfAll(bool visibleSelect)
+        {
+            foreach (AIECore.TankAIHelper TechUnit in LocalPlayerTechsControlled)
+            {
+                if (TechUnit != null)
+                    SetSelectHalo(TechUnit, visibleSelect);
+            }
+        }
 
         public void SetOptionAuto(AIECore.TankAIHelper lastTank, AIType dediAI)
         {
@@ -745,6 +753,7 @@ namespace TAC_AI.World
                     if (Input.GetKeyDown(KickStart.CommandHotkey))
                     {
                         PlayerRTSOverlay = !PlayerRTSOverlay;
+                        SetVisOfAll(PlayerRTSOverlay);
                     }
                 }
                 if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))

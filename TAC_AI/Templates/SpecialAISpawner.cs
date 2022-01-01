@@ -73,14 +73,16 @@ namespace TAC_AI.Templates
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(DetermineActiveOnMode);
             Debug.Log("TACtical_AI: SpecialAISpawner - Initated!");
             startup.SetActive(false);
+            RawTechLoader.Initiate();
         }
         public static void DetermineActiveOnMode(Mode mode)
         {   // 
             AirPool.Clear();
+            RawTechLoader.inst.ClearQueue();
             RawTechExporter.Reload();
             OverrideManPop.QueuedChangeToRagnarokPop();
             DebugRawTechSpawner.ShouldBeActive();
-            if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign || mode is ModeCoOpCreative) && (ManNetwork.inst.IsServer || !ManNetwork.inst.IsMultiplayer()))
+            if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign || mode is ModeCoOpCreative) && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
             {
                 if (mode is ModeMisc || mode is ModeCoOpCreative)
                     CreativeMode = true;
@@ -404,15 +406,15 @@ namespace TAC_AI.Templates
                 if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos3))
                     return;
 
-                if (RawTechLoader.SpawnSpecificTypeTech(pos3, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true))
+                RawTechLoader.SpawnSpecificTypeTechSafe(pos3, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true);
+
+                Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+                try
                 {
-                    Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
-                    try
-                    {
-                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
-                    }
-                    catch { }
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
                 }
+                catch { }
+
                 return;
             }
             catch { }
@@ -420,15 +422,15 @@ namespace TAC_AI.Templates
 
             if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos2))
                 return;
-            if (RawTechLoader.SpawnSpecificTypeTech(pos2, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, forceInstant: true, isPopulation: true))
+            RawTechLoader.SpawnSpecificTypeTechSafe(pos2, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, forceInstant: true, isPopulation: true);
+
+            Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+            try
             {
-                Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
-                try
-                {
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
-                }
-                catch { }
+                Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
             }
+            catch { }
+
         }
 
         private static void ManagePooledAIs()

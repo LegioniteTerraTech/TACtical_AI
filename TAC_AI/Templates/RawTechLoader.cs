@@ -20,14 +20,91 @@ namespace TAC_AI.Templates
         public bool instant = true;
     }
 
-    public static class RawTechLoader
+    // For when the spawner is backlogged to prevent corruption
+    internal class QueueInstantTech
     {
+        internal QueueInstantTech(Action<Tank> endEvent, Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor, bool population)
+        {
+            this.endEvent = endEvent;
+            this.name = name;
+            this.blueprint = blueprint;
+            this.pos = pos;
+            this.forward = forward;
+            this.Team = Team;
+            this.grounded = grounded;
+            this.ForceAnchor = ForceAnchor;
+            this.population = population;
+        }
+        readonly int maxAttempts = 25;
+        public int fails = 0;
+        public Action<Tank> endEvent;
+        public string name;
+        public string blueprint;
+        public Vector3 pos;
+        public Vector3 forward;
+        public int Team;
+        public bool grounded;
+        public bool ForceAnchor = false;
+        public bool population = false;
+
+        internal bool PushSpawn()
+        {
+            if (ManSpawn.inst.IsTechSpawning)
+                return false; // Something else is using it!!  Hold off!
+            Tank outcome = RawTechLoader.InstantTech(pos, forward, Team, name, blueprint, grounded, ForceAnchor, population);
+            if ((bool)outcome)
+            {
+                endEvent.Send(outcome);
+                return true;
+            }
+            if (fails > maxAttempts)
+                return true; // trash the request
+            fails++;
+            return false;
+        }
+    }
+
+    public class RawTechLoader : MonoBehaviour
+    {
+        internal static RawTechLoader inst;
+
         const float MinimumBaseSpacing = 450;
         const int MaxBlockLimitAttract = 128;
 
         static bool ForceSpawn = false;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
+        private static List<QueueInstantTech> TechBacklog = new List<QueueInstantTech>();
 
+
+        public static void Initiate()
+        {
+            inst = new GameObject("EnemyWorldManager").AddComponent<RawTechLoader>();
+        }
+        public void ClearQueue()
+        {
+            TechBacklog.Clear();
+        }
+        public void TryPushTechSpawn()
+        {
+            if (TechBacklog.Count > 0)
+            {
+                QueueInstantTech QIT = TechBacklog.ElementAt(0);
+                if (QIT.PushSpawn())
+                    TechBacklog.RemoveAt(0);
+                else
+                {   // Try again later
+                    TechBacklog.RemoveAt(0);
+                    TechBacklog.Add(QIT);
+                }
+            }
+        }
+        public void LateUpdate()
+        {
+            if (TechBacklog.Count > 0)
+            {
+                TryPushTechSpawn();
+            }
+        }
 
         // Main initiation function
         internal static void TrySpawnBase(Tank tank, AIECore.TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
@@ -708,8 +785,66 @@ namespace TAC_AI.Templates
                     namesav.faction = GetMainCorpExt(toSpawn);
                 }
 
-                Debug.Log("TACtical_AI: SpawnSpecificTypeTech - Spawned " + GetEnglishName(toSpawn));
+                if (theTech.IsNotNull())
+                    Debug.Log("TACtical_AI: SpawnSpecificTypeTech - Spawned " + GetEnglishName(toSpawn));
                 return true;
+            }
+        }
+        internal static void SpawnSpecificTypeTechSafe(Vector3 pos, int Team, Vector3 facingDirect, List<BasePurpose> purposes, BaseTerrain terrainType = BaseTerrain.Land, FactionTypesExt faction = FactionTypesExt.NULL, bool silentFail = true, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0, bool forceInstant = false, bool isPopulation = false, Action<Tank> fallbackOp = null)
+        {
+            if (ShouldUseCustomTechs(faction, purposes, terrainType, true))
+            {
+                SpawnEnemyTechExtSafe(pos, Team, facingDirect, TempManager.ExternalEnemyTechs[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, ManGameMode.inst.IsCurrent<ModeAttract>(), maxGrade, maxPrice, unProvoked)], unProvoked, AutoTerrain, forceInstant, isPopulation, fallbackOp);
+            }
+            else
+            {
+                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, purposes, terrainType, ManGameMode.inst.IsCurrent<ModeAttract>(), maxGrade, maxPrice, unProvoked);
+                if (!IsBaseTemplateAvailable(toSpawn))
+                {
+                    if (silentFail)
+                        return;
+                    else
+                    { // try again with a different one 
+                        int attempts;
+                        for (attempts = 6; attempts > 0; attempts--)
+                        {
+                            toSpawn = GetEnemyBaseType(faction, purposes, terrainType, true);
+                            if (IsBaseTemplateAvailable(toSpawn))
+                                break;
+                        }
+                        if (attempts == 0)
+                        {
+                            Debug.Log("TACtical_AI: SpawnSpecificTypeTechSafe - FAILIURE TO SPAWN ANY TECH!!!");
+                        }
+                    }
+                }
+
+                string baseBlueprint = GetBlueprint(toSpawn);
+
+                bool MustBeAnchored = !ContainsPurpose(toSpawn, BasePurpose.NotStationary);
+
+                if (MustBeAnchored)
+                {
+                    //theTech = null; //InstantTech does not handle this correctly 
+                    bool storeBB = ContainsPurpose(toSpawn, BasePurpose.Harvesting) || ContainsPurpose(toSpawn, BasePurpose.TechProduction);
+
+                    if (storeBB)
+                    {
+                        InstantTechSafe(pos, facingDirect, Team, GetEnglishName(toSpawn) + " ¥¥" + 5000000, baseBlueprint, AutoTerrain, MustBeAnchored, isPopulation, fallbackOp);
+                    }
+                    else
+                    {
+                        InstantTechSafe(pos, facingDirect, Team, GetEnglishName(toSpawn), baseBlueprint, AutoTerrain, MustBeAnchored, isPopulation, fallbackOp);
+                    }
+                }
+                else
+                {
+                    if (ContainsPurpose(toSpawn, BasePurpose.Defense))
+                        InstantTechSafe(pos, facingDirect, Team, GetEnglishName(toSpawn) + " â", baseBlueprint, AutoTerrain, MustBeAnchored, isPopulation, fallbackOp);
+                    else
+                        InstantTechSafe(pos, facingDirect, Team, GetEnglishName(toSpawn), baseBlueprint, AutoTerrain, MustBeAnchored, isPopulation, fallbackOp);
+                }
+                Debug.Log("TACtical_AI: SpawnSpecificTypeTechSafe - Spawned " + GetEnglishName(toSpawn));
             }
         }
 
@@ -789,7 +924,37 @@ namespace TAC_AI.Templates
 
             return theTech;
         }
-        
+        internal static void SpawnEnemyTechExtSafe(Vector3 pos, int Team, Vector3 facingDirect, BaseTemplate Blueprint, bool unProvoked = false, bool AutoTerrain = true, bool forceInstant = false, bool pop = false, Action<Tank> fallbackOp = null)
+        {
+            string baseBlueprint = Blueprint.savedTech;
+
+
+            bool MustBeAnchored = !Blueprint.purposes.Contains(BasePurpose.NotStationary);
+
+            if (!forceInstant && MustBeAnchored)
+            {
+                bool storeBB = Blueprint.purposes.Contains(BasePurpose.Harvesting) || Blueprint.purposes.Contains(BasePurpose.TechProduction);
+
+                if (storeBB)
+                {
+                    InstantTechSafe(pos, facingDirect, Team, Blueprint.techName + " ¥¥" + 5000000, baseBlueprint, AutoTerrain, MustBeAnchored, pop, fallbackOp);
+                }
+                else
+                {
+                    InstantTechSafe(pos, facingDirect, Team, Blueprint.techName, baseBlueprint, AutoTerrain, MustBeAnchored, pop, fallbackOp);
+                }
+            }
+            else
+            {
+                if (Blueprint.purposes.Contains(BasePurpose.Defense))
+                    InstantTechSafe(pos, facingDirect, Team, Blueprint.techName + " â", baseBlueprint, AutoTerrain, MustBeAnchored, pop, fallbackOp);
+                else
+                    InstantTechSafe(pos, facingDirect, Team, Blueprint.techName, baseBlueprint, AutoTerrain, MustBeAnchored, pop, fallbackOp);
+            }
+
+            Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.techName);
+        }
+
         internal static List<int> GetExternalIndexes(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
@@ -1109,6 +1274,7 @@ namespace TAC_AI.Templates
             string baseBlueprint = Blueprint.Blueprint;
 
             Tank theTech = InstantTech(pos, facingDirect, Team, Blueprint.Name, baseBlueprint, AutoTerrain);
+            
             if (theTech.IsNull())
             {   // Generate via the failsafe method
                 Debug.Log("TACtical_AI: SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
@@ -1139,7 +1305,7 @@ namespace TAC_AI.Templates
                     namesav.unprovoked = Blueprint.NonAggressive;
                 }
             }
-            Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + AutoTerrain);
+                Debug.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + AutoTerrain);
 
 
             if (Team == -2)//neutral
@@ -1215,8 +1381,15 @@ namespace TAC_AI.Templates
             //if (ManNetwork.inst.IsMultiplayer)
             //    Team = ManSpawn.inst.gette
             Tank theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, name);
-            TryForceIntoPop(theTech);
+            if ((bool)theTech)
+                TryForceIntoPop(theTech);
             return theTech;
+        }
+        internal static void InstantTechSafe(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false, bool population = false, Action<Tank> fallbackOp = null)
+        {
+            QueueInstantTech queue = new QueueInstantTech(fallbackOp, pos, forward, Team, name, blueprint, grounded, ForceAnchor, population);
+            TechBacklog.Add(queue);
+            Debug.Log("TACtical_AI: InstantTech - Adding to Queue - In Queue: " + TechBacklog.Count);
         }
         internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false, bool population = false)
         {
@@ -1287,7 +1460,7 @@ namespace TAC_AI.Templates
             tankSpawn.blockIDs = null;
             tankSpawn.teamID = Team;
             tankSpawn.position = pos;
-            tankSpawn.rotation = Quaternion.LookRotation(Singleton.cameraTrans.position - pos, Vector3.up);
+            tankSpawn.rotation = Quaternion.LookRotation(forward, Vector3.up);//Singleton.cameraTrans.position - pos
             tankSpawn.ignoreSceneryOnSpawnProjection = false;
             tankSpawn.forceSpawn = true;
             tankSpawn.isPopulation = population;
