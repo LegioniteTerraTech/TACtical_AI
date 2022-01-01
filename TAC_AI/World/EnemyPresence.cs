@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using TAC_AI.AI;
+using TAC_AI.Templates;
 
 namespace TAC_AI.World
 {
@@ -26,8 +27,15 @@ namespace TAC_AI.World
 
         public bool UpdateGrandCommand()
         {
+            if (Team == SpecialAISpawner.trollTeam)
+            {
+                HandleTraderTrolls();
+                return EBUs.Count > 0 || ETUs.Count > 0;
+            }
             if (EBUs.Count < 0)
+            {
                 return false; // NO SUCH TEAM EXISTS (no base!!!)
+            }
             eventStarted = false;
             //Debug.Log("TACtical_AI: UpdateGrandCommand - Updating for team " + Team);
             UpdateRevenue();
@@ -36,6 +44,25 @@ namespace TAC_AI.World
             EnemyBaseWorld.TryUnloadedBaseOperations(this);
             HandleRepairs();
             return EBUs.Count > 0 || ETUs.Count > 0;
+        }
+        private void HandleTraderTrolls()
+        {
+            int count = ETUs.Count;
+            for (int step = 0; step < count;)
+            {
+                try
+                {
+                    EnemyTechUnit ETUcase = ETUs.ElementAt(step);
+                    if ((ETUcase.tech.GetBackwardsCompatiblePosition() - Singleton.playerPos).sqrMagnitude > EnemyWorldManager.EnemyBaseCullingRangeSq)
+                    {
+                        EnemyBaseWorld.RemoteRemove(ETUcase);
+                        count--;
+                    }
+                    else
+                        step++;
+                }
+                catch { }
+            }
         }
         private void HandleUnitMoving()
         {

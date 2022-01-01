@@ -827,71 +827,71 @@ namespace TAC_AI.AI
             // Troubleshooting
             //internal bool RequirementsFailiure = false;
 
-
+  
             public void Subscribe(Tank tank)
             {
                 Vector3 _ = tank.boundsCentreWorld;
                 this.tank = tank;
-                tank.AttachEvent.Subscribe(OnAttach);
-                tank.DetachEvent.Subscribe(OnDetach);
                 //tank.TankRecycledEvent.Subscribe(OnRecycle);
                 AIList = new List<ModuleAIExtension>();
                 Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnDeathOrRemoval);
                 Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Subscribe(OnSpawn);
             }
 
-            public void OnAttach(TankBlock newBlock, Tank tank)
+            public static void OnAttach(TankBlock newBlock, Tank tank)
             {
-                if (this.tank != tank)
-                    return;
-                EstTopSped = 1;
-                //LastBuildClock = 0;
-                PendingHeightCheck = true;
-                if (AIState == 1)
+                //Debug.Log("TACtical_AI: On Attach " + tank.name);
+                TankAIHelper thisInst = tank.GetComponent<TankAIHelper>();
+                thisInst.EstTopSped = 1;
+                //thisInst.LastBuildClock = 0;
+                thisInst.PendingHeightCheck = true;
+                if (thisInst.AIState == 1)
                 {
                     try
                     {
-                        if ((bool)TechMemor)
+                        if (!thisInst.PendingSystemsCheck && (bool)thisInst.TechMemor)
                         {
-                            TechMemor.SaveTech();
+                            thisInst.TechMemor.SaveTech();
                         }
                     }
                     catch { }
                 }
-                else if (AIState == 2)
+                else if (thisInst.AIState == 2)
                 {
                     if (newBlock.GetComponent<ModulePacemaker>())
                         tank.Holders.SetHeartbeatSpeed(TechHolders.HeartbeatSpeed.Fast);
                 }
             }
-            public void OnDetach(TankBlock newBlock, Tank tank)
+            public static void OnDetach(TankBlock newBlock, Tank tank)
             {
-                if (this.tank != tank)
-                    return;
-                EstTopSped = 1;
-                recentSpeed = 1;
-                PendingHeightCheck = true;
-                if (AIState == 1)
+                TankAIHelper thisInst = tank.GetComponent<TankAIHelper>();
+                thisInst.EstTopSped = 1;
+                thisInst.recentSpeed = 1;
+                thisInst.PendingHeightCheck = true;
+                thisInst.PendingSystemsCheck = true;
+                if (thisInst.AIState == 1)
                 {
                     try
                     {
                         if (!ManNetwork.IsNetworked)
                         {
-                            if ((bool)TechMemor)
+                            if ((bool)thisInst.TechMemor)
                             {
-                                PendingSystemsCheck = true;
-                                if (tank.blockman.LastRemovedBlocks.Contains(ManPointer.inst.targetVisible.block))
-                                    TechMemor.SaveTech();
+                                if (newBlock == ManPointer.inst.targetVisible.block && !thisInst.BoltsFired)
+                                {
+                                    thisInst.TechMemor.SaveTech();
+                                }
                             }
                         }
                         else if (ManNetwork.IsHost)
                         {
-                            if ((bool)TechMemor)
+                            if ((bool)thisInst.TechMemor)
                             {
-                                PendingSystemsCheck = true;
-                                if ((bool)lastPlayer)
-                                    if (lastEnemy != null && !BoltsFired)// only save when not in combat Or exploding bolts
-                                        TechMemor.SaveTech();
+                                if ((bool)thisInst.lastPlayer)
+                                    if (thisInst.lastEnemy != null && !thisInst.BoltsFired)// only save when not in combat Or exploding bolts
+                                    {
+                                        thisInst.TechMemor.SaveTech();
+                                    }
                             }
                         }
                         newBlock.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
@@ -1022,7 +1022,6 @@ namespace TAC_AI.AI
                 DelayedAnchorClock = 0;
                 foundBase = false;
                 foundGoal = false;
-                useInventory = false;
                 lastBasePos = null;
                 lastPlayer = null;
                 lastEnemy = null;
@@ -1120,8 +1119,8 @@ namespace TAC_AI.AI
             public void RefreshAI()
             {
                 AvoidStuff = true;
-                IdealRangeCombat = 25; 
-                AutoAnchor = false;     
+                IdealRangeCombat = 25;
+                AutoAnchor = false;
                 FullMelee = false;      // Should the AI ram the enemy?
                 AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
                 SecondAvoidence = false;// Should the AI avoid two techs at once?
@@ -1196,6 +1195,8 @@ namespace TAC_AI.AI
                         SideToThreat = true;
                     if (AIEx.SelfRepairAI)
                         allowAutoRepair = true;
+                    if (AIEx.InventoryUser)
+                        useInventory = true;
 
                     // Engadgement Ranges
                     if (AIEx.MinCombatRange > IdealRangeCombat)
@@ -1291,6 +1292,19 @@ namespace TAC_AI.AI
                     if (TechMemor.IsNotNull())
                         TechMemor.Remove();
                 }
+                try
+                {
+                    tank.AttachEvent.Unsubscribe(OnAttach);
+                    tank.DetachEvent.Unsubscribe(OnDetach);
+                }
+                catch { }
+
+                try
+                {
+                    tank.AttachEvent.Subscribe(OnAttach);
+                    tank.DetachEvent.Subscribe(OnDetach);
+                }
+                catch { }
             }
 
             public void OnSwitchAI(bool ResetRTS = true)
@@ -1963,17 +1977,16 @@ namespace TAC_AI.AI
 
             public void TryRepairAllied()
             {
-                if (allowAutoRepair && KickStart.AllowAISelfRepair)
+                if (allowAutoRepair && (KickStart.AllowAISelfRepair || tank.IsAnchored))
                 {
                     if (lastEnemy != null)
                     {   // Combat repairs (combat mechanic)
-                        if (AdvancedAI) // must be smrt
-                            AIERepair.RepairStepper(this, tank, TechMemor, true, true);
-                        else
-                            AIERepair.RepairStepper(this, tank, TechMemor, Combat: true);
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + " RepairCombat");
+                        AIERepair.RepairStepper(this, tank, TechMemor, AdvancedAI, Combat: true);
                     }
                     else
                     {   // Repairs in peacetime
+                        //Debug.Log("TACtical_AI: Tech " + tank.name + " Repair");
                         if (AdvancedAI) // faster for smrt
                             AIERepair.InstaRepair(tank, TechMemor, KickStart.AIClockPeriod);
                         else

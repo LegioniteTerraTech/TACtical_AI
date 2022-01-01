@@ -99,6 +99,7 @@ namespace TAC_AI
         public bool MTForAll = false;        // Should the AI listen to other Tech MT commands?
         public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's safety?
         public bool SelfRepairAI = false;   // Can the AI self-repair?
+        public bool InventoryUser = false;  // Can the AI use the player Inventory?
         //public bool AnimeAI = false;      // Do we attempt a hookup to the AnimeAI mod and display a character for this AI?
 
         public float MaxCombatRange = 100;  // Range to chase enemy

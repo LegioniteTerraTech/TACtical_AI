@@ -48,6 +48,8 @@ namespace TAC_AI
         //internal static bool testEnemyAI = true; // OBSOLETE
         internal static int EnemyTeamTechLimit { get { return 6 + MaxBasesPerTeam; } }// Allow the bases plus 6 additional capacity of the AIs' choosing
 
+        public static float SavedDefaultEnemyFragility;
+
         internal static int MaxEnemyWorldCapacity
         {
             get
@@ -166,6 +168,7 @@ namespace TAC_AI
         public static OptionKey modeSelectKey;
         public static OptionToggle commandClassic;
         public static OptionToggle betterAI;
+        public static OptionToggle aiSelfRepair;
         public static OptionRange dodgePeriod;
         public static OptionRange aiUpkeepRefresh; //AIClockPeriod
         public static OptionToggle muteNonPlayerBuildRacket;
@@ -245,7 +248,8 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "DisplayEnemyEvents");
             thisModConfig.BindConfig<RawTechExporter>(null, "ExportJSONInsteadOfRAWTECH");
-            thisModConfig.BindConfig<KickStart>(null, "difficulty");
+            thisModConfig.BindConfig<KickStart>(null, "difficulty"); 
+            thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepair");
             thisModConfig.BindConfig<KickStart>(null, "LandEnemyOverrideChanceSav");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
@@ -289,7 +293,9 @@ namespace TAC_AI
                 RetreatHotkey = retreatHotkey.SavedValue;
                 RetreatHotkeySav = (int)RetreatHotkey;
                 thisModConfig.WriteConfigJsonFile();
-            }); 
+            });
+            aiSelfRepair = new OptionToggle("Allow Mobile AIs to Build", TACAI, AllowAISelfRepair);
+            aiSelfRepair.onValueSaved.AddListener(() => { AllowAISelfRepair = aiSelfRepair.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             aiUpkeepRefresh = new OptionRange("AI Awareness Update Shoddiness", TACAI, AIClockPeriod, 5, 50, 5);
@@ -346,7 +352,17 @@ namespace TAC_AI
             displayEvents = new OptionToggle("Show Enemy AI Events", TACAIEnemies, DisplayEnemyEvents);
             displayEvents.onValueSaved.AddListener(() => { DisplayEnemyEvents = displayEvents.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             blockRecoveryChance = new OptionRange("Enemy Block Drop Chance", TACAIEnemies, EnemyBlockDropChance, 0, 100, 10);
-            blockRecoveryChance.onValueSaved.AddListener(() => { EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            blockRecoveryChance.onValueSaved.AddListener(() => { 
+                EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue;
+
+                if (EnemyBlockDropChance == 0)
+                {
+                    Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
+                }
+                else
+                    Globals.inst.moduleDamageParams.detachMeterFillFactor = SavedDefaultEnemyFragility;
+                thisModConfig.WriteConfigJsonFile(); 
+            });
             infEnemySupplies = new OptionToggle("All Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             //enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
@@ -388,7 +404,11 @@ namespace TAC_AI
                     thisModConfig.WriteConfigJsonFile();
                 });
             }
-
+            SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
+            if (EnemyBlockDropChance == 0)
+            {
+                Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
+            }
             OverrideManPop.ChangeToRagnarokPop(CommitDeathMode);
 
             // Now setup bases

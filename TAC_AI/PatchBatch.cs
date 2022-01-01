@@ -1009,6 +1009,7 @@ namespace TAC_AI
                             //ModuleAdd.AutoAnchor = true; // temp testing
                             ModuleAdd.Prospector = true;
                             ModuleAdd.Energizer = true;
+                            ModuleAdd.SelfRepairAI = true; // EXTREMELY POWERFUL
                             ModuleAdd.MTForAll = true;
                             ModuleAdd.MeleePreferred = true;
                         }
@@ -1040,6 +1041,7 @@ namespace TAC_AI
                             ModuleAdd.Astrotech = true;
                             ModuleAdd.AdvAvoidence = true;
                             ModuleAdd.SelfRepairAI = true; // EXTREMELY POWERFUL
+                            ModuleAdd.InventoryUser = true;
                             ModuleAdd.MinCombatRange = 60;
                             ModuleAdd.MaxCombatRange = 250;
                         }

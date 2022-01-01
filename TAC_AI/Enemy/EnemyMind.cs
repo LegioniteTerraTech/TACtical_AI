@@ -85,6 +85,9 @@ namespace TAC_AI.AI.Enemy
                 queueRemove = true;
                 if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
                     gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
+                Tank.DamageEvent.Unsubscribe(OnHit);
+                Tank.AttachEvent.Unsubscribe(OnBlockAdd);
+                Tank.DetachEvent.Unsubscribe(OnBlockLoss);
                 AIControl.MovementController.UpdateEnemyMind(null);
                 DestroyImmediate(this);
             }
@@ -156,12 +159,14 @@ namespace TAC_AI.AI.Enemy
             {
                 if (ManLicenses.inst.GetLicense(ManSpawn.inst.GetCorporation(blockLoss.BlockType)).CurrentLevel < ManLicenses.inst.GetBlockTier(blockLoss.BlockType) && !KickStart.AllowOverleveledBlockDrops)
                 {
+                    ManLooseBlocks.inst.RequestDespawnBlock(blockLoss, DespawnReason.Host);
                     blockLoss.damage.SelfDestruct(0.6f); // - no get illegal blocks
                 }
                 else
                 {
                     if (UnityEngine.Random.Range(0, 99) >= KickStart.EnemyBlockDropChance)
                     {
+                        ManLooseBlocks.inst.RequestDespawnBlock(blockLoss, DespawnReason.Host);
                         blockLoss.damage.SelfDestruct(0.75f);
                     }
                 }

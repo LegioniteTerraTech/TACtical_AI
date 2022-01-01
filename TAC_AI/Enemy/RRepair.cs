@@ -72,7 +72,7 @@ namespace TAC_AI.AI.Enemy
                         RepairAttempts = mind.TechMemor.ReturnContents().Count();
 
                     bool hardest = KickStart.EnemyBlockDropChance == 0;
-                    List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3), hardest);
+                    List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3), hardest && !ManNetwork.IsNetworked);
                     List<BlockTypes> typesMissing = AIERepair.GetMissingBlockTypes(mind.TechMemor, cBlocks);
 
                     while (RepairAttempts > 0)
@@ -96,8 +96,6 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
         {
-            if (!KickStart.AllowAISelfRepair)
-                return false;
             if (!(bool)mind.TechMemor)
             {
                 Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Tried to call EnemyRepairStepper when TechMemor is NULL");
@@ -123,7 +121,7 @@ namespace TAC_AI.AI.Enemy
                     thisInst.TechMemor.ReserveSuperGrabs = 9;
                 }
                 else if (tank.IsAnchored)
-                {
+                {   // Enemy bases must be allowed to build or they will 
                     if (mind.Provoked == 0)
                     {
                         if (!Super)
@@ -141,6 +139,8 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
+                    if (!KickStart.AllowAISelfRepair)
+                        return false;
                     if (mind.Provoked == 0)
                     {
                         if (!Super)
@@ -174,7 +174,7 @@ namespace TAC_AI.AI.Enemy
                         else if (AIERepair.SystemsCheck(tank, mind.TechMemor) && PreRepairPrep(tank, mind))
                         {   // Cheaper to check twice than to use GetMissingBlockTypes when not needed.
                             bool hardest = KickStart.EnemyBlockDropChance == 0;
-                            List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3), hardest);
+                            List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3), hardest && !ManNetwork.IsNetworked);
                             List<BlockTypes> typesMissing = AIERepair.GetMissingBlockTypes(mind.TechMemor, tank.blockman.IterateBlocks().ToList());
                             EnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing);
                             thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);

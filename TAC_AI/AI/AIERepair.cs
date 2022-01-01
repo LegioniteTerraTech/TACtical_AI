@@ -43,14 +43,14 @@ namespace TAC_AI.AI
         public static float RepairDelayCombatMultiBase = 5;
         // ALLIED
         // Basic AIs
-        public static short DelayNormal = 60;
+        public static short DelayNormal = 8;
         // Smarter AIs
-        public static short DelaySmart = 25;
+        public static short DelaySmart = 2;
         // ENEMY
         // General Enemy AIs
-        public static short DelayEnemy = 60;
+        public static short DelayEnemy = 60; // this is divided by 2 later on
         // Enemy Base AIs
-        public static short DelayBase = 30;
+        public static short DelayBase = 30; // Divided by difficulty
 
 
         // -- Calculated --
@@ -101,10 +101,14 @@ namespace TAC_AI.AI
                 thisInst.TechMemor = this;
                 rejectSaveAttempts = false;
                 if (DoFirstSave)
+                {
                     SaveTech();
+                    //Invoke("SaveTech", 0.01f);
+                }
             }
             public void Remove()
             {
+                //CancelInvoke();
                 gameObject.GetComponent<AIECore.TankAIHelper>().TechMemor = null;
                 DestroyImmediate(this);
             }
@@ -195,14 +199,14 @@ namespace TAC_AI.AI
             // Advanced
             public bool ChanceGrabBackBlock(TankBlock blockLoss)
             {
+                if (KickStart.EnemyBlockDropChance == 0)
+                    return false;
                 if (KickStart.CommitDeathMode)
                 {
                     if (UnityEngine.Random.Range(0, 500) < 150)
                     {
                         //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
                         ReserveSuperGrabs++;
-                        if (KickStart.EnemyBlockDropChance == 0)
-                            blockLoss.damage.SelfDestruct(0.75f);
                         return true;
                     }
                 }
@@ -212,8 +216,6 @@ namespace TAC_AI.AI
                     {
                         //Debug.Log("TACtical_AI: Enemy AI " + Tank.name + " reclaim attempt success");
                         ReserveSuperGrabs++;
-                        if (KickStart.EnemyBlockDropChance == 0)
-                            blockLoss.damage.SelfDestruct(0.75f);
                         return true;
                     }
                 }
@@ -704,7 +706,7 @@ namespace TAC_AI.AI
             bool success = false;
             if (SystemsCheck(tank, TechMemor) && PreRepairPrep(tank, TechMemor))
             {
-                List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+                //List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
                 if (RepairAttempts == 0)
                     RepairAttempts = TechMemor.ReturnContents().Count();
 
@@ -729,7 +731,12 @@ namespace TAC_AI.AI
         }
         public static bool RepairStepper(AIECore.TankAIHelper thisInst, Tank tank, DesignMemory TechMemor, bool AdvancedAI = false, bool Combat = false)
         {
-            if (thisInst.repairStepperClock >= 0)
+            if (thisInst.repairStepperClock == 1)
+            {
+                //thisInst.AttemptedRepairs = 0;
+                thisInst.repairStepperClock = 0;
+            }
+            else if (thisInst.repairStepperClock <= 0)
             {
                 int prevVal = thisInst.repairStepperClock;
                 if (Combat)
@@ -766,6 +773,7 @@ namespace TAC_AI.AI
                     }
                     else
                         thisInst.PendingSystemsCheck = false;
+                    Debug.Log("TACtical AI: RepairStepper(" + tank.name + ") - Pending check: " + thisInst.PendingSystemsCheck);
                 }
             }
             thisInst.repairStepperClock -= KickStart.AIClockPeriod;
@@ -831,7 +839,7 @@ namespace TAC_AI.AI
             }
             return typesMissing;
         }
-        public static List<TankBlock> FindBlocksNearbyTank(Tank tank, float radius, bool includeSD = false)
+        public static List<TankBlock> FindBlocksNearbyTank(Tank tank, float radius, bool RecoverFlashing = false)
         {
             List <TankBlock> fBlocks = new List<TankBlock>();
             foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, radius, new Bitfield<ObjectTypes>()))//new ObjectTypes[1]{ObjectTypes.Block})
@@ -840,16 +848,8 @@ namespace TAC_AI.AI
                 {
                     if (!(bool)foundBlock.block.tank && (!foundBlock.InBeam || (foundBlock.InBeam && foundBlock.holderStack.myHolder.block.LastTechTeam == tank.Team)) && Singleton.Manager<ManPointer>.inst.DraggingItem != foundBlock)
                     {
-                        if (!includeSD)
-                        {
-                            if (foundBlock.block.PreExplodePulse)
-                                continue; //explode? no thanks
-                        }
-                        else
-                        {
-                            if (foundBlock.block.GetComponent<Damageable>().Health <= 0)
-                                continue;
-                        }
+                        if (foundBlock.block.PreExplodePulse)
+                            continue; //explode? no thanks
                         //Debug.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
                         fBlocks.Add(foundBlock.block);
                     }
@@ -894,9 +894,11 @@ namespace TAC_AI.AI
             {
                 BlockTypes bType = typesMissing.ElementAt(step);
                 if (playerInventory)
+                {
                     if (!IsBlockStoredInInventory(tank, bType))
                         continue;
-                if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
+                }
+                else if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
                 {
                     if (!Enemy.RBases.PurchasePossible(bType, tank.Team))
                     {
@@ -922,6 +924,8 @@ namespace TAC_AI.AI
                 {
                     if (playerInventory)
                         IsBlockStoredInInventory(tank, bType, true);
+                    if (ManNetwork.IsNetworked)
+                        ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                     foundBlock.transform.Recycle();
                     typesMissing.RemoveAt(step);
                     attachAttempts--;
@@ -943,6 +947,8 @@ namespace TAC_AI.AI
                     IsBlockStoredInInventory(tank, bType, true);
                 //Debug.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
 
+                if (ManNetwork.IsNetworked)
+                    ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                 foundBlock.transform.Recycle();
                 // if everything fails, resort to timbuktu
                 //foundBlock.damage.SelfDestruct(0.1f);

@@ -629,9 +629,9 @@ namespace TAC_AI.World
             {
                 if (help != null)
                 {
-                    if (KeepBuilding || help.tank.IsAnchored)
-                        help.BoltsFired = true;
+                    help.BoltsFired = true;
                     help.tank.control.DetonateExplosiveBolt();
+                    help.PendingSystemsCheck = true;
                 }
             }
             Debug.Log("TACtical_AI: HandleSelectTerrain.");

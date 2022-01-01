@@ -39,6 +39,7 @@ namespace TAC_AI.Templates
         private static ManLicenses Licences;
 
         private static Tank playerTank;
+        internal static int trollTeam = -9001;
 
         /// <summary>
         /// AIRTECHS
@@ -373,6 +374,7 @@ namespace TAC_AI.Templates
 
         public static void TrySpawnTraderTroll(Vector3 pos)
         {   // Spawn trader trolls to make bigger techs fight harder
+
             Debug.Log("TACtical_AI: TrySpawnTraderTroll - Queued request at " + pos + "!");
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return;
@@ -406,7 +408,7 @@ namespace TAC_AI.Templates
                 if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos3))
                     return;
 
-                RawTechLoader.SpawnSpecificTypeTechSafe(pos3, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true);
+                RawTechLoader.SpawnSpecificTypeTechSafe(pos3, trollTeam, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true);
 
                 Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
                 try
@@ -422,7 +424,7 @@ namespace TAC_AI.Templates
 
             if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos2))
                 return;
-            RawTechLoader.SpawnSpecificTypeTechSafe(pos2, -1, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, forceInstant: true, isPopulation: true);
+            RawTechLoader.SpawnSpecificTypeTechSafe(pos2, trollTeam, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, forceInstant: true, isPopulation: true);
 
             Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
             try
