@@ -624,7 +624,6 @@ namespace TAC_AI.World
         }
         public void ExplodeUnitBolts()
         {
-            bool KeepBuilding = Input.GetKey(KickStart.MultiSelect);
             foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
             {
                 if (help != null)
@@ -736,53 +735,47 @@ namespace TAC_AI.World
         {
             if (!ManPauseGame.inst.IsPaused)
             {
-                if ((PlayerIsInRTS || PlayerRTSOverlay) && Input.GetMouseButtonDown(0) && !ManPointer.inst.DraggingItem)
+                if (!PlayerIsInRTS && Input.GetKeyDown(KickStart.CommandHotkey))
                 {
-                    isBoxSelecting = true;
-                    StartBoxSelectUnits();
+                    PlayerRTSOverlay = !PlayerRTSOverlay;
+                    SetVisOfAll(PlayerRTSOverlay);
                 }
-                if (PlayerIsInRTS)
+                if ((PlayerIsInRTS || PlayerRTSOverlay))
                 {
+                    if (Input.GetMouseButtonDown(0) && !ManPointer.inst.DraggingItem)
+                    {
+                        isBoxSelecting = true;
+                        StartBoxSelectUnits();
+                    }
                     if (Input.GetKeyDown(KickStart.CommandBoltsHotkey))
                     {
                         ExplodeUnitBolts();
                     }
-                }
-                else
-                {
-                    if (Input.GetKeyDown(KickStart.CommandHotkey))
+                    if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
+                        LastClickFrameTimer = 8;
+                    if (LastClickFrameTimer > 0)
                     {
-                        PlayerRTSOverlay = !PlayerRTSOverlay;
-                        SetVisOfAll(PlayerRTSOverlay);
-                    }
-                }
-                if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
-                    LastClickFrameTimer = 8;
-                if (LastClickFrameTimer > 0)
-                {
-                    if (Input.GetMouseButtonUp(0))
-                    {
-                        OnRTSEvent(ManPointer.Event.LMB, true);
-                    }
-                    else if (Input.GetMouseButtonUp(1))
-                    {
-                        OnRTSEvent(ManPointer.Event.RMB, true);
-                    }
-                    LastClickFrameTimer--;
-                }
-                else
-                {
-                    if (isBoxSelecting && Input.GetMouseButtonUp(0))
-                    {
-                        isBoxSelecting = false;
-                        if (!ManPointer.inst.DraggingItem)
+                        if (Input.GetMouseButtonUp(0))
                         {
-                            HandleBoxSelectUnits();
+                            OnRTSEvent(ManPointer.Event.LMB, true);
+                        }
+                        else if (Input.GetMouseButtonUp(1))
+                        {
+                            OnRTSEvent(ManPointer.Event.RMB, true);
+                        }
+                        LastClickFrameTimer--;
+                    }
+                    else
+                    {
+                        if (isBoxSelecting && Input.GetMouseButtonUp(0))
+                        {
+                            isBoxSelecting = false;
+                            if (!ManPointer.inst.DraggingItem)
+                            {
+                                HandleBoxSelectUnits();
+                            }
                         }
                     }
-                }
-                if (PlayerRTSOverlay || PlayerIsInRTS)
-                {
                     foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
                     {
                         if (help != null)
