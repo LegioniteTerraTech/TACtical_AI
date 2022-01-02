@@ -77,6 +77,7 @@ namespace TAC_AI.World
 
         private float Offset = 10;
 
+        private AIECore.TankAIHelper GrabbedThisFrame;
         public List<AIECore.TankAIHelper> LocalPlayerTechsControlled { get; private set; } = new List<AIECore.TankAIHelper>();
         public static void Initiate()
         {
@@ -278,7 +279,7 @@ namespace TAC_AI.World
                 if (!(bool)Tech)
                     continue;
                 AIECore.TankAIHelper TechUnit = Tech.GetComponent<AIECore.TankAIHelper>();
-                if (TechUnit != null)
+                if (TechUnit != null && GrabbedThisFrame != TechUnit)
                 {
                     if (Tech.Team == Singleton.Manager<ManPlayer>.inst.PlayerTeam)
                     {
@@ -352,6 +353,7 @@ namespace TAC_AI.World
                             if (!shift)
                                 ClearList();
                             LocalPlayerTechsControlled.Add(TechUnit);
+                            GrabbedThisFrame = TechUnit;
                             SetSelectHalo(TechUnit, true);
                             TechUnit.SetRTSState(true);
                             //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
@@ -370,6 +372,7 @@ namespace TAC_AI.World
                                 {
                                     ClearList();
                                     LocalPlayerTechsControlled.Add(TechUnit);
+                                    GrabbedThisFrame = TechUnit;
                                     SetSelectHalo(TechUnit, true);
                                     TechUnit.SetRTSState(true);
                                     //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
@@ -378,6 +381,7 @@ namespace TAC_AI.World
                                 else
                                 {
                                     LocalPlayerTechsControlled.Remove(TechUnit);
+                                    GrabbedThisFrame = TechUnit;
                                     SetSelectHalo(TechUnit, false);
                                     //Debug.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
                                     UnSelectUnitSFX();
@@ -393,6 +397,7 @@ namespace TAC_AI.World
                         if (LocalPlayerTechsControlled.Contains(TechUnit) && !shift)
                         {
                             LocalPlayerTechsControlled.Remove(TechUnit);
+                            GrabbedThisFrame = TechUnit;
                             SetSelectHalo(TechUnit, false);
                             //Debug.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
                             UnSelectUnitSFX();
@@ -405,6 +410,7 @@ namespace TAC_AI.World
                                 return;
                             }
                             LocalPlayerTechsControlled.Add(TechUnit);
+                            GrabbedThisFrame = TechUnit;
                             SetSelectHalo(TechUnit, true);
                             TechUnit.SetRTSState(true);
                             //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
@@ -427,9 +433,11 @@ namespace TAC_AI.World
                     {
                         if (help != null)
                         {
-                            help.RTSDestination = Vector3.zero;
-                            if (!ManNetwork.IsNetworked)
-                                help.lastEnemy = grabbedTech.visible;
+                            if (Input.GetKey(KickStart.MultiSelect))
+                                help.RTSDestination = Vector3.zero;
+                            if (ManNetwork.IsNetworked)
+                                NetworkHandler.TryBroadcastRTSAttack(help.tank.netTech.netId.Value, grabbedTech.netTech.netId.Value);
+                            help.lastEnemy = grabbedTech.visible;
                         }
                     }
                     Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.LockOn);
@@ -738,6 +746,7 @@ namespace TAC_AI.World
         {
             if (!ManPauseGame.inst.IsPaused)
             {
+                GrabbedThisFrame = null;
                 if (!PlayerIsInRTS && Input.GetKeyDown(KickStart.CommandHotkey))
                 {
                     PlayerRTSOverlay = !PlayerRTSOverlay;
@@ -745,15 +754,6 @@ namespace TAC_AI.World
                 }
                 if ((PlayerIsInRTS || PlayerRTSOverlay))
                 {
-                    if (Input.GetMouseButtonDown(0) && !ManPointer.inst.DraggingItem)
-                    {
-                        isBoxSelecting = true;
-                        StartBoxSelectUnits();
-                    }
-                    if (Input.GetKeyDown(KickStart.CommandBoltsHotkey))
-                    {
-                        ExplodeUnitBolts();
-                    }
                     if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
                         LastClickFrameTimer = 8;
                     if (LastClickFrameTimer > 0)
@@ -768,16 +768,22 @@ namespace TAC_AI.World
                         }
                         LastClickFrameTimer--;
                     }
-                    else
+                    if (Input.GetMouseButtonDown(0) && !ManPointer.inst.DraggingItem)
                     {
-                        if (isBoxSelecting && Input.GetMouseButtonUp(0))
+                        isBoxSelecting = true;
+                        StartBoxSelectUnits();
+                    }
+                    else if (isBoxSelecting && Input.GetMouseButtonUp(0))
+                    {
+                        isBoxSelecting = false;
+                        if (!ManPointer.inst.DraggingItem)
                         {
-                            isBoxSelecting = false;
-                            if (!ManPointer.inst.DraggingItem)
-                            {
-                                HandleBoxSelectUnits();
-                            }
+                            HandleBoxSelectUnits();
                         }
+                    }
+                    if (Input.GetKeyDown(KickStart.CommandBoltsHotkey))
+                    {
+                        ExplodeUnitBolts();
                     }
                     foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
                     {

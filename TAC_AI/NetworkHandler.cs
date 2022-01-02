@@ -19,6 +19,7 @@ namespace TAC_AI
         const TTMsgType AIRetreatRequest = (TTMsgType)4318;
         const TTMsgType AIRTSPosCommand = (TTMsgType)4319;
         const TTMsgType AIRTSPosControl = (TTMsgType)4320;
+        const TTMsgType AIRTSAttack = (TTMsgType)4321;
 
 
         public class AITypeChangeMessage : MessageBase
@@ -114,6 +115,29 @@ namespace TAC_AI
             public uint netTechID;
             public bool RTSControl = false;
         }
+        public class AIRTSAttackComm : MessageBase
+        {
+            public AIRTSAttackComm() { }
+            public AIRTSAttackComm(uint netTechID, uint netTechIDTarget)
+            {
+                this.netTechID = netTechID;
+                this.targetNetTechID = netTechIDTarget;
+            }
+            public override void Deserialize(NetworkReader reader)
+            {
+                netTechID = reader.ReadUInt32();
+                targetNetTechID = reader.ReadUInt32();
+            }
+
+            public override void Serialize(NetworkWriter writer)
+            {
+                writer.Write(netTechID);
+                writer.Write(targetNetTechID);
+            }
+
+            public uint netTechID;
+            public uint targetNetTechID;
+        }
 
 
 
@@ -153,9 +177,9 @@ namespace TAC_AI
             if (HostExists) try
                 {
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRTSPosControl, new AIRTSControlMessage(netTechID, isRTS), Host);
-                    Debug.Log("Sent new TryBroadcastRTSCommand update to all");
+                    Debug.Log("Sent new TryBroadcastRTSControl update to all");
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSCommand!"); }
+                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSControl!"); }
         }
         public static void OnClientAcceptRTSControl(NetworkMessage netMsg)
         {
@@ -165,11 +189,38 @@ namespace TAC_AI
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
                 find.tech.GetComponent<AIECore.TankAIHelper>().isRTSControlled = reader.RTSControl;
-                Debug.Log("TACtical_AI: Received new TryBroadcastRTSCommand update, RTS control is " + reader.RTSControl);
+                Debug.Log("TACtical_AI: Received new TryBroadcastRTSControl update, RTS control is " + reader.RTSControl);
             }
             catch
             {
-                Debug.Log("TACtical_AI: OnClientAcceptRTSCommand Receive failiure! Could not decode intake!?");
+                Debug.Log("TACtical_AI: OnClientAcceptRTSControl Receive failiure! Could not decode intake!?");
+            }
+        }
+
+        // AIRTSAttackComm
+        public static void TryBroadcastRTSAttack(uint netTechID, uint TargetNetTechID)
+        {
+            if (HostExists) try
+                {
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRTSAttack, new AIRTSAttackComm(netTechID, TargetNetTechID), Host);
+                    Debug.Log("Sent new TryBroadcastRTSAttack update to all");
+                }
+                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSAttack!"); }
+        }
+        public static void OnClientAcceptRTSAttack(NetworkMessage netMsg)
+        {
+            var reader = new AIRTSAttackComm();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
+                NetTech targeting = ManNetTechs.inst.FindTech(reader.targetNetTechID);
+                find.tech.GetComponent<AIECore.TankAIHelper>().lastEnemy = targeting.tech.visible;
+                Debug.Log("TACtical_AI: Received new TryBroadcastRTSAttack update, RTS target is " + targeting.tech.name);
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: OnClientAcceptRTSAttack Receive failiure! Could not decode intake!?");
             }
         }
 

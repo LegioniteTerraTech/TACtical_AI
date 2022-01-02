@@ -108,7 +108,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (pilot.PerformDiveAttack == 2)
                     {
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
-                        if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
+                        if (pilot.Helper.GetSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
                             pilot.AdvisedThrottle = 1;
                         else
                             pilot.AdvisedThrottle = 0;
@@ -161,7 +161,7 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {   // Moving to target
                             //Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
-                            if (tank.GetForwardSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
+                            if (pilot.Helper.GetSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
                                 pilot.AdvisedThrottle = 1;
                             else
                                 pilot.AdvisedThrottle = 0;

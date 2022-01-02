@@ -112,17 +112,13 @@ namespace TAC_AI.AI
         {
             // Determines the weapons actions and aiming of the AI
             if (thisInst.lastEnemy != null)
-            {
-                if (thisInst.RTSDestination != Vector3.zero)
-                    thisInst.lastEnemy = GetTarget(thisInst, tank);
-                // else we focus fire
+            {   // focus fire like Grudge
                 thisInst.DANGER = true;
             }
             else
             {
                 thisInst.DANGER = false;
-                if (thisInst.RTSDestination != Vector3.zero)
-                    thisInst.lastEnemy = GetTarget(thisInst, tank);
+                thisInst.lastEnemy = GetTarget(thisInst, tank);
             }
         }
 

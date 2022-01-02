@@ -1864,6 +1864,23 @@ namespace TAC_AI.AI
                 }
             }
 
+            public float GetSpeed()
+            {
+                if (tank.rbody.IsNull())
+                    return 0; // Slow/Stopped
+                if (IsTryingToUnjam)
+                    return 0;
+                if (Attempt3DNavi || MovementController is AIControllerAir)
+                {
+                    return tank.rbody.velocity.magnitude;
+                }
+                else
+                {
+                    if (!(bool)tank.rootBlockTrans)
+                        return 0; // There's some sort of error in play
+                    return tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z;
+                }
+            }
             public bool IsTechMoving(float minSpeed)
             {
                 if (tank.rbody.IsNull())
@@ -2038,7 +2055,7 @@ namespace TAC_AI.AI
                         PivotOnly = true;
                         if (unanchorCountdown > 0)
                             unanchorCountdown--;
-                        if ((AutoAnchor || isPlayer) && tank.Anchors.NumPossibleAnchors >= 1)
+                        if (AutoAnchor && !isPlayer && tank.Anchors.NumPossibleAnchors >= 1)
                         {
                             if (tank.Anchors.NumIsAnchored > 0)
                             {
@@ -2054,7 +2071,7 @@ namespace TAC_AI.AI
                         DelayedAnchorClock = 0;
                         if (unanchorCountdown > 0)
                             unanchorCountdown--;
-                        if ((AutoAnchor || isPlayer) && tank.Anchors.NumPossibleAnchors >= 1)
+                        if (AutoAnchor && !isPlayer && tank.Anchors.NumPossibleAnchors >= 1)
                         {
                             if (tank.Anchors.NumIsAnchored > 0)
                             {
@@ -2063,7 +2080,7 @@ namespace TAC_AI.AI
                                 JustUnanchored = true;
                             }
                         }
-                        if (!(AutoAnchor || isPlayer) && tank.IsAnchored)
+                        if (!AutoAnchor && !isPlayer && tank.IsAnchored)
                         {
                             BGeneral.RTSCombat(this, tank);
                             return;
@@ -2198,7 +2215,7 @@ namespace TAC_AI.AI
                                     DirectorUpdateClock = 0;
                                 }
 
-                                recentSpeed = tank.GetForwardSpeed();
+                                recentSpeed = GetSpeed();
                                 if (recentSpeed < 1)
                                     recentSpeed = 1;
                                 OperationsUpdateClock++;
@@ -2245,7 +2262,7 @@ namespace TAC_AI.AI
                                 else
                                     updateCA = false;
 
-                                recentSpeed = tank.GetForwardSpeed();
+                                recentSpeed = GetSpeed();
                                 if (recentSpeed < 1)
                                     recentSpeed = 1;
                                 OperationsUpdateClock++;
@@ -2298,7 +2315,7 @@ namespace TAC_AI.AI
                                     DirectorUpdateClock = 0;
                                 }
 
-                                recentSpeed = tank.GetForwardSpeed();
+                                recentSpeed = GetSpeed();
                                 if (recentSpeed < 1)
                                     recentSpeed = 1;
                                 OperationsUpdateClock++;
@@ -2345,7 +2362,7 @@ namespace TAC_AI.AI
                                 else
                                     updateCA = false;
 
-                                recentSpeed = tank.GetForwardSpeed();
+                                recentSpeed = GetSpeed();
                                 if (recentSpeed < 1)
                                     recentSpeed = 1;
                                 OperationsUpdateClock++;
