@@ -300,9 +300,12 @@ namespace TAC_AI.World
             if (!shift)
             {
                 ClearList();
-                LocalPlayerTechsControlled.Add(GrabbedThisFrame);
-                SetSelectHalo(GrabbedThisFrame, true);
-                GrabbedThisFrame.SetRTSState(true);
+                if (GrabbedThisFrame.IsNotNull())
+                {
+                    LocalPlayerTechsControlled.Add(GrabbedThisFrame);
+                    SetSelectHalo(GrabbedThisFrame, true);
+                    GrabbedThisFrame.SetRTSState(true);
+                }
             }
             foreach (Tank Tech in ManTechs.inst.CurrentTechs)
             {
