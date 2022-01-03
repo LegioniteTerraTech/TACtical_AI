@@ -35,6 +35,7 @@ namespace TAC_AI
 
 
         public static bool UseClassicRTSControls = false;//
+        public static bool UseNumpadForGrouping = false;//
         internal static KeyCode RetreatHotkey = KeyCode.I;// The key to press to retreat!
         public static int RetreatHotkeySav = (int)RetreatHotkey;//
         internal static KeyCode CommandHotkey = KeyCode.K;// The key to press to toggle RTS
@@ -192,6 +193,7 @@ namespace TAC_AI
         public static OptionRange enemyMaxCount;
         public static OptionToggle ragnarok;
         public static OptionToggle enemyStrategic;
+        public static OptionToggle useKeypadForGroups;
         public static OptionToggle enemyBaseCulling;
 
 
@@ -269,7 +271,8 @@ namespace TAC_AI
 
             // RTS
             thisModConfig.BindConfig<KickStart>(null, "AllowStrategicAI");
-            thisModConfig.BindConfig<KickStart>(null, "UseClassicRTSControls"); 
+            thisModConfig.BindConfig<KickStart>(null, "UseClassicRTSControls");
+            thisModConfig.BindConfig<KickStart>(null, "UseNumpadForGrouping");
             thisModConfig.BindConfig<KickStart>(null, "CommandHotkeySav"); 
             thisModConfig.BindConfig<KickStart>(null, "CommandBoltsHotkeySav");
             thisModConfig.BindConfig<KickStart>(null, "MultiSelectKeySav");
@@ -310,6 +313,8 @@ namespace TAC_AI
             enemyStrategic.onValueSaved.AddListener(() => { AllowStrategicAI = enemyStrategic.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             commandClassic = new OptionToggle("Use Classic RTS Controls", TACAIRTS, UseClassicRTSControls);
             commandClassic.onValueSaved.AddListener(() => { UseClassicRTSControls = commandClassic.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            useKeypadForGroups = new OptionToggle("Use Keypad to Assign Grouping - Check Num Lock", TACAIRTS, UseNumpadForGrouping);
+            useKeypadForGroups.onValueSaved.AddListener(() => { UseNumpadForGrouping = useKeypadForGroups.SavedValue; thisModConfig.WriteConfigJsonFile(); });
             commandHotKey = new OptionKey("Click Command Button", TACAIRTS, CommandHotkey);
             commandHotKey.onValueSaved.AddListener(() =>
             {

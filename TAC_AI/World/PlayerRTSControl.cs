@@ -79,6 +79,20 @@ namespace TAC_AI.World
 
         private AIECore.TankAIHelper GrabbedThisFrame;
         public List<AIECore.TankAIHelper> LocalPlayerTechsControlled { get; private set; } = new List<AIECore.TankAIHelper>();
+
+        public List<List<AIECore.TankAIHelper>> SavedGroups = new List<List<AIECore.TankAIHelper>> {
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()},
+            {new List<AIECore.TankAIHelper>()}
+        };
+        
         public static void Initiate()
         {
             if (!KickStart.AllowStrategicAI)
@@ -131,7 +145,18 @@ namespace TAC_AI.World
         public static void OnWorldReset()
         {
             if ((bool)inst)
+            {
                 inst.LocalPlayerTechsControlled.Clear();
+                int numOp = inst.SavedGroups.Count;
+                try
+                {
+                    for (int step = 0; step < numOp; step++)
+                    {
+                        inst.SavedGroups.ElementAt(step).Clear();
+                    }
+                }
+                catch { }
+            }
         }
         public static void OnCameraChange(CameraManager.Camera camera1, CameraManager.Camera camera2)
         {
@@ -328,6 +353,74 @@ namespace TAC_AI.World
             {
                 SelectUnitSFX();
             }
+        }
+        public void HandleGroups()
+        {
+            int groupNum = -1;
+            if (KickStart.UseNumpadForGrouping)
+            {
+                for (int step = (int)KeyCode.Keypad0; step <= (int)KeyCode.Keypad9; step++)
+                {
+                    if (Input.GetKeyDown((KeyCode)step))
+                    {
+                        groupNum = step - (int)KeyCode.Keypad0;
+                    }
+                }
+            }
+            else
+            {
+                for (int step = (int)KeyCode.Alpha0; step <= (int)KeyCode.Alpha9; step++)
+                {
+                    if (Input.GetKeyDown((KeyCode)step))
+                    {
+                        groupNum = step - (int)KeyCode.Alpha0;
+                    }
+                }
+            }
+            if (groupNum < 0)
+            {
+                return;
+            }
+            bool working = false;
+            if (LocalPlayerTechsControlled.Count > 0 && (Input.GetKey(KickStart.MultiSelect) || SavedGroups[groupNum].Count == 0))
+            {
+                PurgeAllNull();
+                SavedGroups[groupNum].Clear();
+                SavedGroups[groupNum].AddRange(LocalPlayerTechsControlled);
+                Debug.Log("TACtical_AI: GROUP SAVED " + groupNum + ".");
+                working = true;
+            }
+            else
+            {
+                ClearList();
+                Debug.Log("TACtical_AI: GROUP SELECTED " + groupNum + ".");
+                foreach (AIECore.TankAIHelper TechUnit in SavedGroups[groupNum])
+                {
+                    if (!(bool)TechUnit)
+                        continue;
+                    try
+                    {
+                        if (!PlayerIsInRTS && TechUnit.tank == Singleton.playerTank)
+                        {
+                            continue;
+                        }
+                        if (!(PlayerIsInRTS && TechUnit.tank == Singleton.playerTank) && TechUnit.AIState != 1)
+                            continue;
+
+                        if (!LocalPlayerTechsControlled.Contains(TechUnit))
+                        {
+                            working = true;
+                            LocalPlayerTechsControlled.Add(TechUnit);
+                            SetSelectHalo(TechUnit, true);
+                            TechUnit.SetRTSState(true);
+                            Debug.Log("TACtical_AI: Selected Tank " + TechUnit.tank.name + ".");
+                        }
+                    }
+                    catch { }
+                }
+            }
+            if (working)
+                SelectUnitSFX();
         }
 
         public void HandleSelectTank(RaycastHit rayman)
@@ -781,6 +874,7 @@ namespace TAC_AI.World
                             HandleBoxSelectUnits();
                         }
                     }
+                    HandleGroups();
                     if (Input.GetKeyDown(KickStart.CommandBoltsHotkey))
                     {
                         ExplodeUnitBolts();
