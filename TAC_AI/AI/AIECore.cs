@@ -2029,7 +2029,7 @@ namespace TAC_AI.AI
 
                     if (tank.wheelGrounded)
                     {
-                        if (!IsTechMoving(EstTopSped / 8))
+                        if (!IsTechMoving(EstTopSped / 4))
                             TryHandleObstruction(!Feedback, lastRange, true, true);
                         else
                             SettleDown();
@@ -2086,7 +2086,7 @@ namespace TAC_AI.AI
                             return;
                         }
                         float driveVal = Mathf.Min(1, lastRange / 10);
-                        if (!IsTechMovingActual((EstTopSped * driveVal) / 6) && lastRange > 32)
+                        if (!IsTechMovingActual((EstTopSped * driveVal) / 4) && lastRange > 32)
                         {   //OBSTRUCTION MANAGEMENT
                             Urgency += KickStart.AIClockPeriod / 2;
                             if (Urgency > 10)

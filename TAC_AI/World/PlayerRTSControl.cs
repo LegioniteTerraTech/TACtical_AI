@@ -298,7 +298,10 @@ namespace TAC_AI.World
 
             bool shift = Input.GetKey(KickStart.MultiSelect);
             if (!shift)
+            {
                 ClearList();
+                LocalPlayerTechsControlled.Add(GrabbedThisFrame);
+            }
             foreach (Tank Tech in ManTechs.inst.CurrentTechs)
             {
                 if (!(bool)Tech)
@@ -840,12 +843,13 @@ namespace TAC_AI.World
             if (!ManPauseGame.inst.IsPaused)
             {
                 GrabbedThisFrame = null;
+                bool isRTSState = PlayerIsInRTS || PlayerRTSOverlay;
                 if (!PlayerIsInRTS && Input.GetKeyDown(KickStart.CommandHotkey))
                 {
                     PlayerRTSOverlay = !PlayerRTSOverlay;
-                    SetVisOfAll(PlayerRTSOverlay);
+                    SetVisOfAll(isRTSState);
                 }
-                if ((PlayerIsInRTS || PlayerRTSOverlay))
+                if (isRTSState)
                 {
                     if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
                         LastClickFrameTimer = 8;
