@@ -11,8 +11,14 @@ namespace TAC_AI.AI.AlliedOperations
 
         public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
         {
+            Vector3 veloFlat = Vector3.zero;
+            if ((bool)tank.rbody)   // So that drifting is minimized
+            {
+                veloFlat = tank.rbody.velocity;
+                veloFlat.y = 0;
+            }
             //The Handler that tells the Tank (Prospector) what to do movement-wise
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
+            float dist = (tank.boundsCentreWorldNoCheck + veloFlat - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
             thisInst.AvoidStuff = true;

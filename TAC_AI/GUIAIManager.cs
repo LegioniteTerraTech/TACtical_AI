@@ -351,15 +351,15 @@ namespace TAC_AI
         {
             if (lastTank.IsNull())
                 return;
-            bool isShiftNotHeld = !Input.GetKey(KickStart.MultiSelect);
             if (ManNetwork.IsNetworked)
             {
                 try
                 {
                     NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, dediAI);
 
-                    lastTank.OnSwitchAI(isShiftNotHeld);
+                    lastTank.OnSwitchAI();
                     lastTank.DediAI = dediAI;
+                    lastTank.ForceAllAIsToEscort();
                     fetchAI = dediAI;
                     lastTank.TestForFlyingAIRequirement();
 
@@ -373,20 +373,21 @@ namespace TAC_AI
             }
             else
             {
-                lastTank.OnSwitchAI(isShiftNotHeld);
+                lastTank.OnSwitchAI();
                 lastTank.DediAI = dediAI;
+                lastTank.ForceAllAIsToEscort();
                 fetchAI = dediAI;
                 lastTank.TestForFlyingAIRequirement();
 
                 TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
                 overlay.Update();
             }
-            inst.TrySetOptionRTS(dediAI, isShiftNotHeld);
+            inst.TrySetOptionRTS(dediAI);
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
             CloseSubMenuClickable();
         }
-        private void TrySetOptionRTS(AIType dediAI, bool ShiftNotHeld)
+        private void TrySetOptionRTS(AIType dediAI)
         {
             if (!(bool)PlayerRTSControl.inst)
                 return;
@@ -395,26 +396,21 @@ namespace TAC_AI
                 PlayerRTSControl.inst.PurgeAllNull();
                 int select = 0;
                 int amount = PlayerRTSControl.inst.LocalPlayerTechsControlled.Count;
-                for (int step = 0; amount > step; )
+                for (int step = 0; amount > step; step++)
                 {
                     AIECore.TankAIHelper tankInst = PlayerRTSControl.inst.LocalPlayerTechsControlled.ElementAt(step);
                     if ((bool)tankInst && tankInst != lastTank)
                     {
                         select++;
-                        SetOptionCase(tankInst, dediAI, ShiftNotHeld);
-                        if (ShiftNotHeld)
-                        {
-                            amount--;
-                            continue;
-                        }
+                        SetOptionCase(tankInst, dediAI);
                     }
-                    step++;
                 }
+                Debug.Log("TACtical_AI: TrySetOptionRTS - Set " + amount + " Techs to mode " + dediAI);
                 if (select > 0)
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionCase(AIECore.TankAIHelper tankInst, AIType dediAI, bool ShiftNotHeld)
+        private static void SetOptionCase(AIECore.TankAIHelper tankInst, AIType dediAI)
         {
             if (tankInst.IsNull())
                 return;
@@ -466,7 +462,7 @@ namespace TAC_AI
                 try
                 {
                     NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, locDediAI);
-                    tankInst.OnSwitchAI(ShiftNotHeld);
+                    tankInst.OnSwitchAI();
                     tankInst.ForceAllAIsToEscort();
                     tankInst.DediAI = locDediAI;
                     tankInst.TestForFlyingAIRequirement();
@@ -481,7 +477,7 @@ namespace TAC_AI
             }
             else
             {
-                tankInst.OnSwitchAI(ShiftNotHeld);
+                tankInst.OnSwitchAI();
                 tankInst.ForceAllAIsToEscort();
                 tankInst.DediAI = locDediAI;
                 tankInst.TestForFlyingAIRequirement();

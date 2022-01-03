@@ -1307,7 +1307,7 @@ namespace TAC_AI.AI
                 catch { }
             }
 
-            public void OnSwitchAI(bool ResetRTS = true)
+            public void OnSwitchAI()
             {
                 AvoidStuff = true;
                 EstTopSped = 1;
@@ -1320,12 +1320,9 @@ namespace TAC_AI.AI
                 theBase = null;
                 IsTryingToUnjam = false;
                 JustUnanchored = false;
-                if (ResetRTS)
-                {
-                    isRTSControlled = false;
-                    tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
-                    //World.PlayerRTSControl.ReleaseControl(this);
-                }
+                isRTSControlled = false;
+                tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
+                //World.PlayerRTSControl.ReleaseControl(this);
             }
             public void ForceAllAIsToEscort(bool Do = true)
             {
@@ -2015,7 +2012,13 @@ namespace TAC_AI.AI
 
             public void RunRTSNavi(bool isPlayer = false)
             {   // Alternative Operator for RTS
-                lastRange = (tank.boundsCentreWorldNoCheck - lastDestination).magnitude;
+                Vector3 veloFlat = Vector3.zero;
+                if ((bool)tank.rbody)   // So that drifting is minimized
+                {
+                    veloFlat = tank.rbody.velocity;
+                    veloFlat.y = 0;
+                }
+                lastRange = (tank.boundsCentreWorldNoCheck + veloFlat - lastDestination).magnitude;
 
                 //ProceedToObjective = true;
                 if (DediAI == AIType.Aviator)
