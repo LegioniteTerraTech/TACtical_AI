@@ -419,7 +419,7 @@ namespace TAC_AI.AI
                     return;
                 }
                 thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.RTSDestination, thisInst);
-                this.AICore.DriveDirector();
+                this.AICore.DriveDirectorRTS();
             }
             else if (thisInst.AIState == 2) //enemy
             {

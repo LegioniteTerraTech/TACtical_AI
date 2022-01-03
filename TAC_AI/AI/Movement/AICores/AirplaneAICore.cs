@@ -275,6 +275,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (combat)
             {
                 pilot.LowerEngines = true;
+                pilot.AirborneDest = this.pilot.Helper.lastDestination;
             }
             else
             {
@@ -286,7 +287,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                    pilot.AirborneDest = this.pilot.Helper.RTSDestination;
                 }
             }
 

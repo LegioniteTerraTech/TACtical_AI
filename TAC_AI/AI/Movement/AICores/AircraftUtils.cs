@@ -151,10 +151,11 @@ namespace TAC_AI.AI.Movement.AICores
             }
             //Debug.Log("TACtical_AI: upwards direction " + tank.name + "  is " + direct.y);
 
-            // Blue is the target destination, Red is up  
+// Blue is the target destination, Red is up  
+#if DEBUG
             Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, Navi3DDirect * pilot.Helper.lastTechExtents, new Color(0, 0, 1));
             Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, direct * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
-
+#endif
             return direct; // IS IN WORLD SPACE
         }
         public static void AngleTowards(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
