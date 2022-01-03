@@ -63,7 +63,7 @@ namespace TAC_AI.Templates
         const int SpaceshipChance = 2;     // Out of 100
         const float AirSpawnDist = 400;
         const float AirDespawnDist = 475;
-        const float AirSpawnInterval = 30;
+        internal static float AirSpawnInterval = 30;
 
 
         public static void Initiate()

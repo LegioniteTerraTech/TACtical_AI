@@ -1631,15 +1631,12 @@ namespace TAC_AI
         {
             private static void Prefix(TankControl __instance, ref TankControl other)
             {
-                if (__instance.Tech.blockman.IterateBlockComponents<ModuleWheels>().Count() > 0 || __instance.Tech.blockman.IterateBlockComponents<ModuleHover>().Count() > 0)
-                    __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.Escort;
-                else
+                try
                 {
-                    if (__instance.Tech.blockman.IterateBlockComponents<ModuleWeapon>().Count() > 0)
-                        __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.MTTurret;
-                    else
-                        __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>().DediAI = AIType.MTSlave;
+                    other.gameObject.AddComponent<AIESplitHandler>().Setup(other.Tech, __instance.Tech);
                 }
+                catch
+                { }
             }
         }
 

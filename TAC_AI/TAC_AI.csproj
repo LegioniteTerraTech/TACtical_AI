@@ -123,6 +123,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AI\AIESplitHandler.cs" />
     <Compile Include="AI\AlliedOperations\BAssassin.cs" />
     <Compile Include="AI\AlliedOperations\BEnergizer.cs" />
     <Compile Include="AI\AlliedOperations\BScrapper.cs" />

@@ -85,6 +85,7 @@ namespace TAC_AI
         }
         public static int LandEnemyOverrideChanceSav = 10;
         public static bool AllowAirEnemiesToSpawn = true;
+        public static float AirEnemiesSpawnRate = 1;
         public static bool AllowSeaEnemiesToSpawn = true;
         public static bool TryForceOnlyPlayerSpawns = false;
         public static bool DesignsToLog = false;
@@ -186,7 +187,7 @@ namespace TAC_AI
         //public static OptionToggle enemyBaseExpand;// OBSOLETE
         public static OptionRange enemyExpandLim;
         // public static OptionToggle enemyLandSpawn;
-        public static OptionToggle enemyAirSpawn;
+        public static OptionRange enemyAirSpawn;
         public static OptionToggle enemySeaSpawn;
         public static OptionToggle playerMadeTechsOnly;
         public static OptionRange enemyBaseCount;
@@ -260,7 +261,7 @@ namespace TAC_AI
             //thisModConfig.BindConfig<KickStart>(null, "AllowEnemyBaseExpand");    // OBSOLETE
             thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
             thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
-            thisModConfig.BindConfig<KickStart>(null, "AllowAirEnemiesToSpawn");
+            thisModConfig.BindConfig<KickStart>(null, "AirEnemiesSpawnRate");
             //thisModConfig.BindConfig<KickStart>(null, "AllowOverleveledBlockDrops");
             thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
             thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
@@ -393,8 +394,18 @@ namespace TAC_AI
                 });
                 landEnemyChangeChance = new OptionRange("Custom Land Enemy Chance", TACAIEnemiesPop, LandEnemyOverrideChance, 0, 100, 5);
                 landEnemyChangeChance.onValueSaved.AddListener(() => { LandEnemyOverrideChance = (int)landEnemyChangeChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                enemyAirSpawn = new OptionToggle("Enemy Aircraft Spawning", TACAIEnemiesPop, AllowAirEnemiesToSpawn);
-                enemyAirSpawn.onValueSaved.AddListener(() => { AllowAirEnemiesToSpawn = enemyAirSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                enemyAirSpawn = new OptionRange("Enemy Aircraft Spawn Rate [0x - 2x - 4x]", TACAIEnemiesPop, AirEnemiesSpawnRate, 0, 4, 0.5f);
+                enemyAirSpawn.onValueSaved.AddListener(() => { 
+                    AirEnemiesSpawnRate = (int)enemyAirSpawn.SavedValue;
+                    if (AirEnemiesSpawnRate == 0)
+                        AllowAirEnemiesToSpawn = false;
+                    else
+                    {
+                        SpecialAISpawner.AirSpawnInterval = 60 / AirEnemiesSpawnRate;
+                        AllowAirEnemiesToSpawn = true;
+                    }
+                    thisModConfig.WriteConfigJsonFile(); 
+                });
                 enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemiesPop, AllowSeaEnemiesToSpawn);
                 enemySeaSpawn.onValueSaved.AddListener(() => { AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
                 playerMadeTechsOnly = new OptionToggle("Try Spawning From Raw Enemy Folder Only", TACAIEnemiesPop, TryForceOnlyPlayerSpawns);
@@ -415,6 +426,14 @@ namespace TAC_AI
                 Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
             }
             OverrideManPop.ChangeToRagnarokPop(CommitDeathMode);
+
+            if (AirEnemiesSpawnRate == 0)
+                AllowAirEnemiesToSpawn = false;
+            else
+            {
+                SpecialAISpawner.AirSpawnInterval = 60 / AirEnemiesSpawnRate;
+                AllowAirEnemiesToSpawn = true;
+            }
 
             // Now setup bases
             //if (!isBlockInjectorPresent)

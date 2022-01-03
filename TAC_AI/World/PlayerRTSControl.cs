@@ -301,6 +301,8 @@ namespace TAC_AI.World
             {
                 ClearList();
                 LocalPlayerTechsControlled.Add(GrabbedThisFrame);
+                SetSelectHalo(GrabbedThisFrame, true);
+                GrabbedThisFrame.SetRTSState(true);
             }
             foreach (Tank Tech in ManTechs.inst.CurrentTechs)
             {
@@ -761,12 +763,18 @@ namespace TAC_AI.World
             if (LocalPlayerTechsControlled.Count > 0)
                 Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.SendToInventory);
         }
+
+        private bool visEnabled = true;
         public void SetVisOfAll(bool visibleSelect)
         {
-            foreach (AIECore.TankAIHelper TechUnit in LocalPlayerTechsControlled)
+            if (visEnabled != visibleSelect)
             {
-                if (TechUnit != null)
-                    SetSelectHalo(TechUnit, visibleSelect);
+                foreach (AIECore.TankAIHelper TechUnit in LocalPlayerTechsControlled)
+                {
+                    if (TechUnit != null)
+                        SetSelectHalo(TechUnit, visibleSelect);
+                }
+                visEnabled = visibleSelect;
             }
         }
 
@@ -864,8 +872,8 @@ namespace TAC_AI.World
                 if (!PlayerIsInRTS && Input.GetKeyDown(KickStart.CommandHotkey))
                 {
                     PlayerRTSOverlay = !PlayerRTSOverlay;
-                    SetVisOfAll(isRTSState);
                 }
+                SetVisOfAll(isRTSState);
                 if (isRTSState)
                 {
                     if (Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1))
