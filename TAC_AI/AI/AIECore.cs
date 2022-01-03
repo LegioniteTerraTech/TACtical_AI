@@ -1324,7 +1324,7 @@ namespace TAC_AI.AI
                 {
                     isRTSControlled = false;
                     tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
-                    World.PlayerRTSControl.ReleaseControl(this);
+                    //World.PlayerRTSControl.ReleaseControl(this);
                 }
             }
             public void ForceAllAIsToEscort(bool Do = true)

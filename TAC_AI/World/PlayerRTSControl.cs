@@ -519,6 +519,7 @@ namespace TAC_AI.World
         public void HandleSelectTargetTank(RaycastHit rayman)
         {
             Debug.Log("TACtical_AI: HandleSelectTargetTank.");
+            PurgeAllNull();
 
             Tank grabbedTech = rayman.collider.transform.root.GetComponent<Tank>();
             if ((bool)grabbedTech)
@@ -529,6 +530,7 @@ namespace TAC_AI.World
                     {
                         if (help != null)
                         {
+                            help.SetRTSState(true);
                             if (Input.GetKey(KickStart.MultiSelect))
                                 help.RTSDestination = Vector3.zero;
                             if (ManNetwork.IsNetworked)
@@ -538,9 +540,8 @@ namespace TAC_AI.World
                     }
                     Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.LockOn);
                 }
-                else
+                else if (grabbedTech.IsFriendly(Singleton.Manager<ManPlayer>.inst.PlayerTeam))
                 {
-                    PurgeAllNull();
                     if (grabbedTech.IsPlayer)
                     {   // Reset to working order
                         foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
@@ -556,22 +557,34 @@ namespace TAC_AI.World
                     }
                     else
                     {   // Protect/Defend
-                        foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
+                        try
                         {
-                            if (help != null)
+                            foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
                             {
-                                if (help.isAegisAvail)
+                                if (help != null)
                                 {
-                                    help.RTSDestination = Vector3.zero;
-                                    if (!ManNetwork.IsNetworked)
-                                        help.LastCloseAlly = grabbedTech;
-                                    SetOptionAuto(help, AIType.Aegis);
-                                    help.SetRTSState(false);
+                                    if (help.isAegisAvail)
+                                    {
+                                        help.RTSDestination = Vector3.zero;
+                                        if (!ManNetwork.IsNetworked)
+                                            help.LastCloseAlly = grabbedTech;
+                                        SetOptionAuto(help, AIType.Aegis);
+                                        help.SetRTSState(false);
+                                    }
+                                    else
+                                    {
+                                        help.RTSDestination = grabbedTech.boundsCentreWorldNoCheck;
+                                        help.SetRTSState(true);
+                                    }
                                 }
-                                else
-                                {
-                                    help.RTSDestination = grabbedTech.boundsCentreWorldNoCheck;
-                                }
+                            }
+                        }
+                        catch
+                        {
+                            Debug.Log("TACtical_AI: Error on Protect/Defend - Techs");
+                            foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
+                            {
+                                Debug.Log("TACtical_AI: " + help.name);
                             }
                         }
                     }
@@ -587,6 +600,7 @@ namespace TAC_AI.World
                         if (help != null)
                         {
                             help.RTSDestination = rayman.point;
+                            help.SetRTSState(true);
                         }
                     }
                 }
@@ -600,6 +614,7 @@ namespace TAC_AI.World
                 if (help != null)
                 {
                     help.RTSDestination = rayman.point;
+                    help.SetRTSState(true);
                 }
             }
             Debug.Log("TACtical_AI: HandleSelectTerrain.");
@@ -633,6 +648,7 @@ namespace TAC_AI.World
                             else
                             {
                                 help.RTSDestination = node.transform.position + (Vector3.up * 2);
+                                help.SetRTSState(true);
                             }
                         }
                     }
@@ -652,6 +668,7 @@ namespace TAC_AI.World
                         if (help != null)
                         {
                             help.RTSDestination = rayman.point;
+                            help.SetRTSState(true);
                         }
                     }
                 }
