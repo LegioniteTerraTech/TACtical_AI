@@ -268,10 +268,10 @@ namespace TAC_AI.World
                             QueuedRelease = false;
                             inst.HandleSelectTerrain(rayman);
                         }
-                        if (layer == gInst.layerScenery)
+                        else if (layer == gInst.layerScenery)
                         {
                             QueuedRelease = false;
-                            inst.HandleSelectTerrain(rayman);
+                            inst.HandleSelectScenery(rayman);
                         }
                         else
                         {
