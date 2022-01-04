@@ -6,6 +6,8 @@ using System.Text;
 using UnityEngine.Serialization;
 using UnityEngine.Networking;
 using UnityEngine;
+using TAC_AI.Templates;
+using Nuterra.BlockInjector;
 
 namespace TAC_AI.AI
 {
@@ -498,13 +500,16 @@ namespace TAC_AI.AI
             {
                 TankBlock prefab = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
                 string name = prefab.name;
-                if (prefab.GetComponent<Damageable>() && type.ToString() != name && !Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
+                if (prefab.GetComponent<Damageable>() && type.ToString() != name) //&& !Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
                 {
                     int hash = name.GetHashCode();
                     if (!errorNames.Keys.Contains(hash))
                     {
                         errorNames.Add(hash, type);
-                        //Debug.Log("TACtical_AI: ConstructErrorBlocksList - Added " + name + " | " + type.ToString());
+#if DEBUG
+                        if ((int)type > 5000)
+                            Debug.Log("TACtical_AI: ConstructErrorBlocksList - Added Modded Block " + name + " | " + type.ToString());
+#endif
                     }
                 }
             }
@@ -525,10 +530,38 @@ namespace TAC_AI.AI
             if (!Enum.TryParse(mem, out BlockTypes type))
             {
                 if (!TryGetMismatchNames(mem, ref type))
-                    type = (BlockTypes)Singleton.Manager<ManMods>.inst.GetBlockID(mem);
+                {
+                    if (StringToBIBlockType(mem, out BlockTypes BTC))
+                    {
+                        return BTC;
+                    }
+                    type = RawTechExporter.GetBlockIDLogFree(mem);
+                }
             }
             return type;
         }
+        public static bool StringToBIBlockType(string mem, out BlockTypes BT) // BLOCK INJECTOR
+        {
+            BT = BlockTypes.GSOAIController_111;
+            if (!KickStart.isBlockInjectorPresent)
+                return false;
+            int hashName = mem.GetHashCode();
+            foreach (KeyValuePair<int, CustomBlock> pair in BlockLoader.CustomBlocks)
+            {
+                CustomBlock CB = pair.Value;
+                if (CB != null)
+                {
+                    if (CB.Name.GetHashCode() == hashName)
+                    {
+                        //Debug.Log("TACtical_AI: StringToBIBlockType - Found Match in BlockInjector for " + mem);
+                        BT = (BlockTypes)pair.Key;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
 
         public static BlockTypes JSONToFirstBlock(string toLoad)
         {   // Loading a Tech from the BlockMemory

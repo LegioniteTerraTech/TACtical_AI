@@ -127,6 +127,7 @@ namespace TAC_AI.Templates
                 {
                     float timeDelay = Time.time;
                     Debug.Log("TACtical_AI: Reloading All Raw Enemy Techs!");
+                    AIERepair.ConstructErrorBlocksList();
                     TempManager.ValidateAndAddAllExternalTechs();
                     timeDelay = Time.time - timeDelay;
                     Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
@@ -242,15 +243,19 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total RAW Techs found in " + GetNameDirectory(Dir) + ": " + names.Count());
                 foreach (string name in names)
                 {
+                    int errorLevel = 0;
                     try
                     {
                         BuilderExternal ext = LoadEnemyTech(name, Dir);
+                        errorLevel++;
                         BaseTemplate temp = new BaseTemplate();
 
                         temp.techName = ext.Name;
                         temp.savedTech = ext.Blueprint;
                         temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
+                        errorLevel++;
                         FactionTypesExt MainCorp = KickStart.GetCorpExtended(AIERepair.JSONToFirstBlock(ext.Blueprint));
+                        errorLevel++;
                         temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                         temp.IntendedGrade = minCorpGrade;
                         temp.faction = MainCorp;
@@ -261,7 +266,7 @@ namespace TAC_AI.Templates
                     }
                     catch
                     {
-                        Debug.Log("TACtical_AI: Could not deploy " + name + " as an enemy tech!  Corrupted BuilderExternal(Or tech too small)!!");
+                        Debug.Log("TACtical_AI: Could not deploy " + name + " as an enemy tech!  Corrupted BuilderExternal(Or tech too small)!! - Error Level " + errorLevel);
                     }
                 }
             }
@@ -518,13 +523,20 @@ namespace TAC_AI.Templates
                     isFlyingDirectionForwards = false;
             }
 
-            if (modDangerCount > modControlCount)
+            if (modDangerCount <= modControlCount)
                 purposes.Add(BasePurpose.NoWeapons);
 
             terra = BaseTerrain.Land;
+            string purposesList = "None.";
             if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
-                Debug.Log("TACtical_AI: Purposes: Anchored (static)");
+                foreach (BasePurpose purp in purposes)
+                {
+                    purposesList += purp.ToString() + "|";
+                }
+                Debug.Log("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "|Anchored (static)");
+
+                //Debug.Log("TACtical_AI: Purposes: Anchored (static)");
                 return purposes;
             }
             else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
@@ -556,7 +568,6 @@ namespace TAC_AI.Templates
                 purposes.Add(BasePurpose.NANI);
             }
 
-            string purposesList = "None.";
             if (purposes.Count > 0)
             {
                 purposesList = "";
@@ -1008,6 +1019,19 @@ namespace TAC_AI.Templates
             }
         }
 
+        // Logless block loader
+        private static Dictionary<string, int> ModdedBlocksGrabbed;
+        private static FieldInfo allModdedBlocks = typeof(ManMods).GetField("m_BlockIDReverseLookup", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static void PrepareModdedBlocksSearch()
+        {
+            ModdedBlocksGrabbed = (Dictionary<string, int>)allModdedBlocks.GetValue(Singleton.Manager<ManMods>.inst);
+        }
+        public static BlockTypes GetBlockIDLogFree (string name)
+        {
+            int blockType = 3;
+            ModdedBlocksGrabbed.TryGetValue(name, out blockType);
+            return (BlockTypes)blockType;
+        }
 
         // Utilities
         public static string BlockSpecToJSONExternal(List<TankPreset.BlockSpec> specs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount)

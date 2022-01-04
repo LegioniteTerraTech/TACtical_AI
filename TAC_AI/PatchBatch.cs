@@ -606,8 +606,6 @@ namespace TAC_AI
             }
         }
 
-        // this is a VERY big mod
-        //   we must make it look big like it is
         [HarmonyPatch(typeof(Mode))]
         [HarmonyPatch("EnterPreMode")]//On very late update
         private static class Startup
@@ -619,6 +617,8 @@ namespace TAC_AI
             }
         }
 
+        // this is a VERY big mod
+        //   we must make it look big like it is
         [HarmonyPatch(typeof(ModeAttract))]
         [HarmonyPatch("UpdateModeImpl")] // Checking title techs
         private static class RestartAttract
