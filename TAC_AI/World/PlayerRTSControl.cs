@@ -141,6 +141,10 @@ namespace TAC_AI.World
             ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
             SelectHalo.SelectCirclePrefab.SetActive(false);
             Debug.Log("TACtical_AI: Created SelectCircle.");
+
+
+            SelectWindow = Instantiate(new GameObject("TechSelectRect"));
+            SelectWindow.AddComponent<GUIRectSelect>();
         }
         public static void OnWorldReset()
         {
@@ -568,7 +572,8 @@ namespace TAC_AI.World
                             {
                                 if (help != null)
                                 {
-                                    if (help.isAegisAvail)
+                                    bool LandAIAssigned = help.DediAI < AIType.MTTurret;
+                                    if (help.isAegisAvail && LandAIAssigned)
                                     {
                                         help.RTSDestination = Vector3.zero;
                                         if (!ManNetwork.IsNetworked)
@@ -639,7 +644,8 @@ namespace TAC_AI.World
                     {
                         if (help != null)
                         {
-                            if (help.isProspectorAvail)
+                            bool LandAIAssigned = help.DediAI < AIType.MTTurret;
+                            if (help.isProspectorAvail && LandAIAssigned)
                             {
                                 help.RTSDestination = Vector3.zero;
                                 if (!ManNetwork.IsNetworked)
@@ -893,6 +899,10 @@ namespace TAC_AI.World
                         }
                         LastClickFrameTimer--;
                     }
+                    if (Input.GetMouseButton(0) && isBoxSelecting)
+                    {
+                        DrawSelectBox(ScreenBoxStart, Input.mousePosition);
+                    }
                     if (Input.GetMouseButtonDown(0) && !ManPointer.inst.DraggingItem)
                     {
                         isBoxSelecting = true;
@@ -953,5 +963,73 @@ namespace TAC_AI.World
             lr.SetPositions(vecs);
             Destroy(gO, Time.deltaTime);
         }
+        private void DrawSelectBox(Vector3 startPosGlobal, Vector3 endPosGlobal)
+        {
+            Debug.Log("TACtical_AI: DrawSelectBox - " + startPosGlobal + " | " + endPosGlobal);
+            Vector3 sPos = startPosGlobal;
+            Vector3 ePos = endPosGlobal;
+            Vector3 ePosVert = ePos.SetY(sPos.y);
+            Vector3 sPosVert = sPos.SetY(ePos.y);
+            GameObject gO = Instantiate(new GameObject("TechSelectRect"), Vector3.zero, Quaternion.identity);
+
+            var lr = gO.GetComponent<LineRenderer>();
+            if (!(bool)lr)
+            {
+                lr = gO.AddComponent<LineRenderer>();
+                lr.material = new Material(Shader.Find("Sprites/Default"));
+                lr.positionCount = 2;
+                lr.startWidth = 0.25f;
+                lr.endWidth = 0.25f;
+                lr.numCapVertices = 4;
+            }
+            lr.startColor = color;
+            lr.endColor = color;
+            Vector3[] vecs = new Vector3[5] { sPos, ePosVert, ePos, sPosVert, sPos };
+            lr.SetPositions(vecs);
+            Destroy(gO, Time.deltaTime);
+        }
+
+        private static GameObject SelectWindow;
+        private static Rect HotWindow = new Rect(0, 0, 200, 240);   // the "window"
+        private static GUIStyle modifStyle;
+        internal class GUIRectSelect : MonoBehaviour
+        {
+            private void OnGUI()
+            {
+                if (isBoxSelecting)
+                {
+                    if (modifStyle == null)
+                        HotWindow = GUI.Window(8006, HotWindow, GUIHandler, "");//"<b>BoxSelect</b>"
+                    else
+                        HotWindow = GUI.Window(8006, HotWindow, GUIHandler, "", modifStyle);
+                }
+            }
+        }
+        private static void GUIHandler(int ID)
+        {
+            if (modifStyle == null)
+            {
+                Texture2D[] mats = Resources.FindObjectsOfTypeAll<Texture2D>();
+                mats = mats.Where(cases => cases.name == "UI_CHECKBOX_OFF").ToArray();//GUI_DottedSquare
+                foreach (Texture2D matcase in mats)
+                {
+                    Debug.Log("TACtical_AI: Getting " + matcase.name + "...");
+                }
+                Texture2D mat = mats.ElementAt(0);
+                modifStyle = new GUIStyle(GUI.skin.window);
+                //modifStyle.border = new RectOffset(mat.width / 4, mat.width / 4, mat.height / 4, mat.height / 4);
+                modifStyle.border = new RectOffset(mat.width / 3, mat.width / 3, mat.height / 3, mat.height / 3);
+                modifStyle.normal.background = mat;
+                modifStyle.active.background = mat;
+            }
+            Vector3 ScreenBoxEnd = Input.mousePosition;
+            float HighX = ScreenBoxStart.x >= ScreenBoxEnd.x ? ScreenBoxStart.x : ScreenBoxEnd.x;
+            float LowX = ScreenBoxStart.x < ScreenBoxEnd.x ? ScreenBoxStart.x : ScreenBoxEnd.x;
+            float HighY = ScreenBoxStart.y >= ScreenBoxEnd.y ? ScreenBoxStart.y : ScreenBoxEnd.y;
+            float LowY = ScreenBoxStart.y < ScreenBoxEnd.y ? ScreenBoxStart.y : ScreenBoxEnd.y;
+            float highYCorrect = Display.main.renderingHeight - HighY;
+            HotWindow = new Rect(LowX - 25, highYCorrect - 25, HighX - LowX + 50, HighY - LowY + 50);
+        }
+
     }
 }

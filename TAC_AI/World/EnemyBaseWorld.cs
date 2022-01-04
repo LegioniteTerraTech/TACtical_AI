@@ -287,12 +287,28 @@ namespace TAC_AI.World
                 }
                 catch { }
 
+                int Cost = EP.BuildBucks();
                 if (EP.GetBaseCount() >= KickStart.MaxBasesPerTeam)
                 {// Build a mobile Tech 
                     TryFreeUpBaseSlots(EP);
                     if (EP.ETUs.Count * 3 > KickStart.EnemyTeamTechLimit)
                         return;
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, maxGrade: grade, maxPrice: EP.BuildBucks());
+                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost);
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
+                            EnemyWorldManager.ConstructNewTechExt(EBU, EP, BTemp);
+                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewTech(EBU, EP, type);
@@ -300,10 +316,28 @@ namespace TAC_AI.World
                     return;
                 }
 
-
+                BasePurpose reason;
+                BaseTerrain Terra;
                 if (TryFindExpansionLocation(EBU, EBU.tech.GetBackwardsCompatiblePosition(), out Vector3 pos))
                 {   // Try spawning defense
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, PickBuildBasedOnPriorities(EP), RawTechLoader.GetTerrain(pos), maxGrade: grade, maxPrice: EP.BuildBucks());
+                    reason = PickBuildBasedOnPriorities(EP);
+                    Terra = RawTechLoader.GetTerrain(pos);
+                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost);
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
+                            EnemyWorldManager.ConstructNewExpansionExt(pos, EBU, EP, BTemp);
+                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewExpansion(pos, EBU, EP, type);
@@ -311,7 +345,24 @@ namespace TAC_AI.World
                 }
                 else if (TryFindExpansionLocation2(EBU, EBU.tech.GetBackwardsCompatiblePosition(), out Vector3 pos2))
                 {   // Try spawning base extensions
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, PickBuildNonDefense(EP), RawTechLoader.GetTerrain(pos2), maxGrade: grade, maxPrice: EP.BuildBucks());
+                    reason = PickBuildNonDefense(EP);
+                    Terra = RawTechLoader.GetTerrain(pos2);
+                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost);
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
+                            EnemyWorldManager.ConstructNewExpansionExt(pos2, EBU, EP, BTemp);
+                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewExpansion(pos2, EBU, EP, type);
@@ -323,7 +374,23 @@ namespace TAC_AI.World
                     EmergencyMoveMoney(GetTeamFunder(EP));
                     if (EP.ETUs.Count * 3 > KickStart.EnemyTeamTechLimit)
                         return;
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, BasePurpose.NotStationary, RawTechLoader.GetTerrain(pos2), maxGrade: grade, maxPrice: EP.BuildBucks());
+                    Terra = RawTechLoader.GetTerrain(pos2);
+                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost);
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
+                            EnemyWorldManager.ConstructNewTechExt(EBU, EP, BTemp);
+                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, BasePurpose.NotStationary, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewTech(EBU, EP, type);

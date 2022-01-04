@@ -636,6 +636,65 @@ namespace TAC_AI.World
                 }
             }
         }
+        public static void ConstructNewTechExt(EnemyBaseUnloaded BuilderTech, EnemyPresence EP, BaseTemplate BT)
+        {
+            ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
+            if (ST != null)
+            {
+                if (!FindFreeSpaceOnTile(Vector2.up, ST, out Vector2 newPosOff))
+                    return;
+                if (!KickStart.EnemiesHaveCreativeInventory)
+                {
+                    var funder = EnemyBaseWorld.GetTeamFunder(EP);
+                    funder.Funds -= RawTechLoader.GetBaseBBCost(BT.savedTech);
+                }
+
+                int ID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
+                Quaternion quat = BuilderTech.tech.m_Rotation;
+                Vector3 pos = ManWorld.inst.TileManager.CalcTileCentre(ST.coord) + newPosOff.ToVector3XZ();
+                TechData TD = RawTechLoader.SpawnUnloadedTechExt(BT, out int[] bIDs);
+                if (TD != null)
+                {
+                    ST.AddSavedTech(TD, bIDs, EP.Team, pos, Quaternion.LookRotation(quat * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
+
+                    TrackedVisible TVa = new TrackedVisible(ID, null, ObjectTypes.Vehicle, RadarTypes.Vehicle);
+                    TVa.SetPos(pos);
+                    Singleton.Manager<ManVisible>.inst.TrackVisible(TVa);
+                    if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
+                    {
+                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last(), ST.coord);
+                    }
+                }
+            }
+        }
+        public static void ConstructNewExpansionExt(Vector3 position, EnemyBaseUnloaded BuilderTech, EnemyPresence EP, BaseTemplate BT)
+        {
+            ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
+            if (ST != null)
+            {
+                if (!KickStart.EnemiesHaveCreativeInventory)
+                {
+                    var funder = EnemyBaseWorld.GetTeamFunder(EP);
+                    funder.Funds -= RawTechLoader.GetBaseBBCost(BT.savedTech);
+                }
+
+                int ID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
+                Quaternion quat = BuilderTech.tech.m_Rotation;
+                TechData TD = RawTechLoader.GetBaseExpansionUnloadedExt(position, EP, BT, out int[] bIDs);
+                if (TD != null)
+                {
+                    ST.AddSavedTech(TD, bIDs, EP.Team, position, Quaternion.LookRotation(quat * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
+
+                    TrackedVisible TVa = new TrackedVisible(ID, null, ObjectTypes.Vehicle, RadarTypes.Base);
+                    TVa.SetPos(position);
+                    Singleton.Manager<ManVisible>.inst.TrackVisible(TVa);
+                    if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
+                    {
+                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last(), ST.coord);
+                    }
+                }
+            }
+        }
 
 
         // UPDATE

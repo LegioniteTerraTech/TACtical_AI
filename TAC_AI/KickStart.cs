@@ -558,12 +558,16 @@ namespace TAC_AI
         }
         public static FactionTypesExt GetBlockCorpExt(BlockTypes BT)
         {
+            if ((int)BT < 5000)// Payload's range
+                return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
             int BTval = (int)BT;
-            if (BTval >= 584200 && BTval <= 584599)
-                return FactionTypesExt.TAC;
-            if (BTval >= 584600 && BTval <= 584750)
-                return FactionTypesExt.EFF;
 
+            if (BTval >= 584200 && BTval <= 584599) // Technocratic AI Colony - Power Density
+                return FactionTypesExt.TAC;
+            if (BTval >= 584600 && BTval <= 584750) // Emperical Forge Fabrication - Unit Count
+                return FactionTypesExt.EFF;
+            if (BTval >= 911000 && BTval <= 912000) // GreenTech - Eco Rangers
+                return FactionTypesExt.GT;
 
             return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
         }

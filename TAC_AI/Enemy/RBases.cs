@@ -536,6 +536,11 @@ namespace TAC_AI.AI.Enemy
                 Purposes.Clear();
                 Purposes = RawTechLoader.GetBaseTemplate(type).purposes;
             }
+            public void SetupPurposesExt(BaseTemplate type)
+            {
+                Purposes.Clear();
+                Purposes = type.purposes;
+            }
             public void OnRecycle(Tank tank)
             {
                 // Make sure the money is safe
@@ -785,12 +790,30 @@ namespace TAC_AI.AI.Enemy
 
                     try
                     {
-                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(EnemyBaseFunder.GetActualName(name));
-                        SetupBaseType(type, mind);
-                        funds.SetupPurposes(type);
-                        Debug.Log("TACtical_AI: Registered base " + EnemyBaseFunder.GetActualName(name) + " |type " + type.ToString());
-                        mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
-                        tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
+                        string baseName = EnemyBaseFunder.GetActualName(name);
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(baseName);
+                        bool activated = false;
+                        if (type == SpawnBaseTypes.NotAvail)
+                        {
+                            BaseTemplate BTExt = RawTechLoader.GetExtEnemyBaseFromName(baseName);
+                            if (BTExt != null)
+                            {
+                                SetupBaseTypeExt(BTExt, mind);
+                                funds.SetupPurposesExt(BTExt);
+                                Debug.Log("TACtical_AI: Registered EXTERNAL base " + baseName);
+                                mind.TechMemor.SetupForNewTechConstruction(thisInst, BTExt.savedTech);
+                                tank.MainCorps.Add(KickStart.CorpExtToCorp(BTExt.faction));
+                                activated = true;
+                            }
+                        }
+                        if (!activated)
+                        {
+                            SetupBaseType(type, mind);
+                            funds.SetupPurposes(type);
+                            Debug.Log("TACtical_AI: Registered base " + baseName + " |type " + type.ToString());
+                            mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
+                            tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
+                        }
                     }
                     catch { }
                     if (!tank.IsAnchored)
@@ -836,10 +859,27 @@ namespace TAC_AI.AI.Enemy
                     }
                     try
                     {
-                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(GetActualNameDef(name));
-                        SetupBaseType(type, mind);
-                        mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
-                        tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
+                        string defName = GetActualNameDef(name);
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(defName);
+                        bool activated = false;
+                        if (type == SpawnBaseTypes.NotAvail)
+                        {
+                            BaseTemplate BTExt = RawTechLoader.GetExtEnemyBaseFromName(defName);
+                            if (BTExt != null)
+                            {
+                                SetupBaseTypeExt(BTExt, mind);
+                                //Debug.Log("TACtical_AI: Registered EXTERNAL base defense " + defName);
+                                mind.TechMemor.SetupForNewTechConstruction(thisInst, BTExt.savedTech);
+                                tank.MainCorps.Add(KickStart.CorpExtToCorp(BTExt.faction));
+                                activated = true;
+                            }
+                        }
+                        if (!activated)
+                        {
+                            SetupBaseType(type, mind);
+                            mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
+                            tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
+                        }
                     }
                     catch { }
                     if (!tank.IsAnchored)
@@ -884,6 +924,54 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderBolts = EnemyBolts.AtFull;
             }
             else if (RawTechLoader.ContainsPurpose(type, BasePurpose.TechProduction))
+            {
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderMind = EnemyAttitude.Default;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderBolts = EnemyBolts.AtFullOnAggro;
+            }
+            else
+            {
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderMind = EnemyAttitude.Default;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderBolts = EnemyBolts.AtFull;
+            }
+        }
+        public static void SetupBaseTypeExt(BaseTemplate BT, EnemyMind mind)
+        {  
+            if (BT.purposes.Contains(BasePurpose.Headquarters))
+            {
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.InvertBullyPriority = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderMind = EnemyAttitude.Homing;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderBolts = EnemyBolts.AtFull;
+            }
+            else if (BT.purposes.Contains(BasePurpose.Harvesting))
+            {
+                mind.StartedAnchored = true;
+                mind.AllowInvBlocks = true;
+                mind.AllowRepairsOnFly = true;
+                mind.EvilCommander = EnemyHandling.Stationary;
+                mind.CommanderMind = EnemyAttitude.Default;
+                mind.CommanderSmarts = EnemySmarts.IntAIligent;
+                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderBolts = EnemyBolts.AtFull;
+            }
+            else if (BT.purposes.Contains(BasePurpose.TechProduction))
             {
                 mind.StartedAnchored = true;
                 mind.AllowInvBlocks = true;
@@ -991,9 +1079,28 @@ namespace TAC_AI.AI.Enemy
                 }
                 catch { }
 
+                BaseTerrain Terra;
+                BasePurpose reason;
+                int Cost = GetTeamFunds(tech.Team);
                 if (TryFindExpansionLocation(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos))
                 {   // Try spawning defense
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, PickBuildBasedOnPriorities(mind, funds), RawTechLoader.GetTerrain(pos), maxGrade: grade, maxPrice: GetTeamFunds(tech.Team));
+                    Terra = RawTechLoader.GetTerrain(pos);
+                    reason = PickBuildBasedOnPriorities(mind, funds);
+                    if (RawTechLoader.ShouldUseCustomTechs(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = RawTechLoader.GetExternalIndex(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost);
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
+                            RawTechLoader.SpawnEnemyTechExtBase(pos, tech.Team, Vector3.forward, BTemp);
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, type))
@@ -1005,7 +1112,23 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (TryFindExpansionLocation2(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
                 {   // Try spawning base extensions
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, PickBuildNonDefense(mind), RawTechLoader.GetTerrain(pos2), maxGrade: grade, maxPrice: GetTeamFunds(tech.Team));
+                    Terra = RawTechLoader.GetTerrain(pos2);
+                    reason = PickBuildNonDefense(mind);
+                    if (RawTechLoader.ShouldUseCustomTechs(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = RawTechLoader.GetExternalIndex(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost);
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
+                            RawTechLoader.SpawnEnemyTechExtBase(pos, tech.Team, Vector3.forward, BTemp);
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
