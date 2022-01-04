@@ -1688,7 +1688,7 @@ namespace TAC_AI.AI
                     }
                     catch (Exception e)
                     {
-                        Debug.Log("TACtical_AI: Crash on Avoid " + e);
+                        //Debug.Log("TACtical_AI: Crash on Avoid Allied" + e);
                         return targetIn;
                     }
                 }

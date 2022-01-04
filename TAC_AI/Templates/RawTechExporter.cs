@@ -397,6 +397,8 @@ namespace TAC_AI.Templates
             int modGunCount = 0;
             int modDrillCount = 0;
             minCorpGrade = 0;
+            bool NotMP = false;
+            bool hasAutominer = false;
 
             BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
             int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(factionType));
@@ -407,6 +409,14 @@ namespace TAC_AI.Templates
                 TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
                 if (bloc.IsNull())
                     continue;
+                if (bloc.GetComponent<ModuleItemProducer>())
+                {
+                    hasAutominer = true;
+                    NotMP = true;
+                }
+                if (bloc.GetComponent<ModuleItemConsume>() || bloc.GetComponent<ModuleItemConveyor>())
+                    NotMP = true;
+
 
                 if (bloc.GetComponent<ModuleTechController>())
                     modControlCount++;
@@ -501,11 +511,30 @@ namespace TAC_AI.Templates
                 }
                 blocs.Add(bloc);
             }
-
+            bool isDef = true;
             if (modEXPLODECount > 0)
+            {
                 purposes.Add(BasePurpose.TechProduction);
+                isDef = false;
+            }
             if (modCollectCount > 0)
+            {
                 purposes.Add(BasePurpose.Harvesting);
+                isDef = false;
+            }
+            if (NotMP)
+                purposes.Add(BasePurpose.MPUnsafe);
+            if (Anchored)
+            {
+                if (hasAutominer)
+                {
+                    purposes.Add(BasePurpose.Autominer);
+                    isDef = false;
+                }
+                if (isDef)
+                    purposes.Add(BasePurpose.Defense);
+            }
+
 
             boostBiasDirection.Normalize();
             biasDirection.Normalize();

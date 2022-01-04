@@ -1298,7 +1298,7 @@ namespace TAC_AI.Templates
             if (KickStart.TryForceOnlyPlayerSpawns)
             {
                 Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: " + ((PrefabTechs > 0) ? "true" : "false"));
-                if (PrefabTechs > 0)
+                if (CustomTechs > 0)
                 {
                     return true;
                 }

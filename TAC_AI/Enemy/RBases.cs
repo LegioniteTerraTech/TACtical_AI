@@ -1105,7 +1105,7 @@ namespace TAC_AI.AI.Enemy
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!");
+                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type " + reason);
                     }
                     else
                         Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
@@ -1133,7 +1133,7 @@ namespace TAC_AI.AI.Enemy
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!");
+                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type " + reason);
                     }
                     else
                         Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");

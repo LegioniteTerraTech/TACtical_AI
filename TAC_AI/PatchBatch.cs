@@ -1718,7 +1718,8 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade)], AutoTerrain: false);
+                                    int newTech = RawTechLoader.GetExternalIndex(FactionTypesExt.NULL, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
+                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[newTech], AutoTerrain: false);
                                     replacementBote.SetTeam(tv.TeamID, wasPop);
 
                                     Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
@@ -1810,7 +1811,8 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    Tank replacementTech = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[RawTechLoader.GetExternalIndex(tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching)], AutoTerrain: false);
+                                    int newType = RawTechLoader.GetExternalIndex(FactionTypesExt.NULL, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
+                                    Tank replacementTech = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[newType], AutoTerrain: false);
                                     replacementTech.SetTeam(tv.TeamID, wasPop);
 
                                     Debug.Log("TACtical_AI:  Tech " + previousTechName + " has been swapped out for land tech " + replacementTech.name + " instead");
@@ -1847,6 +1849,7 @@ namespace TAC_AI
                             }
                             catch
                             {
+                                Debug.Log("TACtical_AI: Attempt to swap Land tech failed!");
                             }
                         }
                     }
