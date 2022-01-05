@@ -363,7 +363,8 @@ namespace TAC_AI.Templates
             output = final.ToString();
             return true;
         }
-        private static FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance); 
+        
         public static List<BasePurpose> GetHandler(string blueprint, FactionTypesExt factionType, bool Anchored, out BaseTerrain terra, out int minCorpGrade)
         {
             List<TankBlock> blocs = new List<TankBlock>();
@@ -406,6 +407,7 @@ namespace TAC_AI.Templates
             bool NotMP = false;
             bool hasAutominer = false;
             bool hasReceiver = false;
+            bool hasBaseFunction = false;
 
             BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
             int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(factionType));
@@ -420,15 +422,44 @@ namespace TAC_AI.Templates
                 if ((bool)rec)
                 {
                     hasReceiver = true;
-                    NotMP = true;
                 }
                 if (bloc.GetComponent<ModuleItemProducer>())
                 {
                     hasAutominer = true;
                     NotMP = true;
                 }
-                if (bloc.GetComponent<ModuleItemConsume>() || bloc.GetComponent<ModuleItemConveyor>())
+                if (bloc.GetComponent<ModuleItemConveyor>())
+                {
                     NotMP = true;
+                }
+                if (bloc.GetComponent<ModuleItemConsume>())
+                {
+                    hasBaseFunction = true;
+                    switch (type)
+                    {
+                        case BlockTypes.GSODeliCannon_221:
+                        case BlockTypes.GSODeliCannon_222:
+                        case BlockTypes.GCDeliveryCannon_464:
+                        case BlockTypes.VENDeliCannon_221:
+                        case BlockTypes.HE_DeliveryCannon_353:
+                        case BlockTypes.BF_DeliveryCannon_122:
+                            break;
+                        default:
+                            var recipeCase = bloc.GetComponent<ModuleRecipeProvider>();
+                            if ((bool)recipeCase)
+                            {
+                                List<RecipeTable.RecipeList> matters = (List<RecipeTable.RecipeList>)recipeCase.GetEnumerator();
+                                foreach (RecipeTable.RecipeList matter in matters)
+                                { 
+                                    if (matter.m_Name != "rawresources" && matter.m_Name != "gsodelicannon")
+                                    {
+                                        NotMP = true;
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
 
 
                 if (bloc.GetComponent<ModuleTechController>())
@@ -532,7 +563,7 @@ namespace TAC_AI.Templates
                 purposes.Add(BasePurpose.TechProduction);
                 isDef = false;
             }
-            if (modCollectCount > 0)
+            if (modCollectCount > 0 || hasBaseFunction)
             {
                 purposes.Add(BasePurpose.Harvesting);
                 isDef = false;
