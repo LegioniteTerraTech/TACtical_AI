@@ -1340,8 +1340,8 @@ namespace TAC_AI.Templates
             {
                 if (CustomTechs > 0)
                 {
-                    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Local Techs spawn possible: true");
-                    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                    //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Local Techs spawn possible: true");
+                    //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
                     StringBuilder SB = new StringBuilder();
                     foreach (int val in validIndexes)
                     {
@@ -1350,8 +1350,8 @@ namespace TAC_AI.Templates
                     Debug.Log(SB.ToString());
                     return true;
                 }
-                else
-                    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: false");
+                //else
+                //    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: false");
             }
             else
             {
@@ -1359,8 +1359,8 @@ namespace TAC_AI.Templates
                 {
                     if (CustomTechs > 0)
                     {
-                        Debug.Log("TACtical_AI: ShouldUseCustomTechs - There's only Local Techs available");
-                        Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                        //Debug.Log("TACtical_AI: ShouldUseCustomTechs - There's only Local Techs available");
+                        //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
                         StringBuilder SB = new StringBuilder();
                         foreach (int val in validIndexes)
                         {
@@ -1369,12 +1369,12 @@ namespace TAC_AI.Templates
                         Debug.Log(SB.ToString());
                         return true;
                     }
-                    else
-                        Debug.Log("TACtical_AI: ShouldUseCustomTechs - No Techs found");
+                    //else
+                    //    Debug.Log("TACtical_AI: ShouldUseCustomTechs - No Techs found");
                     return false;
                 }
                 float RAND = UnityEngine.Random.Range(0, CombinedVal);
-                Debug.Log("TACtical_AI: ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
+                //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
                 if (RAND > PrefabTechs)
                 {
                     return true;
@@ -1550,7 +1550,7 @@ namespace TAC_AI.Templates
         // Override
         internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat, out bool worked)
         {
-            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(position) && Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) && TechDataAvailValidation.IsBlockAvailableInMode(type))
+            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(WorldPosition.FromGameWorldPosition(position).ScenePosition) && Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) && TechDataAvailValidation.IsBlockAvailableInMode(type))
             {
                 worked = true;
 

@@ -1671,7 +1671,7 @@ namespace TAC_AI
                 {
                     if (tv.visible != null)
                     {
-                        if (ManWorld.inst.CheckIsTileAtPositionLoaded(tv.Position))
+                        if (ManWorld.inst.CheckIsTileAtPositionLoaded(WorldPosition.FromGameWorldPosition(tv.Position).ScenePosition))
                         {
                             if (tv.visible.tank != null)
                             {

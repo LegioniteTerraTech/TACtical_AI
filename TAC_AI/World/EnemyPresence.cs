@@ -20,6 +20,7 @@ namespace TAC_AI.World
         private IntVector2 lastEventTile;
         public List<IntVector2> scannedPositions = new List<IntVector2>();
 
+
         public EnemyPresence(int team)
         {
             Team = team;
@@ -36,8 +37,9 @@ namespace TAC_AI.World
             {
                 return false; // NO SUCH TEAM EXISTS (no base!!!)
             }
+            PresenceDebug("TACtical_AI: UpdateGrandCommand - Turn for Team " + Team);
             eventStarted = false;
-            //Debug.Log("TACtical_AI: UpdateGrandCommand - Updating for team " + Team);
+            //PresenceDebug("TACtical_AI: UpdateGrandCommand - Updating for team " + Team);
             UpdateRevenue();
             HandleUnitMoving();
             HandleCombat();
@@ -70,7 +72,7 @@ namespace TAC_AI.World
             EnemyBaseUnloaded mainBase = EnemyBaseWorld.GetTeamFunder(this);
             if (mainBase == null)
             {
-                //Debug.Log("TACtical_AI: EnemyPresence - Team " + Team + " does not have a base allocated yet");
+                //PresenceDebug("Team " + Team + " does not have a base allocated yet");
                 foreach (EnemyTechUnit ETU in ETUs)
                 {
                     if (ETU.MoveSpeed < 10)
@@ -81,6 +83,8 @@ namespace TAC_AI.World
                         {
                             EnemyWorldManager.StrategicMoveQueue(ETU, WorldPosition.FromGameWorldPosition(Singleton.cameraTrans.position).TileCoord);
                         }
+                        else
+                            PresenceDebug("Unit " + ETU.tech.m_TechData.Name + " is moving");
                     }
                 }
             }
@@ -90,6 +94,7 @@ namespace TAC_AI.World
                 IntVector2 eventTile = mainBase.tilePos;
                 if (eventHappening)
                     eventTile = lastEventTile;
+                PresenceDebug("Main Base is " + mainBase.tech.m_TechData.Name + " at " + mainBase.tilePos + ", EventTile is " + eventTile);
                 foreach (EnemyTechUnit ETU in ETUs)
                 {
                     if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileOriginScene(ETU.tilePos)))
@@ -98,6 +103,8 @@ namespace TAC_AI.World
                         {
                             EnemyWorldManager.StrategicMoveQueue(ETU, eventTile);
                         }
+                        else
+                            PresenceDebug("Unit " + ETU.tech.m_TechData.Name + " is moving");
                     }
                 }
             }
@@ -118,21 +125,21 @@ namespace TAC_AI.World
                 catch { }
             }
             float damageTime = EnemyWorldManager.UpdateDelay / EnemyWorldManager.ExpectedDPSDelitime;
-            //Debug.Log("TACtical_AI: EnemyPresence - HandleCombat found " + tilesHasTechs.Count + " tiles with Techs");
+            //PresenceDebug("HandleCombat found " + tilesHasTechs.Count + " tiles with Techs");
             foreach (IntVector2 TT in tilesHasTechs)
             {
                 try
                 {
                     if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileOriginScene(TT)))
                     {
-                        //Debug.Log("TACtical_AI: EnemyPresence - HandleCombat found the tile to be active!?");
+                        //PresenceDebug("HandleCombat found the tile to be active!?");
                         continue; // tile loaded
                     }
-                    //Debug.Log("TACtical_AI: EnemyPresence - HandleCombat Trying to test for combat");
+                    //PresenceDebug("HandleCombat Trying to test for combat");
                     List<EnemyTechUnit> techsCache = EnemyWorldManager.GetTechsInTile(TT);
                     if (techsCache.Count == 0)
                     {
-                        //Debug.Log("TACtical_AI: EnemyPresence(ASSERT) - HandleCombat called the tile, but THERE'S NO TECHS IN THE TILE!");
+                        //PresenceDebug("TACtical_AI: EnemyPresence(ASSERT) - HandleCombat called the tile, but THERE'S NO TECHS IN THE TILE!");
                         continue;
                     }
                     EnemyTechUnit target = techsCache.Find(delegate (EnemyTechUnit cand) { return Tank.IsEnemy(cand.tech.m_TeamID, Team); });
@@ -140,18 +147,18 @@ namespace TAC_AI.World
                     {
                         List<EnemyTechUnit> Allies = techsCache.FindAll(delegate (EnemyTechUnit cand) { return Tank.IsFriendly(cand.tech.m_TeamID, Team); });
 
-                        Debug.Log("TACtical_AI: EnemyPresence - Combat underway at " + TT + " | " + Allies.First().tech.m_TeamID + " vs " + target.tech.m_TeamID);
+                        ReportCombat("Combat underway at " + TT + " | " + Allies.First().tech.m_TeamID + " vs " + target.tech.m_TeamID);
                         OnCombat();
                         int strikePower = 1;
                         foreach (EnemyTechUnit Ally in Allies)
                         {
                             if (Ally is EnemyBaseUnloaded)
                             {
-                                strikePower += Math.Max(5, Ally.AttackPower / 2);
+                                strikePower += Math.Max(5, (int)(Ally.AttackPower * EnemyWorldManager.BaseCombatMulti));
                             }
                             else
                             {
-                                strikePower += Math.Max(5, Ally.AttackPower);
+                                strikePower += Math.Max(5, (int)(Ally.AttackPower * EnemyWorldManager.MobileCombatMulti));
                             }
                         }
                         int min = 5 * Allies.Count;
@@ -164,7 +171,7 @@ namespace TAC_AI.World
                                 {
                                     EnemyBaseWorld.EmergencyMoveMoney(EBU);
                                 }
-                                Debug.Log("TACtical_AI: EnemyPresence - Enemy " + target.tech.m_TechData.Name + " has been destroyed");
+                                ReportCombat("Enemy " + target.tech.m_TechData.Name + " has been destroyed");
                             }
                             catch { }
                             EnemyBaseWorld.RemoteRemove(target);
@@ -172,7 +179,7 @@ namespace TAC_AI.World
                     }
                     else
                     {
-                        //Debug.Log("TACtical_AI: EnemyPresence - 404 target not found");
+                        //PresenceDebug("404 target not found");
                         EnemyBaseWorld.NaviFind(this, TT);
                     }
                 }
@@ -226,7 +233,7 @@ namespace TAC_AI.World
                 }
                 if (numHealed > 0)
                 {
-                    //Debug.Log("TACtical_AI: EnemyPresence - HandleRepairs Team " + Team + " repaired " + numHealed + "Techs");
+                    //PresenceDebug("HandleRepairs Team " + Team + " repaired " + numHealed + "Techs");
                 }
             }
         }
@@ -243,13 +250,24 @@ namespace TAC_AI.World
 
         public void SetEvent(IntVector2 tilePos)
         {
-            //Debug.Log("TACtical_AI: EnemyPresence - Enemy team " + Team + " has found target");
+            //PresenceDebug("Enemy team " + Team + " has found target");
             eventStarted = true;
             eventHappening = true;
             lastEventTile = tilePos;
         }
 
         // MISC
+        public static bool ignoreOut = true;
+        public void PresenceDebug(string thing)
+        {
+            if (ignoreOut)
+                return;
+            Debug.Log(thing);
+        }
+        public static void ReportCombat(string thing)
+        {
+            Debug.Log("TACtical_AI: EnemyPresence - " + thing);
+        }
         public bool WasInCombat()
         {
             return lastAttackedTimestep > Time.time;

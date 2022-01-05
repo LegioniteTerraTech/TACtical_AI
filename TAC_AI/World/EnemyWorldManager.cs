@@ -23,7 +23,7 @@ namespace TAC_AI.World
     {
         public static EnemyWorldManager inst;
         public static bool enabledThis = false;
-        public static bool subToTiles = false;
+        private static bool subToTiles = false;
 
         // There are roughly around 6 chunks per node
         internal static float SurfaceHarvestingMulti = 5.5f;
@@ -32,10 +32,18 @@ namespace TAC_AI.World
         internal static int UpdateDelay = 400;
         internal static int UpdateMoveDelay = 160;
         internal static int ExpectedDPSDelitime = 60;
-        internal const int UnitSightRadius = 2;
-        internal const int BaseSightRadius = 3;
-        internal const float EnemyBaseCullingRangeSq = 562500;// 750
+        internal const int UnitSightRadius = 3;
+        internal const int BaseSightRadius = 4;
+        internal const float EnemyBaseCullingRangeSq = 1562500;// 1250
         private static float TerrainTraverseMulti = 0.75f;
+
+        // Volume-Based
+        internal const float MobileCombatMulti = 10;
+        internal const float BaseCombatMulti = 4f;
+        // Health-Based
+        private const float MobileHealthMulti = 0.05f;
+        private const float BaseHealthMulti = 0.1f;
+
         private static Dictionary<FactionTypesExt, float> corpSpeeds = new Dictionary<FactionTypesExt, float>() {
             {
                 FactionTypesExt.GSO , 60
@@ -59,6 +67,8 @@ namespace TAC_AI.World
             { FactionTypesExt.TAC, 70 },
             { FactionTypesExt.OS, 45 },
         };
+
+
 
         private static FieldInfo ProdDelay = typeof(ModuleItemProducer).GetField("m_SecPerItemProduced", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -117,7 +127,7 @@ namespace TAC_AI.World
                         {
                             if (Vis is ManSaveGame.StoredTech tech)
                             {
-                                HandleTechUnloaded(tech, tileInst.coord);
+                                HandleTechUnloaded(tech);
                                 count++;
                             }
                         }
@@ -158,7 +168,7 @@ namespace TAC_AI.World
                 {
                     if (Vis is ManSaveGame.StoredTech tech)
                     {
-                        HandleTechUnloaded(tech, WT.Coord);
+                        HandleTechUnloaded(tech);
                     }
                 }
             }
@@ -195,7 +205,7 @@ namespace TAC_AI.World
 
 
         // WORLD Loading
-        public static void HandleTechUnloaded(ManSaveGame.StoredTech tech, IntVector2 tilePos)
+        public static void HandleTechUnloaded(ManSaveGame.StoredTech tech)
         {
             int level = 0;
             if (ManSpawn.IsEnemyTeam(tech.m_TeamID) && !tech.m_IsPopulation)
@@ -206,7 +216,7 @@ namespace TAC_AI.World
                 {
                     try
                     {
-                        EnemyBaseUnloaded EBU = new EnemyBaseUnloaded(tilePos, tech, PrepTeam(tech.m_TeamID));
+                        EnemyBaseUnloaded EBU = new EnemyBaseUnloaded(tech.m_WorldPosition.TileCoord, tech, PrepTeam(tech.m_TeamID));
                         level++;
                         foreach (TankPreset.BlockSpec spec in specs)
                         {
@@ -224,13 +234,13 @@ namespace TAC_AI.World
                                 {
                                     EBU.revenue += (int)((GetBiomeGains(tech.m_WorldPosition.GameWorldPosition) * UpdateDelay) / (float)ProdDelay.GetValue(MIP));
                                 }
-                                healthAll += Mathf.Max((int)TB.GetComponent<Damageable>().Health / 10, 1);
+                                healthAll += Mathf.Max(TB.GetComponent<ModuleDamage>().maxHealth, 1);
                             }
                         }
                         level++;
                         EBU.Faction = tech.m_TechData.GetMainCorpExt();
-                        EBU.Health = healthAll;
-                        EBU.MaxHealth = healthAll;
+                        EBU.Health = (long)(healthAll * BaseHealthMulti);
+                        EBU.MaxHealth = (long)(healthAll * BaseHealthMulti);
                         EBU.MoveSpeed = 0; //(STATIONARY)
                         level++;
                         EBU.Funds = RBases.GetBuildBucksFromNameExt(tech.m_TechData.Name);
@@ -260,7 +270,7 @@ namespace TAC_AI.World
                 {
                     try
                     {
-                        EnemyTechUnit ETU = new EnemyTechUnit(tilePos, tech);
+                        EnemyTechUnit ETU = new EnemyTechUnit(tech.m_WorldPosition.TileCoord, tech);
                         level++;
                         foreach (TankPreset.BlockSpec spec in specs)
                         {
@@ -275,12 +285,12 @@ namespace TAC_AI.World
                                 }
                                 if (TB.GetComponent<ModuleItemHolderBeam>())
                                     ETU.canHarvest = true;
-                                healthAll += Mathf.Max((int)TB.GetComponent<Damageable>().Health / 10, 1);
+                                healthAll += Mathf.Max(TB.GetComponent<ModuleDamage>().maxHealth, 1);
                             }
                         }
                         level++;
-                        ETU.Health = healthAll;
-                        ETU.MaxHealth = healthAll;
+                        ETU.Health = (long)(healthAll * MobileHealthMulti);
+                        ETU.MaxHealth = (long)(healthAll * MobileHealthMulti);
                         ETU.Faction = tech.m_TechData.GetMainCorpExt();
                         ETU.MoveSpeed = 0;
                         level++;
@@ -355,7 +365,7 @@ namespace TAC_AI.World
                     tile.AddSavedTech(ST.m_TechData, BTs.ToArray(), ST.m_TeamID, newPos, fromDirect, true, false, true, ST.m_ID, false, 1, true);
                     if (tile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
                     {
-                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last(), tile.coord);
+                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last());
                     }
                 }
                 return true;
@@ -452,7 +462,10 @@ namespace TAC_AI.World
             {
                 if (!EP.EBUs.Contains(EBU))
                 {
-                    //Debug.Log("TACtical_AI: HandleTechUnloaded(EBU) New tech " + tech.tech.m_TechData.Name + " of type " + EBU.Faction + ", health " + EBU.MaxHealth + ", weapons " + EBU.AttackPower + ", funds " + EBU.Funds);
+#if DEBUG
+                    Debug.Log("TACtical_AI: HandleTechUnloaded(EBU) New tech " + tech.tech.m_TechData.Name + " of type " + EBU.Faction + ", health " + EBU.MaxHealth + ", weapons " + EBU.AttackPower + ", funds " + EBU.Funds);
+                    Debug.Log("TACtical_AI: of Team " + tech.tech.m_TeamID);
+#endif
                     EP.EBUs.Add(EBU);
                 }
                 else
@@ -464,7 +477,10 @@ namespace TAC_AI.World
             {
                 if (!EP.EBUs.Contains(tech))
                 {
-                    //Debug.Log("TACtical_AI: HandleTechUnloaded(ETU) New tech " + tech.tech.m_TechData.Name + " of type " + tech.Faction + ", health " + tech.MaxHealth + ", weapons " + tech.AttackPower);
+#if DEBUG
+                    Debug.Log("TACtical_AI: HandleTechUnloaded(ETU) New tech " + tech.tech.m_TechData.Name + " of type " + tech.Faction + ", health " + tech.MaxHealth + ", weapons " + tech.AttackPower);
+                    Debug.Log("TACtical_AI: of Team " + tech.tech.m_TeamID);
+#endif
                     EP.ETUs.Add(tech);
                 }
                 else
@@ -489,7 +505,7 @@ namespace TAC_AI.World
         /// <returns>True if it can perform</returns>
         public static bool StrategicMoveQueue(EnemyTechUnit ETU, IntVector2 target)
         {
-            if (ETU.tilePos == target)
+            if (ETU.tilePos == target || ETU.MoveSpeed < 2)
                 return true;
             ManSaveGame.StoredTech ST = ETU.tech;
             bool worked = false;
@@ -526,8 +542,10 @@ namespace TAC_AI.World
                 TMC.TargetTileCoord = newWorldPos;
                 ETU.isMoving = true;
                 QueuedUnitMoves.Add(new KeyValuePair<float, TileMoveCommand>(ETA, TMC));
+#if DEBUG
                 Debug.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.tech.m_TechData.Name + " Requested move to " + newWorldPos);
                 Debug.Log("   ETA is " + ETA);
+#endif
                 return true;
             }
             return false;
@@ -600,12 +618,9 @@ namespace TAC_AI.World
                 {
                     ST.AddSavedTech(TD, bIDs, EP.Team, pos, Quaternion.LookRotation(quat * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
 
-                    TrackedVisible TVa = new TrackedVisible(ID, null, ObjectTypes.Vehicle, RadarTypes.Vehicle);
-                    TVa.SetPos(pos);
-                    Singleton.Manager<ManVisible>.inst.TrackVisible(TVa);
                     if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
                     {
-                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last(), ST.coord);
+                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last());
                     }
                 }
             }
@@ -628,12 +643,9 @@ namespace TAC_AI.World
                 {
                     ST.AddSavedTech(TD, bIDs, EP.Team, position, Quaternion.LookRotation(quat * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
 
-                    TrackedVisible TVa = new TrackedVisible(ID, null, ObjectTypes.Vehicle, RadarTypes.Base);
-                    TVa.SetPos(position);
-                    Singleton.Manager<ManVisible>.inst.TrackVisible(TVa);
                     if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
                     {
-                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last(), ST.coord);
+                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last());
                     }
                 }
             }
@@ -659,12 +671,9 @@ namespace TAC_AI.World
                 {
                     ST.AddSavedTech(TD, bIDs, EP.Team, pos, Quaternion.LookRotation(quat * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
 
-                    TrackedVisible TVa = new TrackedVisible(ID, null, ObjectTypes.Vehicle, RadarTypes.Vehicle);
-                    TVa.SetPos(pos);
-                    Singleton.Manager<ManVisible>.inst.TrackVisible(TVa);
                     if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
                     {
-                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last(), ST.coord);
+                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last());
                     }
                 }
             }
@@ -687,12 +696,9 @@ namespace TAC_AI.World
                 {
                     ST.AddSavedTech(TD, bIDs, EP.Team, position, Quaternion.LookRotation(quat * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
 
-                    TrackedVisible TVa = new TrackedVisible(ID, null, ObjectTypes.Vehicle, RadarTypes.Base);
-                    TVa.SetPos(position);
-                    Singleton.Manager<ManVisible>.inst.TrackVisible(TVa);
                     if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
                     {
-                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last(), ST.coord);
+                        HandleTechUnloaded((ManSaveGame.StoredTech)SV.Last());
                     }
                 }
             }
@@ -831,15 +837,12 @@ namespace TAC_AI.World
         }
         internal static List<EnemyTechUnit> GetTechsInTile(IntVector2 tilePos)
         {
-            //List<EnemyPresence> EPs = EnemyTeams.Values.ToList();
             List<EnemyTechUnit> ETUsInRange = new List<EnemyTechUnit>();
-            //Singleton.Manager<ManSaveGame>.inst.CurrentState.m_StoredTiles.TryGetValue(tilePos, out ManSaveGame.StoredTile Tile)
 
             ManSaveGame.StoredTile Tile = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(tilePos, false);
             if (Tile == null)
                 return ETUsInRange;
 
-            //Singleton.Manager<ManVisible>.inst.ID
             if (Tile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> viss))
             {
                 foreach (ManSaveGame.StoredVisible STV in viss)

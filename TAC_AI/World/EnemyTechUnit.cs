@@ -34,7 +34,7 @@ namespace TAC_AI.World
         {
             EnemyWorldManager.GetTeam(tech.m_TeamID).SetEvent(tilePos);
             Health -= Dealt;
-            Debug.Log("TACtical_AI: EnemyPresence - Enemy " + tech.m_TechData.Name + " has received " + Dealt + " damage | Health " + Health);
+            EnemyPresence.ReportCombat("TACtical_AI: EnemyPresence - Enemy " + tech.m_TechData.Name + " has received " + Dealt + " damage | Health " + Health);
             return Health < 0;
         }
     }

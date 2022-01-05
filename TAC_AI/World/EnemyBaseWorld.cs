@@ -193,20 +193,26 @@ namespace TAC_AI.World
             }
             posToCheck.OrderBy(x => x.sqrMagnitude);
 
+            int numScanned = 0;
             foreach (Vector2 NV2 in posToCheck)
             {
                 IntVector2 IV2 = NV2;
                 if (TileHasEnemy(EP, IV2))
                 {
                     tilePosEnemy = IV2;
+                    Debug.Log("TACtical_AI: SearchPattern - Enemy found at " + tilePosEnemy);
                     return true;
-                } 
+                }
+                //Debug.Log("TACtical_AI: SearchPattern - Scanned " + IV2);
+                numScanned++;
             }
+            //Debug.Log("TACtical_AI: SearchPattern - Scanned a total of " + numScanned);
             return false;
         }
         public static bool TileHasEnemy(EnemyPresence EP, IntVector2 tilePos)
         {
             List<EnemyTechUnit> ETUe = EnemyWorldManager.GetTechsInTile(tilePos);
+            //Debug.Log("TACtical_AI: TileHasEnemy - Tile count " + ETUe.Count());
             return ETUe.Exists(delegate (EnemyTechUnit cand) { return Tank.IsEnemy(cand.tech.m_TeamID, EP.Team); });
         }
         public static IntVector2 FindTeamBaseTile(EnemyPresence EP)
@@ -253,15 +259,15 @@ namespace TAC_AI.World
                     if ((EBU.tech.GetBackwardsCompatiblePosition() - Singleton.playerPos).sqrMagnitude > EnemyWorldManager.EnemyBaseCullingRangeSq)
                     {
                         int count = EP.EBUs.Count;
-                        for (int step = 0; step < count; count--)
+                        for (int step = 0; step <= count; count--)
                         {
-                            EnemyBaseUnloaded EBUcase = EP.EBUs.ElementAt(step);
+                            EnemyBaseUnloaded EBUcase = EP.EBUs.ElementAt(0);
                             RemoteRemove(EBUcase);
                         }
                         int count2 = EP.ETUs.Count;
-                        for (int step = 0; step < count2; count--)
+                        for (int step = 0; step <= count2; count2--)
                         {
-                            EnemyTechUnit ETUcase = EP.ETUs.ElementAt(step);
+                            EnemyTechUnit ETUcase = EP.ETUs.ElementAt(0);
                             RemoteRemove(ETUcase);
                         }
                         return;
@@ -291,7 +297,7 @@ namespace TAC_AI.World
                 if (EP.GetBaseCount() >= KickStart.MaxBasesPerTeam)
                 {// Build a mobile Tech 
                     TryFreeUpBaseSlots(EP);
-                    if (EP.ETUs.Count * 3 > KickStart.EnemyTeamTechLimit)
+                    if (EP.ETUs.Count * 2 > KickStart.EnemyTeamTechLimit)
                         return;
                     if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost))
                     {
@@ -304,7 +310,7 @@ namespace TAC_AI.World
                         {
                             BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
                             EnemyWorldManager.ConstructNewTechExt(EBU, EP, BTemp);
-                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            //Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
                             return;
                         }
                     }
@@ -312,7 +318,7 @@ namespace TAC_AI.World
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewTech(EBU, EP, type);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
+                    //Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                     return;
                 }
 
@@ -333,7 +339,7 @@ namespace TAC_AI.World
                         {
                             BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
                             EnemyWorldManager.ConstructNewExpansionExt(pos, EBU, EP, BTemp);
-                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
+                            //Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
                             return;
                         }
                     }
@@ -341,7 +347,7 @@ namespace TAC_AI.World
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewExpansion(pos, EBU, EP, type);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
+                    //Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
                 }
                 else if (TryFindExpansionLocation2(EBU, EBU.tech.GetBackwardsCompatiblePosition(), out Vector3 pos2))
                 {   // Try spawning base extensions
@@ -358,7 +364,7 @@ namespace TAC_AI.World
                         {
                             BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
                             EnemyWorldManager.ConstructNewExpansionExt(pos2, EBU, EP, BTemp);
-                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
+                            //Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
                             return;
                         }
                     }
@@ -366,7 +372,7 @@ namespace TAC_AI.World
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewExpansion(pos2, EBU, EP, type);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
+                    //Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
                 }
                 else
                 {   // Find new home base position
@@ -386,7 +392,7 @@ namespace TAC_AI.World
                         {
                             BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
                             EnemyWorldManager.ConstructNewTechExt(EBU, EP, BTemp);
-                            Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            //Debug.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
                             return;
                         }
                     }
@@ -394,12 +400,12 @@ namespace TAC_AI.World
                     if (RawTechLoader.IsFallback(type))
                         return;
                     EnemyWorldManager.ConstructNewTech(EBU, EP, type);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
+                    //Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                 }
             }
-            catch
+            catch (Exception e)
             {
-                Debug.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn");
+                Debug.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn: " + e);
             }
         }
         public static void TryFreeUpBaseSlots(EnemyPresence EP)
