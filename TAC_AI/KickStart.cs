@@ -525,12 +525,35 @@ namespace TAC_AI
             }
         }
 
+        /// <summary>
+        /// Only call for cases where we want only vanilla corps!
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
         public static FactionTypesExt GetCorpExtended(BlockTypes type)
         {
             return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(type);
         }
         public static FactionSubTypes CorpExtToCorp(FactionTypesExt corpExt)
         {
+            switch (corpExt)
+            {
+                case FactionTypesExt.GT:
+                case FactionTypesExt.IEC:
+                    return FactionSubTypes.GSO;
+                case FactionTypesExt.EFF:
+                case FactionTypesExt.LK:
+                    return FactionSubTypes.GC;
+                case FactionTypesExt.OS:
+                    return FactionSubTypes.VEN;
+                case FactionTypesExt.BL:
+                case FactionTypesExt.TAC:
+                    return FactionSubTypes.HE;
+                case FactionTypesExt.DL:
+                case FactionTypesExt.EYM:
+                case FactionTypesExt.HS:
+                    return FactionSubTypes.BF;
+            }
             return (FactionSubTypes)corpExt;
         }
     }
@@ -544,7 +567,10 @@ namespace TAC_AI
                 toSort.Add(GetBlockCorpExt(BlocS.BlockType));
             }
             toSort = SortCorps(toSort);
-            return toSort.First();
+            FactionTypesExt final = toSort.First();
+
+            Debug.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp");
+            return final;
         }
         public static FactionTypesExt GetMainCorpExt(this TechData tank)
         {
@@ -556,11 +582,11 @@ namespace TAC_AI
             toSort = SortCorps(toSort);
             return toSort.First();//(FactionTypesExt)tank.GetMainCorporations().First();
         }
-        public static FactionTypesExt GetBlockCorpExt(BlockTypes BT)
+        internal static FactionTypesExt GetBlockCorpExt(BlockTypes BT)
         {
-            if ((int)BT < 5000)// Payload's range
-                return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
             int BTval = (int)BT;
+            if (BTval < 5000)// Payload's range
+                return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
 
             if (BTval >= 584200 && BTval <= 584599) // Technocratic AI Colony - Power Density
                 return FactionTypesExt.TAC;
@@ -571,7 +597,7 @@ namespace TAC_AI
 
             return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
         }
-        public static List<FactionTypesExt> SortCorps(List<FactionTypesExt> unsorted)
+        private static List<FactionTypesExt> SortCorps(List<FactionTypesExt> unsorted)
         {
             List<FactionTypesExt> distinct = unsorted.Distinct().ToList();
             List<KeyValuePair<int, FactionTypesExt>> sorted = new List<KeyValuePair<int, FactionTypesExt>>();

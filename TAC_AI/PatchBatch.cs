@@ -797,7 +797,7 @@ namespace TAC_AI
                                 {
                                     Vector3 position = tanksToConsider[step] + (Vector3.up * 10);
                                     if (!RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), -(spawn - tanksToConsider[step]).normalized, BaseTerrain.Air, silentFail: false))
-                                        Debug.Log("TACtical_AI: error");
+                                        Debug.Log("TACtical_AI: ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
                                 }
                                 rTime.SetValue(__instance, Time.time + __instance.resetTime);
                                 spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
@@ -808,7 +808,7 @@ namespace TAC_AI
                                 {
                                     Vector3 position = tanksToConsider[step] + (Vector3.up * 14);
                                     if (RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), (spawn - tanksToConsider[step]).normalized, BaseTerrain.Space, silentFail: false))
-                                        Debug.Log("TACtical_AI: error");
+                                        Debug.Log("TACtical_AI: ThrowCoolAIInAttract(SpaceBattle) - error ~ could not find Tech");
                                 }
                                 rTime.SetValue(__instance, Time.time + __instance.resetTime);
                                 spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
@@ -872,7 +872,7 @@ namespace TAC_AI
                                     Vector3 position = tanksToConsider[step] + (Vector3.up * 10);
 
                                     if (RawTechLoader.SpawnAttractTech(position, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), (spawn - tanksToConsider[step]).normalized, BaseTerrain.AnyNonSea))
-                                        Debug.Log("TACtical_AI: error");
+                                        Debug.Log("TACtical_AI: ThrowCoolAIInAttract(Misc) - error ~ could not find Tech");
                                 }
                                 RawTechLoader.SpawnAttractTech(spawn, 749, Vector3.forward, BaseTerrain.Air);
                                 rTime.SetValue(__instance, Time.time + __instance.resetTime);
@@ -1705,7 +1705,7 @@ namespace TAC_AI
                                 catch { }
 
 
-                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
+                                if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
                                 {
                                     RadarTypes inherit = tv.RadarType;
                                     string previousTechName = tv.visible.tank.name;
@@ -1718,7 +1718,7 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    int newTech = RawTechLoader.GetExternalIndex(FactionTypesExt.NULL, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
+                                    int newTech = valid.GetRandomEntry();
                                     Tank replacementBote = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[newTech], AutoTerrain: false);
                                     replacementBote.SetTeam(tv.TeamID, wasPop);
 
@@ -1798,7 +1798,7 @@ namespace TAC_AI
                                         grade = ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp());
                                 }
                                 catch { }
-                                if (RawTechLoader.ShouldUseCustomTechs(tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
+                                if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
                                 {
                                     RadarTypes inherit = tv.RadarType;
                                     string previousTechName = tv.visible.tank.name;
@@ -1811,7 +1811,7 @@ namespace TAC_AI
                                     SpecialAISpawner.Purge(tv.visible.tank);
                                     pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
 
-                                    int newType = RawTechLoader.GetExternalIndex(FactionTypesExt.NULL, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
+                                    int newType = valid.GetRandomEntry();
                                     Tank replacementTech = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[newType], AutoTerrain: false);
                                     replacementTech.SetTeam(tv.TeamID, wasPop);
 

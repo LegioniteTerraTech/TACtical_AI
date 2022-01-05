@@ -106,7 +106,7 @@ namespace TAC_AI.AI
 
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
-            Debug.Log("TACtical_AI: Added ground AI from " + Tank.name);
+            Debug.Log("TACtical_AI: Added ground AI for " + Tank.name);
         }
         public void UpdateEnemyMind(EnemyMind mind)
         {

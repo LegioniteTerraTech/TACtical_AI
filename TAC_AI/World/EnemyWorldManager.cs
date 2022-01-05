@@ -53,6 +53,8 @@ namespace TAC_AI.World
                 FactionTypesExt.BF , 75
             },
             { FactionTypesExt.EXP, 45 },
+
+            // MODDED UNOFFICIAL
             { FactionTypesExt.GT, 65 },
             { FactionTypesExt.TAC, 70 },
             { FactionTypesExt.OS, 45 },

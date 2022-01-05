@@ -69,17 +69,19 @@ namespace TAC_AI.AI.Enemy
             }
             if (Mind.StartedAnchored)
             {
-                if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0 && Mind.AIControl.anchorAttempts < 16)
+                if (!tank.IsAnchored)
                 {
-                    //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
-                    tank.FixupAnchors(true);
-                    if (!tank.IsAnchored)
+                    if (Mind.AIControl.anchorAttempts < 32)
+                    {
+                        //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
+                        tank.FixupAnchors(true);
                         tank.Anchors.TryAnchorAll(true);
-                    Mind.AIControl.anchorAttempts++;
+                        Mind.AIControl.anchorAttempts++;
+                        if (tank.IsAnchored)
+                            Mind.AIControl.anchorAttempts = 0;
+                    }
                 }
             }
-            else
-                Mind.AIControl.anchorAttempts = 0;
 
 
             RBolts.ManageBolts(thisInst, tank, Mind);

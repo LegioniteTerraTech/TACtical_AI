@@ -1086,9 +1086,10 @@ namespace TAC_AI.AI.Enemy
                 {   // Try spawning defense
                     Terra = RawTechLoader.GetTerrain(pos);
                     reason = PickBuildBasedOnPriorities(mind, funds);
-                    if (RawTechLoader.ShouldUseCustomTechs(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
-                        int spawnIndex = RawTechLoader.GetExternalIndex(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost);
+                        int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
                             Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
@@ -1096,7 +1097,7 @@ namespace TAC_AI.AI.Enemy
                         else
                         {
                             BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
-                            RawTechLoader.SpawnEnemyTechExtBase(pos, tech.Team, Vector3.forward, BTemp);
+                            RawTechLoader.SpawnEnemyTechExtBase(pos, tech.Team, tech.rootBlockTrans.right, BTemp);
                             return;
                         }
                     }
@@ -1105,7 +1106,7 @@ namespace TAC_AI.AI.Enemy
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type " + reason);
+                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
                     }
                     else
                         Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
@@ -1114,9 +1115,10 @@ namespace TAC_AI.AI.Enemy
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
                     reason = PickBuildNonDefense(mind);
-                    if (RawTechLoader.ShouldUseCustomTechs(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
-                        int spawnIndex = RawTechLoader.GetExternalIndex(mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost);
+                        int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
                             Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
@@ -1124,7 +1126,7 @@ namespace TAC_AI.AI.Enemy
                         else
                         {
                             BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
-                            RawTechLoader.SpawnEnemyTechExtBase(pos, tech.Team, Vector3.forward, BTemp);
+                            RawTechLoader.SpawnEnemyTechExtBase(pos2, tech.Team, tech.rootBlockTrans.right, BTemp);
                             return;
                         }
                     }
@@ -1133,7 +1135,7 @@ namespace TAC_AI.AI.Enemy
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type " + reason);
+                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
                     }
                     else
                         Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");

@@ -293,9 +293,9 @@ namespace TAC_AI.World
                     TryFreeUpBaseSlots(EP);
                     if (EP.ETUs.Count * 3 > KickStart.EnemyTeamTechLimit)
                         return;
-                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost))
                     {
-                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost);
+                        int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
                             Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
@@ -322,9 +322,9 @@ namespace TAC_AI.World
                 {   // Try spawning defense
                     reason = PickBuildBasedOnPriorities(EP);
                     Terra = RawTechLoader.GetTerrain(pos);
-                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, reason, Terra, false, grade, maxPrice: Cost))
                     {
-                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost);
+                        int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
                             Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
@@ -347,9 +347,9 @@ namespace TAC_AI.World
                 {   // Try spawning base extensions
                     reason = PickBuildNonDefense(EP);
                     Terra = RawTechLoader.GetTerrain(pos2);
-                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, reason, Terra, false, grade, maxPrice: Cost))
                     {
-                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, reason, Terra, false, grade, maxPrice: Cost);
+                        int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
                             Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
@@ -375,9 +375,9 @@ namespace TAC_AI.World
                     if (EP.ETUs.Count * 3 > KickStart.EnemyTeamTechLimit)
                         return;
                     Terra = RawTechLoader.GetTerrain(pos2);
-                    if (RawTechLoader.ShouldUseCustomTechs(EBU.Faction, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost))
                     {
-                        int spawnIndex = RawTechLoader.GetExternalIndex(EBU.Faction, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost);
+                        int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
                             Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");

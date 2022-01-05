@@ -254,7 +254,13 @@ namespace TAC_AI.Templates
                         temp.savedTech = ext.Blueprint;
                         temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
                         errorLevel++;
-                        FactionTypesExt MainCorp = KickStart.GetCorpExtended(AIERepair.JSONToFirstBlock(ext.Blueprint));
+                        FactionTypesExt MainCorp;
+                        if (ext.Faction == FactionTypesExt.NULL)
+                        {
+                            MainCorp = KickStart.GetCorpExtended(AIERepair.JSONToFirstBlock(ext.Blueprint));
+                        }
+                        else
+                            MainCorp = ext.Faction;
                         errorLevel++;
                         temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                         temp.IntendedGrade = minCorpGrade;
@@ -399,6 +405,7 @@ namespace TAC_AI.Templates
             minCorpGrade = 0;
             bool NotMP = false;
             bool hasAutominer = false;
+            bool hasReceiver = false;
 
             BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
             int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(factionType));
@@ -409,6 +416,12 @@ namespace TAC_AI.Templates
                 TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
                 if (bloc.IsNull())
                     continue;
+                ModuleItemPickup rec = bloc.GetComponent<ModuleItemPickup>();
+                if ((bool)rec)
+                {
+                    hasReceiver = true;
+                    NotMP = true;
+                }
                 if (bloc.GetComponent<ModuleItemProducer>())
                 {
                     hasAutominer = true;
@@ -418,6 +431,8 @@ namespace TAC_AI.Templates
                     NotMP = true;
 
 
+                if (bloc.GetComponent<ModuleTechController>())
+                    modControlCount++;
                 if (bloc.GetComponent<ModuleTechController>())
                     modControlCount++;
                 if (bloc.GetComponent<ModuleItemHolder>())
@@ -526,6 +541,11 @@ namespace TAC_AI.Templates
                 purposes.Add(BasePurpose.MPUnsafe);
             if (Anchored)
             {
+                if (hasReceiver)
+                {
+                    purposes.Add(BasePurpose.HasReceivers);
+                    isDef = false;
+                }
                 if (hasAutominer)
                 {
                     purposes.Add(BasePurpose.Autominer);
@@ -559,11 +579,12 @@ namespace TAC_AI.Templates
             string purposesList = "None.";
             if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
+                purposesList = "";
                 foreach (BasePurpose purp in purposes)
                 {
                     purposesList += purp.ToString() + "|";
                 }
-                Debug.Log("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "|Anchored (static)");
+                Debug.Log("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
 
                 //Debug.Log("TACtical_AI: Purposes: Anchored (static)");
                 return purposes;
@@ -708,7 +729,7 @@ namespace TAC_AI.Templates
         {
             BuilderExternal builder = new BuilderExternal();
             builder.Name = tank.name;
-            builder.Faction = GetTopCorp(tank);
+            builder.Faction = tank.GetMainCorpExt();//GetTopCorp(tank);
             builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
             builder.InfBlocks = false;
             builder.IsAnchored = tank.IsAnchored;
@@ -722,7 +743,7 @@ namespace TAC_AI.Templates
         {
             BuilderExternal builder = new BuilderExternal();
             builder.Name = tank.name;
-            builder.Faction = GetTopCorp(tank);
+            builder.Faction = tank.GetMainCorpExt();
             builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
             builder.InfBlocks = false;
             builder.IsAnchored = tank.IsAnchored;
@@ -1188,7 +1209,7 @@ namespace TAC_AI.Templates
 
             foreach (TankBlock block in tank.blockman.IterateBlocks())
             {
-                corpCounts[(int)KickStart.GetCorpExtended(block.BlockType)]++;
+                corpCounts[(int)TankExtentions.GetBlockCorpExt(block.BlockType)]++;
             }
             int blockCounts = 0;
             int bestCorpIndex = 0;

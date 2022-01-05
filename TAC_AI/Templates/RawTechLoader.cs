@@ -287,9 +287,9 @@ namespace TAC_AI.Templates
             if (BT == BaseTerrain.Land)
                 type = GetEnemyBaseType(FTE, purpose, BaseTerrain.Land, maxGrade: grade);
 
-            if (ShouldUseCustomTechs(spawnerTank.GetMainCorpExt(), purpose, BT, false, grade))
+            if (ShouldUseCustomTechs(out List<int> valid, spawnerTank.GetMainCorpExt(), purpose, BT, false, grade))
             {
-                int spawnIndex = GetExternalIndex(FTE, purpose, BT, false, grade);
+                int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex == -1)
                 {
                     Debug.Log("TACtical_AI: ShouldUseCustomTechs(SpawnBaseAtPosition) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
@@ -615,9 +615,9 @@ namespace TAC_AI.Templates
         {   // This will try to spawn player-made enemy techs as well
 
             Tank outTank;
-            if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, maxPrice: maxPrice, unProvoked: unProvoked))
+            if (ShouldUseCustomTechs(out List<int> valid, factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, maxPrice: maxPrice, unProvoked: unProvoked))
             {
-                int spawnIndex = GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, maxPrice: maxPrice, unProvoked: unProvoked);
+                int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex == -1)
                 {
                     Debug.Log("TACtical_AI: ShouldUseCustomTechs - Critical error on call - Expected a Custom Local Tech to exist but found none!");
@@ -655,7 +655,7 @@ namespace TAC_AI.Templates
         internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, out Tank outTank, FactionTypesExt factionType = FactionTypesExt.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
         {   // This will try to spawn player-made enemy techs as well
 
-            if (ShouldUseCustomTechs(factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, unProvoked: unProvoked, maxPrice: maxPrice))
+            if (ShouldUseCustomTechs(out List<int> valid, factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, unProvoked: unProvoked, maxPrice: maxPrice))
             {
                 outTank = SpawnEnemyTechExt(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, unProvoked: unProvoked, maxPrice: maxPrice)], unProvoked, AutoTerrain);
             }
@@ -721,12 +721,12 @@ namespace TAC_AI.Templates
         }
         internal static bool SpawnAttractTech(Vector3 pos, int Team, Vector3 facingDirect, BaseTerrain terrainType = BaseTerrain.Land, FactionTypesExt faction = FactionTypesExt.NULL, BasePurpose purpose = BasePurpose.NotStationary, bool silentFail = true)
         {
-            if (ShouldUseCustomTechs(faction, BasePurpose.NotStationary, terrainType, true))
+            if (ShouldUseCustomTechs(out List<int> valid, faction, BasePurpose.NotStationary, terrainType, true))
             {
-                int spawnIndex = GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, true);
+                int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex == -1)
                 {
-                    Debug.Log("TACtical_AI: SpawnAttractTech - Critical error on call - Expected a Custom Local tech to exist but found none!");
+                    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Critical error on call - Expected a Custom Local tech to exist but found none!");
                     return false;
                 }
                 else
@@ -1092,8 +1092,7 @@ namespace TAC_AI.Templates
         internal static List<int> GetExternalIndexes(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
             try
-            {
-                // Filters
+            {   // Filters
                 List<BaseTemplate> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -1108,27 +1107,44 @@ namespace TAC_AI.Templates
                 bool cantSpawnErad = (!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs);
                 canidates = canidates.FindAll(delegate (BaseTemplate cand)
                 {
+                    List<BasePurpose> techPurposes = cand.purposes;
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
+                    {   // no illegal base in MP
+                        return false;
+                    }
+                    if (purpose == BasePurpose.HarvestingNoHQ)
+                    {
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
+                            return false;
+                        if (techPurposes.Contains(BasePurpose.Harvesting))
+                            return true;
+                        return false;
+                    }
                     if (purpose == BasePurpose.AnyNonHQ)
                     {
-                        if (cand.purposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
+                        if (techPurposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
                             return false;
                         return true;
                     }
-                    if (purpose != BasePurpose.NotStationary && cand.purposes.Contains(BasePurpose.NotStationary))
+                    bool notStationary = techPurposes.Contains(BasePurpose.NotStationary);
+                    if (purpose != BasePurpose.NotStationary && notStationary)
                         return false;
-                    if (!searchAttract && cand.purposes.Contains(BasePurpose.AttractTech))
+                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
                         return false;
-                    bool noWeaps = cand.purposes.Contains(BasePurpose.NoWeapons);
-                    if (searchAttract && noWeaps)
+                    bool noWeapons = techPurposes.Contains(BasePurpose.NoWeapons);
+                    if (searchAttract && noWeapons)
                         return false;
-                    if (unProvoked && noWeaps)
+                    if (unProvoked && noWeapons)
                         return true;
-                    if (cantSpawnErad && cand.purposes.Contains(BasePurpose.NANI))
-                        return false;
-                    if (cand.purposes.Count == 0)
+                    if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
                         return false;
 
-                    return cand.purposes.Contains(purpose);
+                    if (purpose == BasePurpose.Harvesting && notStationary)
+                        return false;
+
+                    if (techPurposes.Count == 0)
+                        return false;
+                    return techPurposes.Contains(purpose);
                 });
 
                 if (terra == BaseTerrain.AnyNonSea)
@@ -1192,31 +1208,49 @@ namespace TAC_AI.Templates
                         (delegate (BaseTemplate cand) { return cand.faction == faction; });
                 }
 
+                bool cantSpawnErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs;
                 canidates = canidates.FindAll(delegate (BaseTemplate cand)
                 {
+                    List<BasePurpose> techPurposes = cand.purposes;
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
+                    {   // no illegal base in MP
+                        return false;
+                    }
+                    if (purposes.Contains(BasePurpose.HarvestingNoHQ))
+                    {
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
+                            return false;
+                        if (techPurposes.Contains(BasePurpose.Harvesting))
+                            return true;
+                        return false;
+                    }
                     if (purposes.Contains(BasePurpose.AnyNonHQ))
                     {
-                        if (cand.purposes.Contains(BasePurpose.Headquarters))
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
                             return false;
                         return true;
                     }
-                    if (!purposes.Contains(BasePurpose.NotStationary) && cand.purposes.Contains(BasePurpose.NotStationary))
+                    if (!purposes.Contains(BasePurpose.NotStationary) && techPurposes.Contains(BasePurpose.NotStationary))
                         return false;
-                    if (!searchAttract && cand.purposes.Contains(BasePurpose.AttractTech))
+                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
                         return false;
-                    if (searchAttract && cand.purposes.Contains(BasePurpose.NoWeapons))
+                    if (searchAttract && techPurposes.Contains(BasePurpose.NoWeapons))
                         return false;
-                    if (unProvoked && cand.purposes.Contains(BasePurpose.NoWeapons))
+                    if (unProvoked && techPurposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.purposes.Contains(BasePurpose.NANI))
+                    if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
                         return false;
-                    if (cand.purposes.Count == 0)
+
+                    if (purposes.Contains(BasePurpose.Harvesting) && techPurposes.Contains(BasePurpose.NotStationary) && !purposes.Contains(BasePurpose.NotStationary))
+                        return false;
+
+                    if (techPurposes.Count == 0)
                         return false;
 
                     bool valid = true;
                     foreach (BasePurpose purpose in purposes)
                     {
-                        if (!cand.purposes.Contains(purpose))
+                        if (!techPurposes.Contains(purpose))
                             valid = false;
                     }
                     return valid;
@@ -1288,23 +1322,57 @@ namespace TAC_AI.Templates
             return -1;
         }
 
-        internal static bool ShouldUseCustomTechs(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
+        internal static bool ShouldUseCustomTechs(out List<int> validIndexes, FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
-            int CustomTechs = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
-            int PrefabTechs = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked).Count;
+            validIndexes = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked);
+            int CustomTechs = validIndexes.Count;
+            List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked);
+            int PrefabTechs = SBT.Count;
+             
+            if (validIndexes.First() == -1)
+                CustomTechs = 0;
+            if (SBT.First() == SpawnBaseTypes.NotAvail)
+                PrefabTechs = 0;
 
             int CombinedVal = CustomTechs + PrefabTechs;
 
             if (KickStart.TryForceOnlyPlayerSpawns)
             {
-                Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: " + ((PrefabTechs > 0) ? "true" : "false"));
                 if (CustomTechs > 0)
                 {
+                    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Local Techs spawn possible: true");
+                    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                    StringBuilder SB = new StringBuilder();
+                    foreach (int val in validIndexes)
+                    {
+                        SB.Append(val + ", ");
+                    }
+                    Debug.Log(SB.ToString());
                     return true;
                 }
+                else
+                    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: false");
             }
             else
             {
+                if (PrefabTechs == 0)
+                {
+                    if (CustomTechs > 0)
+                    {
+                        Debug.Log("TACtical_AI: ShouldUseCustomTechs - There's only Local Techs available");
+                        Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                        StringBuilder SB = new StringBuilder();
+                        foreach (int val in validIndexes)
+                        {
+                            SB.Append(val + ", ");
+                        }
+                        Debug.Log(SB.ToString());
+                        return true;
+                    }
+                    else
+                        Debug.Log("TACtical_AI: ShouldUseCustomTechs - No Techs found");
+                    return false;
+                }
                 float RAND = UnityEngine.Random.Range(0, CombinedVal);
                 Debug.Log("TACtical_AI: ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
                 if (RAND > PrefabTechs)
@@ -1840,43 +1908,44 @@ namespace TAC_AI.Templates
                 bool cantSpawnErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs;
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
+                    List<BasePurpose> techPurposes = cand.Value.purposes;
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
                     {   // no illegal base in MP
                         return false;
                     }
                     if (purpose == BasePurpose.HarvestingNoHQ)
                     {
-                        if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
                             return false;
-                        if (cand.Value.purposes.Contains(BasePurpose.Harvesting))
+                        if (techPurposes.Contains(BasePurpose.Harvesting))
                             return true;
                         return false;
                     }
                     if (purpose == BasePurpose.AnyNonHQ)
                     {
-                        if (cand.Value.purposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
+                        if (techPurposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
                             return false;
                         return true;
                     }
-                    bool notStationary = cand.Value.purposes.Contains(BasePurpose.NotStationary);
+                    bool notStationary = techPurposes.Contains(BasePurpose.NotStationary);
                     if (purpose != BasePurpose.NotStationary && notStationary)
                         return false;
-                    if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.AttractTech))
+                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
                         return false;
-                    bool noWeapons = cand.Value.purposes.Contains(BasePurpose.NoWeapons);
+                    bool noWeapons = techPurposes.Contains(BasePurpose.NoWeapons);
                     if (searchAttract && noWeapons)
                         return false;
                     if (unProvoked && noWeapons)
                         return true;
-                    if (cantSpawnErad && cand.Value.purposes.Contains(BasePurpose.NANI))
+                    if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
                         return false;
 
                     if (purpose == BasePurpose.Harvesting && notStationary)
                         return false;
 
-                    if (cand.Value.purposes.Count == 0)
+                    if (techPurposes.Count == 0)
                         return false;
-                    return cand.Value.purposes.Contains(purpose);
+                    return techPurposes.Contains(purpose);
                 });
 
                 if (terra == BaseTerrain.Any)
@@ -1947,45 +2016,46 @@ namespace TAC_AI.Templates
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
+                    List<BasePurpose> techPurposes = cand.Value.purposes;
+                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
                     {   // no illegal base in MP
                         return false;
                     }
                     if (purposes.Contains(BasePurpose.HarvestingNoHQ))
                     {
-                        if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
                             return false;
-                        if (cand.Value.purposes.Contains(BasePurpose.Harvesting))
+                        if (techPurposes.Contains(BasePurpose.Harvesting))
                             return true;
                         return false;
                     }
                     if (purposes.Contains(BasePurpose.AnyNonHQ))
                     {
-                        if (cand.Value.purposes.Contains(BasePurpose.Headquarters))
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
                             return false;
                         return true;
                     }
-                    if (!purposes.Contains(BasePurpose.NotStationary) && cand.Value.purposes.Contains(BasePurpose.NotStationary))
+                    if (!purposes.Contains(BasePurpose.NotStationary) && techPurposes.Contains(BasePurpose.NotStationary))
                         return false;
-                    if (!searchAttract && cand.Value.purposes.Contains(BasePurpose.AttractTech))
+                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
                         return false;
-                    if (searchAttract && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
+                    if (searchAttract && techPurposes.Contains(BasePurpose.NoWeapons))
                         return false;
-                    if (unProvoked && cand.Value.purposes.Contains(BasePurpose.NoWeapons))
+                    if (unProvoked && techPurposes.Contains(BasePurpose.NoWeapons))
                         return true;
-                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && cand.Value.purposes.Contains(BasePurpose.NANI))
+                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs) && techPurposes.Contains(BasePurpose.NANI))
                         return false;
 
-                    if (purposes.Contains(BasePurpose.Harvesting) && cand.Value.purposes.Contains(BasePurpose.NotStationary) && !purposes.Contains(BasePurpose.NotStationary))
+                    if (purposes.Contains(BasePurpose.Harvesting) && techPurposes.Contains(BasePurpose.NotStationary) && !purposes.Contains(BasePurpose.NotStationary))
                         return false;
 
-                    if (cand.Value.purposes.Count == 0)
+                    if (techPurposes.Count == 0)
                         return false;
 
                     bool valid = true;
                     foreach (BasePurpose purpose in purposes)
                     {
-                        if (!cand.Value.purposes.Contains(purpose))
+                        if (!techPurposes.Contains(purpose))
                             valid = false;
                     }
                     return valid;
@@ -2145,8 +2215,9 @@ namespace TAC_AI.Templates
             int nameNum = Name.GetHashCode();
             try
             {
-                int lookup = TempManager.ExternalEnemyTechs.ToList().FindIndex(delegate (BaseTemplate cand) { return cand.techName.GetHashCode() == nameNum; });
-                if (lookup == -1) return null;
+                int lookup = TempManager.ExternalEnemyTechs.FindIndex(delegate (BaseTemplate cand) { return cand.techName.GetHashCode() == nameNum; });
+                if (lookup == -1) 
+                    return null;
                 return TempManager.ExternalEnemyTechs[lookup];
             }
             catch
