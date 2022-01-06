@@ -1691,6 +1691,7 @@ namespace TAC_AI
                         return;
                     if (tv.visible.tank.IsPopulation)
                     {
+                        RawTechLoader.UseFactionSubTypes = true;
                         if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval)
                         {
                             // OVERRIDE TO SHIP
@@ -1852,6 +1853,8 @@ namespace TAC_AI
                                 Debug.Log("TACtical_AI: Attempt to swap Land tech failed!");
                             }
                         }
+
+                        RawTechLoader.UseFactionSubTypes = false;
                     }
                 }
             }

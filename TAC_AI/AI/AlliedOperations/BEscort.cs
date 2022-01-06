@@ -10,7 +10,13 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (thisInst.lastPlayer == null)
                 return;
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
+            Vector3 veloFlat = Vector3.zero;
+            if ((bool)tank.rbody)   // So that drifting is minimized
+            {
+                veloFlat = tank.rbody.velocity;
+                veloFlat.y = 0;
+            }
+            float dist = (tank.boundsCentreWorldNoCheck + veloFlat - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
             float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
             bool hasMessaged = false;
             thisInst.lastRange = dist;

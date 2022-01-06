@@ -27,7 +27,6 @@ namespace TAC_AI.Templates
         private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
 
 
-
         public static void Initiate()
         {
             if (!Enabled)

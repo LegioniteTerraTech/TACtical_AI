@@ -588,6 +588,11 @@ namespace TAC_AI
             if (BTval < 5000)// Payload's range
                 return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
 
+            if (BTval >= 300000 && BTval <= 303999) // Old Star
+            {   // This should work until Pachu makes a VEN Block
+                if (Singleton.Manager<ManSpawn>.inst.GetCorporation(BT) == FactionSubTypes.VEN)
+                    return FactionTypesExt.OS;
+            }
             if (BTval >= 584200 && BTval <= 584599) // Technocratic AI Colony - Power Density
                 return FactionTypesExt.TAC;
             if (BTval >= 584600 && BTval <= 584750) // Emperical Forge Fabrication - Unit Count

@@ -24,11 +24,11 @@ namespace TAC_AI.AI.Enemy
 
         public static EnemyAttack GetAttackStrat(Tank tank)
         {
-            /*
+            
             if (KickStart.isTweakTechPresent && tank.blockman.IterateBlocks().Count() <= SmolTechThreshold)
             {   // Small Techs should play it mobile
                 return EnemyAttack.Circle;
-            }*/
+            }
 
             EnemyAttack attack = EnemyAttack.Grudge;
             int strongWeaps = 0; // Weapons with damage surpassing 1750

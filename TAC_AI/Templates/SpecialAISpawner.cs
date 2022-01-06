@@ -274,12 +274,14 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 if (unProvoked)
                 {
-                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.NoWeapons }, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching))
+                    RawTechLoader.UseFactionSubTypes = true;
+                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching))
                         return finalTank;
                     else
                         return null;
                 }
                 // else we do default spawn
+                RawTechLoader.UseFactionSubTypes = true;
                 return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
             }
             catch { }
@@ -362,7 +364,8 @@ namespace TAC_AI.Templates
                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>HUGE unidentified flying object spotted!</b>");
                 }
                 catch { }
-                Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene"); 
+                Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
+                RawTechLoader.UseFactionSubTypes = true;
                 worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, -1, out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
                 return tech;
             }
@@ -408,6 +411,7 @@ namespace TAC_AI.Templates
                 if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos3))
                     return;
 
+                RawTechLoader.UseFactionSubTypes = true;
                 RawTechLoader.SpawnSpecificTypeTechSafe(pos3, trollTeam, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true);
 
                 Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
@@ -424,6 +428,7 @@ namespace TAC_AI.Templates
 
             if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos2))
                 return;
+            RawTechLoader.UseFactionSubTypes = true;
             RawTechLoader.SpawnSpecificTypeTechSafe(pos2, trollTeam, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, forceInstant: true, isPopulation: true);
 
             Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");

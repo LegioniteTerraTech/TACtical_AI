@@ -70,7 +70,10 @@ namespace TAC_AI.Templates
 
         const float MinimumBaseSpacing = 450;
         const int MaxBlockLimitAttract = 128;
-
+        /// <summary>
+        /// FOR CASES INVOLVING FIRST TECH SPAWNS, NOT ADDITIONS TO TEAMS
+        /// </summary>
+        internal static bool UseFactionSubTypes = false;  // Force FactionSubTypes instead of FactionTypesExt
         static bool ForceSpawn = false;  // Test a specific base
         static SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
         private static List<QueueInstantTech> TechBacklog = new List<QueueInstantTech>();
@@ -633,25 +636,7 @@ namespace TAC_AI.Templates
 
             return outTank;
         }
-        internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, List<BasePurpose> purposes, out Tank outTank, FactionTypesExt factionType = FactionTypesExt.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
-        {   // This will try to spawn player-made enemy techs as well
-            if (ShouldUseCustomTechs(factionType, purposes, terrainType, false, maxGrade, maxPrice, unProvoked))
-            {
-                outTank = SpawnEnemyTechExt(pos, Team, heading, TempManager.ExternalEnemyTechs[GetExternalIndex(factionType, purposes, terrainType, maxGrade: maxGrade, maxPrice: maxPrice, unProvoked: unProvoked)], unProvoked, AutoTerrain);
-            }
-            else
-            {
-                SpawnBaseTypes type = GetEnemyBaseType(factionType, purposes, terrainType, maxGrade: maxGrade);
-                if (type == SpawnBaseTypes.NotAvail)
-                {
-                    outTank = null;
-                    return false;
-                }
-                outTank = SpawnMobileTech(pos, heading, Team, GetEnemyBaseType(factionType, purposes, terrainType, maxGrade: maxGrade, unProvoked: unProvoked, maxPrice: maxPrice), false, unProvoked, AutoTerrain);
-            }
 
-            return true;
-        }
         internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 heading, int Team, out Tank outTank, FactionTypesExt factionType = FactionTypesExt.NULL, BaseTerrain terrainType = BaseTerrain.Land, bool unProvoked = false, bool AutoTerrain = true, int maxGrade = 99, int maxPrice = 0)
         {   // This will try to spawn player-made enemy techs as well
 
@@ -1100,8 +1085,17 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    canidates = TempManager.ExternalEnemyTechs.FindAll
-                        (delegate (BaseTemplate cand) { return cand.faction == faction; });
+                    if (UseFactionSubTypes)
+                    {
+                        canidates = TempManager.ExternalEnemyTechs.FindAll
+                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == KickStart.CorpExtToCorp(faction); });
+                        UseFactionSubTypes = false;
+                    }
+                    else
+                    {
+                        canidates = TempManager.ExternalEnemyTechs.FindAll
+                            (delegate (BaseTemplate cand) { return cand.faction == faction; });
+                    }
                 }
 
                 bool cantSpawnErad = (!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs);
@@ -1204,8 +1198,17 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    canidates = TempManager.ExternalEnemyTechs.FindAll
+                    if (UseFactionSubTypes)
+                    {
+                        canidates = TempManager.ExternalEnemyTechs.FindAll
+                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == KickStart.CorpExtToCorp(faction); });
+                        UseFactionSubTypes = false;
+                    }
+                    else
+                    {
+                        canidates = TempManager.ExternalEnemyTechs.FindAll
                         (delegate (BaseTemplate cand) { return cand.faction == faction; });
+                    }
                 }
 
                 bool cantSpawnErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs;
@@ -1324,9 +1327,12 @@ namespace TAC_AI.Templates
 
         internal static bool ShouldUseCustomTechs(out List<int> validIndexes, FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool unProvoked = false)
         {
+            bool cacheSubTypes = UseFactionSubTypes;
             validIndexes = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked);
             int CustomTechs = validIndexes.Count;
+            UseFactionSubTypes = cacheSubTypes;
             List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, unProvoked);
+            UseFactionSubTypes = cacheSubTypes;
             int PrefabTechs = SBT.Count;
              
             if (validIndexes.First() == -1)
@@ -1901,8 +1907,17 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    canidates = TempManager.techBases.ToList().FindAll
+                    if (UseFactionSubTypes)
+                    {
+                        canidates = TempManager.techBases.ToList().FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == KickStart.CorpExtToCorp(faction); });
+                        UseFactionSubTypes = false;
+                    }
+                    else
+                    {
+                        canidates = TempManager.techBases.ToList().FindAll
                         (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
+                    }
                 }
 
                 bool cantSpawnErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= KickStart.MaxEradicatorTechs;
@@ -2010,8 +2025,17 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    canidates = TempManager.techBases.ToList().FindAll
+                    if (UseFactionSubTypes)
+                    {
+                        canidates = TempManager.techBases.ToList().FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == KickStart.CorpExtToCorp(faction); });
+                        UseFactionSubTypes = false;
+                    }
+                    else
+                    {
+                        canidates = TempManager.techBases.ToList().FindAll
                         (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
+                    }
                 }
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
@@ -2396,6 +2420,7 @@ namespace TAC_AI.Templates
 
             return enemyBases.ElementAt(steppe).Team;
         }
+
 
         private static void ReconstructConveyorSequencing(Tank tank)
         {

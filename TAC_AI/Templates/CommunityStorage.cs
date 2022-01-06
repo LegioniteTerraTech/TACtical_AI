@@ -10,7 +10,18 @@ namespace TAC_AI.Templates
     {
         //All incredible community contributions are stored here!
 
-        //private static string  NotAvailableTech = "{\"t\":\"GSOAnchorFixed_111\",\"p\":{\"x\":0.0,\"y\":0.0,\"z\":0.0},\"r\":0}";
+        /*  
+         * REMINDERS FOR SUBMISSION TESTING:
+         *   MAKE SURE THE TECH WORKS ON IT'S OWN (Some may fail due to Cab Issues)
+         *   
+         * 
+         * 
+         * Maker Preferences:
+         *   Lemon Kingdom - *UNDECIDED* - Do not allow Community Spawns into the population
+         *   Old Stars - Only permit Combat Cab to be used in designs as enemy AI is broken
+         * 
+         * 
+         */
 
         public static List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> ReturnAllCommunityStored()
         {
@@ -38,7 +49,6 @@ namespace TAC_AI.Templates
             ComSeas.Clear();
             ComAirs.Clear();
             ComSpaces.Clear();
-
         }
 
         public static Dictionary<SpawnBaseTypes, BaseTemplate> ComHarvests = new Dictionary<SpawnBaseTypes, BaseTemplate>

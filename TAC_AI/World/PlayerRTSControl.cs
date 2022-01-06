@@ -68,7 +68,7 @@ namespace TAC_AI.World
     {
         public static PlayerRTSControl inst;
         public static int MaxCommandDistance = 9001;//500;
-        public static int MaxAllowedSizeForHighlight = 7;
+        public static int MaxAllowedSizeForHighlight = 6;
         public static bool PlayerIsInRTS = false;
         public static bool PlayerRTSOverlay = false;
         public static bool QueuedRelease = false;
