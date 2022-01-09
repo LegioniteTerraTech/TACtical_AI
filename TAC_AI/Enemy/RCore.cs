@@ -44,6 +44,13 @@ namespace TAC_AI.AI.Enemy
                     {
                         Singleton.Manager<ManMusic>.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, tonk.tank);
                     }
+                    else if (World.PlayerRTSControl.PlayerIsInRTS)
+                    {
+                        if (tonk.tank.IsFriendly())
+                        {
+                            Singleton.Manager<ManMusic>.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, tonk.tank);
+                        }
+                    }
                 }
             }
             catch { }

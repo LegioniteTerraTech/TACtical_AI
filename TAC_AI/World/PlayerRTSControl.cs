@@ -54,14 +54,14 @@ namespace TAC_AI.World
                 return;
             ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
             circleInst.SetActive(false);
-            /*
+            
             tech = null;
             ps = null;
             circleInst = null;
             tech.tank.AttachEvent.Unsubscribe(OnSizeUpdate);
             tech.tank.DetachEvent.Unsubscribe(OnSizeUpdate);
             Destroy(ps);
-            Destroy(circleInst);*/
+            Destroy(circleInst);
         }
     }
     public class PlayerRTSControl : MonoBehaviour
