@@ -114,6 +114,8 @@ namespace TAC_AI.AI
             if (thisInst.lastEnemy != null)
             {   // focus fire like Grudge
                 thisInst.DANGER = true;
+                if (!thisInst.lastEnemy.isActive)
+                    thisInst.lastEnemy = GetTarget(thisInst, tank);
             }
             else
             {
