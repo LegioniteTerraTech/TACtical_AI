@@ -86,11 +86,14 @@ namespace TAC_AI.AI.Enemy
 
             RBolts.ManageBolts(thisInst, tank, Mind);
             TestShouldCommitDie(tank, Mind);
-            if (Mind.AllowRepairsOnFly && Mind.TechMemor)
+            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck))
             {
-                bool venPower = false;
-                if (Mind.MainFaction == FactionTypesExt.VEN) venPower = true;
-                RRepair.EnemyRepairStepper(thisInst, tank, Mind, venPower);// longer while fighting
+                if (Mind.AllowRepairsOnFly && Mind.TechMemor)
+                {
+                    bool venPower = false;
+                    if (Mind.MainFaction == FactionTypesExt.VEN) venPower = true;
+                    RRepair.EnemyRepairStepper(thisInst, tank, Mind, venPower);// longer while fighting
+                }
             }
             if (Mind.Provoked == EnemyMind.ProvokeTime)
             {

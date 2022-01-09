@@ -593,6 +593,10 @@ namespace TAC_AI
                 if (Singleton.Manager<ManSpawn>.inst.GetCorporation(BT) == FactionSubTypes.VEN)
                     return FactionTypesExt.OS;
             }
+            if (BTval >= 419000 && BTval <= 419999) // Lemon Kingdom - Mobile Kingdom
+                return FactionTypesExt.LK;
+            if (BTval == 584147)
+                return FactionTypesExt.TAC;
             if (BTval >= 584200 && BTval <= 584599) // Technocratic AI Colony - Power Density
                 return FactionTypesExt.TAC;
             if (BTval >= 584600 && BTval <= 584750) // Emperical Forge Fabrication - Unit Count

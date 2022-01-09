@@ -2115,7 +2115,9 @@ namespace TAC_AI.AI
             public void RunAlliedOperations()
             {
                 var aI = tank.AI;
-                TryRepairAllied();
+
+                if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck));
+                    TryRepairAllied();
                 BoltsFired = false;
 
                 if (tank.PlayerFocused)

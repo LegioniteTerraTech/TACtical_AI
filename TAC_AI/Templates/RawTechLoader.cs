@@ -1556,7 +1556,7 @@ namespace TAC_AI.Templates
         // Override
         internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat, out bool worked)
         {
-            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(WorldPosition.FromGameWorldPosition(position).ScenePosition) && Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) && TechDataAvailValidation.IsBlockAvailableInMode(type))
+            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(position) && Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) && TechDataAvailValidation.IsBlockAvailableInMode(type))
             {
                 worked = true;
 
@@ -1567,6 +1567,11 @@ namespace TAC_AI.Templates
                         block.InitNew();
                 }
                 return block;
+            }
+            else
+            {   // It's trying to work out of bounds
+                worked = false;
+                return null;
             }
             try
             {
