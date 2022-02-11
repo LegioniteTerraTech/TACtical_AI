@@ -27,7 +27,8 @@ namespace TAC_AI
         public const float AirPromoteHeight = 200;
         public const int DefaultEnemyRange = 150;
         public const int EnemyBaseMiningMaxRange = 250;
-        public const int EnemyExtendActionRange = 450;
+        public const int EnemyExtendActionRange = 500 + 32; //the extra 32 to account for tech sizes
+        // was 450
 
         // EPIC TECH HANDLER
         public const int LethalTechSize = 256;
@@ -260,6 +261,7 @@ namespace TAC_AI
             //thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToStartBases");// OBSOLETE
             //thisModConfig.BindConfig<KickStart>(null, "AllowEnemyBaseExpand");    // OBSOLETE
             thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
+            thisModConfig.BindConfig<KickStart>(null, "MaxBasesPerTeam");
             thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
             thisModConfig.BindConfig<KickStart>(null, "AirEnemiesSpawnRate");
             //thisModConfig.BindConfig<KickStart>(null, "AllowOverleveledBlockDrops");
@@ -290,76 +292,78 @@ namespace TAC_AI
 
             var TACAI = ModName;
             betterAI = new OptionToggle("<b>Rebuilt AI</b> \n(Toggle this OFF to uninstall and Save your Techs & Worlds to keep!)", TACAI, EnableBetterAI);
-            betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            betterAI.onValueSaved.AddListener(() => { EnableBetterAI = betterAI.SavedValue; });
             retreatHotkey = new OptionKey("Retreat Button", TACAI, RetreatHotkey);
             retreatHotkey.onValueSaved.AddListener(() =>
             {
                 RetreatHotkey = retreatHotkey.SavedValue;
                 RetreatHotkeySav = (int)RetreatHotkey;
-                thisModConfig.WriteConfigJsonFile();
             });
             aiSelfRepair = new OptionToggle("Allow Mobile AIs to Build", TACAI, AllowAISelfRepair);
-            aiSelfRepair.onValueSaved.AddListener(() => { AllowAISelfRepair = aiSelfRepair.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            aiSelfRepair.onValueSaved.AddListener(() => { AllowAISelfRepair = aiSelfRepair.SavedValue; });
             dodgePeriod = new OptionRange("AI Dodge Processing Shoddiness", TACAI, AIDodgeCheapness, 1, 61, 5);
-            dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            dodgePeriod.onValueSaved.AddListener(() => { AIDodgeCheapness = (int)dodgePeriod.SavedValue; });
             aiUpkeepRefresh = new OptionRange("AI Awareness Update Shoddiness", TACAI, AIClockPeriod, 5, 50, 5);
-            aiUpkeepRefresh.onValueSaved.AddListener(() => { AIClockPeriod = (short)aiUpkeepRefresh.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            aiUpkeepRefresh.onValueSaved.AddListener(() => { AIClockPeriod = (short)aiUpkeepRefresh.SavedValue; });
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, MuteNonPlayerRacket);
-            muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; });
             exportReadableRAW = new OptionToggle("Export .JSON instead of .RAWTECH", TACAI, RawTechExporter.ExportJSONInsteadOfRAWTECH);
-            exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; });
 
             var TACAIRTS = ModName + " - Strategic Mode";
             enemyStrategic = new OptionToggle("Enable Click Commander and Epic Enemy Base AI - Requires Restart", TACAIRTS, AllowStrategicAI);//\nRandomAdditions and TweakTech highly advised for best experience
-            enemyStrategic.onValueSaved.AddListener(() => { AllowStrategicAI = enemyStrategic.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyStrategic.onValueSaved.AddListener(() => { 
+                AllowStrategicAI = enemyStrategic.SavedValue;
+                if (AllowStrategicAI)
+                {
+                    EnemyWorldManager.Initiate();
+                    EnemyWorldManager.LateInitiate();
+                }
+            });
             commandClassic = new OptionToggle("Use Classic RTS Controls", TACAIRTS, UseClassicRTSControls);
-            commandClassic.onValueSaved.AddListener(() => { UseClassicRTSControls = commandClassic.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            commandClassic.onValueSaved.AddListener(() => { UseClassicRTSControls = commandClassic.SavedValue; });
             useKeypadForGroups = new OptionToggle("Use Keypad to Assign Grouping - Check Num Lock", TACAIRTS, UseNumpadForGrouping);
-            useKeypadForGroups.onValueSaved.AddListener(() => { UseNumpadForGrouping = useKeypadForGroups.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            useKeypadForGroups.onValueSaved.AddListener(() => { UseNumpadForGrouping = useKeypadForGroups.SavedValue; });
             commandHotKey = new OptionKey("Click Command Button", TACAIRTS, CommandHotkey);
             commandHotKey.onValueSaved.AddListener(() =>
             {
                 CommandHotkey = commandHotKey.SavedValue;
                 CommandHotkeySav = (int)CommandHotkey;
-                thisModConfig.WriteConfigJsonFile();
             }); 
             commandBoltsHotKey = new OptionKey("Explode Bolts Order Button", TACAIRTS, CommandBoltsHotkey);
             commandBoltsHotKey.onValueSaved.AddListener(() =>
             {
                 CommandBoltsHotkey = commandBoltsHotKey.SavedValue;
                 CommandBoltsHotkeySav = (int)CommandBoltsHotkey;
-                thisModConfig.WriteConfigJsonFile();
             });
             groupSelectKey = new OptionKey("Multi-Select Button", TACAIRTS, MultiSelect);
             groupSelectKey.onValueSaved.AddListener(() =>
             {
                 MultiSelect = groupSelectKey.SavedValue;
                 MultiSelectKeySav = (int)MultiSelect;
-                thisModConfig.WriteConfigJsonFile();
             });
             modeSelectKey = new OptionKey("AI Mode Button", TACAIRTS, ModeSelect);
             modeSelectKey.onValueSaved.AddListener(() =>
             {
                 ModeSelect = modeSelectKey.SavedValue;
                 ModeSelectKeySav = (int)ModeSelect;
-                thisModConfig.WriteConfigJsonFile();
             });
 
             var TACAIEnemies = ModName + " - Enemies General";
             painfulEnemies = new OptionToggle("<b>Rebuilt Enemies</b>", TACAIEnemies, enablePainMode);
-            painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            painfulEnemies.onValueSaved.AddListener(() => { enablePainMode = painfulEnemies.SavedValue; });
             diff = new OptionRange("Enemy Difficulty", TACAIEnemies, difficulty, -50, 150, 25);
             diff.onValueSaved.AddListener(() =>
             {
                 difficulty = (int)diff.SavedValue;
                 AIERepair.RefreshDelays();
-                thisModConfig.WriteConfigJsonFile();
             });
             displayEvents = new OptionToggle("Show Enemy AI Events", TACAIEnemies, DisplayEnemyEvents);
-            displayEvents.onValueSaved.AddListener(() => { DisplayEnemyEvents = displayEvents.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            displayEvents.onValueSaved.AddListener(() => { DisplayEnemyEvents = displayEvents.SavedValue; });
             blockRecoveryChance = new OptionRange("Enemy Block Drop Chance", TACAIEnemies, EnemyBlockDropChance, 0, 100, 10);
             blockRecoveryChance.onValueSaved.AddListener(() => { 
                 EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue;
+                Globals.inst.m_BlockSurvivalChance = (float)((float)EnemyBlockDropChance / 100.0f);
 
                 if (EnemyBlockDropChance == 0)
                 {
@@ -367,20 +371,19 @@ namespace TAC_AI
                 }
                 else
                     Globals.inst.moduleDamageParams.detachMeterFillFactor = SavedDefaultEnemyFragility;
-                thisModConfig.WriteConfigJsonFile(); 
             });
             infEnemySupplies = new OptionToggle("All Enemies Have Unlimited Parts", TACAIEnemies, EnemiesHaveCreativeInventory);
-            infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            infEnemySupplies.onValueSaved.AddListener(() => { EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; });
             //enemyBaseSpawn = new OptionToggle("Enemies Can Start Bases", TACAIEnemies, AllowEnemiesToStartBases);
-            //enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            //enemyBaseSpawn.onValueSaved.AddListener(() => { AllowEnemiesToStartBases = enemyBaseSpawn.SavedValue; });
             enemyBaseCount = new OptionRange("Max Different Enemy Base Teams [0-6]", TACAIEnemies, MaxEnemyBaseLimit, 0, 6, 1);
-            enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyBaseCount.onValueSaved.AddListener(() => { MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; });
             //enemyBaseExpand = new OptionToggle("Enemy Bases Can Expand", TACAIEnemies, AllowEnemyBaseExpand);
-            //enemyBaseExpand.onValueSaved.AddListener(() => { AllowEnemyBaseExpand = enemyBaseExpand.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            //enemyBaseExpand.onValueSaved.AddListener(() => { AllowEnemyBaseExpand = enemyBaseExpand.SavedValue; });
             enemyExpandLim = new OptionRange("Max Enemy Base Expansions [0-12]", TACAIEnemies, MaxBasesPerTeam, 0, 12, 3);
-            enemyExpandLim.onValueSaved.AddListener(() => { MaxBasesPerTeam = (int)enemyExpandLim.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyExpandLim.onValueSaved.AddListener(() => { MaxBasesPerTeam = (int)enemyExpandLim.SavedValue; });
             enemyBaseCulling = new OptionToggle("Remove Far Enemy Bases", TACAIEnemies, CullFarEnemyBases);
-            enemyBaseCulling.onValueSaved.AddListener(() => { CullFarEnemyBases = enemyBaseCulling.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+            enemyBaseCulling.onValueSaved.AddListener(() => { CullFarEnemyBases = enemyBaseCulling.SavedValue; });
 
             if (!isPopInjectorPresent)
             {
@@ -389,11 +392,10 @@ namespace TAC_AI
                 enemyMaxCount.onValueSaved.AddListener(() =>
                 {
                     AIPopMaxLimit = (int)enemyMaxCount.SavedValue;
-                    thisModConfig.WriteConfigJsonFile();
                     OverrideEnemyMax();
                 });
                 landEnemyChangeChance = new OptionRange("Custom Land Enemy Chance", TACAIEnemiesPop, LandEnemyOverrideChance, 0, 100, 5);
-                landEnemyChangeChance.onValueSaved.AddListener(() => { LandEnemyOverrideChance = (int)landEnemyChangeChance.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                landEnemyChangeChance.onValueSaved.AddListener(() => { LandEnemyOverrideChance = (int)landEnemyChangeChance.SavedValue; });
                 enemyAirSpawn = new OptionRange("Enemy Aircraft Spawn Rate [0x - 2x - 4x]", TACAIEnemiesPop, AirEnemiesSpawnRate, 0, 4, 0.5f);
                 enemyAirSpawn.onValueSaved.AddListener(() => { 
                     AirEnemiesSpawnRate = (int)enemyAirSpawn.SavedValue;
@@ -404,20 +406,18 @@ namespace TAC_AI
                         SpecialAISpawner.AirSpawnInterval = 60 / AirEnemiesSpawnRate;
                         AllowAirEnemiesToSpawn = true;
                     }
-                    thisModConfig.WriteConfigJsonFile(); 
                 });
                 enemySeaSpawn = new OptionToggle("Enemy Ship Spawning", TACAIEnemiesPop, AllowSeaEnemiesToSpawn);
-                enemySeaSpawn.onValueSaved.AddListener(() => { AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                enemySeaSpawn.onValueSaved.AddListener(() => { AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; });
                 playerMadeTechsOnly = new OptionToggle("Try Spawning From Raw Enemy Folder Only", TACAIEnemiesPop, TryForceOnlyPlayerSpawns);
-                playerMadeTechsOnly.onValueSaved.AddListener(() => { TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; thisModConfig.WriteConfigJsonFile(); });
+                playerMadeTechsOnly.onValueSaved.AddListener(() => { TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; });
                 permitEradication = new OptionToggle("Huge Enemy Spawns - Requires Beefy Computer", TACAIEnemiesPop, EnemyEradicators);
-                permitEradication.onValueSaved.AddListener(() => { EnemyEradicators = permitEradication.SavedValue; thisModConfig.WriteConfigJsonFile(); });
-                ragnarok = new OptionToggle("<b>Ragnarok - Death To All</b> - Requires Beefy Computer", TACAIEnemiesPop, CommitDeathMode);
+                permitEradication.onValueSaved.AddListener(() => { EnemyEradicators = permitEradication.SavedValue; });
+                ragnarok = new OptionToggle("<b>Ragnarok - Death To All (Spawns have no restrictions)</b> - Requires Beefy Computer", TACAIEnemiesPop, CommitDeathMode);
                 ragnarok.onValueSaved.AddListener(() =>
                 {
                     CommitDeathMode = ragnarok.SavedValue;
                     OverrideManPop.ChangeToRagnarokPop(CommitDeathMode);
-                    thisModConfig.WriteConfigJsonFile();
                 });
             }
             SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
@@ -434,6 +434,7 @@ namespace TAC_AI
                 SpecialAISpawner.AirSpawnInterval = 60 / AirEnemiesSpawnRate;
                 AllowAirEnemiesToSpawn = true;
             }
+            NativeOptionsMod.onOptionsSaved.AddListener(() => { thisModConfig.WriteConfigJsonFile(); });
 
             // Now setup bases
             //if (!isBlockInjectorPresent)
@@ -538,21 +539,29 @@ namespace TAC_AI
         {
             switch (corpExt)
             {
+                case FactionTypesExt.SPE:
+                //case FactionTypesExt.GSO:
                 case FactionTypesExt.GT:
                 case FactionTypesExt.IEC:
                     return FactionSubTypes.GSO;
+                //case FactionTypesExt.GC:
                 case FactionTypesExt.EFF:
                 case FactionTypesExt.LK:
                     return FactionSubTypes.GC;
+                //case FactionTypesExt.VEN:
                 case FactionTypesExt.OS:
                     return FactionSubTypes.VEN;
+                //case FactionTypesExt.HE:
                 case FactionTypesExt.BL:
                 case FactionTypesExt.TAC:
                     return FactionSubTypes.HE;
+                //case FactionTypesExt.BF:
                 case FactionTypesExt.DL:
                 case FactionTypesExt.EYM:
                 case FactionTypesExt.HS:
                     return FactionSubTypes.BF;
+                case FactionTypesExt.EXP:
+                    return FactionSubTypes.EXP;
             }
             return (FactionSubTypes)corpExt;
         }
@@ -569,7 +578,7 @@ namespace TAC_AI
             toSort = SortCorps(toSort);
             FactionTypesExt final = toSort.First();
 
-            Debug.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp");
+            //Debug.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp");
             return final;
         }
         public static FactionTypesExt GetMainCorpExt(this TechData tank)
@@ -622,6 +631,13 @@ namespace TAC_AI
                 distinct.Add(intBT.Value);
             }
             return distinct;
+        }
+    }
+    public static class VectorExtentions
+    {
+        public static Vector3 Clamp01Box(this Vector3 vec)
+        {
+            return Vector3.Max(Vector3.Min(-Vector3.one, vec), Vector3.one);
         }
     }
 }

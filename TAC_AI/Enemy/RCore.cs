@@ -186,15 +186,18 @@ namespace TAC_AI.AI.Enemy
         public static void RandomizeBrain(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //Debug.Log("TACtical_AI: offset " + tank.boundsCentreWorldNoCheck);
-            if (!tank.gameObject.GetComponent<EnemyMind>())
-                tank.gameObject.AddComponent<EnemyMind>();
+            var toSet = tank.gameObject.GetComponent<EnemyMind>();
+            if (!toSet)
+            {
+                toSet = tank.gameObject.AddComponent<EnemyMind>();
+                toSet.Initiate();
+            }
             thisInst.lastPlayer = null;
 
             thisInst.ResetToDefaultAIController();
 
-            var toSet = tank.gameObject.GetComponent<EnemyMind>();
             toSet.HoldPos = tank.boundsCentreWorldNoCheck;
-            toSet.Initiate();
+            toSet.Refresh();
             toSet.Range = 100;
             try
             {
@@ -208,11 +211,13 @@ namespace TAC_AI.AI.Enemy
                 if (!(bool)tank)
                     return;
                 FinalCleanup(thisInst, toSet, tank);
+                if (ManNetwork.IsNetworked && ManNetwork.IsHost)
+                {
+                    NetworkHandler.TryBroadcastNewEnemyState(tank.netTech.netId.Value, toSet.CommanderSmarts);
+                }
                 return;
             }
 
-            if (tank.Anchors.NumAnchored > 0)
-                toSet.StartedAnchored = true;
 
             //add Smartness
             AutoSetIntelligence(toSet, tank);
@@ -223,6 +228,15 @@ namespace TAC_AI.AI.Enemy
                 RandomSetMindAttack(toSet, tank);
             }
             FinalCleanup(thisInst, toSet, tank);
+            if (tank.Anchors.NumAnchored > 0 || tank.GetComponent<RequestAnchored>())
+            {
+                toSet.StartedAnchored = true;
+                toSet.EvilCommander = EnemyHandling.Stationary;
+            }
+            if (ManNetwork.IsNetworked && ManNetwork.IsHost)
+            {
+                NetworkHandler.TryBroadcastNewEnemyState(tank.netTech.netId.Value, toSet.CommanderSmarts);
+            }
         }
 
 
@@ -270,7 +284,10 @@ namespace TAC_AI.AI.Enemy
             }
 
             //Determine Attitude
-            if (BM.IterateBlockComponents<ModuleWeapon>().Count() + BM.IterateBlockComponents<ModuleDrill>().Count() <= BM.IterateBlockComponents<ModuleTechController>().Count())
+            bool playerIsSmall = false;
+            if (Singleton.playerTank)
+                playerIsSmall = Singleton.playerTank.blockman.blockCount < BM.blockCount + 5;
+            if (!playerIsSmall && BM.blockCount + BM.IterateBlockComponents<ModuleDrill>().Count() <= BM.IterateBlockComponents<ModuleTechController>().Count())
             {   // Unarmed - Runner
                 toSet.CommanderMind = EnemyAttitude.SubNeutral;
                 toSet.CommanderAttack = EnemyAttack.Coward;
@@ -670,7 +687,23 @@ namespace TAC_AI.AI.Enemy
                 {
                     thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
                     if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI
-                        toSet.CommanderAttack = EnemyAttack.Coward;
+                    {
+                        switch (toSet.EvilCommander)
+                        {
+                            case EnemyHandling.Naval:
+                                toSet.CommanderAttack = EnemyAttack.Spyper;
+                                break;
+                            case EnemyHandling.Starship:
+                            case EnemyHandling.Airplane:
+                            case EnemyHandling.Chopper:
+                                toSet.CommanderAttack = EnemyAttack.Pesterer;
+                                break;
+                            default:
+                                toSet.CommanderAttack = EnemyAttack.Coward;
+                                break;
+                        }
+                    }
+                    toSet.Range = EnemyMind.BaseFounderRange;
                     if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
                         RawTechLoader.TrySpawnBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
                     else
@@ -696,6 +729,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     RBolts.BlowBolts(tank, toSet);
                 }
+                thisInst.FullMelee = toSet.LikelyMelee;
             }
         }
         public static void SetFromScheme(EnemyMind toSet, Tank tank)

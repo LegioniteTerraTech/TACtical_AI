@@ -42,6 +42,7 @@ namespace TAC_AI.AI.Enemy
 
         internal bool queueRemove = false;
         internal const float MaxRangeFireAll = 125;
+        internal const int BaseFounderRange = 60;
         internal const float SpyperMaxRange = 450;
         internal const float SpacingRange = 8;
         internal const float SpacingRangeAir = 16;
@@ -53,17 +54,21 @@ namespace TAC_AI.AI.Enemy
 
         public void Initiate()
         {
-            if (GetComponents<EnemyMind>().Count() > 1)
-                Debug.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
-
-            queueRemove = false;
-            Tank = gameObject.GetComponent<Tank>();
             //Debug.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
+            Tank = gameObject.GetComponent<Tank>();
             AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
-            EnemyOpsController = new EnemyOperationsController(this);
             Tank.DamageEvent.Subscribe(OnHit);
             Tank.AttachEvent.Subscribe(OnBlockAdd);
             Tank.DetachEvent.Subscribe(OnBlockLoss);
+        }
+        public void Refresh()
+        {
+            if (GetComponents<EnemyMind>().Count() > 1)
+                Debug.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
+
+            //Debug.Log("TACtical_AI: Refreshing Enemy AI for " + Tank.name);
+            queueRemove = false;
+            EnemyOpsController = new EnemyOperationsController(this);
             AIControl.MovementController.UpdateEnemyMind(this);
             AIControl.AvoidStuff = true;
             PursuingTarget = false;
@@ -79,18 +84,15 @@ namespace TAC_AI.AI.Enemy
         }
         public void SetForRemoval()
         {
-            if (gameObject.GetComponent<EnemyMind>().IsNotNull())
-            {
-                //Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
-                queueRemove = true;
-                if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
-                    gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
-                Tank.DamageEvent.Unsubscribe(OnHit);
-                Tank.AttachEvent.Unsubscribe(OnBlockAdd);
-                Tank.DetachEvent.Unsubscribe(OnBlockLoss);
-                AIControl.MovementController.UpdateEnemyMind(null);
-                DestroyImmediate(this);
-            }
+            //Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
+            queueRemove = true;
+            if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
+                gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
+            Tank.DamageEvent.Unsubscribe(OnHit);
+            Tank.AttachEvent.Unsubscribe(OnBlockAdd);
+            Tank.DetachEvent.Unsubscribe(OnBlockLoss);
+            AIControl.MovementController.UpdateEnemyMind(null);
+            DestroyImmediate(this);
         }
 
         public static void OnBlockAdd(TankBlock blockAdd, Tank tonk)
@@ -136,7 +138,7 @@ namespace TAC_AI.AI.Enemy
                 mind.Hurt = true;
                 mind.Provoked = ProvokeTime;
                 mind.AIControl.PendingSystemsCheck = true;
-                if (mind.BoltsQueued == 0)
+                if (mind.BoltsQueued == 0 && ManNetwork.IsHost)
                 {   // do NOT destroy blocks on split Techs!
                     if (!blockLoss.GetComponent<ModuleTechController>())
                     {
@@ -159,14 +161,16 @@ namespace TAC_AI.AI.Enemy
             {
                 if (ManLicenses.inst.GetLicense(ManSpawn.inst.GetCorporation(blockLoss.BlockType)).CurrentLevel < ManLicenses.inst.GetBlockTier(blockLoss.BlockType) && !KickStart.AllowOverleveledBlockDrops)
                 {
-                    ManLooseBlocks.inst.RequestDespawnBlock(blockLoss, DespawnReason.Host);
+                    if (ManNetwork.IsNetworked)
+                        ManLooseBlocks.inst.RequestDespawnBlock(blockLoss, DespawnReason.Host);
                     blockLoss.damage.SelfDestruct(0.6f); // - no get illegal blocks
                 }
                 else
                 {
                     if (UnityEngine.Random.Range(0, 99) >= KickStart.EnemyBlockDropChance)
                     {
-                        ManLooseBlocks.inst.RequestDespawnBlock(blockLoss, DespawnReason.Host);
+                        if (ManNetwork.IsNetworked)
+                            ManLooseBlocks.inst.RequestDespawnBlock(blockLoss, DespawnReason.Host);
                         blockLoss.damage.SelfDestruct(0.75f);
                     }
                 }

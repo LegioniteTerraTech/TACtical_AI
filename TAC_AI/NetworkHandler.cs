@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using HarmonyLib;
 using UnityEngine;
 using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
+using TAC_AI.World;
 using UnityEngine.Networking;
 
 namespace TAC_AI
@@ -20,6 +22,8 @@ namespace TAC_AI
         const TTMsgType AIRTSPosCommand = (TTMsgType)4319;
         const TTMsgType AIRTSPosControl = (TTMsgType)4320;
         const TTMsgType AIRTSAttack = (TTMsgType)4321;
+        const TTMsgType AIEnemyType = (TTMsgType)4322;
+        const TTMsgType AIEnemySiege = (TTMsgType)4323;
 
 
         public class AITypeChangeMessage : MessageBase
@@ -139,6 +143,33 @@ namespace TAC_AI
             public uint targetNetTechID;
         }
 
+        public class AIEnemySet : MessageBase
+        {
+            public AIEnemySet() { }
+            public AIEnemySet(uint netTechID, EnemySmarts EnemyType)
+            {
+                this.netTechID = netTechID;
+                this.enemyType = (int)EnemyType;
+            }
+
+            public uint netTechID;
+            public int enemyType;
+        }
+
+        public class AIEnemyStagedSiege : MessageBase
+        {
+            public AIEnemyStagedSiege() { }
+            public AIEnemyStagedSiege(int team, long totalHP, bool start)
+            {
+                Team = team;
+                MaxHP = totalHP;
+                Starting = start;
+            }
+
+            public int Team;
+            public long MaxHP;
+            public bool Starting;
+        }
 
 
 
@@ -259,7 +290,7 @@ namespace TAC_AI
             if (HostExists) try
                 {
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRetreatRequest, new AIRetreatMessage(team, retreat), Host);
-                    Debug.Log("Sent new AdvancedAI update to all");
+                    Debug.Log("Sent new TryBroadcastNewRetreatState update to all");
                 }
                 catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastNewRetreatState update, shouldn't be too bad in the long run"); }
         }
@@ -278,6 +309,58 @@ namespace TAC_AI
             }
         }
 
+        // AIEnemyState
+        public static void TryBroadcastNewEnemyState(uint netTechID, EnemySmarts smartz)
+        {
+            if (HostExists && ManNetwork.IsHost) try
+                {
+                    Singleton.Manager<ManNetwork>.inst.SendToAllClients(AIRetreatRequest, new AIEnemySet(netTechID, smartz));
+                    Debug.Log("Sent new TryBroadcastNewEnemyState update to all");
+                }
+                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastNewEnemyState update, shouldn't be too bad in the long run"); }
+        }
+        public static void OnClientChangeNewEnemyState(NetworkMessage netMsg)
+        {
+            var reader = new AIEnemySet();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                ManNetTechs.inst.FindTech(reader.netTechID).GetComponent<EnemyMind>().CommanderSmarts = (EnemySmarts)reader.enemyType;
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: EnemyState receive failiure! Could not decode intake or input was too early!?");
+            }
+        }
+
+        // AIEnemySiege
+        public static void TryBroadcastNewEnemySiege(int Team, long HP, bool starting)
+        {
+            if (HostExists && ManNetwork.IsHost) try
+                {
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(AIRetreatRequest, new AIEnemyStagedSiege(Team, HP, starting));
+                    Debug.Log("Sent new TryBroadcastNewEnemySiege update to all");
+                }
+                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastNewEnemySiege update, shouldn't be too bad in the long run"); }
+        }
+        public static void OnClientChangeNewEnemySiege(NetworkMessage netMsg)
+        {
+            var reader = new AIEnemyStagedSiege();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                if (reader.Starting)
+                    EnemySiege.InitSiegeWarning(reader.Team, reader.MaxHP);
+                else
+                    EnemySiege.EndSiege();
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: EnemySiege receive failiure! Could not decode intake or input was too early!?");
+            }
+        }
+
+
         public static class Patches
         {
             [HarmonyPatch(typeof(NetPlayer), "OnStartClient")]
@@ -285,10 +368,18 @@ namespace TAC_AI
             {
                 static void Postfix(NetPlayer __instance)
                 {
-                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRTSPosCommand, new ManNetwork.MessageHandler(OnClientAcceptRTSCommand));
+                    // Standard
                     Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRetreatRequest, new ManNetwork.MessageHandler(OnClientChangeNewRetreatState));
                     Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIADVTypeChange, new ManNetwork.MessageHandler(OnClientChangeNewAIState));
-                    Debug.Log("Subscribed " + __instance.netId.ToString() + " to AdvancedAI updates from host. Sending current techs");
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIEnemyType, new ManNetwork.MessageHandler(OnClientChangeNewEnemyState));
+
+                    // RTS
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRTSPosCommand, new ManNetwork.MessageHandler(OnClientAcceptRTSCommand));
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRTSPosControl, new ManNetwork.MessageHandler(OnClientAcceptRTSControl));
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRTSAttack, new ManNetwork.MessageHandler(OnClientAcceptRTSAttack));
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIEnemySiege, new ManNetwork.MessageHandler(OnClientChangeNewEnemySiege));
+
+                    Debug.Log("Subscribed " + __instance.netId.ToString() + " to AdvancedAI updates from host.");
                 }
             }
 

@@ -37,7 +37,7 @@ namespace TAC_AI.Templates
 
     public class RawTechExporter : MonoBehaviour
     {
-        public static GameObject inst;
+        public static RawTechExporter inst;
         public static GameObject GUIWindow;
         private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
         public static bool isOpen;
@@ -62,8 +62,7 @@ namespace TAC_AI.Templates
             {
                 up = "/";
             }
-            inst = new GameObject();
-            inst.AddComponent<RawTechExporter>();
+            inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
             GUIWindow = new GameObject();
             GUIWindow.AddComponent<GUIRawDisplay>();
             GUIWindow.SetActive(false);
@@ -101,23 +100,21 @@ namespace TAC_AI.Templates
                 }
             }
         }
-        public int TimeStep = 0;
+        public static void LateInitiate()
+        {
+            ManPauseGame.inst.PauseEvent.Subscribe(inst.UpdatePauseStatus);
+            Globals.inst.m_BlockSurvivalChance = KickStart.EnemyBlockDropChance / 100.0f;
+        }
+        public void UpdatePauseStatus(bool paused)
+        {
+            if (paused)
+                LaunchSubMenu();
+            else
+                CloseSubMenu();
+        }
         public void Update()
         {
             CheckKeyCombos();
-            if (TimeStep > 30)
-            {
-                if (Singleton.Manager<ManPauseGame>.inst.IsPaused)
-                {
-                    LaunchSubMenu();
-                }
-                else
-                {
-                    CloseSubMenu();
-                }
-                TimeStep = 0;
-            }
-            TimeStep++;
         }
         public void CheckKeyCombos()
         {

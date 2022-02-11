@@ -63,10 +63,10 @@ namespace TAC_AI.AI.Enemy
 
         public static bool SpecificNameCases(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {   // Handle specific enemy names to tailor the AI into working order
-            string name = tank.name;
+            int name = tank.name.GetHashCode();
             bool DidFire = false;
 
-            if (name == "Missile Defense")
+            if (name == "Missile Defense".GetHashCode())
             {   // The GSO Missile Turret
                 mind.AllowRepairsOnFly = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
@@ -75,7 +75,7 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderSmarts = EnemySmarts.Mild;
                 DidFire = true;
             }
-            else if (name == "Wing-nut")
+            else if (name == "Wing-nut".GetHashCode())
             {   // Wing-nut mission
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
@@ -85,7 +85,7 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 DidFire = true;
             }
-            else if (name == "Spider King")
+            else if (name == "Spider King".GetHashCode())
             {   // Spider King mission
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
@@ -95,7 +95,7 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 DidFire = true;
             }
-            else if (name == "Fly")
+            else if (name == "Fly".GetHashCode())
             {   // Spider King mission
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
@@ -105,7 +105,7 @@ namespace TAC_AI.AI.Enemy
                 RCore.AutoSetIntelligence(mind, tank);
                 DidFire = true;
             }
-            else if (name == "Enemy HQ")
+            else if (name == "Enemy HQ".GetHashCode())
             {   //Base where enemies spawn from
                 mind.AllowInvBlocks = true;
                 mind.AllowRepairsOnFly = true;
@@ -117,7 +117,7 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderBolts = EnemyBolts.AtFull;
                 DidFire = true;
             }
-            else if (name == "Missile #2")
+            else if (name == "Missile #2".GetHashCode())
             {
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
@@ -128,7 +128,7 @@ namespace TAC_AI.AI.Enemy
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
                 DidFire = true;
             }
-            else if (name == "DPS Target")
+            else if (name == "DPS Target".GetHashCode())
             {   // R&D Target
                 mind.AIControl.Hibernate = true;
                 mind.StartedAnchored = true;

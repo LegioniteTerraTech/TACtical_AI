@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using System.Reflection;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement.AICores;
 using UnityEngine;
@@ -11,6 +11,8 @@ namespace TAC_AI.AI
 {
     public class AIControllerDefault : MonoBehaviour, IMovementAIController
     {
+        internal static FieldInfo boostGet = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
+
         private Tank _tank;
         public Tank Tank
         {
@@ -35,6 +37,9 @@ namespace TAC_AI.AI
             get => _mind;
             internal set => _mind = value;
         }
+
+        public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
+        public float BoosterThrustBias = 0.5f;
 
         public void DriveDirector()
         {
@@ -108,6 +113,76 @@ namespace TAC_AI.AI
             tank.DetachEvent.Subscribe(OnDetach);
             Debug.Log("TACtical_AI: Added ground AI for " + Tank.name);
         }
+        private void CheckBoosters()
+        {
+            float lowestDelta = 100;
+            float guzzleLevel = 0;
+            int consumeBoosters = 0;
+            Vector3 biasDirection = Vector3.zero;
+            Vector3 boostBiasDirection = Vector3.zero;
+
+            float fanThrust = 0.0f;
+            float boosterThrust = 0.0f;
+
+            foreach (ModuleBooster module in Tank.blockman.IterateBlockComponents<ModuleBooster>().ToList())
+            {
+                //Get the slowest spooling one
+                List<FanJet> jets = module.transform.GetComponentsInChildren<FanJet>().ToList();
+                foreach (FanJet jet in jets)
+                {
+                    if (jet.spinDelta <= 10)
+                    {
+                        biasDirection -= Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                        if (jet.spinDelta < lowestDelta)
+                            lowestDelta = jet.spinDelta;
+                    }
+                    //Vector3 fanDirection = (Vector3) fanDir.GetValue(jet);
+                    //if (fanDirection.x < -0.5)
+                    if (Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards).z < -0.5)
+                    {
+                        fanThrust += jet.force;
+                    }
+                }
+                List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
+                foreach (BoosterJet boost in boosts)
+                {
+                    if (boost.ConsumesFuel)
+                    {
+                        consumeBoosters++;
+                        guzzleLevel += boost.BurnRate;
+                    }
+
+                    float force = (float)boostGet.GetValue(boost);
+                    //Vector3 jetDirection = (Vector3) boostDir.GetValue(boost);
+                    //if (jetDirection.x < -0.5)
+                    if (Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection)).z < -0.5)
+                    {
+                        boosterThrust += force;
+                    }
+
+                    //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
+                    boostBiasDirection -= Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection)) * force;
+                }
+            }
+
+            //float totalThrust = (fanThrust + boosterThrust * this.BoosterThrustBias);
+            BoostBias = boostBiasDirection.normalized;
+        }
+        public void TryBoost(TankControl TC, bool forwardsOnly = true)
+        {
+            if (Helper.Obst)
+                return; // Prevent thrusting into trees
+            if (BoostBias.z > 0.75f && forwardsOnly)
+            {
+                TC.m_Movement.FireBoosters(Tank);
+            }
+            else
+            {
+                TC.m_Movement.FireBoosters(Tank);
+            }
+        }
+
+
         public void UpdateEnemyMind(EnemyMind mind)
         {
             this.EnemyMind = mind;

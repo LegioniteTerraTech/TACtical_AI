@@ -19,11 +19,21 @@ namespace TAC_AI.Templates
         public bool unprovoked = false;
         public bool instant = true;
     }
+    internal class RequestAnchored : MonoBehaviour
+    {
+        sbyte delay = 2;
+        private void Update()
+        {
+            delay--;
+            if (delay == 0)
+                Destroy(this);
+        }
+    }
 
     // For when the spawner is backlogged to prevent corruption
     internal class QueueInstantTech
     {
-        internal QueueInstantTech(Action<Tank> endEvent, Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor, bool population)
+        internal QueueInstantTech(Action<Tank> endEvent, Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor, bool population, bool skins)
         {
             this.endEvent = endEvent;
             this.name = name;
@@ -34,6 +44,7 @@ namespace TAC_AI.Templates
             this.grounded = grounded;
             this.ForceAnchor = ForceAnchor;
             this.population = population;
+            this.skins = skins;
         }
         readonly int maxAttempts = 25;
         public int fails = 0;
@@ -44,6 +55,7 @@ namespace TAC_AI.Templates
         public Vector3 forward;
         public int Team;
         public bool grounded;
+        public bool skins;
         public bool ForceAnchor = false;
         public bool population = false;
 
@@ -51,7 +63,7 @@ namespace TAC_AI.Templates
         {
             if (ManSpawn.inst.IsTechSpawning)
                 return false; // Something else is using it!!  Hold off!
-            Tank outcome = RawTechLoader.InstantTech(pos, forward, Team, name, blueprint, grounded, ForceAnchor, population);
+            Tank outcome = RawTechLoader.InstantTech(pos, forward, Team, name, blueprint, grounded, ForceAnchor, population, skins);
             if ((bool)outcome)
             {
                 endEvent.Send(outcome);
@@ -81,7 +93,8 @@ namespace TAC_AI.Templates
 
         public static void Initiate()
         {
-            inst = new GameObject("EnemyWorldManager").AddComponent<RawTechLoader>();
+            if (!inst)
+                inst = new GameObject("EnemyWorldManager").AddComponent<RawTechLoader>();
         }
         public void ClearQueue()
         {
@@ -554,20 +567,6 @@ namespace TAC_AI.Templates
                 name = GetEnglishName(toSpawn) + " â";
             }
             return ExportRawTechToTechData(name, baseBlueprint, out blocIDs);
-            /*
-            ManSaveGame.StoredTech ST = new ManSaveGame.StoredTech();
-            ST.m_TeamID = EP.Team;
-            ST.m_Velocity = new V3Serial();
-            ST.m_Rotation = new QuatSerial(Quaternion.LookRotation(spawnerForwards, Vector3.up));
-            ST.m_WorldPosition = new WorldPosition(tilePos, pos);
-            ST.m_AngularVelocity = new V3Serial();
-            ST.m_Asleep = true;
-            ST.m_HasBeenSpawned = false;
-            ST.m_ID = ManVisible.
-            ST.m_ShouldExplodeDetachingBlocks = false;
-            ST.m_TechData = ExportRawTechToTechData(name, baseBlueprint);
-            */
-            //return ST;
         }
         internal static TechData SpawnUnloadedTech(SpawnBaseTypes toSpawn, out int[] blocIDs)
         {
@@ -1472,7 +1471,18 @@ namespace TAC_AI.Templates
 
 
         // Use this for external cases
-        public static Tank SpawnTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BuilderExternal Blueprint, bool AutoTerrain = false, bool Charged = false)
+        /// <summary>
+        /// Spawns a RawTech IMMEDEATELY.  Do NOT Call while calling BlockMan or spawner blocks or the game will break!
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <param name="Team"></param>
+        /// <param name="facingDirect"></param>
+        /// <param name="Blueprint"></param>
+        /// <param name="AutoTerrain"></param>
+        /// <param name="Charged"></param>
+        /// <param name="ForceInstant"></param>
+        /// <returns></returns>
+        public static Tank SpawnTechExternal(Vector3 pos, int Team, Vector3 facingDirect, BuilderExternal Blueprint, bool AutoTerrain = false, bool Charged = false, bool RandSkins = false)
         {
             if (Blueprint == null)
             {
@@ -1481,8 +1491,8 @@ namespace TAC_AI.Templates
             }
             string baseBlueprint = Blueprint.Blueprint;
 
-            Tank theTech = InstantTech(pos, facingDirect, Team, Blueprint.Name, baseBlueprint, AutoTerrain);
-            
+            Tank theTech = InstantTech(pos, facingDirect, Team, Blueprint.Name, baseBlueprint, AutoTerrain, ForceAnchor: Blueprint.IsAnchored, Team == -1, RandSkins);
+
             if (theTech.IsNull())
             {   // Generate via the failsafe method
                 Debug.Log("TACtical_AI: SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
@@ -1503,7 +1513,7 @@ namespace TAC_AI.Templates
 
                 theTech = TechFromBlock(block, Team, Blueprint.Name);
                 AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToMemoryExternal(baseBlueprint), Charged);
-                
+
                 if (theTech.IsEnemy())//enemy
                 {
                     var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
@@ -1524,6 +1534,29 @@ namespace TAC_AI.Templates
             return theTech;
         }
 
+        /// <summary>
+        /// Spawns a RawTech safely.  There is an update delay on call so it's not immedeate on call.
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <param name="Team"></param>
+        /// <param name="facingDirect"></param>
+        /// <param name="Blueprint"></param>
+        /// <param name="AutoTerrain"></param>
+        /// <param name="Charged"></param>
+        /// <param name="ForceInstant"></param>
+        /// <param name="AfterAction">Assign the action you want given the spawned Tech after it spawns.</param>
+        public static void SpawnTechExternalSafe(Vector3 pos, int Team, Vector3 facingDirect, BuilderExternal Blueprint, bool AutoTerrain = false, bool randomSkins = false, Action<Tank> AfterAction = null)
+        {
+            if (Blueprint == null)
+            {
+                Debug.Log("TACtical_AI: SpawnTechExternal - Was handed a NULL Blueprint! \n" + StackTraceUtility.ExtractStackTrace());
+                return;
+            }
+            QueueInstantTech queue;
+            queue = new QueueInstantTech(AfterAction, pos, facingDirect, Team, Blueprint.Name, Blueprint.Blueprint, AutoTerrain, Blueprint.IsAnchored, Team == -1, randomSkins);
+            TechBacklog.Add(queue);
+            Debug.Log("TACtical_AI: SpawnTechExternalSafe - Adding to Queue - In Queue: " + TechBacklog.Count);
+        }
         public static Tank TechTransformer(Tank tech, string JSONTechBlueprint)
         {
             int team = tech.Team;
@@ -1556,7 +1589,7 @@ namespace TAC_AI.Templates
         // Override
         internal static TankBlock SpawnBlockS(BlockTypes type, Vector3 position, Quaternion quat, out bool worked)
         {
-            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(position) && Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) && TechDataAvailValidation.IsBlockAvailableInMode(type))
+            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(position) && Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
             {
                 worked = true;
 
@@ -1571,7 +1604,7 @@ namespace TAC_AI.Templates
             else
             {   // It's trying to work out of bounds
                 worked = false;
-                return null;
+                //return null;
             }
             try
             {
@@ -1598,13 +1631,13 @@ namespace TAC_AI.Templates
                 TryForceIntoPop(theTech);
             return theTech;
         }
-        internal static void InstantTechSafe(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false, bool population = false, Action<Tank> fallbackOp = null)
+        internal static void InstantTechSafe(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false, bool population = false, Action<Tank> fallbackOp = null, bool randomSkins = true)
         {
-            QueueInstantTech queue = new QueueInstantTech(fallbackOp, pos, forward, Team, name, blueprint, grounded, ForceAnchor, population);
+            QueueInstantTech queue = new QueueInstantTech(fallbackOp, pos, forward, Team, name, blueprint, grounded, ForceAnchor, population, randomSkins);
             TechBacklog.Add(queue);
             Debug.Log("TACtical_AI: InstantTech - Adding to Queue - In Queue: " + TechBacklog.Count);
         }
-        internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false, bool population = false)
+        internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false, bool population = false, bool randomSkins = true)
         {
             TechData data = new TechData();
             data.Name = name;
@@ -1615,9 +1648,15 @@ namespace TAC_AI.Templates
             data.m_BlockSpecs = new List<TankPreset.BlockSpec>();
             List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
 
-            bool skinChaotic = UnityEngine.Random.Range(0, 100) < 2;
-            byte skinset = (byte)UnityEngine.Random.Range(0, 2);
-            byte skinset2 = (byte)UnityEngine.Random.Range(0, 1);
+            bool skinChaotic = false;
+            byte skinset = (byte)0;
+            byte skinset2 = (byte)0;
+            if (randomSkins)
+            {
+                skinChaotic = UnityEngine.Random.Range(0, 100) < 2;
+                skinset = (byte)UnityEngine.Random.Range(0, 2);
+                skinset2 = (byte)UnityEngine.Random.Range(0, 1);
+            }
             foreach (BlockMemory mem in mems)
             {
                 BlockTypes type = AIERepair.StringToBlockType(mem.t);
@@ -1694,8 +1733,8 @@ namespace TAC_AI.Templates
                 if (!theTech.IsAnchored)
                 {
                     theTech.FixupAnchors(true);
-                    theTech.Anchors.UnanchorAll(false);
-                    theTech.TryToggleTechAnchor();
+                    //theTech.Anchors.UnanchorAll(false);
+                    //theTech.TryToggleTechAnchor();
                 }
                 if (!theTech.IsAnchored)
                     theTech.TryToggleTechAnchor();
@@ -1712,6 +1751,8 @@ namespace TAC_AI.Templates
 
             ForceAllBubblesUp(theTech);
             ReconstructConveyorSequencing(theTech);
+            if (ForceAnchor)
+                theTech.gameObject.AddComponent<RequestAnchored>();
 
             Debug.Log("TACtical_AI: InstantTech - Built " + name);
 
@@ -1909,6 +1950,7 @@ namespace TAC_AI.Templates
                 if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.techBases.ToList();
+                    UseFactionSubTypes = false;
                 }
                 else
                 {
@@ -2002,6 +2044,7 @@ namespace TAC_AI.Templates
                 }
                 // finally, remove those which are N/A
 
+                //Debug.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
                 if (canidates.Count == 0)
                     return FallbackHandler(faction);
 
@@ -2027,6 +2070,7 @@ namespace TAC_AI.Templates
                 if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.techBases.ToList();
+                    UseFactionSubTypes = false;
                 }
                 else
                 {
@@ -2124,6 +2168,7 @@ namespace TAC_AI.Templates
                 }
                 // finally, remove those which are N/A
 
+                //Debug.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
                 if (canidates.Count == 0)
                     return FallbackHandler(faction);
 
@@ -2153,13 +2198,14 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
+                    FactionSubTypes fallback = KickStart.CorpExtToCorp(faction);
                     canidates = TempManager.techBases.ToList().FindAll
-                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return (FactionSubTypes)cand.Value.faction == fallback; });
                 }
 
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
+                    if (ManNetwork.IsNetworked && cand.Value.purposes.Contains(BasePurpose.MPUnsafe))
                     {   // no illegal base in MP
                         return false;
                     }
@@ -2173,7 +2219,10 @@ namespace TAC_AI.Templates
                 // finally, remove those which are N/A
 
                 if (canidates.Count == 0)
+                {
+                    Debug.Log("TACtical_AI: FallbackHandler - COULD NOT FIND FALLBACK FOR " + KickStart.CorpExtToCorp(faction));
                     return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
+                }
 
                 // final list compiling
                 List<SpawnBaseTypes> final = new List<SpawnBaseTypes>();
@@ -2186,6 +2235,7 @@ namespace TAC_AI.Templates
                 return final;
             }
             catch { } // we resort to legacy
+            Debug.Log("TACtical_AI: FallbackHandler(ERROR) - COULD NOT FIND FALLBACK FOR " + KickStart.CorpExtToCorp(faction));
             return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
         }
 

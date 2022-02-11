@@ -28,7 +28,7 @@ namespace TAC_AI.AI.Movement
             List<Visible> ObstList = new List<Visible>();
             try
             {
-                foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(posWorld, thisInst.lastTechExtents + 12, new Bitfield<ObjectTypes>()))
+                foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(posWorld, thisInst.lastTechExtents + 12, new Bitfield<ObjectTypes>(new ObjectTypes[1]{ObjectTypes.Scenery})))
                 {
                     if (vis.resdisp.IsNotNull() && vis.isActive)
                     {
@@ -804,7 +804,7 @@ namespace TAC_AI.AI.Movement
             Vector3 final = input;
             float heightTank;
             if (tank.rbody != null)
-                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.rbody.velocity, out heightTank);
+                Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck + tank.rbody.velocity.Clamp(-75 * Vector3.one, 75 * Vector3.one), out heightTank);
             else
                 Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out heightTank);
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
@@ -895,7 +895,7 @@ namespace TAC_AI.AI.Movement
             // The below is far too inaccurate for this duty - I will have to do it the old way
             //Singleton.Manager<ManWorld>.inst.GetTerrainHeight(tank.rbody.velocity, out heightTank);
             if (tank.rbody != null)
-                heightTank = tank.rbody.velocity.y + tank.boundsCentreWorldNoCheck.y - (thisInst.lastTechExtents / 2);
+                heightTank = tank.rbody.velocity.Clamp(-75 * Vector3.one, 75 * Vector3.one).y + tank.boundsCentreWorldNoCheck.y - (thisInst.lastTechExtents / 2);
             else
                 heightTank = tank.boundsCentreWorldNoCheck.y - (thisInst.lastTechExtents / 2);
             Vector3 final = input;

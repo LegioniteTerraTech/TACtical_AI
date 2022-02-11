@@ -63,6 +63,7 @@ namespace TAC_AI.Templates
         const int SpaceshipChance = 2;     // Out of 100
         const float AirSpawnDist = 400;
         const float AirDespawnDist = 475;
+        const float SpaceBeginAltitude = 500;
         internal static float AirSpawnInterval = 30;
 
 
@@ -147,14 +148,27 @@ namespace TAC_AI.Templates
 
             pos = GetAirOffsetFromPosition(pos, forwards);
 
+
             Tank newAirborneAI;
             bool spawnSpace;
             if (KickStart.CommitDeathMode)
             {
-                spawnSpace = UnityEngine.Random.Range(0, 10) < 1;
+                if (playerTank.boundsCentreWorld.y > SpaceBeginAltitude)
+                {
+                    spawnSpace = true;
+                }
+                else
+                    spawnSpace = UnityEngine.Random.Range(0, 10) < 1;
             }
             else
-                spawnSpace = UnityEngine.Random.Range(0, 100) < SpaceshipChance;
+            {
+                if (playerTank.boundsCentreWorld.y > SpaceBeginAltitude)
+                {
+                    spawnSpace = true;
+                }
+                else
+                    spawnSpace = UnityEngine.Random.Range(0, 100) < SpaceshipChance;
+            }
 
             bool IsSpace = false;
             if (CreativeMode)

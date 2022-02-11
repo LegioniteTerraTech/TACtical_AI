@@ -68,54 +68,54 @@ namespace TAC_AI.Templates
             }
         }
 
+        private static Vector2 scrolll = new Vector2(0, 0);
+        private static float scrolllSize = 50;
+        private const int ButtonWidth = 200;
+        private const int MaxCountWidth = 4;
+        private const int MaxWindowHeight = 500;
+        private static int MaxWindowWidth = MaxCountWidth * ButtonWidth;
         private static void GUIHandlerPlayer(int ID)
         {
             bool clicked = false;
             int VertPosOff = 0;
             int HoriPosOff = 0;
+            bool MaxExtensionX = false;
             bool MaxExtensionY = false;
             int index = 0;
+
+            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width - 40, HotWindow.height), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), "<color=#f23d3dff><b>PURGE ENEMIES</b></color>"))
+            {
+                try
+                {
+                    int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
+                    for (int step = 0; step < techCount; step++)
+                    {
+                        Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
+                        if (tech.IsEnemy() && tech.visible.isActive && tech.name != "DPS Target")
+                        {
+                            SpecialAISpawner.Purge(tech);
+                            techCount--;
+                            step--;
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            HoriPosOff += ButtonWidth;
+
             if (TempManager.ExternalEnemyTechs == null)
             {
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "There's Nothing In"))
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "There's Nothing In"))
                 {
                     SpawnTech(SpawnBaseTypes.NotAvail);
                 }
-                VertPosOff += 30;
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "The Enemies Folder!"))
+                HoriPosOff += ButtonWidth;
+                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "The Enemies Folder!"))
                 {
                     SpawnTech(SpawnBaseTypes.NotAvail);
                 }
-                /*
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Dump Your Folder!"))
-                {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
-                }
-                VertPosOff += 30;
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Fatal Error Tech"))
-                {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
-                }
-                VertPosOff += 30;
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Encountered!!!"))
-                {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
-                }
-                VertPosOff += 30;
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "---------------"))
-                {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
-                }
-                VertPosOff += 30;
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Send log to"))
-                {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
-                }
-                VertPosOff += 30;
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "Legionite!"))
-                {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
-                }*/
                 return;
             }
 
@@ -125,11 +125,13 @@ namespace TAC_AI.Templates
                 try
                 {
                     BaseTemplate temp = TempManager.ExternalEnemyTechs[step];
-                    if (VertPosOff > 600)
+                    if (HoriPosOff >= MaxWindowWidth)
                     {
-                        VertPosOff = 0;
-                        HoriPosOff += 200;
-                        MaxExtensionY = true;
+                        HoriPosOff = 0;
+                        VertPosOff += 30;
+                        MaxExtensionX = true;
+                        if (VertPosOff >= MaxWindowHeight)
+                            MaxExtensionY = true;
                     }
                     string disp;
                     if (temp.purposes.Contains(BasePurpose.NotStationary))
@@ -155,46 +157,28 @@ namespace TAC_AI.Templates
                     }
                     else
                         disp = temp.techName.ToString();
-                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), disp))
+                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), disp))
                     {
                         index = step;
                         clicked = true;
                     }
-                    VertPosOff += 30;
+                    HoriPosOff += ButtonWidth;
                 }
                 catch { }// error on handling something
             }
-            if (VertPosOff > 600)
-            {
-                VertPosOff = 0;
-                HoriPosOff += 200;
-                MaxExtensionY = true;
-            }
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "<color=#f23d3dff><b>PURGE ENEMIES</b></color>"))
-            {
-                try
-                {
-                    int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
-                    for (int step = 0; step < techCount; step++)
-                    {
-                        Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
-                        if (tech.IsEnemy() && tech.visible.isActive && tech.name != "DPS Target")
-                        {
-                            SpecialAISpawner.Purge(tech);
-                            techCount--;
-                            step--;
-                        }
-                    }
-                }
-                catch { }
-            }
+            GUI.EndScrollView();
+            scrolllSize = VertPosOff + 80;
 
-            HotWindow.width = HoriPosOff + 240;
             if (MaxExtensionY)
-                HotWindow.height = 680;
+                HotWindow.height = MaxWindowHeight + 80;
             else
                 HotWindow.height = VertPosOff + 80;
+
+            if (MaxExtensionX)
+                HotWindow.width = MaxWindowWidth + 60;
+            else
+                HotWindow.width = HoriPosOff + 60;
             if (clicked)
             {
                 SpawnTechLocal(index);
@@ -206,15 +190,39 @@ namespace TAC_AI.Templates
             bool clicked = false;
             int VertPosOff = 0;
             int HoriPosOff = 0;
-            bool MaxExtensionY = false; 
+            bool MaxExtensionX = false;
+            bool MaxExtensionY = false;
             SpawnBaseTypes type = SpawnBaseTypes.NotAvail;
+
+            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width - 40, HotWindow.height), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), "<color=#f23d3dff><b>PURGE ENEMIES</b></color>"))
+            {
+                try
+                {
+                    int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
+                    for (int step = 0; step < techCount; step++)
+                    {
+                        Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
+                        if (tech.IsEnemy() && tech.visible.isActive)
+                        {
+                            SpecialAISpawner.Purge(tech);
+                            techCount--;
+                            step--;
+                        }
+                    }
+                }
+                catch { }
+            }
+            HoriPosOff += ButtonWidth;
             foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> temp in TempManager.techBases)
             {
-                if (VertPosOff > 600)
+                if (HoriPosOff >= MaxWindowWidth)
                 {
-                    VertPosOff = 0;
-                    HoriPosOff += 200;
-                    MaxExtensionY = true;
+                    HoriPosOff = 0;
+                    VertPosOff += 30;
+                    MaxExtensionX = true;
+                    if (VertPosOff >= MaxWindowHeight)
+                        MaxExtensionY = true;
                 }
                 string disp;
                 if (temp.Value.purposes.Contains(BasePurpose.NotStationary))
@@ -241,44 +249,25 @@ namespace TAC_AI.Templates
                 else
                     disp = temp.Key.ToString();
 
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), disp))
+                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), disp))
                 {
                     type = temp.Key;
                     clicked = true;
                 }
-                VertPosOff += 30;
+                HoriPosOff += ButtonWidth;
             }
-            if (VertPosOff > 600)
-            {
-                VertPosOff = 0;
-                HoriPosOff += 200;
-                MaxExtensionY = true;
-            }
+            GUI.EndScrollView();
+            scrolllSize = VertPosOff + 80;
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, 200, 30), "<color=#f23d3dff><b>PURGE ENEMIES</b></color>"))
-            {
-                try
-                {
-                    int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
-                    for (int step = 0; step < techCount; step++)
-                    {
-                        Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
-                        if (tech.IsEnemy() && tech.visible.isActive)
-                        {
-                            SpecialAISpawner.Purge(tech);
-                            techCount--;
-                            step--;
-                        }
-                    }
-                }
-                catch { }
-            }
-
-            HotWindow.width = HoriPosOff + 240;
             if (MaxExtensionY)
-                HotWindow.height = 680;
+                HotWindow.height = MaxWindowHeight + 80;
             else
                 HotWindow.height = VertPosOff + 80;
+
+            if (MaxExtensionX)
+                HotWindow.width = MaxWindowWidth + 60;
+            else
+                HotWindow.width = HoriPosOff + 60;
             if (clicked)
             {
                 SpawnTech(type);
@@ -507,7 +496,7 @@ namespace TAC_AI.Templates
         {
             if (EnabledAllModes)
                 return true;
-            if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeMisc>())
+            if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeMisc>() || (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeCoOpCreative>() && ManNetwork.IsHost))
             {
                 return true;
             }

@@ -272,6 +272,11 @@ namespace TAC_AI
                                 {
                                     if (tank.FirstUpdateAfterSpawn)
                                     {
+                                        if (tank.GetComponent<RequestAnchored>())
+                                        {
+                                            if (!__instance.block.tank.IsAnchored)
+                                                __instance.block.tank.FixupAnchors(true);
+                                        }
                                         // let the icon update
                                     }
                                     else if ((aI.CheckAIAvailable() || tank.PlayerFocused) && ManSpawn.IsPlayerTeam(tank.Team))
@@ -334,6 +339,11 @@ namespace TAC_AI
 
                                 if (tank.FirstUpdateAfterSpawn)
                                 {
+                                    if (tank.GetComponent<RequestAnchored>())
+                                    {
+                                        if (!__instance.block.tank.IsAnchored)
+                                            __instance.block.tank.FixupAnchors(true);
+                                    }
                                     // let the icon update
                                 }
                                 else if ((aI.CheckAIAvailable() || tank.PlayerFocused) && ManSpawn.IsPlayerTeam(tank.Team))
@@ -603,6 +613,7 @@ namespace TAC_AI
             private static void Postfix(ManSpawn __instance)
             {
                 PlayerRTSControl.DelayedInitiate();
+                RawTechExporter.LateInitiate();
             }
         }
 

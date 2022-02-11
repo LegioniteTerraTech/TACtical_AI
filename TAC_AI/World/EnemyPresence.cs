@@ -26,6 +26,10 @@ namespace TAC_AI.World
             Team = team;
         }
 
+        public bool HasMobileETUs()
+        {
+            return ETUs.Exists(delegate (EnemyTechUnit cand) { return cand.MoveSpeed > 12; });
+        }
         public bool UpdateGrandCommand()
         {
             if (Team == SpecialAISpawner.trollTeam)
@@ -33,8 +37,9 @@ namespace TAC_AI.World
                 HandleTraderTrolls();
                 return EBUs.Count > 0 || ETUs.Count > 0;
             }
-            if (EBUs.Count < 0)
+            if (EBUs.Count == 0)
             {
+                Debug.Log("TACtical_AI: UpdateGrandCommand - Team " + Team + " has no bases");
                 return false; // NO SUCH TEAM EXISTS (no base!!!)
             }
             PresenceDebug("TACtical_AI: UpdateGrandCommand - Turn for Team " + Team);
@@ -77,7 +82,7 @@ namespace TAC_AI.World
                 {
                     if (ETU.MoveSpeed < 10)
                         continue;
-                    if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileOriginScene(ETU.tilePos)))
+                    if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileCentreScene(ETU.tilePos)))
                     {
                         if (!ETU.isMoving)
                         {
@@ -94,19 +99,35 @@ namespace TAC_AI.World
                 IntVector2 eventTile = mainBase.tilePos;
                 if (eventHappening)
                     eventTile = lastEventTile;
-                PresenceDebug("Main Base is " + mainBase.tech.m_TechData.Name + " at " + mainBase.tilePos + ", EventTile is " + eventTile);
-                foreach (EnemyTechUnit ETU in ETUs)
+                else
                 {
-                    if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileOriginScene(ETU.tilePos)))
+                    if (mainBase != null && !EnemySiege.InProgress && EnemyBaseWorld.IsPlayerWithinProvokeDist(mainBase.tilePos))
                     {
-                        if (!ETU.isMoving)
-                        {
-                            EnemyWorldManager.StrategicMoveQueue(ETU, eventTile);
-                        }
-                        else
-                            PresenceDebug("Unit " + ETU.tech.m_TechData.Name + " is moving");
+                        PresenceDebug("This team can attack the player!  Threshold: " + ETUs.Count + " / " + (KickStart.EnemyTeamTechLimit / 2f));
+                        if (EnemySiege.LaunchSiege(this))
+                            SetEvent(ManWorld.inst.TileManager.SceneToTileCoord(Singleton.playerTank.trans.position));
                     }
                 }
+                PresenceDebug("Main Base is " + mainBase.tech.m_TechData.Name + " at " + mainBase.tilePos + (eventHappening ? ", EventTile is " + eventTile : ""));
+                bool techsMoving = false;
+                foreach (EnemyTechUnit ETU in ETUs)
+                {
+                    //if (Singleton.Manager<ManWorld>.inst.TileManager.LookupTile(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileCentreScene(ETU.tilePos)).m_LoadStep < WorldTile.LoadStep.Populated)
+                    //{
+                    if (!ETU.isMoving)
+                    {
+                        if (EnemyWorldManager.StrategicMoveQueue(ETU, eventTile))
+                            techsMoving = true;
+                    }
+                    else
+                    {
+                        PresenceDebug("Unit " + ETU.tech.m_TechData.Name + " is moving");
+                        techsMoving = true;
+                    }
+                    //}
+                }
+                if (!techsMoving)
+                    eventHappening = false;
             }
         }
         private void HandleCombat()
@@ -130,7 +151,7 @@ namespace TAC_AI.World
             {
                 try
                 {
-                    if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileOriginScene(TT)))
+                    if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileCentreScene(TT)))
                     {
                         //PresenceDebug("HandleCombat found the tile to be active!?");
                         continue; // tile loaded
@@ -182,6 +203,7 @@ namespace TAC_AI.World
                         //PresenceDebug("404 target not found");
                         EnemyBaseWorld.NaviFind(this, TT);
                     }
+
                 }
                 catch { }
             }
@@ -255,9 +277,18 @@ namespace TAC_AI.World
             eventHappening = true;
             lastEventTile = tilePos;
         }
+        public void ResetEvent()
+        {
+            eventHappening = false;
+            EnemyBaseUnloaded mainBase = EnemyBaseWorld.GetTeamFunder(this);
+            if (mainBase != null)
+            {
+                lastEventTile = mainBase.tilePos;
+            }
+        }
 
         // MISC
-        public static bool ignoreOut = true;
+        public static bool ignoreOut = false;
         public void PresenceDebug(string thing)
         {
             if (ignoreOut)

@@ -58,6 +58,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
+
                 if (pilot.TargetGrounded && (bool)thisInst.lastEnemy) // Divebombing mode
                 {  // We previously disabled the ground offset terrain avoider and aim directly at the enemy
                     float dist = (thisInst.lastDestination - (tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime))).magnitude;
@@ -241,14 +242,19 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
             }
+            bool unresponsiveAir = pilot.LargeAircraft || pilot.BankOnly;
 
-            if (!pilot.TargetGrounded)
+            if (!pilot.TargetGrounded && (unresponsiveAir || !pilot.Helper.FullMelee))
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
             AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
-            AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 
-            if (pilot.LargeAircraft || pilot.BankOnly)
+            if (pilot.Helper.FullMelee && !unresponsiveAir)
+                pilot.AdvisedThrottle = 1;
+            else
+                AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
+
+            if (unresponsiveAir)
             {
                 if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
                 {
@@ -290,14 +296,19 @@ namespace TAC_AI.AI.Movement.AICores
                     pilot.AirborneDest = this.pilot.Helper.RTSDestination;
                 }
             }
+            bool unresponsiveAir = pilot.LargeAircraft || pilot.BankOnly;
 
-            if (!pilot.TargetGrounded)
+            if (!pilot.TargetGrounded && (unresponsiveAir || !pilot.Helper.FullMelee))
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
             AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
-            AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 
-            if (pilot.LargeAircraft || pilot.BankOnly)
+            if (pilot.Helper.FullMelee && !unresponsiveAir)
+                pilot.AdvisedThrottle = 1;
+            else
+                AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
+
+            if (unresponsiveAir)
             {
                 if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
                 {
@@ -406,15 +417,20 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
             }
+            bool unresponsiveAir = pilot.LargeAircraft || pilot.BankOnly;
 
-            if (!pilot.TargetGrounded)
+            if (!pilot.TargetGrounded && (unresponsiveAir || !pilot.Helper.FullMelee))
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
             pilot.AirborneDest = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
-            AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
             
+            if (pilot.Helper.FullMelee && !unresponsiveAir)
+                pilot.AdvisedThrottle = 1;
+            else
+                AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
+
             AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
 
-            if (pilot.LargeAircraft || pilot.BankOnly)
+            if (unresponsiveAir)
             {
                 if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 2) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
                 {
@@ -426,8 +442,15 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime), pilot.AerofoilSluggishness + 25))
                 {
-                    pilot.ForcePitchUp = true;
-                    pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                    if (pilot.Helper.FullMelee)
+                    {   // If we can manever nicely and have the melee AI, then we can ram
+                        //pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                    }
+                    else
+                    {
+                        pilot.ForcePitchUp = true;
+                        pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                    }
                 }
             }
             return true;
@@ -492,7 +515,11 @@ namespace TAC_AI.AI.Movement.AICores
                 this.pilot.Helper.lastRange = (this.pilot.Helper.lastEnemy.tank.boundsCentreWorld - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
 
                 pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(this.pilot.Helper.lastEnemy.tank.boundsCentreWorldNoCheck, pilot.AerofoilSluggishness + 25);
-                AircraftUtils.AdviseThrottleTarget(pilot, this.pilot.Helper, this.pilot.Tank, this.pilot.Helper.lastEnemy);
+
+                if (pilot.Helper.FullMelee)
+                    pilot.AdvisedThrottle = 1;
+                else
+                    AircraftUtils.AdviseThrottleTarget(pilot, this.pilot.Helper, this.pilot.Tank, this.pilot.Helper.lastEnemy);
             }
             return output;
         }
@@ -559,7 +586,12 @@ namespace TAC_AI.AI.Movement.AICores
 
                 pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(this.pilot.Helper.lastEnemy.tank.boundsCentreWorldNoCheck, pilot.AerofoilSluggishness + 25);
                 if (mind.CommanderSmarts >= EnemySmarts.Meh)
-                    AircraftUtils.AdviseThrottleTarget(pilot, this.pilot.Helper, this.pilot.Tank, this.pilot.Helper.lastEnemy);
+                {
+                    if (pilot.Helper.FullMelee)
+                        pilot.AdvisedThrottle = 1;
+                    else
+                        AircraftUtils.AdviseThrottleTarget(pilot, this.pilot.Helper, this.pilot.Tank, this.pilot.Helper.lastEnemy);
+                }
                 else
                     pilot.AdvisedThrottle = 1;  //if Ai not smrt enough just hold shift
             }

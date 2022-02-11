@@ -101,7 +101,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.UrgencyOverload = 0;
                 }
                 //URGENCY REACTION
-                if (thisInst.Urgency > 20)
+                if (thisInst.Urgency > 30)
                 {
                     //FARRR behind! BOOSTERS NOW!
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
@@ -109,7 +109,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
-                else if (thisInst.Urgency > 2)
+                else if (thisInst.Urgency > 15)
                 {
                     //Behind and we must catch up
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Wait for meeeeeeeeeee!");
@@ -119,7 +119,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.featherBoost = true;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
-                else if (thisInst.Urgency > 1 && thisInst.recentSpeed < 10)
+                else if (thisInst.Urgency > 5 && thisInst.recentSpeed < 6)
                 {
                     //bloody tree moment
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
@@ -134,7 +134,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
-                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");

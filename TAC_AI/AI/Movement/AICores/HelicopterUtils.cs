@@ -89,7 +89,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             //Turn our work in to processing
             //Debug.Log("TACtical_AI: Tech " + tank.name + " | steering " + turnVal + " | drive " + DriveVar);
-            control3D.m_State.m_InputMovement = DriveVar;
+            control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
             controlGet.SetValue(tank.control, control3D);
             return;
         }

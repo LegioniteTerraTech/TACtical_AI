@@ -16,16 +16,16 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             thisInst.Attempt3DNavi = true;
             thisInst.AvoidStuff = true;
 
-            if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy.IsNotNull())
+            if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy?.tank)
             {
-                if ((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude > mind.Range)
+                if ((thisInst.lastEnemy.tank.boundsCentreWorld - tank.boundsCentreWorld).magnitude > mind.Range)
                 {
                     bool isMending = RGeneral.LollyGag(thisInst, tank, mind);
                     if (isMending)
                         return;
                 }
             }
-            else if (thisInst.lastEnemy == null)
+            else if (!thisInst.lastEnemy?.tank)
             {
                 RGeneral.LollyGag(thisInst, tank, mind);
                 return;
@@ -33,7 +33,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             RGeneral.Engadge(thisInst, tank, mind);
 
             float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
+            float dist = (tank.boundsCentreWorld - thisInst.lastEnemy.tank.boundsCentreWorld).magnitude - enemyExt;
             float range = EnemyMind.SpacingRange + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
 

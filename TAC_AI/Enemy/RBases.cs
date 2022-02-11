@@ -450,29 +450,33 @@ namespace TAC_AI.AI.Enemy
             }
             private static void FocusFireRequest(int Team, Visible Target)
             {
-                foreach (Tank tech in AIECore.TankAIManager.GetAlliedTanks(Team))
+                try
                 {
-                    var helper = tech.GetComponent<AIECore.TankAIHelper>();
-                    var mind = tech.GetComponent<EnemyMind>();
-                    if ((bool)helper && (bool)mind)
+                    foreach (Tank tech in AIECore.TankAIManager.GetAlliedTanks(Team))
                     {
-                        var baseFunds = tech.GetComponent<EnemyBaseFunder>();
-                        if (!mind.StartedAnchored)
+                        var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                        var mind = tech.GetComponent<EnemyMind>();
+                        if ((bool)helper && (bool)mind)
                         {
-                            mind.Provoked = EnemyMind.ProvokeTime;
-                            if (!(bool)helper.lastEnemy)
-                                mind.GetRevengeOn(Target, true);
-                        }
-                        else if ((bool)baseFunds)
-                        {
-                            if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                            var baseFunds = tech.GetComponent<EnemyBaseFunder>();
+                            if (!mind.StartedAnchored)
                             {
-                                if (RBolts.AllyCostCount(tech) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tech, mind.TechMemor))
-                                    RBolts.BlowBolts(tech, mind);
+                                mind.Provoked = EnemyMind.ProvokeTime;
+                                if (!(bool)helper.lastEnemy)
+                                    mind.GetRevengeOn(Target, true);
+                            }
+                            else if ((bool)baseFunds)
+                            {
+                                if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                                {
+                                    if (RBolts.AllyCostCount(tech) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tech, mind.TechMemor))
+                                        RBolts.BlowBolts(tech, mind);
+                                }
                             }
                         }
                     }
                 }
+                catch { }
             }
             private void PeriodicBuildRequest()
             {
@@ -1115,7 +1119,7 @@ namespace TAC_AI.AI.Enemy
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
                     reason = PickBuildNonDefense(mind);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion(2) - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
@@ -1130,6 +1134,7 @@ namespace TAC_AI.AI.Enemy
                             return;
                         }
                     }
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;

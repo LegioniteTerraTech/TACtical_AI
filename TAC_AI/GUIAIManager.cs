@@ -10,6 +10,7 @@ using TAC_AI.World;
 
 namespace TAC_AI
 {
+    /*
     public class AIManagerTechEntry
     {   // Abandoned UI control system for AI - not enough room on HUD 
         internal Tank tank;
@@ -58,7 +59,7 @@ namespace TAC_AI
                 tank = null;
             }
         }
-    }
+    }*/
     public class GUIAIManager : MonoBehaviour
     {
         //Handles the display that's triggered on AI change 

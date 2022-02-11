@@ -578,10 +578,9 @@ namespace TAC_AI.AI
                 {   //Snap
                     this.CurrentThrottle = this.MainThrottle;
                 }
-                this.CurrentThrottle = Mathf.Clamp(this.CurrentThrottle, -1, 1);
                 if (this.FlyStyle == FlightType.Aircraft)
                 {   // Some aircraft stall when pitching up - this should help avoid that
-                    if (CurrentThrottle > 0.5)
+                    if (CurrentThrottle > 1f)
                     {  
                         control3D.m_State.m_BoostProps = true;
                     }
@@ -590,6 +589,7 @@ namespace TAC_AI.AI
                         control3D.m_State.m_BoostProps = false;
                     }
                 }
+                this.CurrentThrottle = Mathf.Clamp(this.CurrentThrottle, -1, 1);
             }
             AircraftUtils.controlGet.SetValue(control, control3D);
         }

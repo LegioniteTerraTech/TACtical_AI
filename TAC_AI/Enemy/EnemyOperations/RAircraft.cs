@@ -80,7 +80,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.SettleDown();
                     }
                 }
-            }
+            }/*
             else if (mind.CommanderAttack == EnemyAttack.Circle)
             {
                 thisInst.SideToThreat = true;
@@ -154,7 +154,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.ProceedToObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-            }
+            }*/
             else
             {
                 thisInst.SideToThreat = false;

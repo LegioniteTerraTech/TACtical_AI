@@ -68,7 +68,7 @@ namespace TAC_AI.World
     {
         public static PlayerRTSControl inst;
         public static int MaxCommandDistance = 9001;//500;
-        public static int MaxAllowedSizeForHighlight = 6;
+        public static int MaxAllowedSizeForHighlight = 3;
         public static bool PlayerIsInRTS = false;
         public static bool PlayerRTSOverlay = false;
         public static bool QueuedRelease = false;
@@ -965,7 +965,7 @@ namespace TAC_AI.World
         }
         private void DrawSelectBox(Vector3 startPosGlobal, Vector3 endPosGlobal)
         {
-            Debug.Log("TACtical_AI: DrawSelectBox - " + startPosGlobal + " | " + endPosGlobal);
+            //Debug.Log("TACtical_AI: DrawSelectBox - " + startPosGlobal + " | " + endPosGlobal);
             Vector3 sPos = startPosGlobal;
             Vector3 ePos = endPosGlobal;
             Vector3 ePosVert = ePos.SetY(sPos.y);

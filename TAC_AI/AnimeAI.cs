@@ -29,6 +29,24 @@ namespace TAC_AI
         //  WIP
         const bool UseErrorChecking = false;
 
+        //private List<Tank> techsWithCharacters = new List<Tank>();
+
+        public static bool PollShouldRetreat(Tank tech, AIECore.TankAIHelper help, out bool verdict)
+        {
+            verdict = false;
+            if (!AnimeAIBackupValidation())
+                return false;
+            if (Core.GetDriverOfTech(tech, out CharacterInst CI))
+            {
+                if (help.lastEnemy?.tank)
+                    verdict = CI.ShouldRetreat(help.lastEnemy.tank);
+                else
+                    verdict = false;
+                return true;
+            }
+            return false;
+        }
+
         public static void RespondToOffense(Tank tech, Tank assailant, AOffenseReact damage)
         {
             if (!AnimeAIBackupValidation())

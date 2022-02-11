@@ -151,52 +151,57 @@ namespace TAC_AI.AI.Movement.AICores
             }
             //Debug.Log("TACtical_AI: upwards direction " + tank.name + "  is " + direct.y);
 
-// Blue is the target destination, Red is up  
-#if DEBUG
-            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, Navi3DDirect * pilot.Helper.lastTechExtents, new Color(0, 0, 1));
-            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, direct * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
-#endif
             return direct; // IS IN WORLD SPACE
         }
         public static void AngleTowards(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
         {
             //AI Steering Rotational
-            TankControl.ControlState control3D = (TankControl.ControlState) AircraftUtils.controlGet.GetValue(thisControl);
+            TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(thisControl);
 
-            thisInst.Navi3DDirect = (position - tank.boundsCentreWorldNoCheck).normalized;
+            Vector3 insureUpright = (position - tank.boundsCentreWorldNoCheck).normalized;
+            if (Vector3.Dot(tank.rootBlockTrans.forward, insureUpright) < -0.25f)
+            {
+                insureUpright.y = 0f;
+            }
+            thisInst.Navi3DDirect = insureUpright.normalized;
           
             thisInst.Navi3DUp = DetermineRoll(tank, pilot, thisInst.Navi3DDirect);
 
-            Vector3 turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DUp)).eulerAngles;
+            // We must make the controls local to the cab to insure predictable performance
+            Transform root = tank.rootBlockTrans;
+            Vector3 ForwardsLocal = root.InverseTransformDirection(thisInst.Navi3DDirect);
+            Vector3 turnVal = Quaternion.LookRotation(ForwardsLocal, Vector3.up).eulerAngles;
+            Vector3 turnValUp = Quaternion.LookRotation(root.InverseTransformDirection(root.forward.SetY(0).normalized), root.InverseTransformDirection(thisInst.Navi3DUp)).eulerAngles;
             //Vector3 forwardFlat = tank.rootBlockTrans.forward;
             //forwardFlat.y = 0;
 
             //Debug.Log("TACtical_AI: Tech " + tank.name + " steering RAW" + turnVal);
 
             //Convert turnVal to runnable format
+            // PITCH
             if (turnVal.x > 180)
                 turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / pilot.FlyingChillFactor.x), -1, 1);
             else
                 turnVal.x = Mathf.Clamp(-(turnVal.x / pilot.FlyingChillFactor.x), -1, 1);
-
+            // YAW
             if (turnVal.y > 180)
                 turnVal.y = Mathf.Clamp(-((turnVal.y - 360) / pilot.FlyingChillFactor.y), -1, 1);
             else
                 turnVal.y = Mathf.Clamp(-(turnVal.y / pilot.FlyingChillFactor.y), -1, 1);
-
-            if (turnVal.z > 180)
-                turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / pilot.FlyingChillFactor.z), -1, 1);
+            // ROLL
+            if (turnValUp.z > 180)
+                turnValUp.z = Mathf.Clamp(-((turnValUp.z - 360) / pilot.FlyingChillFactor.z), -1, 1);
             else
-                turnVal.z = Mathf.Clamp(-(turnVal.z / pilot.FlyingChillFactor.z), -1, 1);
+                turnValUp.z = Mathf.Clamp(-(turnValUp.z / pilot.FlyingChillFactor.z), -1, 1);
 
             //Stop Wobble
             if (Mathf.Abs(turnVal.x) < 0.01f)
                 turnVal.x = 0;
             if (Mathf.Abs(turnVal.y) < 0.01f)
                 turnVal.y = 0;
-            if (Mathf.Abs(turnVal.z) < 0.01f)
-                turnVal.z = 0;
-            thisInst.Navi3DDirect = (position - tank.boundsCentreWorldNoCheck).normalized;
+            if (Mathf.Abs(turnValUp.z) < 0.01f)
+                turnValUp.z = 0;
+            //thisInst.Navi3DDirect = (position - tank.boundsCentreWorldNoCheck).normalized;
 
             if (tank.rootBlockTrans.up.y < 0)
             {   // upside down due to a unfindable oversight in code - just override the bloody thing when it happens
@@ -207,6 +212,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             //Turn our work in to process
+            turnVal.z = turnValUp.z;
             control3D.m_State.m_InputRotation = turnVal;
 
             // DRIVE
@@ -214,12 +220,17 @@ namespace TAC_AI.AI.Movement.AICores
 
             //Turn our work in to processing
             //Debug.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
-            control3D.m_State.m_InputMovement = DriveVar;
+            control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
             //if (pilot.SlowestPropLerpSpeed < 0.1f && pilot.PropBias.z > 0.75f && pilot.CurrentThrottle > 0.75f)
             //    control3D.m_State.m_BoostProps = true;
             //else
             //    control3D.m_State.m_BoostProps = false;
 
+            // Blue is the target destination, Red is up  
+#if DEBUG
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.Navi3DDirect * pilot.Helper.lastTechExtents, new Color(0, 0, 1));
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, thisInst.Navi3DUp * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
+#endif
 
             controlGet.SetValue(tank.control, control3D);
             return;

@@ -514,15 +514,16 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         thisControl.DriveControl = 1f;
                     }
-                    else if (thisInst.DriveDir == EDriveType.Backwards)
-                    {   //Drive to target driving backwards
+                    /*
+                    else if (thisInst.DriveDir == EDriveType.Backwards) // Disabled for now as most designs are forwards-facing
+                    {   //Drive to target driving backwards  
                         //if (thisInst.PivotOnly)
                         //    thisControl.m_Movement.FaceDirection(tank, destDirect, 1);//need max aiming strength for turning
                         //else
                         if (Turner(thisControl, thisInst, -destDirect, out float turnVal))
                             thisControl.m_Movement.FaceDirection(tank, -destDirect, turnVal);//Face the music
                         thisControl.DriveControl = -1f;
-                    }
+                    }*/
                     else
                     {
                         //if (thisInst.PivotOnly)
@@ -598,15 +599,15 @@ namespace TAC_AI.AI.Movement.AICores
                     if (thisInst.BOOST)
                     {
                         thisControl.DriveControl = 1;
-                        if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.75f)
-                            thisControl.m_Movement.FireBoosters(tank);
+                        if (Vector3.Dot(destDirect.SetY(0).normalized, tank.rootBlockTrans.forward.SetY(0).normalized) > 0.8f)
+                            controller.TryBoost(thisControl);
                     }
                     else if (thisInst.featherBoost)
                     {
                         if (thisInst.featherBoostersClock >= 25)
                         {
-                            if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.75f)
-                                thisControl.m_Movement.FireBoosters(tank);
+                            if (Vector3.Dot(destDirect.SetY(0).normalized, tank.rootBlockTrans.forward.SetY(0).normalized) > 0.8f)
+                                controller.TryBoost(thisControl);
                             thisInst.featherBoostersClock = 0;
                         }
                         thisInst.featherBoostersClock++;
@@ -615,15 +616,15 @@ namespace TAC_AI.AI.Movement.AICores
                 else if (thisInst.BOOST)
                 {
                     thisControl.DriveControl = 1;
-                    if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.75f)
-                        thisControl.m_Movement.FireBoosters(tank);
+                    if (Vector3.Dot(destDirect.SetY(0).normalized, tank.rootBlockTrans.forward.SetY(0).normalized) > 0.8f)
+                        controller.TryBoost(thisControl);
                 }
                 else if (thisInst.featherBoost)
                 {
                     if (thisInst.featherBoostersClock >= 25)
                     {
-                        if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.75f)
-                            thisControl.m_Movement.FireBoosters(tank);
+                        if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.8f)
+                            controller.TryBoost(thisControl);
                         thisInst.featherBoostersClock = 0;
                     }
                     thisInst.featherBoostersClock++;
@@ -846,7 +847,7 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.lastEnemy.IsNotNull() && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
-                    driveVal = InertiaTranslation(-tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized);
+                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized);
                     if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                     {
                         if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
@@ -864,7 +865,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
                 else
-                    driveVal = InertiaTranslation(-tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized);
+                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized);
                 driveMultiplier = 1f;
             }
             else
@@ -872,7 +873,7 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.lastEnemy.IsNotNull() && !thisInst.IsMultiTech && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {   //level alt with enemy
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
-                    driveVal = InertiaTranslation(tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized);
+                    driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized);
                     if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                     {
                         if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
@@ -889,12 +890,12 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    driveVal = InertiaTranslation(tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized);
+                    driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized);
                     float range = thisInst.lastRange;
                     if (range < thisInst.MinimumRad - 1)
                     {
                         driveMultiplier = 1f;
-                        driveVal = InertiaTranslation(-tank.transform.InverseTransformPoint(thisInst.lastDestination).normalized * 0.3f);
+                        driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized * 0.3f);
                     }
                     else if (range > thisInst.MinimumRad + 1)
                     {
@@ -952,8 +953,7 @@ namespace TAC_AI.AI.Movement.AICores
                 driveMultiplier = thisInst.DriveVar;
             }
 
-
-            control3D.m_State.m_InputMovement = driveVal * Mathf.Clamp(distDiff.magnitude / thisInst.MinimumRad, 0, 1) * driveMultiplier;
+            control3D.m_State.m_InputMovement = (driveVal * Mathf.Clamp(distDiff.magnitude / thisInst.MinimumRad, 0, 1) * driveMultiplier).Clamp01Box();
             controlGet.SetValue(tank.control, control3D);
         }
 
@@ -1128,9 +1128,11 @@ namespace TAC_AI.AI.Movement.AICores
             return output;
         }
 
+
         //private const int ignoreTurning = 50;
         private const float ignoreTurning = 0.875f;
         private const float MinThrottleToTurnFull = 0.75f;
+        private const float throttleDampen = 0.5f;
         public bool Turner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, out float turnVal)
         {
             turnVal = 1;
@@ -1188,7 +1190,7 @@ namespace TAC_AI.AI.Movement.AICores
                     return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity * Time.deltaTime), direction);
                 }
             }
-            return direction;
+            return direction * throttleDampen;
         }
     }
 }

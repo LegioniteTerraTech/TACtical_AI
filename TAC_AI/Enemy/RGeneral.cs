@@ -172,7 +172,12 @@ namespace TAC_AI.AI.Enemy
             return final;
         }
 
-
+        /// <summary>
+        /// Only is used to keep track of enemies
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        /// <param name="mind"></param>
         public static void Scurry(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             // Determines the weapons actions and aiming of the AI - Sub-Neutral (Coward)

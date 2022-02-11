@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
 
+public class ModuleAIExtension : TAC_AI.ModuleAIExtension { }
 namespace TAC_AI
 {
     public class ModuleAIExtension : Module
