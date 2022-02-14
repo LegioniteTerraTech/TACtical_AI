@@ -31,6 +31,9 @@ namespace TAC_AI
         // was 450
 
         // EPIC TECH HANDLER
+        public const int TileFringeDist = 96;
+        public const int HomingWeaponCount = 25;
+        public const int BossTechSize = 150;
         public const int LethalTechSize = 256;
         public const int MaxEradicatorTechs = 2;
 
@@ -209,7 +212,7 @@ namespace TAC_AI
         {
             get
             {
-                float outValue = -25;
+                float outValue = -100;
                 try { outValue = WaterMod.QPatch.WaterHeight; } catch { }
                 return outValue;
             }
@@ -637,7 +640,7 @@ namespace TAC_AI
     {
         public static Vector3 Clamp01Box(this Vector3 vec)
         {
-            return Vector3.Max(Vector3.Min(-Vector3.one, vec), Vector3.one);
+            return Vector3.Min(Vector3.Max(-Vector3.one, vec), Vector3.one);
         }
     }
 }

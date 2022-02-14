@@ -22,30 +22,31 @@ namespace TAC_AI.AI.Enemy
         private const int CircleRange = 170;
         private const int MinCircleSpeed = 140;
 
-        public static EnemyAttack GetAttackStrat(Tank tank)
+        public static EnemyAttack GetAttackStrat(Tank tank, EnemyMind mind)
         {
-            
+            bool smolTech = false;
             if (KickStart.isTweakTechPresent && tank.blockman.IterateBlocks().Count() <= SmolTechThreshold)
             {   // Small Techs should play it mobile
-                return EnemyAttack.Circle;
+                smolTech = true;
             }
 
             EnemyAttack attack = EnemyAttack.Grudge;
             int strongWeaps = 0; // Weapons with damage surpassing 1750
             int rangedWeaps = 0; // Weapons with velocity >= 140 or can shoot further than 75
-            int circleWeaps = 0; // Weapons with horizontal aiming range >= 170
-            int fastWeaps = 0;   // Weapons with horizontal aiming speed >= 200
+            int circleWeaps = 0; // Weapons with horizontal aiming range >= 170 and aiming speed of at least 60
+            int fastWeaps = 0;   // Weapons with horizontal aiming speed >= 140
             int meleeWeaps = 0;  // Drill, Tesla or Flamethrowers
             Vector3 weaponsAngleBias = Vector3.zero;
             int count = 0;
 
+            // Learn from what weapons we have on our Tech:
             foreach (ModuleWeapon weap in tank.blockman.IterateBlockComponents<ModuleWeapon>())
             {
                 count++;
                 var fD = weap.GetComponent<FireData>();
                 var gA = weap.GetComponentsInChildren<GimbalAimer>();
                 bool CircleAiming = false;
-                if (gA.Count() > 0)
+                if (gA.Count() > 0 && weap.RotateSpeed >= 60)// Minimum allowed rotation speed for circling
                 {
                     foreach (GimbalAimer aim in gA)
                     {
@@ -144,15 +145,18 @@ namespace TAC_AI.AI.Enemy
                 new KeyValuePair<int, int>(meleeWeaps, 4)
             };
 
+            // Sort based on weapon abilities:
             sortList = sortList.OrderBy(x => x.Key).ToList();
-            bool isStrong = false;
-            bool isRanged = false;
-            bool isRaider = false;
-            bool isFast = false;
+            bool isStrong = false;  // High Alpha weapons
+            bool isRanged = false;  // Ranged weapons
+            bool isRaider = false;  // Circle weapons
+            bool isFast = false;    // weapons that aim fast
             bool isMelee = false;
             bool Forwards = (weaponsAngleBias / count).z > 0.7f;
 
-            switch (sortList.ElementAt(4).Value) {
+            // Pick the top two canidates to determine our combat mindset:
+            switch (sortList.ElementAt(4).Value)
+            {
                 case 0:
                     isStrong = true;
                     break;
@@ -189,16 +193,142 @@ namespace TAC_AI.AI.Enemy
             }
             Debug.Log("TACtical_AI: Enemy AI " + tank.name + " Combat type " + sortList.ElementAt(0).Value + " | " + sortList.ElementAt(1).Value);
 
+            // Determine based on Tech Size and driving class:
             // Because we want the combat to not be irritating, circle should only be used if the player has target leading
-            if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
-                attack = EnemyAttack.Circle;
-            else if (isFast && (isRaider || isStrong))
-                attack = EnemyAttack.Pesterer;
-            else if ((isStrong || Forwards) && isRanged)
-                attack = EnemyAttack.Spyper;
-            else if (isStrong && (isMelee || isFast || Forwards))
-                attack = EnemyAttack.Bully;
-
+            switch (mind.EvilCommander)
+            {
+                case EnemyHandling.Stationary: // NEVER use circle on a static defense
+                    if (isStrong && (isMelee || isFast || Forwards))
+                        attack = EnemyAttack.Bully;
+                    else if ((isStrong || Forwards) && isRanged && !isMelee)
+                        attack = EnemyAttack.Spyper;
+                    else if (isFast && (isRaider || isStrong))
+                        attack = EnemyAttack.Pesterer;
+                    break;
+                case EnemyHandling.Airplane: // Try use our height and speed to our advantage
+                    if (smolTech)
+                    {
+                        if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                        else if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                        else if ((isStrong || Forwards) && isRanged)
+                            attack = EnemyAttack.Spyper;
+                    }
+                    else
+                    {
+                        if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                        else if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                        else if((isStrong || Forwards) && isRanged)
+                            attack = EnemyAttack.Spyper;
+                    }
+                    break;
+                case EnemyHandling.Chopper: // Try use our height to our advantage
+                    if (smolTech)
+                    {
+                        if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if ((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper;
+                        else if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                    }
+                    else
+                    {
+                        if ((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper;
+                        else if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                        else if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                    }
+                    break;
+                case EnemyHandling.Starship: // Abuse the crab out of our absurd mobility
+                    if (smolTech)
+                    {
+                        if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if ((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                        else if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                    }
+                    else
+                    {
+                        if (isStrong && (isMelee || isFast || Forwards))
+                        {
+                            attack = EnemyAttack.Bully;
+                            mind.InvertBullyPriority = true; // Probably can rip a new one
+                        }
+                        else if((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper; // Most large Spaceships feature a large forwards weapons array
+                        else if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                    }
+                    break;
+                case EnemyHandling.Naval: // Abuse the sea
+                    if (smolTech)
+                    {
+                        if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                        else if ((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper;
+                        else if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                        else if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                    }
+                    else
+                    {
+                        if ((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper;
+                        else if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                        else if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                    }
+                    break;
+                default:    // Likely Ground
+                    if (smolTech)
+                    {
+                        if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if ((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper;
+                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                        else if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                    }
+                    else
+                    {
+                        if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                            attack = EnemyAttack.Circle;
+                        else if (isFast && (isRaider || isStrong))
+                            attack = EnemyAttack.Pesterer;
+                        else if ((isStrong || Forwards) && isRanged && !isMelee)
+                            attack = EnemyAttack.Spyper;
+                        else if (isStrong && (isMelee || isFast || Forwards))
+                            attack = EnemyAttack.Bully;
+                    }
+                    break;
+            }
             return attack;
         }
     }

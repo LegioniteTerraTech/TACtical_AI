@@ -45,7 +45,7 @@ namespace TAC_AI.AI.Enemy
         internal const int BaseFounderRange = 60;
         internal const float SpyperMaxRange = 450;
         internal const float SpacingRange = 8;
-        internal const float SpacingRangeAir = 16;
+        internal const float SpacingRangeAir = 32;
         internal const int ScanDelay = 20;
         internal const int PestererSwitchDelay = 500;
         internal const int ProvokeTime = 200;
@@ -253,9 +253,6 @@ namespace TAC_AI.AI.Enemy
             //    return null; // We NO ATTACK
             Visible target = AIControl.lastEnemy;
 
-            if (PursuingTarget) // Carry on chasing the target
-                return target;
-
             // We begin the search
             if (CommanderAttack == EnemyAttack.Spyper) inRange = SpyperMaxRange;
             else if (inRange <= 0) inRange = Range;
@@ -265,7 +262,10 @@ namespace TAC_AI.AI.Enemy
             if (target != null)
             {
                 if (!target.isActive || (target.tank.boundsCentreWorldNoCheck - scanCenter).magnitude > TargetRange)
+                {
+                    Debug.Log("Target lost");
                     target = null;
+                }
                 else if (TargetLockDuration >= 0)
                 {
                     TargetLockDuration -= KickStart.AIClockPeriod;
@@ -273,6 +273,8 @@ namespace TAC_AI.AI.Enemy
                 }
             }
 
+            if (PursuingTarget) // Carry on chasing the target
+                return target;
 
             List<Tank> techs = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
             if (CommanderAttack == EnemyAttack.Pesterer)

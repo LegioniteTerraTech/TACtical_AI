@@ -246,7 +246,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!pilot.TargetGrounded && (unresponsiveAir || !pilot.Helper.FullMelee))
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
-            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
+            pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
 
             if (pilot.Helper.FullMelee && !unresponsiveAir)
@@ -300,7 +300,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!pilot.TargetGrounded && (unresponsiveAir || !pilot.Helper.FullMelee))
                 pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
-            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
+            pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
             pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
 
             if (pilot.Helper.FullMelee && !unresponsiveAir)
@@ -428,7 +428,7 @@ namespace TAC_AI.AI.Movement.AICores
             else
                 AircraftUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
 
-            AIEPathing.ModerateMaxAlt(ref pilot.AirborneDest, pilot.Helper);
+            pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
 
             if (unresponsiveAir)
             {

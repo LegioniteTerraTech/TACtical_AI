@@ -78,11 +78,11 @@ namespace TAC_AI.World
                     inst.techsInvolved.Clear();
                     foreach (Tank tech in ManTechs.inst.CurrentTechs)
                     {
-                        if (tech)
+                        if ((bool)tech?.visible?.isActive)
                         {
-                            if (tech.visible.isActive)
+                            if (tech.Team == inst.EP.Team && !tech.IsAnchored)
                             {
-                                if (tech.Team == inst.EP.Team && !tech.IsAnchored)
+                                if (!tech.IsSleeping)
                                 {
                                     var helper = tech.GetComponent<AIECore.TankAIHelper>();
                                     if (!helper.lastEnemy)
@@ -95,9 +95,23 @@ namespace TAC_AI.World
                                     }
                                     inst.techsInvolved.Add(tech);
                                 }
+                                else
+                                    inst.techsFrozen.Add(tech);
                             }
                         }
                     }
+                    int count = inst.techsFrozen.Count;
+                    for (int step = 0; step < count; count--)
+                    {
+                        Tank tech = inst.techsFrozen[0];
+                        inst.techsFrozen.RemoveAt(0);
+                        if ((bool)tech?.visible)
+                        {
+                            EnemyBaseWorld.RecycleLoadedTechToTeam(tech);
+                            SpecialAISpawner.Purge(tech);
+                        }
+                    }
+                    inst.techsFrozen.Clear();
                     var mainBase = EnemyBaseWorld.GetTeamFunder(inst.EP);
                     bool defeatedAllUnits = inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs();
                     if ((mainBase != null && !EnemyBaseWorld.IsPlayerWithinProvokeDist(mainBase.tilePos)) || defeatedAllUnits)
@@ -230,42 +244,32 @@ namespace TAC_AI.World
 
             if (delay > 1)
             {
-                if (!ManNetwork.IsNetworked || !ManNetwork.IsHost)
+                if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 {
                     techsInvolved.Clear();
                     foreach (Tank tech in ManTechs.inst.CurrentTechs)
                     {
                         if ((bool)tech?.visible.isActive)
                         {
-                            if (tech.Team == inst.EP.Team && !tech.IsAnchored)
+                            if (tech.Team == inst.EP.Team)
                             {
-                                techsInvolved.Add(tech);
+                                if (!tech.IsAnchored)
+                                {
+                                    if (!tech.IsSleeping)
+                                        techsInvolved.Add(tech);
+                                }
                             }
                         }
                     }
                 }
                 int totalHealth = 0;
-                List<Tank> techsFrozen = new List<Tank>();
                 foreach (Tank tech in techsInvolved)
                 {
                     if ((bool)tech?.visible.isActive)
                     {
                         totalHealth += tech.blockman.blockCount;
-                        if (tech.IsSleeping)
-                            techsFrozen.Add(tech);
                     }
                 }
-                int count = techsFrozen.Count;
-                for (int step = 0; step < count; count--)
-                {
-                    Tank tech = techsFrozen[0];
-                    techsFrozen.RemoveAt(0);
-                    if ((bool)tech?.visible)
-                    {
-                        SpecialAISpawner.Eradicate(tech);
-                    }
-                }
-                techsFrozen.Clear();
                 UpdatePercentBar(totalHealth, Team);
                 delay = 0;
             }

@@ -36,6 +36,24 @@ namespace TAC_AI.World
             return EP.EBUs.First();
         }
 
+        public static void RecycleLoadedTechToTeam(Tank tank)
+        {
+            if (RBases.GetTeamFunder(tank.Team))
+                RBases.RecycleTechToTeam(tank);
+            else
+            {
+                EnemyPresence EP = EnemyWorldManager.GetTeam(tank.Team);
+                if (EP == null)
+                    return;
+                EnemyBaseUnloaded EBU = GetTeamFunder(EP);
+                if (EBU == null)
+                    return;
+                int tankCost = RawTechExporter.GetBBCost(tank);
+                EBU.Funds += tankCost;
+                SpecialAISpawner.Purge(tank);
+            }
+        }
+
         public static bool HasTooMuchOfType(EnemyPresence EP, BasePurpose purpose)
         {
             int Count = 0;
@@ -233,6 +251,18 @@ namespace TAC_AI.World
             }
             catch { }
         }
+        public static void RemoteRecycle(EnemyTechUnit ETU)
+        {
+            EnemyPresence EP = EnemyWorldManager.GetTeam(ETU.tech.m_TeamID);
+            if (EP != null)
+                EP.AddBuildBucks(RawTechExporter.GetBBCost(ETU.tech));
+            RemoteRemove(ETU);
+        }
+        public static void RemoteDestroy(EnemyTechUnit ETU)
+        {
+            EnemyWorldManager.TechDestroyedEvent.Send(ETU.tech.m_TeamID, ETU.tech.m_ID, false);
+            RemoteRemove(ETU);
+        }
 
 
         public static bool IsPlayerWithinProvokeDist(IntVector2 tilePos)
@@ -279,6 +309,7 @@ namespace TAC_AI.World
 
                 if (KickStart.CullFarEnemyBases)
                 {
+                    // Note: GetBackwardsCompatiblePosition gets the SCENEposition (Position relative to the WorldTreadmillOrigin)!
                     if ((EBU.tech.GetBackwardsCompatiblePosition() - Singleton.playerPos).sqrMagnitude > EnemyWorldManager.EnemyBaseCullingRangeSq)
                     {
                         int count = EP.EBUs.Count;
@@ -340,7 +371,7 @@ namespace TAC_AI.World
 
                 BasePurpose reason;
                 BaseTerrain Terra;
-                if (TryFindExpansionLocation(EBU, EBU.tech.GetBackwardsCompatiblePosition(), out Vector3 pos))
+                if (TryFindExpansionLocation(EBU, EBU.tech.m_WorldPosition, out Vector3 pos))
                 {   // Try spawning defense
                     reason = PickBuildBasedOnPriorities(EP);
                     Terra = RawTechLoader.GetTerrain(pos);
@@ -365,7 +396,7 @@ namespace TAC_AI.World
                     EnemyWorldManager.ConstructNewExpansion(pos, EBU, EP, type);
                     //Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
                 }
-                else if (TryFindExpansionLocation2(EBU, EBU.tech.GetBackwardsCompatiblePosition(), out Vector3 pos2))
+                else if (TryFindExpansionLocation2(EBU, EBU.tech.m_WorldPosition, out Vector3 pos2))
                 {   // Try spawning base extensions
                     reason = PickBuildNonDefense(EP);
                     Terra = RawTechLoader.GetTerrain(pos2);
@@ -455,7 +486,7 @@ namespace TAC_AI.World
                     {
                         if (ForceRemove)
                         {
-                            RemoteRemove(fund);
+                            RemoteRecycle(fund);
                             if (step >= attempts)
                                 return;
                         }
@@ -469,7 +500,7 @@ namespace TAC_AI.World
                         if (RemoveSpenders && fund.Health < fund.MaxHealth
                             && fund.isTechBuilder && !fund.isHarvestBase)
                         {
-                            RemoteRemove(fund);
+                            RemoteRecycle(fund);
                             if (step >= attempts)
                                 return;
                         }
@@ -569,6 +600,7 @@ namespace TAC_AI.World
 
 
         // Utilities
+        /*
         internal static bool IsLocationGridEmpty(Vector3 expansionCenter)
         {
             bool chained = false;
@@ -590,7 +622,6 @@ namespace TAC_AI.World
                 return false;
             return true;
         }
-
         internal static bool TryFindExpansionLocationGrid(Vector3 expansionCenter, out Vector3 pos)
         {
             bool chained = false;
@@ -669,68 +700,77 @@ namespace TAC_AI.World
             }
             pos = expansionCenter;
             return false;
-        }
-        private static bool TryFindExpansionLocation(EnemyTechUnit tank, Vector3 expansionCenter, out Vector3 pos)
+        }*/
+
+        private static bool TryFindExpansionLocation(EnemyTechUnit tank, WorldPosition WP, out Vector3 pos)
         {
             bool chained = false;
             Quaternion quat = tank.tech.m_Rotation;
-            if (IsLocationValid(expansionCenter + ((quat * Vector3.forward) * 64), ref chained))
+            if (WP == null)
             {
-                pos = expansionCenter + ((quat * Vector3.forward) * 64);
+                WP = WorldPosition.FromScenePosition(tank.tech.GetBackwardsCompatiblePosition());
+            }
+            if (IsLocationValid(WP.TileCoord, WP.TileRelativePos + ((quat * Vector3.forward) * 64), ref chained))
+            {
+                pos = WP.ScenePosition + ((quat * Vector3.forward) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter - ((quat * Vector3.forward) * 64), ref chained))
+            else if (IsLocationValid(WP.TileCoord, WP.TileRelativePos - ((quat * Vector3.forward) * 64), ref chained))
             {
-                pos = expansionCenter - ((quat * Vector3.forward) * 64);
+                pos = WP.ScenePosition - ((quat * Vector3.forward) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter - ((quat * Vector3.right) * 64), ref chained))
+            else if (IsLocationValid(WP.TileCoord, WP.TileRelativePos - ((quat * Vector3.right) * 64), ref chained))
             {
-                pos = expansionCenter - ((quat * Vector3.right) * 64);
+                pos = WP.ScenePosition - ((quat * Vector3.right) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter + ((quat * Vector3.right) * 64), ref chained))
+            else if (IsLocationValid(WP.TileCoord, WP.TileRelativePos + ((quat * Vector3.right) * 64), ref chained))
             {
-                pos = expansionCenter + ((quat * Vector3.right) * 64);
+                pos = WP.ScenePosition + ((quat * Vector3.right) * 64);
                 return true;
             }
             else
             {
-                pos = expansionCenter;
+                pos = WP.ScenePosition;
                 return false;
             }
         }
-        private static bool TryFindExpansionLocation2(EnemyTechUnit tank, Vector3 expansionCenter, out Vector3 pos)
+        private static bool TryFindExpansionLocation2(EnemyTechUnit tank, WorldPosition WP, out Vector3 pos)
         {
             bool chained = false;
             Quaternion quat = tank.tech.m_Rotation;
-            if (IsLocationValid(expansionCenter + (((quat * Vector3.right) + (quat * Vector3.forward)) * 64), ref chained))
+            if (WP == null)
             {
-                pos = expansionCenter + (((quat * Vector3.right) + (quat * Vector3.forward)) * 64);
+                WP = WorldPosition.FromScenePosition(tank.tech.GetBackwardsCompatiblePosition());
+            }
+            if (IsLocationValid(WP.TileCoord, WP.TileRelativePos + (((quat * Vector3.right) + (quat * Vector3.forward)) * 64), ref chained))
+            {
+                pos = WP.ScenePosition + (((quat * Vector3.right) + (quat * Vector3.forward)) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter - (((quat * Vector3.right) + (quat * Vector3.forward)) * 64), ref chained))
+            else if (IsLocationValid(WP.TileCoord, WP.TileRelativePos - (((quat * Vector3.right) + (quat * Vector3.forward)) * 64), ref chained))
             {
-                pos = expansionCenter - (((quat * Vector3.right) + (quat * Vector3.forward)) * 64);
+                pos = WP.ScenePosition - (((quat * Vector3.right) + (quat * Vector3.forward)) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter + (((quat * Vector3.right) - (quat * Vector3.forward)) * 64), ref chained))
+            else if (IsLocationValid(WP.TileCoord, WP.TileRelativePos + (((quat * Vector3.right) - (quat * Vector3.forward)) * 64), ref chained))
             {
-                pos = expansionCenter + (((quat * Vector3.right) - (quat * Vector3.forward)) * 64);
+                pos = WP.ScenePosition + (((quat * Vector3.right) - (quat * Vector3.forward)) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter - (((quat * Vector3.right) - (quat * Vector3.forward)) * 64), ref chained))
+            else if (IsLocationValid(WP.TileCoord, WP.TileRelativePos - (((quat * Vector3.right) - (quat * Vector3.forward)) * 64), ref chained))
             {
-                pos = expansionCenter - (((quat * Vector3.right) - (quat * Vector3.forward)) * 64);
+                pos = WP.ScenePosition - (((quat * Vector3.right) - (quat * Vector3.forward)) * 64);
                 return true;
             }
             else
             {
-                pos = expansionCenter;
+                pos = WP.ScenePosition;
                 return false;
             }
         }
-        private static bool IsLocationValid(Vector3 pos, ref bool ChainCancel)
+        private static bool IsLocationValid(IntVector2 TileCoord, Vector3 posInTile, ref bool ChainCancel)
         {
             if (ChainCancel)
                 return false;
@@ -740,9 +780,9 @@ namespace TAC_AI.World
             {
                 return false;
             }*/
-            IntVector2 tileCoord = WorldPosition.FromGameWorldPosition(pos).TileCoord;
+            //WorldPosition WP = WorldPosition.FromScenePosition(posScene);
 
-            foreach (EnemyTechUnit ETU in EnemyWorldManager.GetTechsInTile(tileCoord, pos - ManWorld.inst.TileManager.CalcTileCentre(tileCoord), 32))
+            foreach (EnemyTechUnit ETU in EnemyWorldManager.GetTechsInTile(TileCoord, posInTile, 32))
             {
                 if (ETU is EnemyBaseUnloaded EBU)
                 {

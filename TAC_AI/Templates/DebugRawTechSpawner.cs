@@ -466,6 +466,13 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        /// <summary>
+        /// endPosGlobal is GLOBAL ROTATION in relation to local tech.
+        /// </summary>
+        /// <param name="obj"></param>
+        /// <param name="num"></param>
+        /// <param name="endPosGlobal"></param>
+        /// <param name="color"></param>
         internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobal, Color color)
         {
             GameObject gO;
@@ -488,7 +495,7 @@ namespace TAC_AI.Templates
             lr.startColor = color;
             lr.endColor = color;
             Vector3 pos = obj.transform.position;
-            Vector3[] vecs = new Vector3[2] { pos, (endPosGlobal * 3) + pos };
+            Vector3[] vecs = new Vector3[2] { pos, endPosGlobal + pos };
             lr.SetPositions(vecs);
             Destroy(gO, Time.deltaTime);
         }

@@ -292,7 +292,7 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderMind = EnemyAttitude.SubNeutral;
                 toSet.CommanderAttack = EnemyAttack.Coward;
             }
-            else if (BM.blockCount > 250 && KickStart.MaxEnemyHQLimit > RBases.GetEnemyHQCount())
+            else if (BM.blockCount > KickStart.BossTechSize && KickStart.MaxEnemyHQLimit > RBases.GetEnemyHQCount())
             {   // Boss
                 toSet.InvertBullyPriority = true;
                 toSet.CommanderMind = EnemyAttitude.Boss;
@@ -311,7 +311,7 @@ namespace TAC_AI.AI.Enemy
                     case 0:
                         toSet.CommanderMind = EnemyAttitude.Miner;
                         //toSet.CommanderAttack = EnemyAttack.Pesterer;
-                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
+                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
                         toSet.Range = 64;
                         break;
                     default:
@@ -320,32 +320,32 @@ namespace TAC_AI.AI.Enemy
                         else
                             toSet.CommanderMind = EnemyAttitude.Default;
                         //toSet.CommanderAttack = EnemyAttack.Bully;
-                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
+                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
                         toSet.Range = 64;
                         toSet.InvertBullyPriority = true;
                         break;
                 }
                 fired = true;
             }
-            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() > 50)
+            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() > KickStart.HomingWeaponCount)
             {   // Over-armed
                 toSet.CommanderMind = EnemyAttitude.Homing;
                 //toSet.CommanderAttack = EnemyAttack.Bully;
-                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
+                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
                 fired = true;
             }
             else if (toSet.MainFaction == FactionTypesExt.VEN)
             {   // Ven
                 toSet.CommanderMind = EnemyAttitude.Default; 
                 //toSet.CommanderAttack = EnemyAttack.Circle;
-                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
+                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
                 fired = true;
             }
             else if (toSet.MainFaction == FactionTypesExt.HE)
             {   // Assault
                 toSet.CommanderMind = EnemyAttitude.Homing;
                 //toSet.CommanderAttack = EnemyAttack.Grudge;
-                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
+                toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
                 fired = true;
             }
             if (BM.IterateBlocks().Count() >= KickStart.LethalTechSize)
@@ -541,7 +541,7 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                int randomNum2 = UnityEngine.Random.Range(0, 0);
+                int randomNum2 = UnityEngine.Random.Range(0, 9);
                 switch (randomNum2)
                 {
                     case 0:
@@ -567,7 +567,7 @@ namespace TAC_AI.AI.Enemy
                 }
             }
             //add Attack
-            toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank);
+            toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
             /*
             int randomNum3 = UnityEngine.Random.Range(1, 6);
             switch (randomNum3)
@@ -652,18 +652,9 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (toSet.StartedAnchored)
                     {
-                        /*
-                        tank.FixupAnchors(true);
-                        toSet.CommanderMind = EnemyAttitude.Default;
-                        toSet.EvilCommander = EnemyHandling.Stationary;
-                        toSet.CommanderBolts = EnemyBolts.AtFull;
-                        if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0)
-                        {
-                            tank.TryToggleTechAnchor();
-                        }*/
                         RBases.SetupBaseAI(thisInst, tank, toSet);
                         RBases.MakeMinersMineUnlimited(tank);
-                         Debug.Log("TACtical_AI: Tech " + tank.name + " is is a base Tech");
+                        Debug.Log("TACtical_AI: Tech " + tank.name + " is is a base Tech");
                     }
                     if (toSet.EvilCommander != EnemyHandling.Wheeled)
                         toSet.CommanderAttack = EnemyAttack.Grudge;
@@ -686,7 +677,7 @@ namespace TAC_AI.AI.Enemy
                 if (toSet.CommanderMind == EnemyAttitude.Miner)
                 {
                     thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents);
-                    if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI
+                    if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI in some attack cases
                     {
                         switch (toSet.EvilCommander)
                         {

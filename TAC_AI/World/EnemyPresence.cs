@@ -195,7 +195,7 @@ namespace TAC_AI.World
                                 ReportCombat("Enemy " + target.tech.m_TechData.Name + " has been destroyed");
                             }
                             catch { }
-                            EnemyBaseWorld.RemoteRemove(target);
+                            EnemyBaseWorld.RemoteDestroy(target);
                         }
                     }
                     else
@@ -268,6 +268,17 @@ namespace TAC_AI.World
                     EBU.Funds += EBU.revenue;
                 }
             }
+        }
+
+        public bool AddBuildBucks(int add)
+        {
+            EnemyBaseUnloaded EBU = EnemyBaseWorld.GetTeamFunder(this);
+            if (EBU != null)
+            {
+                EBU.Funds += add;
+                return true;
+            }
+            return false;
         }
 
         public void SetEvent(IntVector2 tilePos)

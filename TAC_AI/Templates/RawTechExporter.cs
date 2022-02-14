@@ -265,11 +265,11 @@ namespace TAC_AI.Templates
                         temp.terrain = terra;
 
                         temps.Add(temp);
-                        Debug.Log("TACtical_AI: Deployed " + name + " as an enemy tech, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
+                        Debug.Log("TACtical_AI: Added " + name + " to the RAW Enemy Tech Pool, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
                     }
                     catch
                     {
-                        Debug.Log("TACtical_AI: Could not deploy " + name + " as an enemy tech!  Corrupted BuilderExternal(Or tech too small)!! - Error Level " + errorLevel);
+                        Debug.Log("TACtical_AI: Could not add " + name + " to the RAW Enemy Tech Pool!  Corrupted BuilderExternal(Or tech too small)!! - Error Level " + errorLevel);
                     }
                 }
             }
@@ -806,6 +806,10 @@ namespace TAC_AI.Templates
         {
             string loaded = LoadEnemyTechFromFile(TechName, altDirect);
             return JsonUtility.FromJson<BuilderExternal>(loaded);
+        }
+        internal static int GetBBCost(ManSaveGame.StoredTech tech)
+        {
+            return tech.m_TechData.GetValue();
         }
         internal static int GetBBCost(Tank tank)
         {

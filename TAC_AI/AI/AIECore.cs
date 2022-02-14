@@ -653,7 +653,15 @@ namespace TAC_AI.AI
             //internal float Oops = 0;
 
             // Directional Handling
-            internal Vector3 lastDestination = Vector3.zero;    // Where we drive to in the world
+            //internal Vector3 lastDestination = Vector3.zero;    // Where we drive to in the world
+            internal Vector3 lastDestination {
+                get { return lastDestinationBugTest; }
+                set {
+                    Debug.Log("lastDestination set by: " + StackTraceUtility.ExtractStackTrace());
+                    lastDestinationBugTest = value; 
+                }
+            }
+            internal Vector3 lastDestinationBugTest = Vector3.zero;    // Where we drive to in the world
             internal float lastRange = 0;
             internal float lastRangeCombat = 0;
 

@@ -33,11 +33,18 @@ namespace TAC_AI.AI.Enemy
     public enum EnemyAttack
     {
         Circle,     // Circle the enemy while shooting at them
+        // !! Only active with TweakTech or WeaponAimMod (because no target leading) !!
+        // Use for: Skirmishers, Mid-long-ranged units with fast turrets [GSO Gigaton, VEN Rapid Cannon, HE HG Cannon, BF Arc Missiles, RR Sonic Blaster TAC Terminator]
         Grudge,     // Chase last assailant head-on until death regardless of range [default for SuicideMissile]
+        // Use for: Homing missiles, Dualling units, Eradicators hellbent on removing the player from existance
         Coward,     // Avoid danger
+        // Use for: Any Non-Combat Tech
         Bully,      // Attack the weakest tech in range
+        // Use for: Riots, Area Denial
         Pesterer,   // Attack random techs
+        // Use for: Interceptors, Raiders
         Spyper,     // Attack player from afar because we are a F^bro-fracker
+        // Use for: Artillery, Motherships
     }
     public enum EnemySmarts
     {               // retroactive for each step lower on this, also meaning more lag lol

@@ -46,15 +46,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             switch (mind.CommanderAttack)
             {
                 case EnemyAttack.Coward:
-                    thisInst.SideToThreat = false;
-                    thisInst.Retreat = true;
-                    thisInst.MoveFromObjective = true;
                     if ((bool)thisInst.lastEnemy)
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     else
                         RGeneral.Scurry(thisInst, tank, mind);
-                    thisInst.forceDrive = true;
-                    thisInst.DriveVar = 1;
                     if (dist < spacer + (range / 4))
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
@@ -72,16 +67,23 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                             thisInst.SettleDown();
                     }
+                    thisInst.SideToThreat = false;
+                    thisInst.Retreat = true;
+                    thisInst.ProceedToObjective = false;
+                    thisInst.MoveFromObjective = true;
                     break;
                 case EnemyAttack.Circle:
                     thisInst.SideToThreat = true;
                     thisInst.Retreat = false;
+                    thisInst.MinimumRad = range;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8) || 10 < thisInst.FrustrationMeter)
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
                         thisInst.SettleDown();
+                        thisInst.ProceedToObjective = true;
+                        /*
                         if (dist < spacer + 2)
                         {
                             thisInst.MoveFromObjective = true;
@@ -94,7 +96,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             thisInst.BOOST = true;
                             thisInst.ProceedToObjective = true;
-                        }
+                        }*/
                     }
                     break;
                 case EnemyAttack.Spyper:
@@ -111,9 +113,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.MoveFromObjective = true;
                         }
                     }
-                    else if (dist < thisInst.lastTechExtents + enemyExt + range)
+                    else if (dist < spacer + range)
                     {
                         thisInst.PivotOnly = true;
+                        thisInst.forceDrive = true;
+                        thisInst.DriveVar = 1;
+                        thisInst.ProceedToObjective = true; // point at the objective
+                        thisInst.SettleDown();
                     }
                     else if (dist < spacer + (range * 2))
                     {

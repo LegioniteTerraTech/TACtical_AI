@@ -9,6 +9,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
     public static class RStarship
     {
         //Same as RWheeled but has multi-plane support
+
         public static void TryAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
@@ -34,7 +35,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
             float dist = (tank.boundsCentreWorld - thisInst.lastEnemy.tank.boundsCentreWorld).magnitude - enemyExt;
-            float range = EnemyMind.SpacingRange + AIECore.Extremes(tank.blockBounds.extents);
+            float range = EnemyMind.SpacingRangeAir + AIECore.Extremes(tank.blockBounds.extents);
             thisInst.lastRange = dist;
 
             thisInst.forceDrive = true;
@@ -64,13 +65,16 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else if (mind.CommanderAttack == EnemyAttack.Circle)
             {
-                thisInst.SideToThreat = true;
+                //thisInst.SideToThreat = true;
+                thisInst.SideToThreat = false;
                 thisInst.Retreat = false;
+                thisInst.MinimumRad = range;
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                     thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                     thisInst.SettleDown();
-                if (dist < thisInst.lastTechExtents + enemyExt + 2)
+                // Melee makes the AI ignore the avoid, making the AI ram into the enemy
+                if (!mind.LikelyMelee && dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -88,8 +92,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
             }
             else if (mind.CommanderAttack == EnemyAttack.Spyper)
-            {
-                thisInst.SideToThreat = true;
+            {   // Spyper does not support melee
+                thisInst.SideToThreat = false; // cannot strafe while firing shells it seems
                 thisInst.Retreat = false;
                 if (dist < thisInst.lastTechExtents + enemyExt + (range / 2))
                 {
@@ -129,7 +133,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = false;
-                if (dist < thisInst.lastTechExtents + enemyExt + 2)
+                if (!mind.LikelyMelee && dist < thisInst.lastTechExtents + enemyExt + 2)
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
@@ -138,7 +142,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.MoveFromObjective = true;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 }
-                else if (dist < thisInst.lastTechExtents + enemyExt + range)
+                else if (!mind.LikelyMelee && dist < thisInst.lastTechExtents + enemyExt + range)
                 {
                     thisInst.PivotOnly = true;
                     thisInst.ProceedToObjective = true;

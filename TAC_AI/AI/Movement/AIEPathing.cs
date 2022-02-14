@@ -950,13 +950,13 @@ namespace TAC_AI.AI.Movement
         }
 
         // Aux
-        internal static void ModerateMaxAlt(ref Vector3 moderate, AIECore.TankAIHelper thisInst)
+        internal static Vector3 ModerateMaxAlt(Vector3 moderate, AIECore.TankAIHelper thisInst)
         {
             if ((bool)Singleton.playerTank)
             {
                 if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight + Singleton.playerPos.y)
                 {
-                    moderate = ForceOffsetFromGroundA(moderate, thisInst);
+                    return ForceOffsetFromGroundA(moderate, thisInst);
                 }
             }
             else
@@ -965,11 +965,12 @@ namespace TAC_AI.AI.Movement
                 {
                     if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight)
                     {
-                        moderate = ForceOffsetFromGroundA(moderate, thisInst);
+                        return ForceOffsetFromGroundA(moderate, thisInst);
                     }
                 }
                 catch { }
             }
+            return moderate;
         }
         internal static bool IsUnderMaxAltPlayer(Vector3 Pos)
         {

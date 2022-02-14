@@ -35,6 +35,7 @@ namespace TAC_AI.AI.Enemy
         {
             return EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; }).Count + EnemyWorldManager.GetTeam(Team).GetBaseCount();
         }
+  
         public static EnemyBaseFunder GetTeamFunder(int Team)
         {
             List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
