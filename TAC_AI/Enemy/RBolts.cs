@@ -55,7 +55,7 @@ namespace TAC_AI.AI.Enemy
                 mind.TechMemor.ReserveSuperGrabs = -256;
             }
             mind.BoltsQueued = 2;
-            tank.control.DetonateExplosiveBolt();
+            tank.control.ServerDetonateExplosiveBolt();
         }
 
         // Tech Accounting

@@ -365,17 +365,28 @@ namespace TAC_AI.AI.Enemy
 
             public static void Initiate()
             {
+                if (inst)
+                    return;
                 inst = new GameObject("BaseFunderManagerMain").AddComponent<BaseFunderManager>();
                 Debug.Log("TACtical_AI: Initiated BaseFunderManager");
             }
+            public static void DeInit()
+            {
+                if (!inst)
+                    return;
+                Destroy(inst.gameObject);
+                inst = null;
+                Debug.Log("TACtical_AI: DeInit BaseFunderManager");
+            }
+            internal static bool turboEnemyExpandCheat = SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace);
             public void Update()
             {
                 if (ManPauseGame.inst.IsPaused)
                     return;
 
-                if (timeStep > 5 && SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace))
+                if (timeStep > 5 && turboEnemyExpandCheat)
                 {
-                    timeStep = 5;
+                    timeStep = 0;
                 }
                 if (timeStep <= 0)
                 {
@@ -550,7 +561,9 @@ namespace TAC_AI.AI.Enemy
             {
                 // Make sure the money is safe
                 EmergencyMoveMoney(this);
+#if !STEAM
                 AnimeAI.RespondToLoss(tank, ALossReact.Base);
+#endif
 
                 Debug.Log("TACtical_AI: Tech " + tank.name + " Recycled EnemyBaseFunder");
                 tank.TankRecycledEvent.Unsubscribe(OnRecycle);
@@ -1063,6 +1076,9 @@ namespace TAC_AI.AI.Enemy
             {
                 if (SpecialAISpawner.IsAttract)
                     return; // no branching
+
+                if (BaseFunderManager.turboEnemyExpandCheat && funds.BuildBucks < MinimumBBRequired * 25)
+                    funds.AddBuildBucks(MinimumBBRequired);
 
                 if (funds.BuildBucks < MinimumBBRequired)
                     return; // Reduce expansion lag

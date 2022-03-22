@@ -7,7 +7,9 @@ using System.Reflection;
 using UnityEngine;
 using TAC_AI.Templates;
 using TAC_AI.AI.Movement;
+#if !STEAM
 using Control_Block;
+#endif
 
 namespace TAC_AI.AI.Enemy
 {
@@ -24,6 +26,7 @@ namespace TAC_AI.AI.Enemy
         internal static FieldInfo generator = typeof(ModuleEnergy).GetField("m_OutputConditions", BindingFlags.NonPublic | BindingFlags.Instance);
 
         // Main host of operations
+        internal static FactionSubTypes mainThreatCorp = FactionSubTypes.NULL;
 
         public static void BeEvil(AIECore.TankAIHelper thisInst, Tank tank)
         {
@@ -914,6 +917,7 @@ namespace TAC_AI.AI.Enemy
         }
         public static void HandleUnsetControlBlocks(EnemyMind mind, TankBlock block)
         {
+#if !STEAM
             try
             {
                 FieldInfo wasSet = typeof(ModuleBlockMover).GetField("Deserialized", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -989,6 +993,7 @@ namespace TAC_AI.AI.Enemy
                 }
             }
             catch { }
+#endif
         }
     }
 }

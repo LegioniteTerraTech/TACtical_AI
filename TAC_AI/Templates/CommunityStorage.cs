@@ -50,6 +50,8 @@ namespace TAC_AI.Templates
             ComAirs.Clear();
             ComSpaces.Clear();
         }
+        // Old BoltsName \"GSO_Exploder_A_111"
+        // New BoltsName \"GSO_Exploder_A1_111"
 
         public static Dictionary<SpawnBaseTypes, BaseTemplate> ComHarvests = new Dictionary<SpawnBaseTypes, BaseTemplate>
         {

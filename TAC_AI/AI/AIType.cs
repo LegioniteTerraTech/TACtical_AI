@@ -22,10 +22,21 @@ namespace TAC_AI.AI {
         MTSlave,    // Does not move on own but does shoot back     
         MTMimic,    // Copies the actions of the closest non-MT Tech in relation     
 
+        // LEGACY - These now have their own Enum now!
         // ADVANCED    (REQUIRES TOUGHER ENEMIES TO USE!)           (can't just do the same without the enemies attacking these ways as well...)
         Aviator,    // Flies aircraft, death from above, nuff said  (Flies above ground, by the player and keeps distance) [unload distance will break!]
         Buccaneer,  // Sails ships amongst ye seas~                 (Avoids terrain above water level)
         Astrotech,  // Flies hoverships and kicks Tech              (Follows player a certain distance above ground level and can follow into the sky)
     }
     //All of their operating ranges are ultimately determined by the Tech's biggest provided vision/radar range.
+
+    public enum AIDriverType
+    {   //like the old plans, we make the AI do stuff
+        Unset,      // Requested auto-set
+        // COMBAT
+        Tank,       // Classic wheeled
+        Pilot,      // Flies aircraft, death from above, nuff said  (Flies above ground, by the player and keeps distance) [unload distance will break!]
+        Sailor,     // Sails ships amongst ye seas~                 (Avoids terrain above water level)
+        Astronaut,  // Flies hoverships and kicks Tech              (Follows player a certain distance above ground level and can follow into the sky)
+    }
 }

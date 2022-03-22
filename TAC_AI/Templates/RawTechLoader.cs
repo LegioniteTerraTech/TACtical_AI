@@ -91,6 +91,11 @@ namespace TAC_AI.Templates
         private static List<QueueInstantTech> TechBacklog = new List<QueueInstantTech>();
 
 
+        public const int EnemyBaseTeamsStart = 5;
+        public const int EnemyBaseTeamsEnd = 365;
+
+
+
         public static void Initiate()
         {
             if (!inst)
@@ -1649,13 +1654,9 @@ namespace TAC_AI.Templates
             List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
 
             bool skinChaotic = false;
-            byte skinset = (byte)0;
-            byte skinset2 = (byte)0;
             if (randomSkins)
             {
                 skinChaotic = UnityEngine.Random.Range(0, 100) < 2;
-                skinset = (byte)UnityEngine.Random.Range(0, 2);
-                skinset2 = (byte)UnityEngine.Random.Range(0, 1);
             }
             foreach (BlockMemory mem in mems)
             {
@@ -1672,41 +1673,26 @@ namespace TAC_AI.Templates
                 spec.position = mem.p;
                 spec.saveState = new Dictionary<int, Module.SerialData>();
                 spec.textSerialData = new List<string>();
-                FactionTypesExt factType = KickStart.GetCorpExtended(type);
-                if (skinChaotic)
+
+                if (randomSkins)
                 {
-                    byte rand = (byte)UnityEngine.Random.Range(0, 2);
-                    if (factType == FactionTypesExt.GSO && rand != 0)
-                        rand += 3;
-                    if (!ManDLC.inst.IsSkinDLC(rand, KickStart.CorpExtToCorp(factType)))
-                        spec.m_SkinID = rand;
+                    FactionTypesExt factType = KickStart.GetCorpExtended(type);
+                    FactionSubTypes FST = KickStart.CorpExtToCorp(factType);
+                    if (skinChaotic)
+                    {
+                        spec.m_SkinID = GetSkinIDRand((int)FST);
+                    }
                     else
-                        spec.m_SkinID = 0;
+                    {
+                        spec.m_SkinID = GetSkinIDSet((int)FST);
+                    }
                 }
                 else
-                {
-                    if (factType == FactionTypesExt.GSO)
-                    {
-                        if (!ManDLC.inst.IsSkinDLC(skinset + (skinset != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = (byte)(skinset + (skinset != 0 ? 3 : 0));
-                        else if (!ManDLC.inst.IsSkinDLC(skinset2 + (skinset2 != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = (byte)(skinset2 + (skinset2 != 0 ? 3 : 0));
-                        else
-                            spec.m_SkinID = 0;
-                    }
-                    else
-                    {
-                        if (!ManDLC.inst.IsSkinDLC(skinset, KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = skinset;
-                        else if (!ManDLC.inst.IsSkinDLC(skinset2, KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = skinset2;
-                        else
-                            spec.m_SkinID = 0;
-                    }
-                }
+                    spec.m_SkinID = 0;
 
                 data.m_BlockSpecs.Add(spec);
             }
+            ResetSkinIDSet();
             ManSpawn.TankSpawnParams tankSpawn = new ManSpawn.TankSpawnParams();
             tankSpawn.techData = data;
             tankSpawn.blockIDs = null;
@@ -1758,7 +1744,7 @@ namespace TAC_AI.Templates
 
             return theTech;
         }
-        
+
         internal static TechData ExportRawTechToTechData(string name, string blueprint, out int[] blockIDs)
         {
             TechData data = new TechData();
@@ -1772,8 +1758,7 @@ namespace TAC_AI.Templates
             List<int> BTs = new List<int>();
 
             bool skinChaotic = UnityEngine.Random.Range(0, 100) < 2;
-            byte skinset = (byte)UnityEngine.Random.Range(0, 2);
-            byte skinset2 = (byte)UnityEngine.Random.Range(0, 1);
+
             foreach (BlockMemory mem in mems)
             {
                 BlockTypes type = AIERepair.StringToBlockType(mem.t);
@@ -1795,45 +1780,127 @@ namespace TAC_AI.Templates
                 spec.saveState = new Dictionary<int, Module.SerialData>();
                 spec.textSerialData = new List<string>();
                 FactionTypesExt factType = KickStart.GetCorpExtended(type);
+                FactionSubTypes FST = KickStart.CorpExtToCorp(factType);
                 if (skinChaotic)
                 {
-                    byte rand = (byte)UnityEngine.Random.Range(0, 2);
-                    if (factType == FactionTypesExt.GSO && rand != 0)
-                        rand += 3;
-                    if (!ManDLC.inst.IsSkinDLC(rand, KickStart.CorpExtToCorp(factType)))
-                        spec.m_SkinID = rand;
-                    else
-                        spec.m_SkinID = 0;
+                    spec.m_SkinID = GetSkinIDRand((int)FST);
                 }
                 else
                 {
-                    if (factType == FactionTypesExt.GSO)
-                    {
-                        if (!ManDLC.inst.IsSkinDLC(skinset + (skinset != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = (byte)(skinset + (skinset != 0 ? 3 : 0));
-                        else if (!ManDLC.inst.IsSkinDLC(skinset2 + (skinset2 != 0 ? 3 : 0), KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = (byte)(skinset2 + (skinset2 != 0 ? 3 : 0));
-                        else
-                            spec.m_SkinID = 0;
-                    }
-                    else
-                    {
-                        if (!ManDLC.inst.IsSkinDLC(skinset, KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = skinset;
-                        else if (!ManDLC.inst.IsSkinDLC(skinset2, KickStart.CorpExtToCorp(factType)))
-                            spec.m_SkinID = skinset2;
-                        else
-                            spec.m_SkinID = 0;
-                    }
+                    spec.m_SkinID = GetSkinIDSet((int)FST);
                 }
 
                 data.m_BlockSpecs.Add(spec);
             }
+            ResetSkinIDSet();
             //Debug.Log("TACtical_AI: ExportRawTechToTechData - Exported " + name);
 
             blockIDs = BTs.ToArray();
             return data;
         }
+
+        private static Dictionary<int, List<byte>> valid = new Dictionary<int, List<byte>>();
+        private static Dictionary<int, byte> valid2 = new Dictionary<int, byte>();
+        internal static void ResetSkinIDSet()
+        {
+            valid.Clear();
+            valid2.Clear();
+        }
+        internal static byte GetSkinIDSet(int faction)
+        {
+            if (valid2.TryGetValue(faction, out byte num))
+            {
+                return num;
+            }
+            else
+            {
+                try
+                {
+                    byte pick = GetSkinIDRand(faction);
+                    valid2.Add(faction, pick);
+                    return pick;
+                }
+                catch { }// corp has no skins!
+            }
+            return 0;
+        }
+        internal static byte GetSkinIDSetForTeam(int team, int faction)
+        {
+            if (valid2.TryGetValue(faction, out byte num))
+            {
+                return num;
+            }
+            else
+            {
+                try
+                {
+                    byte pick = GetSkinIDCase(team, faction);
+                    valid2.Add(faction, pick);
+                    return pick;
+                }
+                catch { }// corp has no skins!
+            }
+            return 0;
+        }
+        internal static byte GetSkinIDRand(int faction)
+        {
+            if (valid.TryGetValue(faction, out List<byte> num))
+            {
+                return num.GetRandomEntry();
+            }
+            else
+            {
+                try
+                {
+                    FactionSubTypes FST = (FactionSubTypes)faction;
+                    List<byte> num2 = new List<byte>();
+                    int count = ManCustomSkins.inst.GetNumSkinsInCorp(FST);
+                    for (int step = 0; step < count; step++)
+                    {
+                        byte skin = ManCustomSkins.inst.SkinIndexToID((byte)step, FST);
+                        if (!ManDLC.inst.IsSkinLocked(skin, FST))
+                        {
+                            num2.Add(skin);
+                            //Debug.Log("SKINSSSSSS " + ManCustomSkins.inst.GetSkinNameForSnapshot(FST, skin));
+                        }
+                    }
+                    valid.Add(faction, num2);
+                    return num2.GetRandomEntry();
+                }
+                catch { }// corp has no skins!
+            }
+            return 0;
+        }
+
+        internal static byte GetSkinIDCase(int team, int faction)
+        {
+            if (valid.TryGetValue(faction, out List<byte> num))
+            {
+                return num[team % (num.Count - 1)];
+            }
+            else
+            {
+                try
+                {
+                    FactionSubTypes FST = (FactionSubTypes)faction;
+                    int count = ManCustomSkins.inst.GetNumSkinsInCorp(FST);
+                    List<byte> num2 = new List<byte>();
+                    for (int step = 0; step < count; step++)
+                    {
+                        byte skin = ManCustomSkins.inst.SkinIndexToID((byte)step, FST);
+                        if (!ManDLC.inst.IsSkinLocked(skin, FST))
+                        {
+                            num2.Add(skin);
+                        }
+                    }
+                    valid.Add(faction, num2);
+                    return num2[team % (num2.Count - 1)];
+                }
+                catch { }// corp has no skins!
+            }
+            return 0;
+        }
+
 
 
         private static FieldInfo forceInsert = typeof(ManPop).GetField("m_SpawnedTechs", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -1899,15 +1966,18 @@ namespace TAC_AI.Templates
             if (mind.StartedAnchored)
                 return false;
             bool can = true;
-            SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
-            if (type != SpawnBaseTypes.NotAvail)
+            if (mind?.Tank && !mind.Tank.name.NullOrEmpty())
             {
-                TempManager.techBases.TryGetValue(type, out BaseTemplate val);
-                can = !val.environ;
-            }
-            else if (TempManager.ExternalEnemyTechs.Exists(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }))
-            {
-                can = !TempManager.ExternalEnemyTechs.Find(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }).environ;
+                SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
+                if (type != SpawnBaseTypes.NotAvail)
+                {
+                    if (TempManager.techBases.TryGetValue(type, out BaseTemplate val))
+                        can = !val.environ;
+                }
+                else if (TempManager.ExternalEnemyTechs.Exists(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }))
+                {
+                    can = !TempManager.ExternalEnemyTechs.Find(delegate (BaseTemplate cand) { return cand.techName == mind.Tank.name; }).environ;
+                }
             }
             return can;
         }
@@ -2450,13 +2520,21 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+        public static bool IsEnemyBaseTeam(int team)
+        {
+            return (team >= EnemyBaseTeamsStart && team <= EnemyBaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
+        }
+        public static int GetRandomEnemyBaseTeam()
+        {
+            return UnityEngine.Random.Range(EnemyBaseTeamsStart, EnemyBaseTeamsEnd);
+        }
         private static void MakeSureCanExistWithBase(Tank tank)
         {
             if (!tank.IsFriendly(tank.Team) || tank.Team == -1)
             {
-                int set = UnityEngine.Random.Range(5, 365);
+                int set = GetRandomEnemyBaseTeam();
                 Debug.Log("TACtical_AI: Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");
-                tank.SetTeam(set);
+                tank.SetTeam(set, false);
                 TryRemoveFromPop(tank);
             }
         }

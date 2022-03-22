@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
+#if !STEAM
 using AnimeAI;
 
 namespace TAC_AI
@@ -36,6 +37,7 @@ namespace TAC_AI
             verdict = false;
             if (!AnimeAIBackupValidation())
                 return false;
+
             if (Core.GetDriverOfTech(tech, out CharacterInst CI))
             {
                 if (help.lastEnemy?.tank)
@@ -99,3 +101,4 @@ namespace TAC_AI
         }
     }
 }
+#endif

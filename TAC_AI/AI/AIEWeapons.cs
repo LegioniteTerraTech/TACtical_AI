@@ -56,6 +56,8 @@ namespace TAC_AI.AI
                             thisInst.OverrideAim = 3;
                             var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, AIECore.Extremes(targetTank.blockBounds.extents));
+                            if (thisInst.FIRE_NOW)
+                                thisControl.m_Weapons.FireWeapons(tank);
                         }
                         else if (thisInst.LastCloseAlly.control.FireControl)
                         {
@@ -71,7 +73,9 @@ namespace TAC_AI.AI
                         {
                             //Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
                             thisInst.OverrideAim = 2;
-                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position, 3f);
+                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
+                            if (thisInst.FIRE_NOW)
+                                thisControl.m_Weapons.FireWeapons(tank);
                         }
                         catch
                         {
@@ -97,6 +101,8 @@ namespace TAC_AI.AI
                         thisInst.OverrideAim = 1;
                         var targetTank = thisInst.lastEnemy.tank;
                         thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, AIECore.Extremes(targetTank.blockBounds.extents));
+                        if (thisInst.FIRE_NOW)
+                            thisControl.m_Weapons.FireWeapons(tank);
                     }
                 }
                 else if (thisInst.FIRE_NOW)

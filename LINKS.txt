@@ -1,3 +1,4 @@
 https://github.com/LegioniteTerraTech/TACtical_AI/tree/master/GitAccess
 /Exund/Nuterra.NativeOptions
 /Aceba1/TTQMM-ModConfigHelper
+/LegioniteTerraTech/SafeSaves

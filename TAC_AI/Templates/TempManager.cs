@@ -30,7 +30,7 @@ namespace TAC_AI.Templates
                 }
                 else 
                 {
-                    Debug.Log("TACtical AIs: Could not load " + pair.Value.techName + " as it contained missing blocks");
+                    Debug.Log("TACtical_AI: Could not load " + pair.Value.techName + " as it contained missing blocks");
                 }
             }
 
@@ -54,7 +54,7 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        Debug.Log("TACtical AIs: Could not load " + raw.techName + " as it contained missing blocks");
+                        Debug.Log("TACtical_AI: Could not load " + raw.techName + " as it contained missing blocks");
                     }
                 }
                 lastExtCount = tCount;

@@ -7,7 +7,10 @@ using UnityEngine.Serialization;
 using UnityEngine.Networking;
 using UnityEngine;
 using TAC_AI.Templates;
+
+#if !STEAM
 using Nuterra.BlockInjector;
+#endif
 
 namespace TAC_AI.AI
 {
@@ -495,24 +498,28 @@ namespace TAC_AI.AI
         public static void ConstructErrorBlocksList()
         {
             errorNames.Clear();
-            List<BlockTypes> types = Singleton.Manager<ManSpawn>.inst.GetLoadedTankBlockNames().ToList();
-            foreach (BlockTypes type in types)
+            try
             {
-                TankBlock prefab = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
-                string name = prefab.name;
-                if (prefab.GetComponent<Damageable>() && type.ToString() != name) //&& !Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
+                List<BlockTypes> types = Singleton.Manager<ManSpawn>.inst.GetLoadedTankBlockNames().ToList();
+                foreach (BlockTypes type in types)
                 {
-                    int hash = name.GetHashCode();
-                    if (!errorNames.Keys.Contains(hash))
+                    TankBlock prefab = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
+                    string name = prefab.name;
+                    if (prefab.GetComponent<Damageable>() && type.ToString() != name) //&& !Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
                     {
-                        errorNames.Add(hash, type);
+                        int hash = name.GetHashCode();
+                        if (!errorNames.Keys.Contains(hash))
+                        {
+                            errorNames.Add(hash, type);
 #if DEBUG
                         if ((int)type > 5000)
                             Debug.Log("TACtical_AI: ConstructErrorBlocksList - Added Modded Block " + name + " | " + type.ToString());
 #endif
+                        }
                     }
                 }
             }
+            catch { };
             Debug.Log("TACtical_AI: ConstructErrorBlocksList - There are " + errorNames.Count + " blocks with names not equal to their type");
         }
         public static bool TryGetMismatchNames(string name, ref BlockTypes type)
@@ -545,6 +552,8 @@ namespace TAC_AI.AI
             BT = BlockTypes.GSOAIController_111;
             if (!KickStart.isBlockInjectorPresent)
                 return false;
+
+#if !STEAM
             int hashName = mem.GetHashCode();
             foreach (KeyValuePair<int, CustomBlock> pair in BlockLoader.CustomBlocks)
             {
@@ -559,6 +568,7 @@ namespace TAC_AI.AI
                     }
                 }
             }
+#endif
             return false;
         }
 
@@ -990,7 +1000,79 @@ namespace TAC_AI.AI
             }
             return false;
         }
-       
+
+        public static bool TrySpawnAndAttachBlockFromListWithSkin(Tank tank, DesignMemory TechMemor, ref List<BlockTypes> typesMissing, bool playerInventory = false, bool useLimitedSupplies = false)
+        {
+            int attachAttempts = typesMissing.Count();
+            for (int step = 0; step < attachAttempts; step++)
+            {
+                BlockTypes bType = typesMissing.ElementAt(step);
+                if (playerInventory)
+                {
+                    if (!IsBlockStoredInInventory(tank, bType))
+                        continue;
+                }
+                else if (useLimitedSupplies && !KickStart.EnemiesHaveCreativeInventory)
+                {
+                    if (!Enemy.RBases.PurchasePossible(bType, tank.Team))
+                    {
+                        TechMemor.ranOutOfParts = true;
+                        TechMemor.thisInst.PendingSystemsCheck = false;
+                        continue;
+                    }
+                }
+                TechMemor.ranOutOfParts = false;
+
+                TankBlock foundBlock = null;
+                foundBlock = Templates.RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * 128), Quaternion.identity, out bool worked);
+                if (!worked)
+                {
+                    Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");
+                    continue;
+                }
+                bool attemptW = false;
+
+                List<BlockMemory> posBlocks = TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.name; });
+                int count = posBlocks.Count();
+                if (count == 0)
+                {
+                    if (playerInventory)
+                        IsBlockStoredInInventory(tank, bType, true);
+                    if (ManNetwork.IsNetworked)
+                        ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
+                    foundBlock.transform.Recycle();
+                    typesMissing.RemoveAt(step);
+                    attachAttempts--;
+                    step--;
+                    continue;
+                }
+                //Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
+                for (int step2 = 0; step2 < count; step2++)
+                {
+                    BlockMemory template = posBlocks.ElementAt(step2);
+                    attemptW = AttemptBlockAttach(tank, template, foundBlock, TechMemor, useLimitedSupplies);
+                    if (attemptW)
+                    {
+                        foundBlock.SetSkinByUniqueID(RawTechLoader.GetSkinIDSetForTeam(tank.Team, (int)ManSpawn.inst.GetCorporation(bType)));
+                        //foundBlock.InitNew();
+                        return true;
+                    }
+                }
+                if (playerInventory)
+                    IsBlockStoredInInventory(tank, bType, true);
+                //Debug.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+
+                if (ManNetwork.IsNetworked)
+                    ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
+                foundBlock.transform.Recycle();
+                // if everything fails, resort to timbuktu
+                //foundBlock.damage.SelfDestruct(0.1f);
+                //Vector3 yeet = Vector3.forward * 450000;
+                //foundBlock.transform.position = yeet;
+            }
+            return false;
+        }
+
 
 
         // Booleenssd

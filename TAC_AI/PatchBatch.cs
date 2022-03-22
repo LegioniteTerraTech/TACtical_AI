@@ -10,12 +10,91 @@ using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
+using SafeSaves;
+using UnityEditor;
 
 namespace TAC_AI
 {
     class PatchBatch
     {
     }
+
+#if STEAM
+    public class KickStartTAC_AI : ModBase
+    {
+        
+        internal static KickStartTAC_AI oInst;
+
+        bool isInit = false;
+        bool firstInit = false;
+        public override bool HasEarlyInit()
+        {
+            return true;
+        }
+
+        // IDK what I should init here...
+        public override void EarlyInit()
+        {
+            if (oInst == null)
+            {
+                oInst = this;
+                try
+                {
+                    //ManSafeSaves.Init();
+                }
+                catch (Exception e) { Debug.LogError(e); }
+                if (!KickStart.hasPatched)
+                {
+                    try
+                    {
+                        KickStart.harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
+                        KickStart.hasPatched = true;
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.Log("TACtical_AI: Error on patch");
+                        Debug.Log(e);
+                    }
+                }
+            }
+        }
+        public override void Init() 
+        {
+            if (isInit)
+                return;
+            if (oInst == null)
+                oInst = this;
+            KickStart.GetActiveMods();
+            KickStart.MainOfficialInit();
+            try
+            {
+                //ManSafeSaves.Init();
+            }
+            catch (Exception e) { Debug.LogError(e); }
+            isInit = true;
+        }
+        public override void DeInit()
+        {
+            if (!isInit)
+                return;
+            KickStart.DeInitALL();
+            isInit = false;
+        }
+
+        public override void Update()
+        {
+            if (!firstInit)
+            {
+                if (Singleton.Manager<ManTechs>.inst)
+                {
+                    SpecialAISpawner.Initiate();
+                    EnemyWorldManager.LateInitiate();
+                    firstInit = true;
+                }
+            }
+        }
+    }
+#endif
 
     internal enum AttractType
     {
@@ -250,6 +329,11 @@ namespace TAC_AI
                         if (ManNetwork.IsNetworked)
                         {
                             var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
+                            if (!tankAIHelp)
+                            {
+                                tankAIHelp = tank.gameObject.AddComponent<AIECore.TankAIHelper>();
+                                tankAIHelp.Subscribe(tank);
+                            }
                             if (ManNetwork.IsHost)
                             {
                                 bool IsPlayerRemoteControlled = false;
@@ -336,7 +420,11 @@ namespace TAC_AI
                             if (!tank.PlayerFocused || PlayerRTSControl.PlayerIsInRTS)//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
                             {
                                 var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
-
+                                if (!tankAIHelp)
+                                {
+                                    tankAIHelp = tank.gameObject.AddComponent<AIECore.TankAIHelper>();
+                                    tankAIHelp.Subscribe(tank);
+                                }
                                 if (tank.FirstUpdateAfterSpawn)
                                 {
                                     if (tank.GetComponent<RequestAnchored>())
@@ -432,7 +520,7 @@ namespace TAC_AI
                                 {   // Allied AI
                                     if (lastTech.lastAIType == AITreeType.AITypes.Escort)
                                     {
-                                        if (RawTechExporter.aiIcons.TryGetValue(lastTech.DediAI, out Sprite sprite))
+                                        if (RawTechExporter.aiIcons.TryGetValue(KickStart.GetLegacy(lastTech.DediAI, lastTech.DriverType), out Sprite sprite))
                                         {
                                             //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                             Image cache = (Image)icon.GetValue(Panel);
@@ -517,6 +605,19 @@ namespace TAC_AI
                 }
             }
         }
+#if STEAM
+        /*
+        [HarmonyPatch(typeof(ManSaveGame))]
+        [HarmonyPatch("Save")]// SAAAAAVVE
+        private static class SaveTheSaves
+        {
+            private static void Prefix(ref ManGameMode.GameType gameType, ref string saveName)
+            {
+                Debug.Log("SafeSaves: Saving!");
+                ManSafeSaves.SaveData(saveName, ManGameMode.inst.GetCurrentGameMode());
+            }
+        }*/
+#endif
 
         /*
         [HarmonyPatch(typeof(LocatorPanel))]
@@ -605,7 +706,7 @@ namespace TAC_AI
             }
         }*/
 
-
+        
         [HarmonyPatch(typeof(ManSpawn))]
         [HarmonyPatch("OnDLCLoadComplete")]//
         private class DelayedLoadRequest
@@ -701,14 +802,15 @@ namespace TAC_AI
             {
                 // Testing
                 bool caseOverride = true;
-                AttractType outNum = AttractType.BaseVBase;
+                AttractType outNum = AttractType.Dogfight;
 
 #if DEBUG
+                caseOverride = true;
 #else
                 caseOverride = false;
 #endif
 
-                if (UnityEngine.Random.Range(1, 100) > 20 || KickStart.retryForBote == 1 || caseOverride)
+                if (UnityEngine.Random.Range(1, 100) > 80 || KickStart.retryForBote == 1 || caseOverride)
                 {
                     Debug.Log("TACtical_AI: Ooop - the special threshold has been met");
                     KickStart.SpecialAttract = true;
@@ -753,7 +855,7 @@ namespace TAC_AI
                 Singleton.Manager<ManGameMode>.inst.RegenerateWorld(__instance.spawns[spawnIndex].biomeMap, __instance.spawns[spawnIndex].cameraSpawn.position, __instance.spawns[spawnIndex].cameraSpawn.orientation);
                 Singleton.Manager<ManTimeOfDay>.inst.EnableSkyDome(enable: true);
                 Singleton.Manager<ManTimeOfDay>.inst.EnableTimeProgression(enable: false);
-                Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(8, 18), 0, 0);//11
+                Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(0, 23), 0, 0);//11
                 return false;
             }
         }
@@ -983,7 +1085,7 @@ namespace TAC_AI
 
         // Enemy AI's ability to "Lock On"
         [HarmonyPatch(typeof(ModuleAIBot))]
-        [HarmonyPatch("OnPool")]//On Creation
+        [HarmonyPatch("OnAttach")]//On Creation
         private static class ImproveAI
         {
             private static void Postfix(ModuleAIBot __instance)
@@ -1001,6 +1103,7 @@ namespace TAC_AI
                     try
                     {
                         var name = __instance.gameObject.name;
+                        //Debug.Log("TACtical_AI: Init new AI for " + name);
                         if (name == "GSO_AI_Module_Guard_111")
                         {
                             ModuleAdd.Aegis = true;
@@ -1158,7 +1261,50 @@ namespace TAC_AI
             }
         }*/
 
-        
+
+        [HarmonyPatch(typeof(TechWeapon))]//
+        [HarmonyPatch("GetManualTarget")]//On targeting
+        private static class PatchManualAimingToHelpAI
+        {
+            static FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static void Postfix(TechWeapon __instance, ref Visible __result)
+            {
+                if (!KickStart.EnableBetterAI)
+                    return;
+                var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
+                if (AICommand.IsNotNull())
+                {
+                    var tank = AICommand.tank;
+                    if (tank.IsNotNull())
+                    {
+                        if (!tank.PlayerFocused)
+                        {
+                            if (AICommand.OverrideAim == 1)
+                            {
+                                if (AICommand.lastEnemy.IsNotNull())
+                                {   // Allow the enemy AI to finely select targets
+                                    //Debug.Log("TACtical_AI: Overriding targeting to aim at " + AICommand.lastEnemy.name + "  pos " + AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
+
+                                    __result = AICommand.lastEnemy;
+                                }
+                            }
+                            else if (AICommand.OverrideAim == 2)
+                            {
+                                if (AICommand.Obst.IsNotNull())
+                                {
+                                    var resTarget = AICommand.Obst.GetComponent<Visible>();
+                                    if (resTarget)
+                                    {
+                                        //Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
+                                        __result = resTarget;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         [HarmonyPatch(typeof(TargetAimer))]//
         [HarmonyPatch("UpdateTarget")]//On targeting
         private static class PatchAimingToHelpAI
@@ -1166,12 +1312,12 @@ namespace TAC_AI
             static FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
             private static void Postfix(TargetAimer __instance)
             {
-                if (!KickStart.EnableBetterAI)
+                if (!KickStart.EnableBetterAI && !KickStart.isWeaponAimModPresent)
                     return;
                 var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
-                if (AICommand.IsNotNull() && !KickStart.isWeaponAimModPresent)
+                if (AICommand.IsNotNull())
                 {
-                    var tank = __instance.transform.root.GetComponent<Tank>();
+                    var tank = AICommand.GetComponent<Tank>();
                     if (tank.IsNotNull())
                     {
                         if (!tank.PlayerFocused)
@@ -1205,7 +1351,7 @@ namespace TAC_AI
                                             }
                                         }
                                     }
-                                    if ((bool)AICommand.lastEnemy.tank.CentralBlock && AICommand.lastEnemy.isActive)
+                                    if (AICommand.lastEnemy.tank?.CentralBlock && AICommand.lastEnemy.isActive)
                                     {
                                         targPos.SetValue(__instance, AICommand.lastEnemy.GetAimPoint(__instance.transform.position));
                                     }
@@ -1252,15 +1398,24 @@ namespace TAC_AI
                 try
                 {
                     var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
-                    if (AICommand.OverrideAim == 2 && AICommand.Obst.IsNotNull())
+                    if (AICommand)
                     {
-                        if (!AICommand.Obst.GetComponent<Visible>().isActive)
+                        if (AICommand.OverrideAim == 2 && AICommand.Obst.IsNotNull())
                         {
-                            AICommand.Obst = null;
+                            Visible obstVis = AICommand.Obst.GetComponent<Visible>();
+                            if (obstVis)
+                            {
+                                if (!obstVis.isActive)
+                                {
+                                    AICommand.Obst = null;
+                                }
+                            }
+                            var rotSped = __instance.RotateSpeed;
+                            var ta = __instance.GetComponent<TargetAimer>();
+                            if (ta)
+                                ta.AimAtWorldPos(AICommand.Obst.position + (Vector3.up * 2), rotSped);
+                            return false;
                         }
-                        var rotSped = __instance.GetComponent<ModuleWeapon>().RotateSpeed;
-                        __instance.GetComponent<TargetAimer>().AimAtWorldPos(AICommand.Obst.position + (Vector3.up * 2), rotSped);
-                        return false;
                     }
                 }
                 catch { }
@@ -1299,11 +1454,15 @@ namespace TAC_AI
         {
             private static void Prefix(ResourceDispenser __instance)
             {
+                try
+                { 
                 //Debug.Log("TACtical_AI: Added resource to list (InitState)");
                 if (!AIECore.Minables.Contains(__instance.visible))
                     AIECore.Minables.Add(__instance.visible);
-                //else
-                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (InitState)");
+                    //else
+                    //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (InitState)");
+                }
+                catch { } // null call
             }
         }
 
@@ -1313,19 +1472,23 @@ namespace TAC_AI
         {
             private static void Prefix(ResourceDispenser __instance, ref ResourceDispenser.PersistentState state)
             {
-                //Debug.Log("TACtical_AI: Added resource to list (Restore)");
-                if (!state.removedFromWorld)
+                try
                 {
-                    if (!AIECore.Minables.Contains(__instance.visible))
-                        AIECore.Minables.Add(__instance.visible);
+                    //Debug.Log("TACtical_AI: Added resource to list (Restore)");
+                    if (!state.removedFromWorld)
+                    {
+                        if (!AIECore.Minables.Contains(__instance.visible))
+                            AIECore.Minables.Add(__instance.visible);
+                    }
+                    else
+                    {
+                        if (AIECore.Minables.Contains(__instance.visible))
+                            AIECore.Minables.Remove(__instance.visible);
+                    }
+                    //else
+                    //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (Restore)");
                 }
-                else
-                {
-                    if (AIECore.Minables.Contains(__instance.visible))
-                        AIECore.Minables.Remove(__instance.visible);
-                }
-                //else
-                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (Restore)");
+                catch { } // null call
             }
         }
 
@@ -1336,13 +1499,17 @@ namespace TAC_AI
         {
             private static void Prefix(ResourceDispenser __instance)
             {
-                //Debug.Log("TACtical_AI: Removed resource from list (Die)");
-                if (AI.AIECore.Minables.Contains(__instance.visible))
+                try
                 {
-                    AI.AIECore.Minables.Remove(__instance.visible);
+                    //Debug.Log("TACtical_AI: Removed resource from list (Die)");
+                    if (AI.AIECore.Minables.Contains(__instance.visible))
+                    {
+                        AI.AIECore.Minables.Remove(__instance.visible);
+                    }
+                    else
+                        Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Die)");
                 }
-                else
-                    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Die)");
+                catch { } // null call
             }
         }
 
@@ -1369,19 +1536,23 @@ namespace TAC_AI
         {
             private static void Prefix(ResourceDispenser __instance)
             {
+                try
+                { 
                 //Debug.Log("TACtical_AI: Removed resource from list (Deactivate)");
                 if (AIECore.Minables.Contains(__instance.visible))
                 {
                     AIECore.Minables.Remove(__instance.visible);
                 }
-                //else
-                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Deactivate)");
+                    //else
+                    //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Deactivate)");
 
+                }
+                catch { } // null call
             }
         }
 
         [HarmonyPatch(typeof(ModuleItemPickup))]
-        [HarmonyPatch("OnPool")]//On Creation
+        [HarmonyPatch("OnAttach")]//On Creation
         private static class MarkReceiver
         {
             private static void Postfix(ModuleItemPickup __instance)
@@ -1391,21 +1562,29 @@ namespace TAC_AI
                 {
                     if (valid.IsFlag(ModuleItemHolder.Flags.Receiver))
                     {
-                        var ModuleAdd = __instance.gameObject.AddComponent<ModuleHarvestReciever>();
-                        ModuleAdd.OnPool();
+                        var ModuleAdd = __instance.gameObject.GetComponent<ModuleHarvestReciever>();
+                        if (!ModuleAdd)
+                        {
+                            ModuleAdd = __instance.gameObject.AddComponent<ModuleHarvestReciever>();
+                            ModuleAdd.OnPool();
+                        }
                     }
                 }
             }
         }
 
         [HarmonyPatch(typeof(ModuleRemoteCharger))]
-        [HarmonyPatch("OnPool")]//On Creation
+        [HarmonyPatch("OnAttach")]//On Creation
         private static class MarkChargers
         {
             private static void Postfix(ModuleRemoteCharger __instance)
             {
-                var ModuleAdd = __instance.gameObject.AddComponent<ModuleChargerTracker>();
-                ModuleAdd.OnPool();
+                var ModuleAdd = __instance.gameObject.GetComponent<ModuleChargerTracker>();
+                if (!ModuleAdd)
+                {
+                    ModuleAdd = __instance.gameObject.AddComponent<ModuleChargerTracker>();
+                    ModuleAdd.OnPool();
+                }
             }
         }
 
@@ -1528,7 +1707,7 @@ namespace TAC_AI
             }
         }
 
-
+         
         // Allied AI state changing remotes
         /*
         [HarmonyPatch(typeof(TechAI))]
@@ -1588,7 +1767,7 @@ namespace TAC_AI
                 }
             }
         }
-
+          
         [HarmonyPatch(typeof(UIRadialTechControlMenu))]
         [HarmonyPatch("Show")]//On popup
         private static class DetectAIRadialAction
@@ -1871,6 +2050,7 @@ namespace TAC_AI
             }
         }
 
+#if !STEAM
         [HarmonyPatch(typeof(ManGameMode))]
         [HarmonyPatch("Awake")]//On Game start
         private static class StartupSpecialAISpawner
@@ -1885,6 +2065,7 @@ namespace TAC_AI
                 }
             }
         }
+#endif
 
         [HarmonyPatch(typeof(ModuleHeart))]
         [HarmonyPatch("OnAttach")]//On Game start

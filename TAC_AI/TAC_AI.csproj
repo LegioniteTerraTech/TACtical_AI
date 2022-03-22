@@ -12,15 +12,17 @@
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,24 +31,22 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Steam|AnyCPU'">
+    <OutputPath>bin\Steam\</OutputPath>
+    <DefineConstants>TRACE;STEAM</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\0Harmony.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="0Nuterra.NativeOptions">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\0Nuterra.NativeOptions\0Nuterra.NativeOptions.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="AcModHelper.Config">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\ModHelper.Config\AcModHelper.Config.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="AnimeAI">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\AnimeAI\AnimeAI.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
+    <Reference Include="Microsoft.CSharp" />
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
@@ -55,25 +55,33 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="BlockInjector">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\Nuterra.BlockInjector\BlockInjector.dll</HintPath>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Control Block">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\Control Block\Control Block.dll</HintPath>
+    <Reference Include="RandomAdditions">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\RandomAdditions\RandomAdditions.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="QModInstaller">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\QModInstaller.dll</HintPath>
+    <Reference Include="SafeSaves">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\LocalMods\Mod Saves\SafeSaves.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.ComponentModel.Composition.Registration" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Workflow.ComponentModel" />
     <Reference Include="UnityEngine">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.ImageConversionModule">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule">
@@ -121,6 +129,56 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\UnityEngine.UIModule.dll</HintPath>
       <Private>False</Private>
     </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)'=='Steam'">
+    <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
+    <!--> THE MATTERS BELOW ARE OFFICIAL </!-->
+    <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
+    <Reference Include="0Harmony">
+      <HintPath>..\..\..\..\..\..\0Harmony.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)'=='Release'OR'$(Configuration)'=='Debug'">
+    <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
+    <!--> THE MATTERS BELOW ARE UNOFFICIAL </!-->
+    <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
+    <Reference Include="0Harmony">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SafeSaves">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\SafeSaves\SafeSaves.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
+    <!--> THE MATTERS BELOW ARE UNOFFICIAL </!-->
+    <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
+    <Reference Include="AnimeAI">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\AnimeAI\AnimeAI.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="0Nuterra.NativeOptions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\0Nuterra.NativeOptions\0Nuterra.NativeOptions.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="AcModHelper.Config">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\ModHelper.Config\AcModHelper.Config.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BlockInjector">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\Nuterra.BlockInjector\BlockInjector.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Control Block">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\Control Block\Control Block.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="QModInstaller">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\QModInstaller.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="WaterMod">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\Water Mod\WaterMod.dll</HintPath>
       <Private>False</Private>
@@ -133,6 +191,8 @@
     <Compile Include="AI\AlliedOperations\BScrapper.cs" />
     <Compile Include="AI\Movement\AIControllerAir.cs" />
     <Compile Include="AI\Movement\AIControllerDefault.cs" />
+    <Compile Include="AI\Movement\AICores\MultiTechUtils.cs" />
+    <Compile Include="AI\Movement\AICores\VehicleUtils.cs" />
     <Compile Include="AI\Movement\AIEPathing.cs" />
     <Compile Include="AI\AIEBeam.cs" />
     <Compile Include="AI\AIERepair.cs" />
@@ -219,44 +279,46 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="AI_Icons\AI_Aegis.png">
+    <EmbeddedResource Include="AI_Icons\AI_Aegis.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\AI_Assault.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_Assault.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\AI_Harvest.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_Harvest.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\AI_MT.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_MT.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\AI_Pilot.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_Pilot.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\AI_Ship.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_Ship.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\AI_Space.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_Space.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\AI_Tank.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_Tank.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\E_Intel.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\E_Intel.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\E_Meh.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\E_Meh.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\E_Mild.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\E_Mild.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="AI_Icons\E_Smrt.png">
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\E_Smrt.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>del *.pdb
@@ -265,9 +327,36 @@
 set modpath="C:\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\TACtical AI"
 
 if exist !modpath! (
+if $(ConfigurationName) == Release (
 echo Copying to game
 set e=$(TargetDir)&gt;nul
 xcopy /S /Y /R "!e:~0,-1!" !modpath!
+)
+if $(ConfigurationName) == Debug (
+echo Copying to game
+set e=$(TargetDir)&gt;nul
+xcopy /S /Y /R "!e:~0,-1!" !modpath!
+)
+)
+
+set modpath2="C:\Users\Legionite\Desktop\Advanced AI\Assets\Mods\Advanced AI"
+
+if exist !modpath2! (
+if $(ConfigurationName) == Steam (
+echo Copying to SteamMod
+set e=$(TargetDir)&gt;nul
+xcopy /S /Y /R "!e:~0,-1!" !modpath2!
+)
+)
+
+set modpath3="C:\Program Files (x86)\Steam\steamapps\common\TerraTech\LocalMods\Advanced AI"
+
+if exist !modpath3! (
+if $(ConfigurationName) == Steam (
+echo Copying to SteamModLocalDirect
+set e=$(TargetDir)&gt;nul
+xcopy /S /Y /R "!e:~0,-1!" !modpath3!
+)
 )</PostBuildEvent>
   </PropertyGroup>
 </Project>

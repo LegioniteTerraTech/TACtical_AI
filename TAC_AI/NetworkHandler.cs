@@ -29,25 +29,29 @@ namespace TAC_AI
         public class AITypeChangeMessage : MessageBase
         {
             public AITypeChangeMessage() { }
-            public AITypeChangeMessage(uint netTechID, AIType AIType)
+            public AITypeChangeMessage(uint netTechID, AIType AIType, AIDriverType AIDriving)
             {
                 this.netTechID = netTechID;
                 this.AIType = AIType;
+                this.AIDriving = AIDriving;
             }
             public override void Deserialize(NetworkReader reader)
             {
                 netTechID = reader.ReadUInt32();
                 AIType = (AIType)reader.ReadInt32();
+                AIDriving = (AIDriverType)reader.ReadInt32();
             }
 
             public override void Serialize(NetworkWriter writer)
             {
                 writer.Write(netTechID);
                 writer.Write((int)AIType);
+                writer.Write((int)AIDriving);
             }
 
             public uint netTechID;
             public AIType AIType;
+            public AIDriverType AIDriving;
         }
         public class AIRetreatMessage : MessageBase
         {
@@ -256,13 +260,13 @@ namespace TAC_AI
         }
 
         // AITypeChangeMessage
-        public static void TryBroadcastNewAIState(uint netTechID, AIType AIType)
+        public static void TryBroadcastNewAIState(uint netTechID, AIType AIType, AIDriverType AIDriver)
         {
             if (HostExists)
             {
                 try
                 {
-                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIADVTypeChange, new AITypeChangeMessage(netTechID, AIType), Host);
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIADVTypeChange, new AITypeChangeMessage(netTechID, AIType, AIDriver), Host);
                     Debug.Log("Sent new AdvancedAI update to all");
                 }
                 catch { Debug.Log("TACtical_AI: Failed to send new AdvancedAI update, shouldn't be too bad in the long run"); }
@@ -275,7 +279,7 @@ namespace TAC_AI
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                find.tech.GetComponent<AIECore.TankAIHelper>().TrySetAITypeRemote(netMsg.GetSender(), reader.AIType);
+                find.tech.GetComponent<AIECore.TankAIHelper>().TrySetAITypeRemote(netMsg.GetSender(), reader.AIType, reader.AIDriving);
                 Debug.Log("TACtical_AI: Received new AdvancedAI update, changing to " + find.tech.GetComponent<AIECore.TankAIHelper>().DediAI.ToString());
             }
             catch

@@ -11,6 +11,9 @@ namespace TAC_AI.World
     // The enemy base in world-relations
     public class EnemyPresence
     {
+        private const int PassiveHQBonusIncome = 500;
+        private const int ExpansionIncome = 125;
+
         public int Team = 3;
         private float lastAttackedTimestep = 0;
         public List<EnemyBaseUnloaded> EBUs = new List<EnemyBaseUnloaded>();
@@ -50,6 +53,11 @@ namespace TAC_AI.World
             HandleCombat();
             EnemyBaseWorld.TryUnloadedBaseOperations(this);
             HandleRepairs();
+            EnemyBaseUnloaded mainBase = EnemyBaseWorld.GetTeamFunder(this);
+            if (mainBase != null)
+            {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
+                PresenceDebug("TACtical_AI: UpdateGrandCommand - Team final funds " + mainBase.Funds);
+            }
             return EBUs.Count > 0 || ETUs.Count > 0;
         }
         private void HandleTraderTrolls()
@@ -265,8 +273,13 @@ namespace TAC_AI.World
             {
                 if (Singleton.Manager<ManVisible>.inst.GetTrackedVisible(EBU.tech.m_ID) == null)
                 {
-                    EBU.Funds += EBU.revenue;
+                    EBU.Funds += EBU.revenue + ExpansionIncome;
                 }
+            }
+            EnemyBaseUnloaded mainBase = EnemyBaseWorld.GetTeamFunder(this);
+            if (mainBase != null)
+            {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
+                mainBase.Funds += PassiveHQBonusIncome;
             }
         }
 
@@ -297,6 +310,19 @@ namespace TAC_AI.World
                 lastEventTile = mainBase.tilePos;
             }
         }
+
+        /*
+        // TEAMS
+        /// <summary>
+        /// Changes all Techs in a team (non-vanilla ranges)
+        /// </summary>
+        /// <param name="newTeamID"></param>
+        public void ChangeEntireTeam(int newTeamID)
+        {
+            if (newTeamID < KickStart.TeamRangeStart && newTeamID > -KickStart.TeamRangeStart)
+                return;
+            //foreach
+        }*/
 
         // MISC
         public static bool ignoreOut = false;

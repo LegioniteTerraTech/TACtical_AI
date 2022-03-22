@@ -124,66 +124,96 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.ProceedToBase = true;
                     return;
                 }
-                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents)
-                {   // Final approach - turn off avoidence
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
-                    thisInst.AvoidStuff = false;
-                    if (thisInst.recentSpeed == 1)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                        thisInst.DriveVar = -1;
-                        //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                if (thisInst.DriverType == AIDriverType.Pilot)
+                {
+                    if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
+                    {   // Final approach - turn off avoidence
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.AvoidStuff = false;
+                        if (thisInst.recentSpeed == 1)
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
+                            thisInst.DriveVar = -1;
+                            //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                        }
+                        else
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
+                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                            thisInst.Yield = true;
+                            thisInst.SettleDown();
+                            thisInst.DropAllItemsInCollectors();
+                        }
                     }
-                    else
+                    else if (thisInst.recentSpeed < 3)
                     {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and unloading!");
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
-                        thisInst.Yield = true;
-                        thisInst.SettleDown();
-                    }
-                }
-                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 4)
-                {   // almost at the the base receiver - fine-tune and yield if nesseary for approach
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(); 
-                    thisInst.AvoidStuff = false;
-                    if (thisInst.recentSpeed < 3)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
-                    }
-                    else if (thisInst.recentSpeed < 8)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
-                        thisInst.Yield = true;
-                    }
-                    else
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
-                        thisInst.Yield = true;
-                        thisInst.SettleDown();
-                    }
-                }
-                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
-                {   // Near the base, but not quite at the receiver 
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
-                    if (thisInst.recentSpeed < 3)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
                         thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                     }
-                    else
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base!");
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
-                        //thisInst.Yield = true;
-                        thisInst.SettleDown();
-                    }
                 }
-                else if (thisInst.recentSpeed < 3)
+                else
                 {
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents)
+                    {   // Final approach - turn off avoidence
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.AvoidStuff = false;
+                        if (thisInst.recentSpeed == 1)
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
+                            thisInst.DriveVar = -1;
+                            //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                        }
+                        else
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and unloading!");
+                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                            thisInst.Yield = true;
+                            thisInst.SettleDown();
+                        }
+                    }
+                    else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 4)
+                    {   // almost at the the base receiver - fine-tune and yield if nesseary for approach
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.AvoidStuff = false;
+                        if (thisInst.recentSpeed < 3)
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
+                            thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                        }
+                        else if (thisInst.recentSpeed < 8)
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
+                            thisInst.Yield = true;
+                        }
+                        else
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
+                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                            thisInst.Yield = true;
+                            thisInst.SettleDown();
+                        }
+                    }
+                    else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
+                    {   // Near the base, but not quite at the receiver 
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        if (thisInst.recentSpeed < 3)
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
+                            thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                        }
+                        else
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base!");
+                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                            //thisInst.Yield = true;
+                            thisInst.SettleDown();
+                        }
+                    }
+                    else if (thisInst.recentSpeed < 3)
+                    {
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
+                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    }
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
                 thisInst.ProceedToBase = true;
@@ -226,7 +256,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
 
-                if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
+                if (dist < thisInst.lastTechExtents + 3 + thisInst.MinimumRad && thisInst.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
@@ -234,20 +264,20 @@ namespace TAC_AI.AI.AlliedOperations
                     if (!thisInst.FullMelee)
                         thisInst.PivotOnly = true;
                     thisInst.SettleDown();
-                    thisInst.RemoveObstruction();
+                    thisInst.RemoveObstruction(48);
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
-                else if (dist < thisInst.lastTechExtents + 12)
+                else if (dist < thisInst.lastTechExtents + 12 + thisInst.MinimumRad)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.centrePosition);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
                     thisInst.SettleDown();
-                    thisInst.RemoveObstruction();
+                    thisInst.RemoveObstruction(48);
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;

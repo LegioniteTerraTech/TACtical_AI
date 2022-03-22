@@ -302,7 +302,7 @@ namespace TAC_AI.AI.Enemy
             {
                 //Debug.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
             }
-            Debug.Log("TACtical_AI: SecondClosestAlly - COULD NOT FETCH TANK");
+            Debug.Log("TACtical_AI: SecondClosestAllyE - COULD NOT FETCH TANK");
             secondTank = null;
             return null;
         }

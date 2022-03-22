@@ -23,12 +23,12 @@ namespace TAC_AI.AI.Movement
         //3-axis steering is handled in AIEDrive
 
         // OBSTICLE AVOIDENCE
-        public static List<Visible> ObstructionAwareness(Vector3 posWorld, AIECore.TankAIHelper thisInst)
+        public static List<Visible> ObstructionAwareness(Vector3 posWorld, AIECore.TankAIHelper thisInst, float radAdd = 12)
         {
             List<Visible> ObstList = new List<Visible>();
             try
             {
-                foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(posWorld, thisInst.lastTechExtents + 12, new Bitfield<ObjectTypes>(new ObjectTypes[1]{ObjectTypes.Scenery})))
+                foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(posWorld, thisInst.lastTechExtents + radAdd, new Bitfield<ObjectTypes>(new ObjectTypes[1]{ObjectTypes.Scenery})))
                 {
                     if (vis.resdisp.IsNotNull() && vis.isActive)
                     {

@@ -287,7 +287,7 @@ namespace TAC_AI.Templates
             }
             else
             {
-                RawTechLoader.SpawnEnemyTechExt(GetPlayerPos(), -1, Vector3.forward, val);
+                RawTechLoader.SpawnEnemyTechExt(GetPlayerPos(), RawTechLoader.GetRandomEnemyBaseTeam(), Vector3.forward, val);
                 /*
                 if (val.purposes.Contains(BasePurpose.Defense))
                     RawTechLoader.spa(GetPlayerPos(), -1, type, false);
@@ -336,10 +336,10 @@ namespace TAC_AI.Templates
                 else
                 {
                     if (val.purposes.Contains(BasePurpose.Defense))
-                        RawTechLoader.SpawnBase(GetPlayerPos(), UnityEngine.Random.Range(5, 365), type, false);
+                        RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomEnemyBaseTeam(), type, false);
                     else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
-                        int team = UnityEngine.Random.Range(5, 365);
+                        int team = RawTechLoader.GetRandomEnemyBaseTeam();
                         int extraBB = 0;
                         SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
                         if (TempManager.techBases.TryGetValue(type2, out _))
@@ -365,7 +365,7 @@ namespace TAC_AI.Templates
                         Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                     else
-                        RawTechLoader.SpawnBase(GetPlayerPos(), UnityEngine.Random.Range(5, 365), type, true);
+                        RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomEnemyBaseTeam(), type, true);
                 }
             }
 

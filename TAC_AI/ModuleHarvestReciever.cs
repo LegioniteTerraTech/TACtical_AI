@@ -21,10 +21,15 @@ namespace TAC_AI
         public void OnPool()
         {
             TankBlock = gameObject.GetComponent<TankBlock>();
-            TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
-            TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
+            Invoke("DelayedSub", 0.001f);
             trans = transform;
             holder = gameObject.GetComponent<ModuleItemHolder>();
+        }
+        public void DelayedSub()
+        {
+            TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
+            TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
+            OnAttach();
         }
         public void OnAttach()
         {

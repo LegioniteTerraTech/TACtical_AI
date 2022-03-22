@@ -34,66 +34,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (help.IsMultiTech)
                 {   //Override and disable most driving abilities
-                    if (help.DediAI == AIType.MTSlave && help.lastEnemy != null)
-                    {   // act like a trailer
-                        help.DriveDir = EDriveType.Neutral;
-                        help.Steer = false;
-                        help.lastDestination = this.tank.boundsCentreWorldNoCheck;
-                        help.MinimumRad = 0;
-                    }
-                    else if (help.DediAI == AIType.MTTurret && help.lastEnemy != null)
-                    {
-                        help.Steer = true;
-                        help.PivotOnly = true;
-                        help.lastDestination = help.lastEnemy.transform.position;
-                        help.MinimumRad = 0;
-                    }
-                    else if (help.DediAI == AIType.MTMimic && help.MTMimicHostAvail)
-                    {
-                        if (help.LastCloseAlly != null)
-                        {
-                            try
-                            {
-                                help.lastDestination = AIEPathing.GetDriveApproxAir(help.LastCloseAlly, this.controller.Helper, out bool IsMoving);
-                                if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
-                                {
-                                    //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
-                                    help.MinimumRad = 0.1f;
-                                    if (Vector3.Dot(this.controller.Tank.rootBlockTrans.forward, (help.lastDestination - this.controller.Tank.boundsCentreWorldNoCheck).normalized) >= 0)
-                                    {
-                                        //Debug.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
-                                        help.Steer = true;
-                                        help.DriveDir = EDriveType.Forwards;
-                                    }
-                                    else
-                                    {
-                                        help.Steer = true;
-                                        help.DriveDir = EDriveType.Backwards;
-                                    }
-                                }
-                                else
-                                {
-                                    //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
-                                    help.MinimumRad = 0f;
-                                    help.lastDestination = tank.boundsCentreWorldNoCheck;
-                                    help.forceDrive = true;
-                                    help.DriveVar = 0;
-                                    help.Steer = false;
-                                    help.PivotOnly = true;
-                                }
-                            }
-                            catch { }
-                        }
-                        else
-                        {
-                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
-                            help.MinimumRad = 0f;
-                            help.lastDestination = tank.boundsCentreWorldNoCheck;
-                            help.forceDrive = true;
-                            help.DriveVar = 0;
-                            help.Steer = false;
-                        }
-                    }
+                    MultiTechUtils.HandleMultiTech(help, tank);
                 }
                 else if (help.ProceedToBase)
                 {
@@ -211,6 +152,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
+                            help.PivotOnly = true;
                             //Debug.Log("TACtical_AI: AI IDLE");
                         }
                     }
@@ -239,7 +181,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper);
-            else if (help.DediAI == AIType.Buccaneer)
+            else if (help.DriverType == AIDriverType.Sailor)
                 help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, tank, this.controller.Helper);
 
             help.lastDestination = AIEPathing.ModerateMaxAlt(help.lastDestination, help);
@@ -333,7 +275,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
                 help.lastDestination = AIEPathing.OffsetFromGround(help.lastDestination, this.controller.Helper);
-            else if (help.DediAI == AIType.Buccaneer)
+            else if (help.DriverType == AIDriverType.Sailor)
                 help.lastDestination = AIEPathing.OffsetToSea(help.lastDestination, tank, this.controller.Helper);
 
             help.lastDestination = AIEPathing.ModerateMaxAlt(help.lastDestination, help);
@@ -464,13 +406,13 @@ namespace TAC_AI.AI.Movement.AICores
                     {   //Move from target
                         if (thisInst.DriveDir == EDriveType.Backwards)//EDriveType.Backwards
                         {   // Face back TOWARDS target
-                            if (Turner(thisControl, thisInst, -destDirect, out float turnVal))
+                            if (VehicleUtils.Turner(thisControl, thisInst, -destDirect, out float turnVal))
                                 thisControl.m_Movement.FaceDirection(tank, -destDirect, turnVal);
                             thisControl.DriveControl = 1f;
                         }
                         else if (thisInst.DriveDir == EDriveType.Perpendicular)
                         {   //Drive to target driving sideways, but obey distance
-                            if (Turner(thisControl, thisInst, destDirect, out float turnVal))
+                            if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
                                 thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
                             //Debug.Log("Orbiting away");
 
@@ -500,7 +442,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {   // Face front TOWARDS target
-                            if (Turner(thisControl, thisInst, destDirect, out float turnVal))
+                            if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
                                 thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
                             thisControl.DriveControl = -1f;
                         }
@@ -511,13 +453,13 @@ namespace TAC_AI.AI.Movement.AICores
                         float range = thisInst.lastRange;
                         if (range < thisInst.MinimumRad + 2)
                         {
-                            if (Turner(thisControl, thisInst, -destDirect, out float turnVal))
+                            if (VehicleUtils.Turner(thisControl, thisInst, -destDirect, out float turnVal))
                                 thisControl.m_Movement.FaceDirection(tank, -destDirect, turnVal);
                             //Debug.Log("Orbiting out " + thisInst.MinimumRad + " | " + destDirect);
                         }
                         else if (range > thisInst.MinimumRad + 22)
                         {
-                            if (Turner(thisControl, thisInst, destDirect, out float turnVal))
+                            if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
                                 thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
                             //Debug.Log("Orbiting in " + thisInst.MinimumRad);
                         }
@@ -528,7 +470,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 aimDirect = Vector3.Cross(destDirect.normalized, Vector3.down);
                             else
                                 aimDirect = Vector3.Cross(destDirect.normalized, Vector3.up);
-                            if (Turner(thisControl, thisInst, aimDirect, out float turnVal))
+                            if (VehicleUtils.Turner(thisControl, thisInst, aimDirect, out float turnVal))
                                 thisControl.m_Movement.FaceDirection(tank, aimDirect, turnVal);
                             //Debug.Log("Orbiting hold " + thisInst.MinimumRad);
                         }
@@ -549,7 +491,7 @@ namespace TAC_AI.AI.Movement.AICores
                         //if (thisInst.PivotOnly)
                         //    thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);// need max aiming strength for turning
                         //else
-                        if (Turner(thisControl, thisInst, destDirect, out float turnVal))
+                        if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
                             thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);//Face the music
                         //Debug.Log("TACtical_AI: AI " + tank.name + ":  driving to " + thisInst.lastDestination);
                         if (thisInst.MinimumRad > 0)
@@ -662,7 +604,7 @@ namespace TAC_AI.AI.Movement.AICores
             float driveMultiplier = 0;
 
             //AI Steering Rotational
-            Vector3 distDiff = thisInst.lastDestination - tank.trans.position;
+            Vector3 distDiff = thisInst.lastDestination - tank.boundsCentreWorldNoCheck;
             Vector3 turnVal;
             Vector3 forwardFlat = tank.rootBlockTrans.forward;
             forwardFlat.y = 0;
@@ -862,7 +804,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {   //Forwards follow but no pitch controls
-                        control3D.m_State.m_InputRotation = turnVal * Mathf.Clamp(1 - Vector3.Dot(turnVal, tank.trans.forward), 0, 1);
+                        control3D.m_State.m_InputRotation = turnVal * Mathf.Clamp(1 - Vector3.Dot(turnVal, tank.rootBlockTrans.forward), 0, 1);
                         thisControl.m_Movement.FacePosition(tank, thisInst.lastDestination, 1);
                     }
                 }
@@ -920,7 +862,6 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized);
                     float range = thisInst.lastRange;
                     if (range < thisInst.MinimumRad - 1)
                     {
@@ -929,14 +870,31 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (range > thisInst.MinimumRad + 1)
                     {
+                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized);
                         if (thisInst.DriveDir == EDriveType.Forwards || thisInst.DriveDir == EDriveType.Backwards)
                             driveMultiplier = 1f;
                         else
                             driveMultiplier = 0.4f;
                     }
+                    else
+                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination).normalized);
                 }
             }
-            if (!thisInst.IsMultiTech)
+            bool EmergencyUp = false;
+            bool CloseToGroundWarning = false;
+            if (ManWorld.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float height))
+            {
+                if (height > tank.boundsCentreWorldNoCheck.y - thisInst.lastTechExtents)
+                {
+                    EmergencyUp = true;
+                    CloseToGroundWarning = true;
+                }
+                else if (height > tank.boundsCentreWorldNoCheck.y - (thisInst.lastTechExtents * 2))
+                {
+                    CloseToGroundWarning = true;
+                }
+            }
+            if (!thisInst.IsMultiTech && CloseToGroundWarning)
             {
                 if (driveVal.y >= -0.5f && driveVal.y < 0f)
                     driveVal.y = 0; // prevent airships from slam-dunk
@@ -983,7 +941,35 @@ namespace TAC_AI.AI.Movement.AICores
                 driveMultiplier = thisInst.DriveVar;
             }
 
-            control3D.m_State.m_InputMovement = (driveVal * Mathf.Clamp(distDiff.magnitude / thisInst.MinimumRad, 0, 1) * driveMultiplier).Clamp01Box();
+            // PREVENT GROUND CRASHING
+            if (EmergencyUp)
+            {
+                control3D.m_State.m_InputMovement = tank.rootBlockTrans.InverseTransformVector(Vector3.up);
+#if DEBUG
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
+#endif
+                controlGet.SetValue(tank.control, control3D);
+                return;
+            }
+            //thisInst.MinimumRad
+            // Prevent drifting
+            Vector3 final = (driveVal * Mathf.Clamp(distDiff.magnitude / 5, 0, 1) * driveMultiplier).Clamp01Box();
+
+            if (thisInst.DriveDir != EDriveType.Neutral)
+            {
+                if (final.y.Approximately(0, 0.2f))
+                    final.y = 0;
+                if (final.x.Approximately(0, 0.15f))
+                    final.x = 0;
+                if (final.z.Approximately(0, 0.15f))
+                    final.z = 0;
+            }
+            control3D.m_State.m_InputMovement = final;
+#if DEBUG
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
+#endif
             controlGet.SetValue(tank.control, control3D);
         }
 
@@ -1104,7 +1090,7 @@ namespace TAC_AI.AI.Movement.AICores
                         thisInst.lastDestination = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         //thisInst.MinimumRad = thisInst.lastTechExtents + AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 2;
                     }
-                    Debug.Log("DriveDyna is " + driveDyna);
+                    //Debug.Log("DriveDyna is " + driveDyna);
                 }
                 else
                 {   // Since the enemy also uses it's Operator in combat, this will have to listen to that
@@ -1168,47 +1154,8 @@ namespace TAC_AI.AI.Movement.AICores
         }
 
 
-        //private const int ignoreTurning = 50;
-        private const float ignoreTurning = 0.875f;
-        private const float MinThrottleToTurnFull = 0.75f;
         private const float throttleDampen = 0.5f;
-        private const float DampeningStrength = 1.75f;
-        public bool Turner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, out float turnVal)
-        {
-            turnVal = 1;
-            float forwards = Vector2.Dot(destinationVec.normalized.ToVector2XZ(), tank.rootBlockTrans.forward.ToVector2XZ());
-
-            if (forwards > ignoreTurning && thisControl.DriveControl >= MinThrottleToTurnFull)
-                return false;
-            if (helper.DriveDir == EDriveType.Perpendicular)
-            {
-                if (!(bool)helper.LastCloseAlly)
-                {
-                    float strength = 1 - forwards;
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }
-                else if (forwards > 0.65f)
-                {
-                    float strength = 1 - (forwards / 1.5f);
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }
-            }
-            else
-            {
-                /*
-                if (!(bool)helper.LastCloseAlly && forwards > 0.65f)
-                {
-                    float strength = 1 - forwards;
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }*/
-                if (!(bool)helper.LastCloseAlly && forwards > 0.7f)
-                {
-                    float strength = 1 - forwards;
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }
-            }
-            return true;
-        }
+        private const float DampeningStrength = 1.25f;
         public Vector3 InertiaTranslation(Vector3 direction)
         {
             Tank tank = controller.Tank;
@@ -1220,14 +1167,14 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (mind.CommanderSmarts >= EnemySmarts.Smrt)
                 {
-                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity * Time.deltaTime) * DampeningStrength, direction);
+                    return direction + Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(-tank.rbody.velocity * Time.deltaTime) * DampeningStrength, direction);
                 }
             }
             else
             {
                 if (controller.Helper.AdvancedAI)
                 {
-                    return direction - Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity * Time.deltaTime) * DampeningStrength, direction);
+                    return direction + Vector3.ProjectOnPlane(tank.rootBlockTrans.InverseTransformVector(-tank.rbody.velocity * Time.deltaTime) * DampeningStrength, direction);
                 }
             }
             return direction * throttleDampen;

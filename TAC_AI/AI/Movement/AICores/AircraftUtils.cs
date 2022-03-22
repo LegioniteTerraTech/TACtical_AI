@@ -243,7 +243,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIControllerAir.Stallspeed)
                     {
-                        float ExtAvoid = 32;
+                        float ExtAvoid = thisInst.MinimumRad;
                         if (thisInst.lastPlayer.IsNotNull())
                             ExtAvoid = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.size);
                         float Extremes = ExtAvoid + AIECore.Extremes(tank.blockBounds.size) + 5;

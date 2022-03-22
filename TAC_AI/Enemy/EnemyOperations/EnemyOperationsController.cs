@@ -28,11 +28,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     RWheeled.TryAttack(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Airplane:
-                    //-awaiting coding
                     RAircraft.TryFly(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Chopper:
-                    //-awaiting coding, Starship but pid
                     RChopper.TryFly(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Starship:
@@ -42,6 +40,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     RNaval.TryAttack(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.SuicideMissile:
+                    // IDK, May make this obsolete and just use plane AI for this instead.
                     RSuicideMissile.RamTillDeath(thisInst, tank, Mind);
                     break;
                 case EnemyHandling.Stationary:

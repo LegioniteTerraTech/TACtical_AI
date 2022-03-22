@@ -64,6 +64,7 @@ namespace TAC_AI.AI.AlliedOperations
             }
         }
 
+
         public static void Dogfighting(AIECore.TankAIHelper thisInst, Tank tank)
         {   // Will have to account for the different types of flight methods available
 

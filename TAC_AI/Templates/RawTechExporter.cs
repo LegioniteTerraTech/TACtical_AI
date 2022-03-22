@@ -55,19 +55,21 @@ namespace TAC_AI.Templates
         public static Dictionary<EnemySmarts, Sprite> aiIconsEnemy;
         public static AIECore.TankAIHelper lastTech;
 
+        private static bool firstInit = false;
         // GUI
         public static void Initiate()
         {
-            if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
+            if (inst)
+                return;
+#if STEAM
+            // Steam does not support RawTech loading the same way as Unofficial.
+            if (!firstInit)
             {
-                up = "/";
-            }
-            inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
-            GUIWindow = new GameObject();
-            GUIWindow.AddComponent<GUIRawDisplay>();
-            GUIWindow.SetActive(false);
-            SetupWorkingDirectories();
-            aiIcons = new Dictionary<AIType, Sprite> {
+                SetupWorkingDirectoriesSteam(); 
+                GUIWindow = new GameObject();
+                GUIWindow.AddComponent<GUIRawDisplay>();
+                GUIWindow.SetActive(false);
+                aiIcons = new Dictionary<AIType, Sprite> {
                 {AIType.Escort,  LoadSprite("AI_Tank.png") },
                 {AIType.MTMimic,  LoadSprite("AI_MT.png") },
                 {AIType.MTSlave,  LoadSprite("AI_MT.png") },
@@ -79,16 +81,65 @@ namespace TAC_AI.Templates
                 {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
                 {AIType.Astrotech,  LoadSprite("AI_Space.png") },
             };
-            aiIconsEnemy = new Dictionary<EnemySmarts, Sprite> {
+                aiIconsEnemy = new Dictionary<EnemySmarts, Sprite> {
                 {EnemySmarts.Mild,  LoadSprite("E_Mild.png") },
                 {EnemySmarts.Meh,  LoadSprite("E_Meh.png") },
                 {EnemySmarts.Smrt,  LoadSprite("E_Smrt.png") },
                 {EnemySmarts.IntAIligent,  LoadSprite("E_Intel.png") },
             };
-
+                firstInit = true;
+                Debug.Log("TACtical_AI: FirstInit RawTechExporter");
+            }
+            inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
+            LateInitiate();
+#else
+            if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
+            {
+                up = "/";
+            }
+            inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
+            if (!firstInit)
+            {
+                GUIWindow = new GameObject();
+                GUIWindow.AddComponent<GUIRawDisplay>();
+                GUIWindow.SetActive(false);
+                SetupWorkingDirectories();
+                aiIcons = new Dictionary<AIType, Sprite> {
+                {AIType.Escort,  LoadSprite("AI_Tank.png") },
+                {AIType.MTMimic,  LoadSprite("AI_MT.png") },
+                {AIType.MTSlave,  LoadSprite("AI_MT.png") },
+                {AIType.MTTurret,  LoadSprite("AI_MT.png") },
+                {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
+                {AIType.Assault,  LoadSprite("AI_Assault.png") },
+                {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
+                {AIType.Aviator,  LoadSprite("AI_Pilot.png") },
+                {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
+                {AIType.Astrotech,  LoadSprite("AI_Space.png") },
+            };
+                aiIconsEnemy = new Dictionary<EnemySmarts, Sprite> {
+                {EnemySmarts.Mild,  LoadSprite("E_Mild.png") },
+                {EnemySmarts.Meh,  LoadSprite("E_Meh.png") },
+                {EnemySmarts.Smrt,  LoadSprite("E_Smrt.png") },
+                {EnemySmarts.IntAIligent,  LoadSprite("E_Intel.png") },
+            };
+                firstInit = true;
+            }
+#endif
 #if DEBUG
             ExportJSONInsteadOfRAWTECH = true;
 #endif
+            PrepareModdedBlocksSearch();
+        }
+
+        public static void DeInit()
+        {
+            if (!inst)
+                return;
+            ManPauseGame.inst.PauseEvent.Unsubscribe(inst.UpdatePauseStatus);
+            Debug.Log("TACtical_AI: RawTechExporter - Unsubscribing from Pause Screen");
+            isSubbed = false;
+            Destroy(inst.gameObject);
+            inst = null;
         }
         internal class GUIRawDisplay : MonoBehaviour
         {
@@ -100,14 +151,22 @@ namespace TAC_AI.Templates
                 }
             }
         }
+
+        private static bool isSubbed = false;
         public static void LateInitiate()
         {
+            if (!inst || isSubbed)
+                return;
             ManPauseGame.inst.PauseEvent.Subscribe(inst.UpdatePauseStatus);
-            Globals.inst.m_BlockSurvivalChance = KickStart.EnemyBlockDropChance / 100.0f;
+            Debug.Log("TACtical_AI: RawTechExporter - Subscribing to Pause Screen");
+            isSubbed = true;
+            // Was causing way too many issues with enemies
+            //Globals.inst.m_BlockSurvivalChance = KickStart.EnemyBlockDropChance / 100.0f;
         }
+
         public void UpdatePauseStatus(bool paused)
         {
-            if (paused)
+            if (paused && SpecialAISpawner.CreativeMode)
                 LaunchSubMenu();
             else
                 CloseSubMenu();
@@ -115,6 +174,9 @@ namespace TAC_AI.Templates
         public void Update()
         {
             CheckKeyCombos();
+#if STEAM
+            LateInitiate();
+#endif
         }
         public void CheckKeyCombos()
         {
@@ -183,6 +245,10 @@ namespace TAC_AI.Templates
             {
                 SaveEnemyTechsToRawBLK();
             }
+            if (GUI.Button(new Rect(20, 110, 160, 40), new GUIContent("<b>+ ALL SNAPS</b>", snapsAvail ? "Save ALL snapshots to Raw Enemies pop in eBulk." : "Open the snapshots menu at least once first!")))
+            {
+                SaveEnemyTechsToRawBLK();
+            }
             GUI.Label(new Rect(20, 160, 150, 40), GUI.tooltip);
             GUI.DragWindow();
         }
@@ -225,6 +291,21 @@ namespace TAC_AI.Templates
 #endif
             ValidateEnemyFolder();
         }
+        public static void SetupWorkingDirectoriesSteam()
+        {
+            DirectoryInfo di = new DirectoryInfo(Assembly.GetExecutingAssembly().Location);
+            di = di.Parent; // off of this DLL
+            DLLDirectory = di.ToString();
+
+            DirectoryInfo Navi = new DirectoryInfo(Application.dataPath);
+            Navi = Navi.Parent; // out of the GAME folder
+            BaseDirectory = Navi.ToString();
+            RawTechsDirectory = Navi.ToString() + up + "Raw Techs";
+
+            //Debug.Log("TACtical_AI: DLL folder is at: " + DLLDirectory);
+            //Debug.Log("TACtical_AI: Raw Techs is at: " + RawTechsDirectory);
+            ValidateEnemyFolder();
+        }
 
 
         // Operations
@@ -232,7 +313,7 @@ namespace TAC_AI.Templates
         {
             List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
             List<BaseTemplate> temps = new List<BaseTemplate>();
-            List<string> names = new List<string>();
+            List<string> names;
             Debug.Log("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
             foreach (string Dir in Dirs)
             {
@@ -1110,9 +1191,9 @@ namespace TAC_AI.Templates
         }
         public static BlockTypes GetBlockIDLogFree (string name)
         {
-            int blockType = 3;
-            ModdedBlocksGrabbed.TryGetValue(name, out blockType);
-            return (BlockTypes)blockType;
+            if (ModdedBlocksGrabbed.TryGetValue(name, out int blockType))
+                return (BlockTypes)blockType;
+            return BlockTypes.GSOCockpit_111;
         }
 
         // Utilities
@@ -1176,7 +1257,7 @@ namespace TAC_AI.Templates
             try
             {
                 Texture2D tex = FileUtils.LoadTexture(destination);
-                Sprite output = Sprite.Create(tex, new Rect(0,0, tex.width, tex.height), Vector2.zero);
+                Sprite output = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
                 Debug.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
                 return output;
             }

@@ -99,10 +99,20 @@ namespace TAC_AI.World
             Debug.Log("TACtical_AI: Created EnemyWorldManager.");
 
         }
+        public static void DeInit()
+        {
+            if (!inst)
+                return;
+            Destroy(inst.gameObject);
+            inst = null;
+            Debug.Log("TACtical_AI: Removed EnemyWorldManager.");
+        }
+
         public static void LateInitiate()
         {
             if (!KickStart.AllowStrategicAI || setup)
                 return;
+            Debug.Log("TACtical_AI: Late Init EnemyWorldManager.");
             Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnTechDestroyed);
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(OnWorldLoad);
             Singleton.Manager<ManGameMode>.inst.ModeSwitchEvent.Subscribe(OnWorldReset);
@@ -110,6 +120,7 @@ namespace TAC_AI.World
             EnemySiege.Init();
             setup = true;
         }
+
         public static void OnWorldLoad(Mode mode)
         {
             EnemyTeams.Clear();
@@ -234,10 +245,16 @@ namespace TAC_AI.World
 
 
         // WORLD Loading
+        /// <summary>
+        /// Does not support teams not within the EnemyBaseTeams range declared in RawTechLoader.
+        /// </summary>
+        /// <param name="tech"></param>
+        /// <param name="tilePos"></param>
+        /// <param name="isNew"></param>
         public static void HandleTechUnloaded(ManSaveGame.StoredTech tech, IntVector2 tilePos, bool isNew = true)
         {
             int level = 0;
-            if (ManSpawn.IsEnemyTeam(tech.m_TeamID) && !tech.m_IsPopulation)
+            if (RawTechLoader.IsEnemyBaseTeam(tech.m_TeamID) && !tech.m_IsPopulation)
             {   // Enemy Team
                 List<TankPreset.BlockSpec> specs = tech.m_TechData.m_BlockSpecs;
                 long healthAll = 0;

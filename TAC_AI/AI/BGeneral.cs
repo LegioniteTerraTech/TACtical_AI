@@ -101,6 +101,7 @@ namespace TAC_AI.AI
             {
                 AidDefend(thisInst, tank);
             }
+            thisInst.DANGER = false;
         }
 
         /// <summary>

@@ -5,16 +5,23 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
+using SafeSaves;
 
 public class ModuleAIExtension : TAC_AI.ModuleAIExtension { }
 namespace TAC_AI
 {
-    public class ModuleAIExtension : Module
+    [AutoSaveComponent]
+    public class ModuleAIExtension : MonoBehaviour
     {
         TankBlock TankBlock;
 
+        [SSaveField]
+        public AIDriverType SavedAIDriver;
+        [SSaveField]
         public AIType SavedAI;
+        [SSaveField]
         public bool WasRTS = false;
+        [SSaveField]
         public Vector3 RTSPos = Vector3.zero;
 
         /*
@@ -97,7 +104,7 @@ namespace TAC_AI
         public bool SidePreferred = false;  // Should the AI orbit the enemy?
         public bool AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
         public bool AdvAvoidence = false;   // Should the AI avoid two allied techs at once?
-        public bool MTForAll = false;        // Should the AI listen to other Tech MT commands?
+        public bool MTForAll = false;       // Should the AI listen to non-player Tech MT commands?
         public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's safety?
         public bool SelfRepairAI = false;   // Can the AI self-repair?
         public bool InventoryUser = false;  // Can the AI use the player Inventory?
@@ -106,23 +113,66 @@ namespace TAC_AI
         public float MaxCombatRange = 100;  // Range to chase enemy
         public float MinCombatRange = 50;  // Minimum range to enemy
 
+        /// <summary>
+        /// Changed to OnFirstAttach
+        /// </summary>
         public void OnPool()
         {
+            if (TankBlock)
+                return;
             TankBlock = gameObject.GetComponent<TankBlock>();
+            Invoke("DelayedSub", 1f);
+            OnAttach();
+        }
+        public void DelayedSub()
+        {
             TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
             TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
+            LoadToTech();
         }
         public void OnAttach()
         {
+            if (!KickStart.EnableBetterAI)
+                return;
+            var tankInst = TankBlock.transform.root.GetComponent<Tank>();
+            if (tankInst)
+            {
+                if (!tankInst.GetComponent<AIECore.TankAIHelper>())
+                {
+                    Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL - making new...");
+                    tankInst.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe(tankInst);
+                }
+            }
+            else
+            {
+                //Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
+                //Debug.Log("TACtical_AI: ModuleAIExtention - TANK IS NULL!!!");
+                return;
+            }
             TankBlock.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             TankBlock.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             SavedAI = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI;
-            var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+            //var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
             //thisInst.AIList.Add(this);
             //thisInst.RefreshAI();
         }
         public void OnDetach()
         {
+            if (!KickStart.EnableBetterAI)
+                return;
+            if (!TankBlock?.transform?.root?.GetComponent<AIECore.TankAIHelper>())
+            {
+                if (TankBlock?.transform?.root)
+                {
+                    Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL - making new...");
+                    TankBlock.transform.root.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe(TankBlock.transform.root.GetComponent<Tank>());
+                }
+                else
+                {
+                    Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
+                }
+                return;
+            }
             var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
             //thisInst.AIList.Remove(this);
             //if (!TankBlock.IsBeingRecycled())
@@ -133,13 +183,53 @@ namespace TAC_AI
         }
 
         [Serializable]
-        private new class SerialData : SerialData<SerialData>
+        // Now obsolete
+        private new class SerialData : Module.SerialData<SerialData>
         {
             public AIType savedMode;
             public bool wasRTS;
             public Vector3 RTSPos;
         }
+        private bool LoadToTech()
+        {
+            try
+            {
+                if (Serialize(false))
+                {
+                    var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                    if (thisInst.DediAI != SavedAI || thisInst.DriverType != SavedAIDriver)
+                    {
+                        if (KickStart.TransferLegacyIfNeeded(SavedAI, out AIType newtype, out AIDriverType driver))
+                        {
+                            SavedAIDriver = driver;
+                            SavedAI = newtype;
+                        }
+                        thisInst.DriverType = SavedAIDriver;
+                        thisInst.DediAI = SavedAI;
+                        Debug.Log("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
+                        thisInst.RefreshAI();
+                        if (SavedAIDriver == AIDriverType.Pilot)
+                            thisInst.TestForFlyingAIRequirement();
+                    }
+                    if (WasRTS)
+                    {
+                        thisInst.RTSDestination = RTSPos;
+                    }
+                    return true;
+                }
+            }
+            catch (Exception e){ Debug.Log("TACtical AI: error on fetch " + e); }
+            return false;
+        }
 
+        internal bool Serialize(bool Saving)
+        {
+            if (Saving)
+                return this.SerializeToSafe();
+            bool deserial = this.DeserializeFromSafe();
+            Debug.Log("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
+            return deserial;
+        }
         private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)
         {
             try
@@ -149,6 +239,7 @@ namespace TAC_AI
                     if (KickStart.EnableBetterAI && !Singleton.Manager<ManScreenshot>.inst.TakingSnapshot)
                     {   //Allow resaving of Techs but not saving this to snapshot to prevent bugs
                         var Helper = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                        /*
                         SerialData serialData;
                         if (Helper.RTSControlled)
                         {
@@ -166,7 +257,14 @@ namespace TAC_AI
                                 savedMode = Helper.DediAI,
                             };
                         }
-                        serialData.Store(blockSpec.saveState);
+                        */
+                        SavedAIDriver = Helper.DriverType;
+                        SavedAI = Helper.DediAI;
+                        WasRTS = Helper.RTSControlled;
+                        RTSPos = Helper.RTSDestination;
+                        Serialize(true);
+                        // OBSOLETE - CAN CAUSE CRASHES
+                        //serialData.Store(blockSpec.saveState);
                         //Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
                     }
                 }
@@ -174,24 +272,34 @@ namespace TAC_AI
                 {   //Load from save
                     try
                     {
-                        SerialData serialData2 = SerialData<SerialData>.Retrieve(blockSpec.saveState);
-                        if (serialData2 != null)
+                        if (!LoadToTech())
                         {
-                            var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
-                            if (thisInst.DediAI != serialData2.savedMode)
+                            SerialData serialData2 = Module.SerialData<SerialData>.Retrieve(blockSpec.saveState);
+                            if (serialData2 != null)
                             {
-                                thisInst.DediAI = serialData2.savedMode;
-                                thisInst.RefreshAI();
-                                if (serialData2.savedMode == AIType.Aviator)
-                                    thisInst.TestForFlyingAIRequirement();
+                                var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                                if (thisInst.DediAI != serialData2.savedMode)
+                                {
+                                    thisInst.DediAI = serialData2.savedMode;
+                                    thisInst.RefreshAI();
+                                    if (serialData2.savedMode == AIType.Aviator)
+                                        thisInst.TestForFlyingAIRequirement();
+                                }
+                                SavedAI = serialData2.savedMode;
+                                if (serialData2.wasRTS)
+                                {
+                                    WasRTS = true;
+                                    thisInst.RTSDestination = serialData2.RTSPos;
+                                }
+                                if (KickStart.TransferLegacyIfNeeded(SavedAI, out AIType newtype, out AIDriverType driver))
+                                {
+                                    SavedAIDriver = driver;
+                                    SavedAI = newtype;
+                                }
+                                thisInst.DriverType = SavedAIDriver;
+                                thisInst.DediAI = SavedAI;
+                                //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                             }
-                            SavedAI = serialData2.savedMode;
-                            if (serialData2.wasRTS)
-                            {
-                                WasRTS = true;
-                                thisInst.RTSDestination = serialData2.RTSPos;
-                            }
-                            //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                         }
                     }
                     catch { }

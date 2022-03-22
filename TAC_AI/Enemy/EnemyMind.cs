@@ -95,7 +95,7 @@ namespace TAC_AI.AI.Enemy
             DestroyImmediate(this);
         }
 
-        public static void OnBlockAdd(TankBlock blockAdd, Tank tonk)
+        public void OnBlockAdd(TankBlock blockAdd, Tank tonk)
         {
             try
             {
@@ -263,7 +263,7 @@ namespace TAC_AI.AI.Enemy
             {
                 if (!target.isActive || (target.tank.boundsCentreWorldNoCheck - scanCenter).magnitude > TargetRange)
                 {
-                    Debug.Log("Target lost");
+                    //Debug.Log("Target lost");
                     target = null;
                 }
                 else if (TargetLockDuration >= 0)
