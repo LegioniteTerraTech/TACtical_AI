@@ -1189,10 +1189,12 @@ namespace TAC_AI.Templates
         {
             ModdedBlocksGrabbed = (Dictionary<string, int>)allModdedBlocks.GetValue(Singleton.Manager<ManMods>.inst);
         }
-        public static BlockTypes GetBlockIDLogFree (string name)
+        public static BlockTypes GetBlockIDLogFree(string name)
         {
             if (ModdedBlocksGrabbed.TryGetValue(name, out int blockType))
                 return (BlockTypes)blockType;
+            else if (name == "GSO_Exploder_A1_111")
+                return (BlockTypes)622;
             return BlockTypes.GSOCockpit_111;
         }
 
