@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace TAC_AI
 {
-    public class ModuleHarvestReciever : Module
+    public class ModuleHarvestReciever : MonoBehaviour
     {
         TankBlock TankBlock;
         // Returns the position of itself in the world as a point the AI can pathfind to
@@ -29,18 +29,39 @@ namespace TAC_AI
         {
             TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
             TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
-            OnAttach();
+            if (TankBlock.IsAttached)
+                OnAttach();
         }
         public void OnAttach()
         {
-            AIECore.Depots.Add(this);
+            if (holder)
+            {
+                if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Blocks))
+                {
+                    AIECore.BlockHandlers.Add(this);
+                }
+                if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Chunks))
+                {
+                    AIECore.Depots.Add(this);
+                }
+            }
             tank = transform.root.GetComponent<Tank>();
             DockingRequested = false;
         }
         public void OnDetach()
         {
             tank = null;
-            AIECore.Depots.Remove(this);
+            if (holder)
+            {
+                if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Blocks))
+                {
+                    AIECore.BlockHandlers.Remove(this);
+                }
+                if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Chunks))
+                {
+                    AIECore.Depots.Remove(this);
+                }
+            }
             DockingRequested = false;
         }
         public void RequestDocking()

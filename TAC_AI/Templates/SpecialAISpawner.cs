@@ -54,7 +54,7 @@ namespace TAC_AI.Templates
         //          please let LegioniteTerraTech know.  
         //      For tech-related concerns or additions, confront Legionite on the TerraTech Community Discord.
 
-        private static bool forceOn = false;    // spawn in creative no matter what
+        private static readonly bool forceOn = false;    // spawn in creative no matter what
 
         private static SpecialAISpawner inst;
         private static ManLicenses Licences;
@@ -77,7 +77,7 @@ namespace TAC_AI.Templates
 
         internal static bool thisActive = false;
         internal static bool CreativeMode = false;
-        internal static bool IsAttract = false;
+        internal static bool IsAttract => ManGameMode.inst.IsCurrent<ModeAttract>();
         private float counter = 0;
         private int updateTimer = 0;
 
@@ -100,7 +100,15 @@ namespace TAC_AI.Templates
             startup.SetActive(false);
             RawTechLoader.Initiate();
         }
-        /*
+        public static void DeInitiate()
+        {
+            RawTechLoader.DeInitiate();
+            Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Unsubscribe(DetermineActiveOnMode);
+            Destroy(inst);
+            inst = null;
+            Debug.Log("TACtical_AI: SpecialAISpawner - DeInitated");
+        }
+        
         public static void DetermineActiveOnModeType(ManGameMode.GameType mode)
         {   // 
             AirPool.Clear();
@@ -108,36 +116,11 @@ namespace TAC_AI.Templates
             RawTechExporter.Reload();
             OverrideManPop.QueuedChangeToRagnarokPop();
             DebugRawTechSpawner.ShouldBeActive();
-            bool spawnableMode;
-            bool creative;
-            switch (mode)
+            if ((mode == ManGameMode.GameType.MainGame || mode == ManGameMode.GameType.Misc
+                || mode == ManGameMode.GameType.CoOpCampaign || mode == ManGameMode.GameType.CoOpCreative) 
+                && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
             {
-                case ManGameMode.GameType.Misc:
-                case ManGameMode.GameType.CoOpCreative:
-                    spawnableMode = true;
-                    creative = true;
-                    IsAttract = false;
-                    break;
-                case ManGameMode.GameType.MainGame:
-                case ManGameMode.GameType.CoOpCampaign:
-                    spawnableMode = true;
-                    creative = false;
-                    IsAttract = false;
-                    break;
-                case ManGameMode.GameType.Attract:
-                    spawnableMode = false;
-                    creative = false;
-                    IsAttract = true;
-                    break;
-                default:
-                    creative = false;
-                    spawnableMode = false;
-                    IsAttract = false;
-                    break;
-            }
-            if (spawnableMode && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
-            {
-                if (creative)
+                if (mode == ManGameMode.GameType.Misc || mode == ManGameMode.GameType.CoOpCreative)
                     CreativeMode = true;
                 else
                     CreativeMode = false;
@@ -148,7 +131,7 @@ namespace TAC_AI.Templates
                 Pause();
                 CreativeMode = false;
             }
-        }*/
+        }
         public static void DetermineActiveOnMode(Mode mode)
         {   // 
             AirPool.Clear();
@@ -169,7 +152,6 @@ namespace TAC_AI.Templates
                 Pause();
                 CreativeMode = false;
             }
-            IsAttract = mode is ModeAttract;
         }
         public static void UpdatePlayerTank(Tank tank, bool beam)
         {   // 
@@ -247,11 +229,11 @@ namespace TAC_AI.Templates
             {
                 if (spawnSpace)
                 {
-                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionTypesExt.NULL, BaseTerrain.Space, AutoTerrain: false);
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionTypesExt.NULL, BaseTerrain.Space, AutoTerrain: false);
                     IsSpace = true;
                 }
                 else
-                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, GetRANDTeam(), FactionTypesExt.NULL, BaseTerrain.Air, AutoTerrain: false);
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionTypesExt.NULL, BaseTerrain.Air, AutoTerrain: false);
             }
             else
             {
@@ -271,10 +253,6 @@ namespace TAC_AI.Templates
                 //Debug.Log("TACtical_AI: SpecialAISpawner - Could not spawn airborneAI - Player has no corps unlocked!?!");
                 return;
             }
-            if (!newAirborneAI.IsEnemy(newAirborneAI.Team))
-                newAirborneAI.SetTeam(GetRANDTeam(), true);
-            else
-                newAirborneAI.SetTeam(EnemyTeam, true);
             TrackedAirborneAI newAir = new TrackedAirborneAI(newAirborneAI, IsSpace);
             AirPool.Add(newAir);
         }
@@ -451,13 +429,13 @@ namespace TAC_AI.Templates
                 catch { }
                 Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 RawTechLoader.UseFactionSubTypes = true;
-                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
+                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, RawTechLoader.GetRandomBaseTeam(), out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
                 return tech;
             }
             catch { }
             Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             worked = true;
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionTypesExt.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, RawTechLoader.GetRandomBaseTeam(), FactionTypesExt.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
 
         public static void TrySpawnTraderTroll(Vector3 pos)
@@ -493,11 +471,11 @@ namespace TAC_AI.Templates
 
                 //pos = GetOffsetPosAngle(pos); 
 
-                if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos3))
+                if (!RBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos3))
                     return;
 
                 RawTechLoader.UseFactionSubTypes = true;
-                RawTechLoader.SpawnSpecificTypeTechSafe(pos3, trollTeam, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, forceInstant: true, isPopulation: true);
+                RawTechLoader.SpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, isPopulation: true);
 
                 Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
                 try
@@ -511,10 +489,10 @@ namespace TAC_AI.Templates
             catch { }
             Debug.Log("TACtical_AI: TrySpawnTraderTroll - Could not fetch corps, resorting to random spawns");
 
-            if (!RBases.TryFindExpansionLocationGrid(pos, out Vector3 pos2))
+            if (!RBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos2))
                 return;
             RawTechLoader.UseFactionSubTypes = true;
-            RawTechLoader.SpawnSpecificTypeTechSafe(pos2, trollTeam, Vector3.forward, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, forceInstant: true, isPopulation: true);
+            RawTechLoader.SpawnSpecificTechSafe(pos2, Vector3.forward, trollTeam, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, isPopulation: true);
 
             Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
             try
@@ -571,7 +549,7 @@ namespace TAC_AI.Templates
                         count--;
                         deadairborneAICount++;
                     }
-                    else if (airborneAI.trans.position.y > KickStart.AirMaxHeightOffset + Singleton.playerPos.y)
+                    else if (airborneAI.trans.position.y > AIGlobals.AirMaxHeightOffset + Singleton.playerPos.y)
                     {
                         AirPool.RemoveAt(step);
                         Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above player distance.");
@@ -651,8 +629,13 @@ namespace TAC_AI.Templates
             Debug.Log("TACtical_AI: Purge - PURGED " + tech.name);
             if (ManNetwork.IsNetworked)
             {
-                //tech.netTech.RequestRemoveFromGame(player, false);
-                tech.netTech.RequestRemoveFromGame(tech.netTech.NetPlayer, false);
+                try
+                {
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
+                    Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
+                    { m_HostID = TV.HostID });
+                }
+                catch { }
             }
             else
                 tech.visible.RemoveFromGame();
@@ -666,8 +649,13 @@ namespace TAC_AI.Templates
         {   // 
             if (ManNetwork.IsNetworked)
             {
-                //tech.netTech.SetToSelfDestruct(true, 0.1f);// only blows up cab
-                tech.netTech.RequestRemoveFromGame(tech.netTech.NetPlayer, false);
+                try
+                {
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
+                    Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
+                    { m_HostID = TV.HostID });
+                }
+                catch { }
             }
             else
             {
@@ -719,7 +707,7 @@ namespace TAC_AI.Templates
             bool doubleSpawnRate = false;
             try
             {
-                doubleSpawnRate = Singleton.cameraTrans.position.y > KickStart.AirPromoteHeight;
+                doubleSpawnRate = Singleton.cameraTrans.position.y > AIGlobals.AirPromoteHeight;
             }
             catch { }
             if ((Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn) && counter > (AirSpawnInterval / (doubleSpawnRate ? 2 : 1)) / ((KickStart.Difficulty / 100) + 1.5f))
@@ -771,10 +759,6 @@ namespace TAC_AI.Templates
         private static Vector3 GetAirOffsetFromPosition(Vector3 pos, Vector3 angleHeading)
         {   // 
             return AI.Movement.AIEPathing.OffsetFromGroundAAlt(pos + -(angleHeading * AirSpawnDist) + (Singleton.cameraTrans.forward * 25), 75);
-        }
-        private static int GetRANDTeam()
-        {   // 
-            return UnityEngine.Random.Range(KickStart.TeamRangeStart, KickStart.TeamRangeStart + 12860);
         }
     }
 }

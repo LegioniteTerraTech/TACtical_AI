@@ -12,6 +12,12 @@ namespace TAC_AI.AI.AlliedOperations
         public static void MotivateProtect(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Aegis) what to do movement-wise
+            thisInst.lastPlayer = thisInst.GetPlayerTech();
+            thisInst.foundGoal = false;
+
+            thisInst.IsMultiTech = false;
+            thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
+
             BGeneral.ResetValues(thisInst);
 
             if (thisInst.theResource == null)
@@ -23,12 +29,12 @@ namespace TAC_AI.AI.AlliedOperations
                 Debug.Log("TACtical_AI: AI " + tank.name + ":  Aegis - error: trying to protect self");
                 return;
             }
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.theResource.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.theResource.tank.blockBounds.extents);
-            float range = thisInst.RangeToStopRush + AIECore.Extremes(tank.blockBounds.extents);
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.theResource.tank.boundsCentreWorldNoCheck).magnitude - thisInst.theResource.GetCheapBounds();
+            float range = thisInst.RangeToStopRush + thisInst.lastTechExtents;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
 
-            float AllyExt = AIECore.Extremes(thisInst.theResource.tank.blockBounds.extents);
+            float AllyExt = thisInst.theResource.GetCheapBounds();
 
             if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
@@ -56,8 +62,7 @@ namespace TAC_AI.AI.AlliedOperations
                         if (tank.Anchors.NumIsAnchored > 0)
                         {
                             thisInst.unanchorCountdown = 15;
-                            tank.TryToggleTechAnchor();
-                            thisInst.JustUnanchored = true;
+                            thisInst.UnAnchor();
                         }
                     }
                 }
@@ -75,7 +80,7 @@ namespace TAC_AI.AI.AlliedOperations
                         if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                         {
                             Debug.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
-                            tank.TryToggleTechAnchor();
+                            thisInst.TryAnchor();
                             thisInst.anchorAttempts++;
                         }
                     }
@@ -95,8 +100,7 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         Debug.Log("TACtical_AI: AI " + tank.name + ": Time to pack up and move out!");
                         thisInst.unanchorCountdown = 15;
-                        tank.TryToggleTechAnchor();
-                        thisInst.JustUnanchored = true;
+                        thisInst.UnAnchor();
                     }
                 }
             }
@@ -191,7 +195,7 @@ namespace TAC_AI.AI.AlliedOperations
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {
                         Debug.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
-                        tank.TryToggleTechAnchor();
+                        thisInst.TryAnchor();
                         thisInst.anchorAttempts++;
                     }
                 }
@@ -213,7 +217,7 @@ namespace TAC_AI.AI.AlliedOperations
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {
                         Debug.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
-                        tank.TryToggleTechAnchor();
+                        thisInst.TryAnchor();
                         thisInst.anchorAttempts++;
                     }
                 }

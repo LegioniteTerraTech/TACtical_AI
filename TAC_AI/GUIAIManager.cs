@@ -84,6 +84,7 @@ namespace TAC_AI
 
 
         private static float windowTimer = 0;
+        private const int AIManagerID = 8001;
 
 
         public static void Initiate()
@@ -159,9 +160,9 @@ namespace TAC_AI
         {
             private void OnGUI()
             {
-                if (isCurrentlyOpen)
+                if (isCurrentlyOpen && KickStart.CanUseMenu)
                 {
-                    HotWindow = GUI.Window(8001, HotWindow, GUIHandler, "<b>AI Mode Select</b>");
+                    HotWindow = GUI.Window(AIManagerID, HotWindow, GUIHandler, "<b>AI Mode Select</b>");
                 }
             }
         }
@@ -297,7 +298,7 @@ namespace TAC_AI
                     }
                 }
 
-                GUI.Label(new Rect(20, 95, 160, 20), lastTank.name);
+                GUI.Label(new Rect(20, 95, 160, 20), !lastTank.name.NullOrEmpty() ? lastTank.name : "NO NAME");
 
                 // Tasks
                 // top - Escort
@@ -323,10 +324,12 @@ namespace TAC_AI
                     }
                     if (select > 0)
                     {
-                        Debug.Log("TACtical_AI: GUIAIManager - Set " + amount + " Techs to RTSMode " + toTog);
+                        Debug.Log("TACtical_AI: GUIAIManager - Set " + select + " Techs to RTSMode " + toTog);
                         inst.Invoke("DelayedExtraNoise", 0.15f);
                     }
                     Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
+                    if (!lastTank)
+                        return;
                 }
                 // upper right - MT
                 if (GUI.Button(new Rect(100, 140, 80, 30), fetchAI == AIType.MTSlave ? new GUIContent("<color=#f23d3dff>STATIC</color>", "ACTIVE") : new GUIContent("Static", "Weapons only")))
@@ -377,21 +380,15 @@ namespace TAC_AI
                         clicked = true;
                     }
                 }
-                //placeholder
-                if (GUI.Button(new Rect(100, 230, 80, 30), new GUIContent("<color=#808080ff>scrap</color>", "Awaiting Space Junkers Update")))
-                {
-                }
-                /*
-                // N/A!
-                if (GUI.Button(new Rect(20, 150, 80, 30), isScrapperAvail ? fetchAI == AI.AIEnhancedCore.DediAIType.Scrapper ? "<color=#f23d3dff>FETCH</color>" : "Fetch" : "<color=#808080ff>fetch</color>"))
+                if (GUI.Button(new Rect(100, 230, 80, 30), isScrapperAvail ? fetchAI == AIType.Scrapper ? new GUIContent("<color=#f23d3dff>FETCH</color>", "ACTIVE") : new GUIContent("Fetch", "Need Block Receiving Base") : new GUIContent("<color=#808080ff>fetch</color>", "Need GC AI")))
                 {
                     if (isScrapperAvail)
                     {
-                        changeAI = AI.AIEnhancedCore.DediAIType.Scrapper;
+                        changeAI = AIType.Scrapper;
                         clicked = true;
                     }
                 }
-                */
+
                 GUI.Label(new Rect(20, 270, 160, 40), GUI.tooltip);
                 if (clickedDriver)
                 {
@@ -827,8 +824,7 @@ namespace TAC_AI
                 ResetInfo();
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
-                if ("<b>AI Mode Select</b>" == GUI.GetNameOfFocusedControl())
-                    GUI.FocusControl(null);
+                KickStart.ReleaseControl(AIManagerID);
                 Debug.Log("TACtical_AI: Closed AI menu!");
             }
         }

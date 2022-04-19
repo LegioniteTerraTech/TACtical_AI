@@ -7,38 +7,77 @@ using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.Templates;
 using TAC_AI.World;
+using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI.Enemy
 {
     public static class RBases
     {
-        internal static int MinimumBBRequired = 10000; // Before expanding
         internal static int MaxSingleBaseType { get { return KickStart.MaxBasesPerTeam / 3; } }
         internal static int MaxDefenses { get { return (int)(KickStart.MaxBasesPerTeam * (float)(2f / 3f)); } }
         internal static int MaxAutominers { get { return KickStart.MaxBasesPerTeam / 2; } }
 
-        internal const int MinResourcesReqToCollect = 50;
-        private const int MinimumStoredBeforeTryBribe = 100000;
-        private const float BribePenalty = 1.5f;
-        internal const int BaseExpandChance = 65;//18;
 
         public static List<EnemyBaseFunder> EnemyBases = new List<EnemyBaseFunder>();
 
 
+        public static List<Tank> TeamActiveMobileTechs(int Team)
+        {
+            List<Tank> activeCount = new List<Tank>();
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item.Team == Team && !item.IsBase())
+                    activeCount.Add(item);
+            }
+            return activeCount;
+        }
+        public static int TeamActiveMobileTechCount(int Team)
+        {
+            int activeCount = 0;
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item.Team == Team && !item.IsBase())
+                    activeCount++;
+            }
+            return activeCount;
+        }
+        public static int TeamActiveAnyBaseCount(int Team)
+        {
+            int activeCount = 0;
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item.Team == Team && item.IsBase())
+                    activeCount++;
+            }
+            return activeCount;
+        }
+        public static int TeamActiveMakerBaseCount(int Team)
+        {
+            return GetTeamBaseFunders(Team).Count;
+        }
+
+        public static int TeamGlobalMobileTechCount(int Team)
+        {
+            return TeamActiveMobileTechCount(Team) + ManEnemyWorld.UnloadedMobileTechCount(Team);
+        }
         // Base handling
         /// <summary>
         /// Does NOT count Defenses!!!
         /// </summary>
         /// <param name="Team"></param>
         /// <returns></returns>
-        public static int GetTeamBaseCount(int Team)
+        public static int TeamGlobalMakerBaseCount(int Team)
         {
-            return EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; }).Count + EnemyWorldManager.GetTeam(Team).GetBaseCount();
+            return TeamActiveMakerBaseCount(Team) + ManEnemyWorld.UnloadedBaseCount(Team);
         }
-  
+        public static int TeamGlobalAnyBaseCount(int Team)
+        {
+            return TeamActiveAnyBaseCount(Team) + ManEnemyWorld.UnloadedBaseCount(Team);
+        }
+
         public static EnemyBaseFunder GetTeamFunder(int Team)
         {
-            List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
+            List<EnemyBaseFunder> baseFunders = GetTeamBaseFunders(Team);
             if (baseFunders.Count == 0)
             {
                 //Debug.Log("TACtical_AI: " + Team + " CALLED GetTeamFunds WITH NO BASE!!!");
@@ -70,14 +109,35 @@ namespace TAC_AI.AI.Enemy
             }
             return funder.BuildBucks;
         }
-        public static int GetEnemyHQCount()
+        public static List<EnemyBaseFunder> GetTeamBaseFunders(int Team)
+        {
+            return EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team && cand.Tank.blockman.blockCount > 0; });
+        }
+        public static int GetAllTeamsEnemyHQCount()
         {
             return EnemyBases.FindAll(delegate (EnemyBaseFunder funds) { return funds.isHQ; }).Count;
         }
-        public static bool HasTooMuchOfType(int Team, BasePurpose purpose)
+        public static int GetCountOfPurpose(BasePurpose BP, List<EnemyBaseFunder> baseFunders)
         {
-            List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
-
+            return baseFunders.FindAll(delegate (EnemyBaseFunder cand) { return cand.Purposes.Contains(BP); }).Count;
+        }
+        public static int GetActiveTeamDefenseCount(int Team)
+        {
+            int Count = 0;
+            foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
+            {
+                if (tech.Team == Team)
+                {
+                    if (tech.name.Contains('â'))
+                    {
+                        Count++;
+                    }
+                }
+            }
+            return Count;
+        }
+        public static bool HasTooMuchOfType(int Team, BasePurpose purpose, List<EnemyBaseFunder> baseFunders)
+        {
             int Count = 0;
             foreach (EnemyBaseFunder funds in baseFunders)
             {
@@ -100,7 +160,7 @@ namespace TAC_AI.AI.Enemy
                 }
             }
 
-            bool thisIsTrue = false;
+            bool thisIsTrue;
             if (purpose == BasePurpose.Defense)
             {
                 thisIsTrue = Count >= MaxDefenses;
@@ -113,7 +173,7 @@ namespace TAC_AI.AI.Enemy
                 if (thisIsTrue)
                     Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
             }
-            else if (purpose == BasePurpose.HasReceivers && FetchNearbyResourceCounts(Team) < MinResourcesReqToCollect)
+            else if (purpose == BasePurpose.HasReceivers && FetchNearbyResourceCounts(Team) < AIGlobals.MinResourcesReqToCollect)
             {
                 thisIsTrue = false;
                 Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " Does not have enough mineables in range to build Reciever bases.");
@@ -158,52 +218,50 @@ namespace TAC_AI.AI.Enemy
             return compressed;
         }
 
-
-        // EnemyPurchase
+        // Bases funds
         public static bool PurchasePossible(int BBCost, int Team)
         {
-            if (BBCost <= GetTeamFunds(Team))
-                return true;
+            EnemyBaseFunder funds = GetTeamFunder(Team);
+            if (funds.IsNotNull())
+                return funds.PurchasePossible(BBCost);
             return false;
         }
         public static bool PurchasePossible(BlockTypes bloc, int Team)
         {
-            if (Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(bloc, true) <= GetTeamFunds(Team))
-                return true;
-            return false;
+            int price = Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(bloc, true);
+            return PurchasePossible(price, Team);
         }
-        public static bool PurchasePossible(Tank tank, int Team)
+        public static bool BribePossible(Tank tank, int Team)
         {
-            if ((int)(RawTechExporter.GetBBCost(tank) * BribePenalty) + MinimumStoredBeforeTryBribe <= GetTeamFunds(Team))
-                return true;
-            return false;
+            int price = (int)(RawTechExporter.GetBBCost(tank) * AIGlobals.BribePenalty) + AIGlobals.MinimumStoredBeforeTryBribe;
+            return PurchasePossible(price, Team);
+        }
+        public static void TryAddMoney(int amount, int Team)
+        {
+            EnemyBaseFunder funds = GetTeamFunder(Team);
+            if (funds.IsNotNull())
+            {
+                funds.AddBuildBucks(amount);
+            }
         }
         public static bool TryMakePurchase(BlockTypes bloc, int Team)
         {
-            if (PurchasePossible(bloc, Team))
+            EnemyBaseFunder funds = GetTeamFunder(Team);
+            if (funds.IsNotNull())
             {
-                var funds = GetTeamFunder(Team);
-                funds.SetBuildBucks(funds.BuildBucks - Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(bloc, true));
-                return true;
+                return funds.TryMakePurchase(bloc);
             }
             return false;
         }
-        public static bool TryMakePurchase(int Pay, int Team)
+        public static bool TryBribeTech(Tank tank, int bribingTeam)
         {
-            if (Pay <= GetTeamFunds(Team))
+            var funds = GetTeamFunder(bribingTeam);
+            if (!funds)
+                return false;
+            int cost = (int)(RawTechExporter.GetBBCost(tank) * AIGlobals.BribePenalty);
+            if (tank.Team != bribingTeam && funds.PurchasePossible(cost) && RBases.TeamGlobalMobileTechCount(bribingTeam) < KickStart.EnemyTeamTechLimit)
             {
-                var funds = GetTeamFunder(Team);
-                funds.SetBuildBucks(funds.BuildBucks - Pay);
-                return true;
-            }
-            return false;
-        }
-        public static bool TryBribeTech(Tank tank, int Team)
-        {
-            if (tank.Team != Team && PurchasePossible(tank, Team) && RBolts.AllyCostCount(tank) < KickStart.EnemyTeamTechLimit)
-            {
-                var funds = GetTeamFunder(Team);
-                funds.SetBuildBucks(funds.BuildBucks - (int)(RawTechExporter.GetBBCost(tank) * BribePenalty));
+                funds.SetBuildBucks(funds.BuildBucks - cost);
                 try
                 {   // Prevent bribing of dead Techs
                     if (tank.rootBlockTrans.GetComponent<TankBlock>())
@@ -217,12 +275,12 @@ namespace TAC_AI.AI.Enemy
             }
             return false;
         }
-        public static void TryAddMoney(int amount, int Team)
+        public static void TryDeclareBankruptcy(int Team)
         {
             EnemyBaseFunder funds = GetTeamFunder(Team);
             if (funds.IsNotNull())
             {
-                funds.AddBuildBucks(amount);
+                funds.FlagBankrupt();
             }
         }
 
@@ -247,10 +305,10 @@ namespace TAC_AI.AI.Enemy
         {
             var funds = GetTeamFunder(Team);
             if (!(bool)funds)
-                return 0;
+                return 1;
 
             Vector3 tankPos = funds.Tank.boundsCentreWorldNoCheck;
-            float MaxScanRange = KickStart.EnemyBaseMiningMaxRange;
+            float MaxScanRange = AIGlobals.EnemyBaseMiningMaxRange;
             int InRange = 0;
             int run = AIECore.Minables.Count;
             for (int step = 0; step < run; step++)
@@ -304,7 +362,7 @@ namespace TAC_AI.AI.Enemy
                 return;
             }
 
-            List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
+            List<EnemyBaseFunder> baseFunders = GetTeamBaseFunders(Team);
             int moneyPool = 0;
             foreach (EnemyBaseFunder funds in baseFunders)
             {
@@ -317,23 +375,24 @@ namespace TAC_AI.AI.Enemy
             Debug.Log("TACtical_AI: PoolTeamMoney - Team " + Team + " Pooled a total of " + moneyPool + " Build Bucks this time.");
             funder.AddBuildBucks(moneyPool);
         }
-        public static void EmergencyMoveMoney(EnemyBaseFunder funds)
+        public static bool EmergencyMoveMoney(EnemyBaseFunder funds)
         {
             if (!(bool)funds)
-                return;
+                return false;
             int Team = funds.Team;
             EnemyBaseFunder funder = GetTeamFunder(Team);
             if (funder.IsNull())
-                return;
+                return false;
 
             if (funder == funds)
             {   // Get the next in line
                 int baseSize = 0;
                 EnemyBaseFunder funderChange = funds;
-                List<EnemyBaseFunder> baseFunders = EnemyBases.FindAll(delegate (EnemyBaseFunder cand) { return cand.Team == Team; });
+                List<EnemyBaseFunder> baseFunders = GetTeamBaseFunders(Team);
+                baseFunders.Remove(funds);
                 foreach (EnemyBaseFunder fundC in baseFunders)
                 {
-                    int blockC = fundC.Tank.blockman.IterateBlocks().Count();
+                    int blockC = fundC.Tank.blockman.blockCount;
                     if (baseSize < blockC && funderChange != funds)
                     {
                         baseSize = blockC;
@@ -341,7 +400,16 @@ namespace TAC_AI.AI.Enemy
                     }
                 }
                 if (funderChange == funds)
-                    return;
+                {
+                    if (baseFunders.Count > 0)
+                    {
+                        funderChange = baseFunders.GetRandomEntry();
+                        if (funderChange == funds)
+                            return false;
+                    }
+                    else
+                        return false;
+                }
 
                 // Transfer the BB
                 funderChange.AddBuildBucks(funds.GetBuildBucksFromName());
@@ -350,7 +418,9 @@ namespace TAC_AI.AI.Enemy
                 // Change positioning
                 EnemyBases.Remove(funderChange);
                 EnemyBases.Insert(0, funderChange);
+                return true;
             }
+            return true;
         }
 
 
@@ -360,8 +430,8 @@ namespace TAC_AI.AI.Enemy
 
             public static List<int> TeamsBuildRequested = new List<int>();
             public static Dictionary<int, Visible> targetingRequests = new Dictionary<int, Visible>();
-            private static List<int> teamsCache = new List<int>();
-            private int timeStep = 0;
+            private static readonly List<int> teamsCache = new List<int>();
+            private float timeStep = 0;
 
             public static void Initiate()
             {
@@ -378,24 +448,27 @@ namespace TAC_AI.AI.Enemy
                 inst = null;
                 Debug.Log("TACtical_AI: DeInit BaseFunderManager");
             }
-            internal static bool turboEnemyExpandCheat = SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace);
+            internal static bool TurboEnemyExpandCheat
+            {
+                get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace); }
+            }
             public void Update()
             {
                 if (ManPauseGame.inst.IsPaused)
                     return;
 
-                if (timeStep > 5 && turboEnemyExpandCheat)
+                if (TurboEnemyExpandCheat && timeStep > 1)
                 {
-                    timeStep = 0;
+                    timeStep = 1;
                 }
                 if (timeStep <= 0)
                 {
                     DelayedUpdate();
-                    timeStep = 300;
+                    timeStep = 6;
                 }
                 RunBuildRequests();
                 RunFocusFireRequests();
-                timeStep--;
+                timeStep -= Time.deltaTime;
             }
             public void DelayedUpdate()
             {
@@ -442,6 +515,7 @@ namespace TAC_AI.AI.Enemy
                         if (helper)
                         {
                             helper.PendingSystemsCheck = true;
+                            Debug.Log("TACtical_AI: Tech " + tech.name + " of " + tech.Team + " has acknowleged the request");
                         }
                         else if (tech.IsAnchored)
                         {
@@ -460,11 +534,11 @@ namespace TAC_AI.AI.Enemy
                 }
                 targetingRequests.Clear();
             }
-            private static void FocusFireRequest(int Team, Visible Target)
+            private static void FocusFireRequest(int requestingTeam, Visible Target)
             {
                 try
                 {
-                    foreach (Tank tech in AIECore.TankAIManager.GetAlliedTanks(Team))
+                    foreach (Tank tech in AIECore.TankAIManager.GetNonEnemyTanks(requestingTeam))
                     {
                         var helper = tech.GetComponent<AIECore.TankAIHelper>();
                         var mind = tech.GetComponent<EnemyMind>();
@@ -473,7 +547,7 @@ namespace TAC_AI.AI.Enemy
                             var baseFunds = tech.GetComponent<EnemyBaseFunder>();
                             if (!mind.StartedAnchored)
                             {
-                                mind.Provoked = EnemyMind.ProvokeTime;
+                                mind.Provoked = AIGlobals.ProvokeTime;
                                 if (!(bool)helper.lastEnemy)
                                     mind.GetRevengeOn(Target, true);
                             }
@@ -481,7 +555,7 @@ namespace TAC_AI.AI.Enemy
                             {
                                 if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
                                 {
-                                    if (RBolts.AllyCostCount(tech) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tech, mind.TechMemor))
+                                    if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tech, mind.TechMemor))
                                         RBolts.BlowBolts(tech, mind);
                                 }
                             }
@@ -500,7 +574,8 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (!teamsCache.Contains(funds.Team))
                     {
-                        teamsCache.Add(funds.Team);
+                        if (funds.Bankrupt)
+                            teamsCache.Add(funds.Team);
                     }
                 }
                 foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
@@ -536,6 +611,7 @@ namespace TAC_AI.AI.Enemy
             /// If this Tech has a terminal, it can build any tech from the population
             /// </summary>
             public bool HasTerminal = false;
+            public bool Bankrupt = false;
 
             public void Initiate(Tank tank)
             {
@@ -547,12 +623,7 @@ namespace TAC_AI.AI.Enemy
                 PoolTeamMoney(tank.Team);
                 Debug.Log("TACtical_AI: Tech " + tank.name + " Initiated EnemyBaseFunder");
             }
-            public void SetupPurposes(SpawnBaseTypes type)
-            {
-                Purposes.Clear();
-                Purposes = RawTechLoader.GetBaseTemplate(type).purposes;
-            }
-            public void SetupPurposesExt(BaseTemplate type)
+            public void SetupPurposes(BaseTemplate type)
             {
                 Purposes.Clear();
                 Purposes = type.purposes;
@@ -560,12 +631,14 @@ namespace TAC_AI.AI.Enemy
             public void OnRecycle(Tank tank)
             {
                 // Make sure the money is safe
-                EmergencyMoveMoney(this);
+
+                Debug.Log("TACtical_AI: Base " + tank.name + " scrambling money to next possible base"
+                    + " worked? " + EmergencyMoveMoney(this));
 #if !STEAM
-                AnimeAI.RespondToLoss(tank, ALossReact.Base);
+                AnimeAICompat.RespondToLoss(tank, ALossReact.Base);
 #endif
 
-                Debug.Log("TACtical_AI: Tech " + tank.name + " Recycled EnemyBaseFunder");
+                //Debug.Log("TACtical_AI: Tech " + tank.name + " Recycled EnemyBaseFunder");
                 tank.TankRecycledEvent.Unsubscribe(OnRecycle);
                 EnemyBases.Remove(this);
                 Destroy(this);
@@ -573,6 +646,11 @@ namespace TAC_AI.AI.Enemy
             public void AddBuildBucks(int toAdd)
             {
                 SetBuildBucks(buildBucks + toAdd);
+            }
+
+            public void FlagBankrupt()
+            {
+                Bankrupt = true;
             }
             public void SetBuildBucks(int newVal, bool noNameChange = false)
             {
@@ -601,7 +679,13 @@ namespace TAC_AI.AI.Enemy
                     }
                     else
                         nameActual.Append(" ¥¥" + newVal);
-                    Tank.SetName(nameActual.ToString());
+                    try
+                    {
+                        Tank.SetName(nameActual.ToString());
+                        TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(Tank);
+                        overlay.Update();
+                    }
+                    catch (Exception e) { Debug.LogError("TACtical_AI: SetBuildBucks - Unhandled error: " + e); }
                 }
                 buildBucks = newVal;
             }
@@ -659,6 +743,39 @@ namespace TAC_AI.AI.Enemy
                 }
                 return nameActual.ToString();
             }
+
+
+            // EnemyPurchase
+            public bool PurchasePossible(int BBCost)
+            {
+                if (BBCost <= buildBucks)
+                    return true;
+                return false;
+            }
+            public bool TryMakePurchase(BlockTypes bloc)
+            {
+                int cost = Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(bloc, true);
+                if (PurchasePossible(cost))
+                {
+                    Bankrupt = false;
+                    SetBuildBucks(buildBucks - cost);
+                    return true;
+                }
+                else
+                    FlagBankrupt();
+                return false;
+            }
+            public bool TryMakePurchase(int Pay, int Team)
+            {
+                if (Pay <= GetTeamFunds(Team))
+                {
+                    var funds = GetTeamFunder(Team);
+                    funds.SetBuildBucks(funds.BuildBucks - Pay);
+                    return true;
+                }
+                return false;
+            }
+
         }
         public static int GetBuildBucksFromNameExt(string name)
         {
@@ -707,24 +824,23 @@ namespace TAC_AI.AI.Enemy
 
             if (name == "TEST_BASE")
             {   //It's a base spawned by this mod
-                tank.Anchors.TryAnchorAll(true);
-                MakeMinersMineUnlimited(tank);
+                thisInst.TryReallyAnchor();
+                mind.StartedAnchored = true;
                 DidFire = true;
             }
-            if (tank.GetComponent<BookmarkBuilder>())
+            var builder = tank.GetComponent<BookmarkBuilder>();
+            if (builder)
             {
                 mind.AllowInvBlocks = true;
                 mind.AllowRepairsOnFly = true;
                 mind.CommanderAttack = EnemyAttack.Grudge;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
-                var builder = tank.GetComponent<BookmarkBuilder>();
-                mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                 if (mind.TechMemor.IsNull())
                 {
-                    mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                    thisInst.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                     mind.TechMemor.Initiate();
-                    Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - BookmarkBuilder)");
+                    Debug.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - BookmarkBuilder)");
                 }
                 mind.TechMemor.SetupForNewTechConstruction(thisInst, builder.blueprint);
                 tank.MainCorps = new List<FactionSubTypes> { KickStart.CorpExtToCorp(builder.faction) };
@@ -743,12 +859,12 @@ namespace TAC_AI.AI.Enemy
 
                 if (builder.unprovoked)
                 {
-                    mind.CommanderMind = EnemyAttitude.SubNeutral;
+                    mind.CommanderAlignment = EnemyStanding.SubNeutral;
                 }
-
+                mind.TechMemor.MakeMinersMineUnlimited();
                 UnityEngine.Object.DestroyImmediate(builder);
                 DidFire = true;
-                //Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + mind.EvilCommander.ToString() + " based enemy with attitude " + mind.CommanderAttack.ToString() + " | Mind " + mind.CommanderMind.ToString() + " | Smarts " + mind.CommanderSmarts.ToString() + " inbound!");
+                //Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + mind.EvilCommander.ToString() + " based " + mind.CommanderAlignment.ToString() + " with attitude " + mind.CommanderAttack.ToString() + " | Mind " + mind.CommanderMind.ToString() + " | Smarts " + mind.CommanderSmarts.ToString() + " inbound!");
             }
 
             if (name.Contains(" ¥¥"))
@@ -784,18 +900,17 @@ namespace TAC_AI.AI.Enemy
 
                     // Charge the new Tech and send it on it's way!
                     RawTechLoader.ChargeAndClean(tank);
-                    tank.visible.Teleport(tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward * (AIECore.Extremes(tank.blockBounds.extents) * 2)), tank.rootBlockTrans.rotation, true, false);
+                    tank.visible.Teleport(tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward * tank.blockBounds.size.magnitude), tank.rootBlockTrans.rotation, true, false);
                     if (Singleton.Manager<ManVisible>.inst.AllTrackedVisibles.ToList().Exists(delegate (TrackedVisible cand) { return cand.visible == tank.visible; }))
-                        Debug.Log("TACtical_AI: ASSERT - " + tank.name + " was not properly inserted into the TrackedVisibles list and will not function properly!");
+                        Debug.Assert(true, "TACtical_AI: ASSERT - " + tank.name + " was not properly inserted into the TrackedVisibles list and will not function properly!");
                 }
                 else
                 {
-                    mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                     if (mind.TechMemor.IsNull())
                     {
-                        mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                        thisInst.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                         mind.TechMemor.Initiate(false);
-                        Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Base)");
+                        Debug.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Base)");
                     }
 
                     var funds = tank.gameObject.GetComponent<EnemyBaseFunder>(); 
@@ -811,40 +926,35 @@ namespace TAC_AI.AI.Enemy
                         string baseName = EnemyBaseFunder.GetActualName(name);
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(baseName);
                         bool activated = false;
+                        BaseTemplate BT;
                         if (type == SpawnBaseTypes.NotAvail)
                         {
-                            BaseTemplate BTExt = RawTechLoader.GetExtEnemyBaseFromName(baseName);
-                            if (BTExt != null)
+                            BT = RawTechLoader.GetExtEnemyBaseFromName(baseName);
+                            if (BT != null)
                             {
-                                SetupBaseTypeExt(BTExt, mind);
-                                funds.SetupPurposesExt(BTExt);
+                                SetupBaseType(BT, mind);
+                                funds.SetupPurposes(BT);
                                 Debug.Log("TACtical_AI: Registered EXTERNAL base " + baseName);
-                                mind.TechMemor.SetupForNewTechConstruction(thisInst, BTExt.savedTech);
-                                tank.MainCorps.Add(KickStart.CorpExtToCorp(BTExt.faction));
+                                mind.TechMemor.SetupForNewTechConstruction(thisInst, BT.savedTech);
+                                tank.MainCorps.Add(KickStart.CorpExtToCorp(BT.faction));
                                 activated = true;
                             }
                         }
                         if (!activated)
                         {
-                            SetupBaseType(type, mind);
-                            funds.SetupPurposes(type);
-                            Debug.Log("TACtical_AI: Registered base " + baseName + " |type " + type.ToString());
-                            mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
+                            BT = RawTechLoader.GetBaseTemplate(type);
+                            SetupBaseType(BT, mind);
+                            funds.SetupPurposes(BT);
+                            Debug.Log("TACtical_AI: Registered base " + baseName + " | type " + type.ToString());
+                            mind.TechMemor.SetupForNewTechConstruction(thisInst, BT.savedTech);
                             tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
                         }
+                        mind.TechMemor.MakeMinersMineUnlimited();
                     }
                     catch { }
                     if (!tank.IsAnchored)
-                        tank.Anchors.TryAnchorAll(true);
-                    //if (!tank.IsAnchored)
-                        //tank.TryToggleTechAnchor();
-                    if (!tank.IsAnchored)
-                    {
-                        tank.Anchors.RetryAnchorOnBeam = true;
-                        tank.Anchors.TryAnchorAll(true);
-                        //tank.TryToggleTechAnchor();
-                    }
-                    MakeMinersMineUnlimited(tank);
+                        thisInst.TryReallyAnchor();
+                    mind.StartedAnchored = true;
                     AllTeamTechsBuildRequest(tank.Team);
                     DidFire = true;
                 }
@@ -868,47 +978,42 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    mind.TechMemor = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
                     if (mind.TechMemor.IsNull())
                     {
-                        mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                        thisInst.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                         mind.TechMemor.Initiate();
-                        Debug.Log("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Defense)");
+                        Debug.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Defense)");
                     }
                     try
                     {
                         string defName = GetActualNameDef(name);
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseTypeFromName(defName);
                         bool activated = false;
+                        BaseTemplate BT;
                         if (type == SpawnBaseTypes.NotAvail)
                         {
-                            BaseTemplate BTExt = RawTechLoader.GetExtEnemyBaseFromName(defName);
-                            if (BTExt != null)
+                            BT = RawTechLoader.GetExtEnemyBaseFromName(defName);
+                            if (BT != null)
                             {
-                                SetupBaseTypeExt(BTExt, mind);
+                                SetupBaseType(BT, mind);
                                 //Debug.Log("TACtical_AI: Registered EXTERNAL base defense " + defName);
-                                mind.TechMemor.SetupForNewTechConstruction(thisInst, BTExt.savedTech);
-                                tank.MainCorps.Add(KickStart.CorpExtToCorp(BTExt.faction));
+                                mind.TechMemor.SetupForNewTechConstruction(thisInst, BT.savedTech);
+                                tank.MainCorps.Add(KickStart.CorpExtToCorp(BT.faction));
                                 activated = true;
                             }
                         }
                         if (!activated)
                         {
-                            SetupBaseType(type, mind);
-                            mind.TechMemor.SetupForNewTechConstruction(thisInst, RawTechLoader.GetBlueprint(type));
+                            BT = RawTechLoader.GetBaseTemplate(type);
+                            SetupBaseType(BT, mind);
+                            mind.TechMemor.SetupForNewTechConstruction(thisInst, BT.savedTech);
                             tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
                         }
                     }
                     catch { }
                     if (!tank.IsAnchored)
-                        tank.Anchors.TryAnchorAll(true);
-                    if (!tank.IsAnchored)
-                        tank.TryToggleTechAnchor();
-                    if (!tank.IsAnchored)
-                    {
-                        tank.Anchors.RetryAnchorOnBeam = true;
-                        tank.TryToggleTechAnchor();
-                    }
+                        thisInst.TryReallyAnchor();
+                    mind.StartedAnchored = true;
                     DidFire = true;
                 }
             }
@@ -916,55 +1021,7 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static void SetupBaseType(SpawnBaseTypes type, EnemyMind mind)
-        {   // iterate through EVERY BASE dammit
-            if (RawTechLoader.IsHQ(type))
-            {
-                mind.StartedAnchored = true;
-                mind.AllowInvBlocks = true;
-                mind.AllowRepairsOnFly = true;
-                mind.InvertBullyPriority = true;
-                mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
-                mind.CommanderMind = EnemyAttitude.Homing;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                mind.CommanderBolts = EnemyBolts.AtFull;
-            }
-            else if (RawTechLoader.ContainsPurpose(type, BasePurpose.Harvesting))
-            {
-                mind.StartedAnchored = true;
-                mind.AllowInvBlocks = true;
-                mind.AllowRepairsOnFly = true;
-                mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderMind = EnemyAttitude.Default;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                mind.CommanderAttack = EnemyAttack.Grudge;
-                mind.CommanderBolts = EnemyBolts.AtFull;
-            }
-            else if (RawTechLoader.ContainsPurpose(type, BasePurpose.TechProduction))
-            {
-                mind.StartedAnchored = true;
-                mind.AllowInvBlocks = true;
-                mind.AllowRepairsOnFly = true;
-                mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderMind = EnemyAttitude.Default;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                mind.CommanderAttack = EnemyAttack.Grudge;
-                mind.CommanderBolts = EnemyBolts.AtFullOnAggro;
-            }
-            else
-            {
-                mind.StartedAnchored = true;
-                mind.AllowInvBlocks = true;
-                mind.AllowRepairsOnFly = true;
-                mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderMind = EnemyAttitude.Default;
-                mind.CommanderSmarts = EnemySmarts.IntAIligent;
-                mind.CommanderAttack = EnemyAttack.Grudge;
-                mind.CommanderBolts = EnemyBolts.AtFull;
-            }
-        }
-        public static void SetupBaseTypeExt(BaseTemplate BT, EnemyMind mind)
+        public static void SetupBaseType(BaseTemplate BT, EnemyMind mind)
         {  
             if (BT.purposes.Contains(BasePurpose.Headquarters))
             {
@@ -1019,12 +1076,23 @@ namespace TAC_AI.AI.Enemy
         {
             try
             {
-                if (mind.GetComponent<EnemyBaseFunder>() && (bool)mind.TechMemor)
+                var funder = mind.GetComponent<EnemyBaseFunder>();
+                if (funder && (bool)mind.TechMemor)
                 {
                     if (!KickStart.AllowEnemiesToStartBases && !mind.Tank.FirstUpdateAfterSpawn)
                     {
                         SpecialAISpawner.Eradicate(mind.Tank);
                         return;
+                    }
+                    if (ManNetwork.IsNetworked)
+                    {   // Because Autominers are disabled
+                        int addBucks = 0;
+                        foreach (var item in GetTeamBaseFunders(mind.Tank.Team))
+                        {
+                            addBucks += AIGlobals.MPEachBaseProfits;
+                        }
+                        if (addBucks > 0)
+                            funder.AddBuildBucks(addBucks);
                     }
 
                     // Bribe
@@ -1055,7 +1123,7 @@ namespace TAC_AI.AI.Enemy
                             }
                         }
                     }
-                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= BaseExpandChance + (GetTeamFunds(mind.Tank.Team) / 10000))
+                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= AIGlobals.BaseExpandChance + (GetTeamFunds(mind.Tank.Team) / 10000))
                         ImTakingThatExpansion(mind, mind.GetComponent<EnemyBaseFunder>());
                     //if (UnityEngine.Random.Range(1, 100) < 7)
                     //{
@@ -1074,23 +1142,18 @@ namespace TAC_AI.AI.Enemy
             }
             try
             {
+                //Debug.Log("TACtical_AI: ImTakingThatExpansion - Call for " + mind.name);
                 if (SpecialAISpawner.IsAttract)
                     return; // no branching
 
-                if (BaseFunderManager.turboEnemyExpandCheat && funds.BuildBucks < MinimumBBRequired * 25)
-                    funds.AddBuildBucks(MinimumBBRequired);
+                if (BaseFunderManager.TurboEnemyExpandCheat && funds.BuildBucks < AIGlobals.MinimumBBRequired * 25)
+                    funds.AddBuildBucks(AIGlobals.MinimumBBRequired);
 
-                if (funds.BuildBucks < MinimumBBRequired)
+                if (funds.BuildBucks < AIGlobals.MinimumBBRequired)
                     return; // Reduce expansion lag
 
                 Tank tech = mind.AIControl.tank;
 
-
-                if (GetTeamBaseCount(tech.Team) >= KickStart.MaxBasesPerTeam)
-                {
-                    TryFreeUpBaseSlots(mind, funds);
-                    return;
-                }
 
                 int grade = 99;
                 try
@@ -1100,13 +1163,32 @@ namespace TAC_AI.AI.Enemy
                 }
                 catch { }
 
-                BaseTerrain Terra;
-                BasePurpose reason;
                 int Cost = GetTeamFunds(tech.Team);
-                if (TryFindExpansionLocation(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos))
+                if (TeamGlobalMakerBaseCount(tech.Team) >= KickStart.MaxBasesPerTeam)
+                {
+                    TryFreeUpBaseSlots(mind, funds);
+                    if (TeamGlobalMobileTechCount(tech.Team) < KickStart.EnemyTeamTechLimit)
+                    {
+                        BaseConstructTech(mind, tech, funds, grade, Cost);
+                    }
+                    else
+                        BaseUpgradeTechs(mind, tech, funds, GetTeamBaseFunders(tech.Team), grade, Cost);
+                    return;
+                }
+
+                Visible lastEnemy = mind.AIControl.lastEnemy;
+                if (!lastEnemy)
+                {
+                    ExpandBasePeaceful(mind, funds, grade, Cost);
+                    return;
+                }
+
+                if (FindNewExpansionBase(tech, lastEnemy.tank.boundsCentreWorld, out Vector3 pos))
                 {   // Try spawning defense
-                    Terra = RawTechLoader.GetTerrain(pos);
-                    reason = PickBuildBasedOnPriorities(mind, funds);
+                    List<EnemyBaseFunder> funders = GetTeamBaseFunders(tech.Team);
+                    BaseTerrain Terra = RawTechLoader.GetTerrain(pos);
+                    BasePurpose reason = PriorityDefense(mind, funds, funders);
+
                     Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
@@ -1117,8 +1199,242 @@ namespace TAC_AI.AI.Enemy
                         }
                         else
                         {
-                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
-                            RawTechLoader.SpawnEnemyTechExtBase(pos, tech.Team, tech.rootBlockTrans.right, BTemp);
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
+                            RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, BTemp);
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    if (RawTechLoader.IsFallback(type))
+                        return;
+
+                    if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, type))
+                    {
+                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
+                    }
+                    else
+                        Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
+                }
+                else
+                {   // Get new base location to expand
+                    if (EmergencyMoveMoney(funds))
+                    {
+                        if (TeamGlobalMobileTechCount(tech.Team) < KickStart.EnemyTeamTechLimit)
+                        {
+                            BaseConstructTech(mind, tech, funds, grade, Cost);
+                        }
+                        else
+                            BaseUpgradeTechs(mind, tech, funds, GetTeamBaseFunders(tech.Team), grade, Cost);
+                    }
+                }
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn");
+            }
+        }
+        public static void ExpandBasePeaceful(EnemyMind mind, EnemyBaseFunder funds, int grade, int Cost)
+        {   // Expand the base!
+            try
+            {
+                Tank tech = mind.Tank;
+                BaseTerrain Terra;
+                BasePurpose reason;
+
+                List<EnemyBaseFunder> funders = GetTeamBaseFunders(tech.Team);
+
+                if (InsureHarvester(mind, funds, funders))
+                {
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Building harvester");
+                }
+                if (TryFindExpansionLocationGrid(tech.boundsCentreWorldNoCheck, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
+                {   // Try spawning base extensions
+                    Terra = RawTechLoader.GetTerrain(pos2);
+                    reason = PickBuildBasedOnPriorities(mind, funds, funders);
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = valid.GetRandomEntry();
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
+                            RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, BTemp);
+                            return;
+                        }
+                    }
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    if (RawTechLoader.IsFallback(type))
+                        return;
+                    if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
+                    {
+                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
+                    }
+                    else
+                        Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
+                }
+                else
+                {   // Get new base location to expand
+                    if (EmergencyMoveMoney(funds))
+                    {
+                        if (TeamGlobalMobileTechCount(tech.Team) < KickStart.EnemyTeamTechLimit)
+                        {
+                            BaseConstructTech(mind, tech, funds, grade, Cost);
+                        }
+                        else
+                            BaseUpgradeTechs(mind, tech, funds, funders, grade, Cost);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: ExpandBasePeaceful - game is being stubborn " + e);
+            }
+        }
+
+        public static void BaseConstructTech(EnemyMind mind, Tank tech, EnemyBaseFunder funds, int grade, int Cost)
+        {   // Expand the base!
+            try
+            {
+                if (FindNewExpansionBase(tech, mind.AIControl.lastDestination, out Vector3 pos))
+                {
+                    BaseTerrain terra;
+                    if (AIEPathing.AboveTheSea(pos))
+                        terra = BaseTerrain.Sea;
+                    else
+                        terra = BaseTerrain.AnyNonSea;
+
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, BasePurpose.NotStationary, terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = valid.GetRandomEntry();
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
+                            RawTechLoader.SpawnTechFragment(pos, funds.Team, BTemp);
+                            //Debug.Log("TACtical_AI: BaseConstructTech - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            return;
+                        }
+                    }
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, BasePurpose.NotStationary, terra, maxGrade: grade, maxPrice: Cost);
+                    if (RawTechLoader.IsFallback(type))
+                        return;
+                    RawTechLoader.SpawnTechFragment(pos, funds.Team, RawTechLoader.GetBaseTemplate(type));
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
+            }
+        }
+
+        public static void BaseUpgradeTechs(EnemyMind mind, Tank tech, EnemyBaseFunder funds, List<EnemyBaseFunder> funders, int grade, int Cost)
+        {   // Upgrade the Techs!
+            try
+            {
+                List<Tank> mobileTechs = TeamActiveMobileTechs(tech.Team);
+                Tank toUpgrade = null;
+                bool shouldChangeHarvesters = GetCountOfPurpose(BasePurpose.HasReceivers, funders) == 0;
+                foreach (var item in mobileTechs)
+                {
+                    var helper = item.GetComponent<AIECore.TankAIHelper>();
+                    if (!helper.PendingSystemsCheck && !helper.lastEnemy && (shouldChangeHarvesters || !RCore.IsHarvester(item.blockman)))
+                    {
+                        toUpgrade = item;
+                        break;
+                    }
+                }
+                if (toUpgrade != null)
+                {
+                    if (FindNewExpansionBase(tech, mind.AIControl.lastDestination, out Vector3 pos))
+                    {
+                        BaseTerrain terra;
+                        if (AIEPathing.AboveTheSea(pos))
+                            terra = BaseTerrain.Sea;
+                        else
+                            terra = BaseTerrain.AnyNonSea;
+
+                        Vector3 posTech = toUpgrade.WorldCenterOfMass;
+                        BaseTemplate BT;
+                        List<BaseTemplate> BTs = new List<BaseTemplate>();
+                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, BasePurpose.NotStationary, terra, false, grade, maxPrice: Cost))
+                        {
+                            if (valid.Count == 0)
+                            {
+                                Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            }
+                            else
+                            {
+                                foreach (var item in valid)
+                                {
+                                    BTs.Add(TempManager.ExternalEnemyTechsAll[item]);
+                                }
+                                if (RawTechLoader.FindNextBest(out BT, BTs, RawTechExporter.GetBBCost(toUpgrade)))
+                                {
+                                    RecycleTechToTeam(toUpgrade);
+                                    RawTechLoader.SpawnTechFragment(posTech, funds.Team, BT);
+                                    //Debug.Log("TACtical_AI: BaseConstructTech - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                                    return;
+                                }
+                            }
+                        }
+                        List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(mind.MainFaction, BasePurpose.NotStationary, terra, maxGrade: grade, maxPrice: Cost);
+
+                        foreach (var item in types)
+                        {
+                            if (!RawTechLoader.IsFallback(item))
+                                BTs.Add(RawTechLoader.GetBaseTemplate(item));
+                        }
+                        if (BTs.Count == 0)
+                            return;
+                        if (RawTechLoader.FindNextBest(out BT, BTs, RawTechExporter.GetBBCost(toUpgrade)))
+                        {
+                            RecycleTechToTeam(toUpgrade);
+                            RawTechLoader.SpawnTechFragment(posTech, funds.Team, BT);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
+            }
+        }
+
+
+        public static void ExpandBaseLegacy(EnemyMind mind, EnemyBaseFunder funds, int grade, int Cost)
+        {   // Expand the base!
+            try
+            {
+                Tank tech = mind.Tank;
+                BaseTerrain Terra;
+                BasePurpose reason;
+
+                List<EnemyBaseFunder> funders = GetTeamBaseFunders(tech.Team);
+
+                if (TryFindExpansionLocationCorner(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos))
+                {   // Try spawning defense
+                    Terra = RawTechLoader.GetTerrain(pos);
+                    reason = PickBuildBasedOnPriorities(mind, funds, funders);
+                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    {
+                        int spawnIndex = valid.GetRandomEntry();
+                        if (spawnIndex == -1)
+                        {
+                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                        }
+                        else
+                        {
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
+                            RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, BTemp);
                             return;
                         }
                     }
@@ -1132,7 +1448,7 @@ namespace TAC_AI.AI.Enemy
                     else
                         Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                 }
-                else if (TryFindExpansionLocation2(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
+                else if (TryFindExpansionLocationDirect(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
                     reason = PickBuildNonDefense(mind);
@@ -1146,8 +1462,8 @@ namespace TAC_AI.AI.Enemy
                         }
                         else
                         {
-                            BaseTemplate BTemp = TempManager.ExternalEnemyTechs[spawnIndex];
-                            RawTechLoader.SpawnEnemyTechExtBase(pos2, tech.Team, tech.rootBlockTrans.right, BTemp);
+                            BaseTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
+                            RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, BTemp);
                             return;
                         }
                     }
@@ -1167,17 +1483,61 @@ namespace TAC_AI.AI.Enemy
                     EmergencyMoveMoney(funds);
                 }
             }
-            catch
+            catch (Exception e)
             {
-                Debug.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn");
+                Debug.Log("TACtical_AI: ExpandBasePeaceful - game is being stubborn " + e);
             }
+        }
+
+
+        public static bool InsureHarvester(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
+        {   // Make sure at least one harvester is on scene
+            try
+            {
+                if (GetCountOfPurpose(BasePurpose.HasReceivers, funders) > 0)
+                {
+                    foreach (var item in ManTechs.inst.IterateTechs())
+                    {
+                        var mindItem = item.GetComponent<EnemyMind>();
+                        if (mindItem && !item.GetComponent<EnemyBaseFunder>())
+                        {
+                            if (mindItem.CommanderMind == EnemyAttitude.Miner)
+                                return false;
+                        }
+                    }
+                    if (TryFindExpansionLocationGrid(mind.Tank.boundsCentreWorld, mind.Tank.trans.forward * 128, out Vector3 pos))
+                    {
+                        SpawnBaseTypes SBT = RawTechLoader.GetEnemyBaseType(mind.MainFaction, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
+                        if (RawTechLoader.IsFallback(SBT))
+                        {
+                            Debug.Log("TACtical_AI: InsureHarvester - There are no harvesters for FactionTypesExt " + mind.MainFaction + ", trying fallbacks");
+
+                            FactionTypesExt FTE = KickStart.CorpExtToVanilla(mind.MainFaction);
+                            SBT = RawTechLoader.GetEnemyBaseType(FTE, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
+                            if (RawTechLoader.IsFallback(SBT))
+                            {
+                                Debug.Log("TACtical_AI: InsureHarvester - There are no harvesters for Vanilla Faction " + FTE + ", using GSO");
+
+                                SBT = RawTechLoader.GetEnemyBaseType(FactionTypesExt.GSO, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
+                            }
+                        }
+                        RawTechLoader.SpawnTechFragment(pos, funds.Team, RawTechLoader.GetBaseTemplate(SBT));
+                        return true;
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("TACtical_AI: InsureHarvester - Error " + e);
+            }
+            return false;
         }
         public static void TryFreeUpBaseSlots(EnemyMind mind, EnemyBaseFunder funds)
         {   // Remove uneeeded garbage
             try
             {
                 Tank tech = mind.AIControl.tank;
-                int TeamBaseCount = GetTeamBaseCount(tech.Team);
+                int TeamBaseCount = TeamGlobalMakerBaseCount(tech.Team);
                 bool RemoveReceivers = FetchNearbyResourceCounts(tech.Team) == 0;
                 bool RemoveSpenders = GetTeamFunds(tech.Team) < CheapestAutominerPrice(mind) / 2;
                 bool ForceRemove = TeamBaseCount > KickStart.MaxBasesPerTeam;
@@ -1192,7 +1552,7 @@ namespace TAC_AI.AI.Enemy
 
                 List<EnemyBaseFunder> basesSorted = EnemyBases;
                 // Remove the lower-end first
-                basesSorted.OrderBy((F) => F.Tank.blockman.IterateBlocks().Count());
+                basesSorted.OrderBy((F) => F.Tank.blockman.blockCount);
 
                 foreach (EnemyBaseFunder fund in basesSorted)
                 {
@@ -1223,11 +1583,12 @@ namespace TAC_AI.AI.Enemy
                 //if (removeAll) // Final coffin nail
                 //    SpecialAISpawner.Eradicate(mind.Tank);
             }
-            catch
+            catch (Exception e)
             {
-                Debug.Log("TACtical_AI: TryFreeUpBaseSlots - game is being stubborn");
+                Debug.Log("TACtical_AI: TryFreeUpBaseSlots - Error " + e);
             }
         }
+
         public static void RemoveAllBases(EnemyMind mind, EnemyBaseFunder funds)
         {   // Remove uneeeded garbage
             try
@@ -1241,15 +1602,59 @@ namespace TAC_AI.AI.Enemy
                     }
                 }
             }
-            catch
+            catch (Exception e)
             {
-                Debug.Log("TACtical_AI: RemoveAllBases - game is being stubborn");
+                Debug.Log("TACtical_AI: RemoveAllBases - Error " + e);
             }
         }
-        public static BasePurpose PickBuildBasedOnPriorities(EnemyMind mind, EnemyBaseFunder funds)
+
+        // AI Base building
+        public static BasePurpose PickBuildBasedOnPriorities(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
+        {   // Expand the base!
+            /*
+             * BUILD ORDER:
+             *  Main base (duh)
+             *  Autominer -- If resources nearby -> HasReceivers
+             *  Defenses
+             *  Factory
+             *  Defenses
+             *  Autominer
+             *  Defenses
+             *  Factory
+             *  
+             */
+            if (GetCountOfPurpose(BasePurpose.Harvesting, funders) == 0)
+                return PickHarvestBase(mind, funds, funders);
+
+            // Fallback
+            return PickBuildBasedOnPrioritiesLegacy(mind, funds);
+        }
+        public static BasePurpose PriorityDefense(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
+        {   // Expand the base!
+            int team = funds.Team;
+            if (GetCountOfPurpose(BasePurpose.Harvesting, funders) == 0)
+                return PickHarvestBase(mind, funds, funders);
+            if (GetActiveTeamDefenseCount(team) >= MaxDefenses)
+                return PickBuildBasedOnPriorities(mind, funds, funders);
+            return BasePurpose.TechProduction;
+        }
+        public static BasePurpose PickHarvestBase(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
+        {   // Expand the base!
+            int team = funds.Team;
+            if (FetchNearbyResourceCounts(team) > 6 && GetCountOfPurpose(BasePurpose.HasReceivers, funders) == 0)
+                return BasePurpose.HasReceivers;
+            if (!ManNetwork.IsNetworked)
+                return BasePurpose.Autominer;
+            else 
+                return BasePurpose.TechProduction;
+        }
+
+
+        public static BasePurpose PickBuildBasedOnPrioritiesLegacy(EnemyMind mind, EnemyBaseFunder funds)
         {   // Expand the base!
             int team = mind.Tank.Team;
-            if (GetTeamFunds(team) <= CheapestAutominerPrice(mind) && !HasTooMuchOfType(team, BasePurpose.Autominer))
+            List<EnemyBaseFunder> funders = GetTeamBaseFunders(team);
+            if (GetTeamFunds(team) <= CheapestAutominerPrice(mind) && !HasTooMuchOfType(team, BasePurpose.Autominer, funders))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
                 return BasePurpose.Autominer;
             }
@@ -1258,25 +1663,25 @@ namespace TAC_AI.AI.Enemy
                 switch (UnityEngine.Random.Range(1, 7))
                 {
                     case 1:
-                        if (HasTooMuchOfType(team, BasePurpose.Defense))
+                        if (GetActiveTeamDefenseCount(team) > MaxDefenses)
                             return BasePurpose.TechProduction;
                         return BasePurpose.Defense;
                     case 2:
-                        if (HasTooMuchOfType(team, BasePurpose.Harvesting))
+                        if (HasTooMuchOfType(team, BasePurpose.Harvesting, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.Harvesting;
                     case 3:
-                        if (HasTooMuchOfType(team, BasePurpose.HasReceivers))
+                        if (HasTooMuchOfType(team, BasePurpose.HasReceivers, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.HasReceivers;
                     case 4:
                         return BasePurpose.TechProduction;
                     case 5:
-                        if (HasTooMuchOfType(team, BasePurpose.Autominer))
+                        if (HasTooMuchOfType(team, BasePurpose.Autominer, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.Autominer;
                     default:
-                        if (HasTooMuchOfType(team, BasePurpose.Defense))
+                        if (HasTooMuchOfType(team, BasePurpose.Defense, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.Defense;
                 }
@@ -1286,25 +1691,25 @@ namespace TAC_AI.AI.Enemy
                 switch (UnityEngine.Random.Range(0, 5))
                 {
                     case 1:
-                        if (HasTooMuchOfType(team, BasePurpose.Defense))
+                        if (GetActiveTeamDefenseCount(team) > MaxDefenses)
                             return BasePurpose.TechProduction;
                         return BasePurpose.Defense;
                     case 2:
-                        if (HasTooMuchOfType(team, BasePurpose.Harvesting))
+                        if (HasTooMuchOfType(team, BasePurpose.Harvesting, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.Harvesting;
                     case 3:
-                        if (HasTooMuchOfType(team, BasePurpose.HasReceivers))
+                        if (HasTooMuchOfType(team, BasePurpose.HasReceivers, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.HasReceivers;
                     case 4:
                         return BasePurpose.TechProduction;
                     case 5:
-                        if (HasTooMuchOfType(team, BasePurpose.Autominer))
+                        if (HasTooMuchOfType(team, BasePurpose.Autominer, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.Autominer;
                     default:
-                        if (HasTooMuchOfType(team, BasePurpose.Harvesting))
+                        if (HasTooMuchOfType(team, BasePurpose.Harvesting, funders))
                             return BasePurpose.TechProduction;
                         return BasePurpose.AnyNonHQ;
                 }
@@ -1313,46 +1718,34 @@ namespace TAC_AI.AI.Enemy
         public static BasePurpose PickBuildNonDefense(EnemyMind mind)
         {   // Expand the base!
             int team = mind.Tank.Team;
+            List<EnemyBaseFunder> funders = GetTeamBaseFunders(team);
             switch (UnityEngine.Random.Range(0, 5))
             {
                 case 2:
-                    if (HasTooMuchOfType(team, BasePurpose.Harvesting))
+                    if (HasTooMuchOfType(team, BasePurpose.Harvesting, funders))
                         return BasePurpose.TechProduction;
                     return BasePurpose.Harvesting;
                 case 3:
-                    if (HasTooMuchOfType(team, BasePurpose.HasReceivers))
+                    if (HasTooMuchOfType(team, BasePurpose.HasReceivers, funders))
                         return BasePurpose.TechProduction;
                     return BasePurpose.HasReceivers;
                 case 4:
                 case 5:
                     return BasePurpose.TechProduction;
                 default:
-                    if (HasTooMuchOfType(team, BasePurpose.Autominer))
+                    if (HasTooMuchOfType(team, BasePurpose.Autominer, funders))
                         return BasePurpose.TechProduction;
                     return BasePurpose.Autominer;
             }
         }
 
 
-        // Infinite money for enemy autominer bases - resources are limited
-        public static void MakeMinersMineUnlimited(Tank tank)
+
+
+        // Utilities
+        public static ChunkTypes[] TryGetBiomeResource(Vector3 scenePos)
         {   // make autominers mine deep based on biome
-            try
-            {
-                //Debug.Log("TACtical_AI: " + tank.name + " is trying to mine unlimited");
-                foreach (ModuleItemProducer module in tank.blockman.IterateBlockComponents<ModuleItemProducer>())
-                {
-                    module.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
-                }
-            }
-            catch
-            {
-                Debug.Log("TACtical_AI: MakeMinersMineUnlimited - game is being stubborn");
-            }
-        }
-        public static ChunkTypes[] TryGetBiomeResource(Vector3 pos)
-        {   // make autominers mine deep based on biome
-            switch (ManWorld.inst.GetBiomeWeightsAtScenePosition(pos).Biome(0).BiomeType)
+            switch (ManWorld.inst.GetBiomeWeightsAtScenePosition(scenePos).Biome(0).BiomeType)
             {
                 case BiomeTypes.Grassland:
                     return new ChunkTypes[1] { ChunkTypes.EruditeShard };
@@ -1371,9 +1764,6 @@ namespace TAC_AI.AI.Enemy
                     return new ChunkTypes[2] { ChunkTypes.PlumbiteOre, ChunkTypes.TitaniteOre };
             }
         }
-
-
-        // Utilities
         internal static bool IsLocationGridEmpty(Vector3 expansionCenter, bool ignoreNeutrals = true)
         {
             bool chained = false;
@@ -1396,96 +1786,86 @@ namespace TAC_AI.AI.Enemy
             return true;
         }
 
-        internal static bool TryFindExpansionLocationGrid(Vector3 expansionCenter, out Vector3 pos)
+        internal static bool TryFindExpansionLocationGrid(Vector3 expansionCenter, Vector3 targetWorld, out Vector3 pos)
         {
-            bool chained = false;
-            int MaxPossibleLocations = 7;
-            List<int> location = new List<int>();
-            for (int step = 0; step < MaxPossibleLocations; step++)
+            List<Vector3> location = new List<Vector3>
             {
-                location.Add(step);
-            }
+                expansionCenter + new Vector3(64, 0, 0),
+                expansionCenter + new Vector3(-64, 0, 0),
+                expansionCenter + new Vector3(0, 0, 64),
+                expansionCenter + new Vector3(0, 0, -64),
+                expansionCenter + new Vector3(64, 0, 64),
+                expansionCenter + new Vector3(-64, 0, 64),
+                expansionCenter + new Vector3(64, 0, -64),
+                expansionCenter + new Vector3(-64, 0, -64),
+                expansionCenter + new Vector3(0, 0, 0)
+            };
 
-            int locationsCount = MaxPossibleLocations;
+            location = location.OrderBy(x => (x - targetWorld).sqrMagnitude).ToList();
+
+            int locationsCount = location.Count;
+            bool constant = false;
             while (locationsCount > 0)
             {
-                int choice = location.GetRandomEntry();
-                location.Remove(choice);
-                switch (choice)
+                Vector3 posCase = location[0];
+                if (IsLocationValid(posCase, ref constant, true, false))
                 {
-                    case 0:
-                        if (IsLocationValid(expansionCenter + (Vector3.forward * 64), ref chained))
-                        {
-                            pos = expansionCenter + (Vector3.forward * 64);
-                            return true;
-                        }
-                        break;
-                    case 1:
-                        if (IsLocationValid(expansionCenter - (Vector3.forward * 64), ref chained))
-                        {
-                            pos = expansionCenter - (Vector3.forward * 64);
-                            return true;
-                        }
-                        break;
-                    case 2:
-                        if (IsLocationValid(expansionCenter - (Vector3.right * 64), ref chained))
-                        {
-                            pos = expansionCenter - (Vector3.right * 64);
-                            return true;
-                        }
-                        break;
-                    case 3:
-                        if (IsLocationValid(expansionCenter + (Vector3.right * 64), ref chained))
-                        {
-                            pos = expansionCenter + (Vector3.right * 64);
-                            return true;
-                        }
-                        break;
-                    case 4:
-                        if (IsLocationValid(expansionCenter + ((Vector3.right + Vector3.forward) * 64), ref chained))
-                        {
-                            pos = expansionCenter + ((Vector3.right + Vector3.forward) * 64);
-                            return true;
-                        }
-                        break;
-                    case 5:
-                        if (IsLocationValid(expansionCenter - ((Vector3.right + Vector3.forward) * 64), ref chained))
-                        {
-                            pos = expansionCenter - ((Vector3.right + Vector3.forward) * 64);
-                            return true;
-                        }
-                        break;
-                    case 6:
-                        if (IsLocationValid(expansionCenter + ((Vector3.right - Vector3.forward) * 64), ref chained))
-                        {
-                            pos = expansionCenter + ((Vector3.right - Vector3.forward) * 64);
-                            return true;
-                        }
-                        break;
-                    case 7:
-                        if (IsLocationValid(expansionCenter - ((Vector3.right - Vector3.forward) * 64), ref chained))
-                        {
-                            pos = expansionCenter - ((Vector3.right - Vector3.forward) * 64);
-                            return true;
-                        }
-                        break;
+                    pos = posCase;
+                    return true;
                 }
+                location.RemoveAt(0);
                 locationsCount--;
             }
             pos = expansionCenter;
             return false;
         }
-        private static bool TryFindExpansionLocation(Tank tank, Vector3 expansionCenter, out Vector3 pos)
+
+        internal static bool FindNewExpansionBase(Tank tank, Vector3 targetWorld, out Vector3 pos)
+        {
+            List<Vector3> location = new List<Vector3>
+            {
+                tank.transform.TransformPoint(new Vector3(64, 0, 0)),
+                tank.transform.TransformPoint(new Vector3(-64, 0, 0)),
+                tank.transform.TransformPoint(new Vector3(0, 0, 64)),
+                tank.transform.TransformPoint(new Vector3(0, 0, -64)),
+                tank.transform.TransformPoint(new Vector3(64, 0, 64)),
+                tank.transform.TransformPoint(new Vector3(-64, 0, 64)),
+                tank.transform.TransformPoint(new Vector3(64, 0, -64)),
+                tank.transform.TransformPoint(new Vector3(-64, 0, -64)),
+                tank.transform.TransformPoint(new Vector3(0, 0, 0))
+            };
+
+            location = location.OrderBy(x => (x - targetWorld).sqrMagnitude).ToList();
+
+            int locationsCount = location.Count;
+            bool constant = false;
+            while (locationsCount > 0)
+            {
+                Vector3 posCase = location[0] + tank.blockBounds.center;
+                if (IsLocationValid(posCase, ref constant, true, false))
+                {
+                    pos = posCase;
+                    return true;
+                }
+                location.RemoveAt(0);
+                locationsCount--;
+            }
+            pos = tank.boundsCentreWorldNoCheck;
+            return false;
+        }
+
+
+        private static bool TryFindExpansionLocationDirect(Tank tank, Vector3 expansionCenter, out Vector3 pos)
         {
             bool chained = false;
-            if (IsLocationValid(expansionCenter + (tank.rootBlockTrans.forward * 64), ref chained))
-            {
-                pos = expansionCenter + (tank.rootBlockTrans.forward * 64);
-                return true;
-            }
-            else if (IsLocationValid(expansionCenter - (tank.rootBlockTrans.forward * 64), ref chained))
+            if (IsLocationValid(expansionCenter - (tank.rootBlockTrans.forward * 64), ref chained))
             {
                 pos = expansionCenter - (tank.rootBlockTrans.forward * 64);
+                return true;
+            }
+            else if (IsLocationValid(expansionCenter + (tank.rootBlockTrans.forward * 64), ref chained))
+            {
+                pos = expansionCenter + (tank.rootBlockTrans.forward * 64);
                 return true;
             }
             else if (IsLocationValid(expansionCenter - (tank.rootBlockTrans.right * 64), ref chained))
@@ -1504,7 +1884,7 @@ namespace TAC_AI.AI.Enemy
                 return false;
             }
         }
-        private static bool TryFindExpansionLocation2(Tank tank, Vector3 expansionCenter, out Vector3 pos)
+        private static bool TryFindExpansionLocationCorner(Tank tank, Vector3 expansionCenter, out Vector3 pos)
         {
             bool chained = false;
             if (IsLocationValid(expansionCenter + ((tank.rootBlockTrans.right + tank.rootBlockTrans.forward) * 64), ref chained))
@@ -1543,7 +1923,7 @@ namespace TAC_AI.AI.Enemy
                 return false;
             }
 
-            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, 32, new Bitfield<ObjectTypes>()))
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, 24, new Bitfield<ObjectTypes>()))
             {
                 if (resourcesToo && vis.resdisp.IsNotNull())
                 {
@@ -1569,9 +1949,11 @@ namespace TAC_AI.AI.Enemy
         {
             List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(mind.MainFaction, BasePurpose.Autominer, BaseTerrain.Land);
             int lowest = 150000;
+            BaseTemplate BT;
             foreach (SpawnBaseTypes type in types)
             {
-                int tryThis = RawTechLoader.GetBaseStartingFunds(type);
+                BT = RawTechLoader.GetBaseTemplate(type);
+                int tryThis = BT.baseCost;
                 if (tryThis < lowest)
                 {
                     lowest = tryThis;

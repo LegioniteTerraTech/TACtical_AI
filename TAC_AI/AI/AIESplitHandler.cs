@@ -35,7 +35,7 @@ namespace TAC_AI.AI
                 tank.AI.SetBehaviorType(AITreeType.AITypes.Escort);
                 BlockManager BM = tank.blockman;
                 AIECore.TankAIHelper help = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
-                if (BM.IterateBlocks().Count() > 0)
+                if (BM.blockCount > 0)
                 {
                     if (BM.IterateBlockComponents<ModuleWheels>().Count() > 0 || BM.IterateBlockComponents<ModuleHover>().Count() > 0)
                         help.DediAI = AIType.Escort;

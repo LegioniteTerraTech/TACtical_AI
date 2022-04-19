@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -31,11 +32,11 @@ namespace TAC_AI.AI.Enemy
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (AllyCostCount(tank) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemy.IsNotNull() && AllyCostCount(tank) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (thisInst.lastEnemy.IsNotNull() && RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 default:                        // Unimplemented
@@ -58,22 +59,27 @@ namespace TAC_AI.AI.Enemy
             tank.control.ServerDetonateExplosiveBolt();
         }
 
-        // Tech Accounting
-        private static Dictionary<int, int> teamTechs = new Dictionary<int, int>();
-        private static List<int> teamUnfiltered = new List<int>();
+        public static int AllyCostCountOld(int Team)
+        {
+            return RBases.TeamGlobalMobileTechCount(Team);
+        }
+
+        // Tech Accounting (OBSOLETE)
+        private static readonly Dictionary<int, int> teamTechs = new Dictionary<int, int>();
+        private static readonly List<int> teamUnfiltered = new List<int>();
         private static int lastTechsCount = 0;
-        public static int AllyCostCount(Tank tank)
+        public static int AllyCostCountLegacy(int Team)
         {
             if (Singleton.Manager<ManTechs>.inst.CurrentTechs.Count() == lastTechsCount)
             {
-                if (teamTechs.TryGetValue(tank.Team, out int val))
+                if (teamTechs.TryGetValue(Team, out int val))
                 {
                     return val;
                 }
             }
-            return GetAllyCostCounts(tank);
+            return GetAllyCostCountsLegacy(Team);
         }
-        public static int GetAllyCostCounts(Tank tank)
+        public static int GetAllyCostCountsLegacy(int Team)
         {
             teamTechs.Clear();
             int AllyCount = 0;
@@ -85,12 +91,12 @@ namespace TAC_AI.AI.Enemy
                 for (int stepper = 0; techCount > stepper; stepper++)
                 {
                     Tank tech = techs.ElementAt(stepper);
-                    teamUnfiltered.Add(tank.Team);
+                    teamUnfiltered.Add(Team);
                     if (!tech.IsAnchored)
                     {
-                        teamUnfiltered.Add(tank.Team);
+                        teamUnfiltered.Add(Team);
                     }
-                    if (tech.IsFriendly(tank.Team))
+                    if (tech.IsFriendly(Team))
                     {
                         AllyCount++;
                         if (!tech.IsAnchored)
@@ -114,6 +120,7 @@ namespace TAC_AI.AI.Enemy
                 Debug.Log("TACtical_AI: AllyCostCount - Error on ally counting");
                 Debug.Log(e);
             }
+            lastTechsCount = techCount;
             teamUnfiltered.Clear();
             return AllyCount;
         }
@@ -127,7 +134,7 @@ namespace TAC_AI.AI.Enemy
                 for (int stepper = 0; techCount > stepper; stepper++)
                 {
                     Tank tech = allTechs.ElementAt(stepper);
-                    if (tech.IsEnemy())
+                    if (RawTechLoader.IsEnemyBaseTeam(tech.Team) || tech.Team == -1)
                         Counter++;
                 }
             }

@@ -62,7 +62,7 @@ namespace TAC_AI.AI.Movement.AICores
             //Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
 
 
-            if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 1.25f))
+            if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, pilot.Helper.lastTechExtents * 1.25f))
                 return Vector3.up;
             Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(Navi3DDirect);
 
@@ -81,7 +81,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 // Stay upright
             }
-            else if (Heading.z < -0.5 && pilot.PerformUTurn == 0 && AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+            else if (Heading.z < -0.5 && pilot.PerformUTurn == 0 && AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, pilot.Helper.lastTechExtents * 2))
             {
                 if (pilot.ErrorsInUTurn > 3)    // Aircraft failed Immelmann over 3 times in a row
                     pilot.PerformUTurn = -1;
@@ -227,10 +227,10 @@ namespace TAC_AI.AI.Movement.AICores
             //    control3D.m_State.m_BoostProps = false;
 
             // Blue is the target destination, Red is up  
-#if DEBUG
+
             Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.Navi3DDirect * pilot.Helper.lastTechExtents, new Color(0, 0, 1));
             Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, thisInst.Navi3DUp * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
-#endif
+
 
             controlGet.SetValue(tank.control, control3D);
             return;
@@ -245,8 +245,8 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         float ExtAvoid = thisInst.MinimumRad;
                         if (thisInst.lastPlayer.IsNotNull())
-                            ExtAvoid = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.size);
-                        float Extremes = ExtAvoid + AIECore.Extremes(tank.blockBounds.size) + 5;
+                            ExtAvoid = thisInst.lastPlayer.GetCheapBounds();
+                        float Extremes = ExtAvoid + thisInst.lastTechExtents + 5;
                         float throttleToSet = 1;
                         float foreTarg = tank.rootBlockTrans.InverseTransformPoint(target).z;
 
@@ -289,7 +289,7 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         float throttleToSet = 1;
                         float foreTarg = tank.rootBlockTrans.InverseTransformPoint(target.tank.boundsCentreWorldNoCheck).z;
-                        float Extremes = AIECore.Extremes(target.tank.blockBounds.size) + AIECore.Extremes(tank.blockBounds.size) + 5;
+                        float Extremes = target.GetCheapBounds() + thisInst.lastTechExtents + 5;
                         if (foreTarg > 0)
                             throttleToSet = (foreTarg - Extremes) / pilot.PropLerpValue;
                         //Debug.Log("TACtical_AI: throttle " + throttleToSet + " | position offset enemy " + foreTarg);

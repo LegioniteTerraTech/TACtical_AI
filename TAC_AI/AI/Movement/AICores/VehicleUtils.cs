@@ -8,9 +8,9 @@ namespace TAC_AI.AI.Movement.AICores
 {
     internal class VehicleUtils
     {
-        //private const int ignoreTurning = 50;
         private const float ignoreTurning = 0.875f;
         private const float MinThrottleToTurnFull = 0.75f;
+        private const float MaxThrottleToTurnAccurate = 0.25f;
         public static bool Turner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, out float turnVal)
         {
             turnVal = 1;
@@ -18,34 +18,39 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (forwards > ignoreTurning && thisControl.DriveControl >= MinThrottleToTurnFull)
                 return false;
-            if (helper.DriveDir == EDriveType.Perpendicular)
-            {
-                if (!(bool)helper.LastCloseAlly)
-                {
-                    float strength = 1 - forwards;
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }
-                else if (forwards > 0.65f)
-                {
-                    float strength = 1 - (forwards / 1.5f);
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }
-            }
             else
             {
-                /*
-                if (!(bool)helper.LastCloseAlly && forwards > 0.65f)
+                if (helper.DriveDir == EDriveType.Perpendicular)
                 {
-                    float strength = 1 - forwards;
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }*/
-                if (!(bool)helper.LastCloseAlly && forwards > 0.7f)
-                {
-                    float strength = 1 - forwards;
-                    turnVal = Mathf.Clamp(strength, 0, 1);
+                    if (!(bool)helper.LastCloseAlly)
+                    {
+                        float strength = 1 - forwards;
+                        turnVal = Mathf.Clamp(strength, 0, 1);
+                    }
+                    else if (forwards > 0.65f)
+                    {
+                        float strength = 1 - (forwards / 1.5f);
+                        turnVal = Mathf.Clamp(strength, 0, 1);
+                    }
                 }
+                else
+                {
+                    if (thisControl.DriveControl <= MaxThrottleToTurnAccurate)
+                    {
+                        if (!(bool)helper.LastCloseAlly && forwards > 0.7f)
+                        {
+                            float strength = 1 - Mathf.Log10(1 + (forwards * 9));
+                            turnVal = Mathf.Clamp(strength, 0, 1);
+                        }
+                    }
+                    else if (!(bool)helper.LastCloseAlly && forwards > 0.7f)
+                    {
+                        float strength = 1 - forwards;
+                        turnVal = Mathf.Clamp(strength, 0, 1);
+                    }
+                }
+                return true;
             }
-            return true;
         }
     }
 }

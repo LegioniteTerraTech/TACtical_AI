@@ -13,6 +13,9 @@ namespace TAC_AI.AI.AlliedOperations
     {
         public static void MTStatic(AIECore.TankAIHelper thisInst, Tank tank)
         {   // stay still
+            thisInst.lastPlayer = thisInst.GetPlayerTech();
+            thisInst.IsMultiTech = true;
+
             BGeneral.ResetValues(thisInst);
 
             thisInst.DANGER = false;
@@ -21,6 +24,10 @@ namespace TAC_AI.AI.AlliedOperations
 
         public static void MimicAllClosestAlly(AIECore.TankAIHelper thisInst, Tank tank)
         {
+            thisInst.lastPlayer = thisInst.GetPlayerTech();
+            thisInst.IsMultiTech = true;
+            thisInst.Attempt3DNavi = true;
+
             Tank hostTech;
             float dist = 0;
             Tank vis;
@@ -62,7 +69,7 @@ namespace TAC_AI.AI.AlliedOperations
                     dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
-                //float range = thisInst.lastTechExtents + AIECore.Extremes(vis.blockBounds.extents);
+                //float range = thisInst.lastTechExtents + vis.GetCheapBounds();
                 float range = thisInst.IdealRangeCombat;
                 if (!thisInst.MTMimicHostAvail)
                 {
@@ -132,7 +139,7 @@ namespace TAC_AI.AI.AlliedOperations
                     dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
-                float range = AIECore.Extremes(tank.blockBounds.extents) + AIECore.Extremes(vis.blockBounds.extents);
+                float range = thisInst.lastTechExtents + vis.GetCheapBounds();
                 if (!thisInst.MTLockedToTechBeam && vis.beam.IsActive && dist < range)
                 {
                     thisInst.MTOffsetPos = vis.trans.InverseTransformPoint(tank.trans.position);

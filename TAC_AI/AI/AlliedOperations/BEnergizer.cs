@@ -8,11 +8,12 @@ namespace TAC_AI.AI.AlliedOperations
 {
     public static class BEnergizer
     {
-        const float FindBaseExtension = 500;
-
         public static void MotivateCharge(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Energizer) what to do movement-wise
+            thisInst.IsMultiTech = false;
+            thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
+
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
@@ -41,14 +42,14 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (!thisInst.areWeFull)
             {   // BRANCH - Not Charged: Recharge!
-                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Searching for nearest charger!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
                         return; // There's no base!
-                    thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                    thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                 }
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
@@ -137,10 +138,10 @@ namespace TAC_AI.AI.AlliedOperations
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Scanning for low batteries...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
-                        thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                        thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     }
                     thisInst.ProceedToBase = true;
                     return; // There's no resources left!

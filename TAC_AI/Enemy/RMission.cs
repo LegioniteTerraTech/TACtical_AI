@@ -164,13 +164,24 @@ namespace TAC_AI.AI.Enemy
             bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
             if (!(bool)tank)
                 return true;
-
             tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree1);
-            Debug.Log("TACtical_AI: AI " + tank.name + ":  AI Tree is " + tree1.ToString());
+            Debug.Info("TACtical_AI: AI " + tank.name + ":  AI Tree is " + tree1.ToString());
 
             if (!DidFire)
             {
-                if (SpecificNameCases(thisInst, tank, mind))
+                if (name.Contains('Ω'))
+                {   // Base host NPC
+                    mind.CommanderMind = EnemyAttitude.NPCBaseHost;
+                    mind.Range = AIGlobals.BaseFounderRange;
+                    DidFire = true;
+                }
+                else if (name.Contains('⦲'))
+                {   // Boss
+                    mind.CommanderMind = EnemyAttitude.Boss;
+                    mind.Range = AIGlobals.BossMaxRange;
+                    DidFire = true;
+                }
+                else if (SpecificNameCases(thisInst, tank, mind))
                 {
                     DidFire = true;
                 }
@@ -223,6 +234,10 @@ namespace TAC_AI.AI.Enemy
                 }
             }
 
+            if (name.Contains('⟰'))
+            {   // Spawned as a Tech Fragment
+                mind.BuildAssist = true;
+            }
             if (DidFire && mind.CommanderMind == EnemyAttitude.OnRails)
             {
                 var rails = tank.GetComponent<OnRailsActions>();

@@ -7,25 +7,33 @@ using System.Reflection;
 using UnityEngine;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI;
+using System.IO;
+using Newtonsoft.Json;
 
 
 namespace TAC_AI.Templates
 {
     internal class DebugRawTechSpawner : MonoBehaviour
     {
-        private static bool Enabled = true;
-        private static bool EnabledAllModes = false;
+        private static readonly bool Enabled = true;
 
-        private static bool IsCurrentlyEnabled = false;
+        internal static bool IsCurrentlyEnabled = false;
 
         private static Vector3 PlayerLoc = Vector3.zero;
+        private static Vector3 PlayerFow = Vector3.forward;
         private static bool isCurrentlyOpen = false;
         private static bool isPrefabs = false;
         private static bool toggleDebugLock = false;
+        private static bool InstantLoad = false;
+        internal static bool DevCheatNoAttackPlayer = false;
+        internal static bool DevCheatPlayerEnemyBaseTeam = false;
+        private static bool ShowLocal = true;
 
         private static GameObject GUIWindow;
         private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
+        private const int RawTechSpawnerID = 8002;
 
+        private const string redStart = "<color=#ffcccbff><b>";//"<color=#f23d3dff><b>";
 
         public static void Initiate()
         {
@@ -34,7 +42,6 @@ namespace TAC_AI.Templates
 
             #if DEBUG
                 Debug.Log("TACtical_AI: Raw Techs Debugger launched (DEV)");
-                EnabledAllModes = true;
             #else
                 Debug.Log("TACtical_AI: Raw Techs Debugger launched");
             #endif
@@ -50,19 +57,20 @@ namespace TAC_AI.Templates
         }
 
 
+
         internal class GUIDisplayTechLoader : MonoBehaviour
         {
             private void OnGUI()
             {
-                if (isCurrentlyOpen)
+                if (isCurrentlyOpen && KickStart.CanUseMenu)
                 {
                     if (!isPrefabs)
                     {
-                        HotWindow = GUI.Window(8002, HotWindow, GUIHandlerPlayer, "<b>Debug Local Spawns</b>");
+                        HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, "<b>Debug Local Spawns</b>");
                     }
                     else
                     {
-                        HotWindow = GUI.Window(8002, HotWindow, GUIHandlerPreset, "<b>Debug Prefab Spawns</b>");
+                        HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPreset, "<b>Debug Prefab Spawns</b>");
                     }
                 }
             }
@@ -73,7 +81,10 @@ namespace TAC_AI.Templates
         private const int ButtonWidth = 200;
         private const int MaxCountWidth = 4;
         private const int MaxWindowHeight = 500;
-        private static int MaxWindowWidth = MaxCountWidth * ButtonWidth;
+        private static readonly int MaxWindowWidth = MaxCountWidth * ButtonWidth;
+        private static List<FactionTypesExt> openedFactions = new List<FactionTypesExt>();
+
+
         private static void GUIHandlerPlayer(int ID)
         {
             bool clicked = false;
@@ -83,48 +94,392 @@ namespace TAC_AI.Templates
             bool MaxExtensionY = false;
             int index = 0;
 
-            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width - 40, HotWindow.height), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), "<color=#f23d3dff><b>PURGE ENEMIES</b></color>"))
+            List<BaseTemplate> listTemp;
+            if (ShowLocal)
+                listTemp = TempManager.ExternalEnemyTechsLocal;
+            else
+                listTemp = TempManager.ExternalEnemyTechsMods;
+
+            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width -20, HotWindow.height - 40), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
+            {
+                RemoveAllEnemies();
+            }
+
+            HoriPosOff += ButtonWidth;
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Sort Entire List</b></color>"))
             {
                 try
                 {
-                    int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
-                    for (int step = 0; step < techCount; step++)
+                    listTemp = listTemp.OrderBy(x => x.terrain).ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary)).ThenBy(x => x.techName).ToList();
+                }
+                catch { }
+            }
+
+
+            HoriPosOff += ButtonWidth;
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), InstantLoad ? redStart + "Instant ON</b></color>" : redStart + "Instant Off</b></color>"))
+            {
+                InstantLoad = !InstantLoad;
+            }
+
+            HoriPosOff += ButtonWidth;
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugNaviLines ? redStart + "Hide Paths</b></color>" : redStart + "Show Paths</b></color>"))
+            {
+                ShowDebugNaviLines = !ShowDebugNaviLines;
+            }
+
+            HoriPosOff = 0;
+            VertPosOff += 30;
+            MaxExtensionX = true;
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowLocal ? redStart + "Showing Local</b></color>" : redStart + "Showing Mods</b></color>"))
+            {
+                ShowLocal = !ShowLocal;
+                return;
+            }
+
+            HoriPosOff += ButtonWidth;
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Correct Forwards</b></color>"))
+            {
+                if (Singleton.playerTank)
+                    AIERepair.DesignMemory.RebuildTechForwards(Singleton.playerTank);
+                return;
+            }
+
+            HoriPosOff += ButtonWidth;
+
+
+            if (ShowLocal)
+            {
+                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle ALL for Mod</b></color>"))
+                {
+                    try
                     {
-                        Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
-                        if (tech.IsEnemy() && tech.visible.isActive && tech.name != "DPS Target")
-                        {
-                            SpecialAISpawner.Purge(tech);
-                            techCount--;
-                            step--;
-                        }
+                        listTemp = listTemp.OrderBy(x => x.terrain).ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary)).ThenBy(x => x.techName).ToList();
+
+                        RawTechExporter.ValidateEnemyFolder();
+                        string export = RawTechExporter.RawTechsDirectory + RawTechExporter.up + "Bundled";
+                        Directory.CreateDirectory(export);
+
+                        RawTechExporter.MakeExternalRawTechListFile(export + RawTechExporter.up + "RawTechs.RTList", listTemp);
                     }
+                    catch { }
+                }
+            }
+
+            HoriPosOff += ButtonWidth;
+
+
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+#if DEBUG
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "LOCAL TO COM</b></color>"))
+            {
+                try
+                {
+                    listTemp = listTemp.OrderBy(x => x.terrain).ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary)).ThenBy(x => x.techName).ToList();
+
+                    string export = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    Directory.CreateDirectory(export);
+
+                    List<string> toWrite = new List<string>();
+
+                    toWrite.Add("-----------------------------------------------------------");
+                    toWrite.Add("--------------- <<< MASS EXPORTING >>> --------------------");
+                    toWrite.Add("-----------------------------------------------------------");
+                    toWrite.Add("");
+
+                    List<string> basetypeNames = new List<string>();
+                    StringBuilder SB = new StringBuilder();
+                    foreach (BaseTemplate BT in listTemp)
+                    {
+                        string nameBaseType = BT.techName.Replace(" ", "");
+                        basetypeNames.Add(nameBaseType);
+                        toWrite.Add("{ SpawnBaseTypes." + nameBaseType + ", new BaseTemplate {");
+                        toWrite.Add("    techName = \"" + BT.techName + "\",");
+                        toWrite.Add("    faction = FactionTypesExt." + BT.faction.ToString() + ",");
+                        toWrite.Add("    IntendedGrade = " + BT.IntendedGrade + ",");
+                        toWrite.Add("    terrain = BaseTerrain." + BT.terrain.ToString() + ",");
+                        SB.Clear();
+                        foreach (BasePurpose BP in BT.purposes)
+                            SB.Append("BasePurpose." + BP.ToString() + ", ");
+                        toWrite.Add("    purposes = new List<BasePurpose>{ " + SB.ToString() + "},");
+                        SB.Clear();
+                        toWrite.Add("    deployBoltsASAP = " + BT.purposes.Contains(BasePurpose.NotStationary).ToString().ToLower() + ",");
+                        toWrite.Add("    environ = " + (BT.faction == FactionTypesExt.GT).ToString().ToLower() + ",");
+                        toWrite.Add("    startingFunds = " + BT.startingFunds + ",");
+                        toWrite.Add("    savedTech = \"" + BT.savedTech.Replace("\"", "\\\"") + "\",");
+                        toWrite.Add("} },");
+                    }
+                    toWrite.Add("");
+                    toWrite.Add("-----------------------------------------------------------");
+                    toWrite.Add("");
+                    File.WriteAllText(export + RawTechExporter.up + "Techs.json", ""); // CLEAR
+                    File.AppendAllLines(export + RawTechExporter.up + "Techs.json", toWrite);
+                    toWrite.Clear();
+
+                    foreach (string str in basetypeNames)
+                    {
+                        toWrite.Add(str + ",");
+                    }
+
+                    toWrite.Add("");
+                    toWrite.Add("-----------------------------------------------------------");
+                    toWrite.Add("---------------- <<< END EXPORTING >>> --------------------");
+                    toWrite.Add("-----------------------------------------------------------");
+                    File.WriteAllText(export + RawTechExporter.up + "ESpawnBaseTypes.json", ""); // CLEAR
+                    File.AppendAllLines(export + RawTechExporter.up + "ESpawnBaseTypes.json", toWrite);
+
+                    File.WriteAllText(export + RawTechExporter.up + "batchNew.json", CommunityCluster.GetLocalToPublic());
                 }
                 catch { }
             }
 
             HoriPosOff += ButtonWidth;
-
-            if (TempManager.ExternalEnemyTechs == null)
+            if (HoriPosOff >= MaxWindowWidth)
             {
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "There's Nothing In"))
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM PULL EXISTING</b></color>"))
+            {
+                try
                 {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
+                    string export = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    if (!Directory.Exists(export))
+                        Directory.CreateDirectory(export);
+                    Dictionary<SpawnBaseTypes, BaseTemplate> BTs = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, BaseTemplate>>(CommunityCluster.FetchPublicFromFile());
+                    CommunityCluster.Organize(ref BTs);
+                    Dictionary<int, BaseTemplate> BTsInt = BTs.ToList().ToDictionary(x => (int)x.Key, x => x.Value);
+                    File.WriteAllText(export + RawTechExporter.up + "batchEdit.json", JsonConvert.SerializeObject(BTsInt, Formatting.Indented, RawTechExporter.JSONDEV));
                 }
-                HoriPosOff += ButtonWidth;
-                if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "The Enemies Folder!"))
+                catch (Exception e) {
+                    Debug.LogError("TAC_AI: ERROR - " + e);
+                    ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - " + e); 
+                }
+            }
+
+            HoriPosOff += ButtonWidth;
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM TEST FORMAT</b></color>"))
+            {
+                try
                 {
-                    SpawnTech(SpawnBaseTypes.NotAvail);
+                    string import = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    if (Directory.Exists(import))
+                    {
+                        string importJSON = import + RawTechExporter.up + "batchEdit.json";
+                        if (File.Exists(importJSON))
+                        {
+                            CommunityCluster.DeployUncompressed(importJSON);
+                            TempManager.ValidateAndAddAllInternalTechs(false);
+                        }
+                        else
+                            ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - Please pull existing first.");
+                    }
+                }
+                catch(Exception e) { ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - " + e); }
+            }
+
+            HoriPosOff += ButtonWidth;
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM PUSH PUBLIC</b></color>"))
+            {
+                try
+                {
+                    string import = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    if (Directory.Exists(import))
+                    {
+                        string importJSON = import + RawTechExporter.up + "batchEdit.json";
+                        if (File.Exists(importJSON))
+                        {
+                            CommunityCluster.DeployUncompressed(importJSON);
+                            CommunityCluster.PushDeployedToPublicFile();
+                            TempManager.ValidateAndAddAllInternalTechs();
+                        }
+                        else
+                            ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - Please pull existing first.");
+                    }
+                }
+                catch (Exception e) { ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - " + e); }
+            }
+
+
+            HoriPosOff += ButtonWidth;
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE DUPLICATES</b></color>"))
+            {
+                try
+                {
+                    List<int> exists = new List<int>();
+                    foreach (BaseTemplate bt in TempManager.techBases.Values)
+                    {
+                        exists.Add(bt.techName.GetHashCode());
+                    }
+
+                    int count = listTemp.Count();
+                    for (int step = 0; step < count; step++)
+                    {
+                        BaseTemplate BT = listTemp[step];
+                        if (exists.Contains(BT.techName.GetHashCode()))
+                        {
+                            listTemp.Remove(BT);
+                            count--;
+                            step--;
+                        }
+                    }
+                    Debug.Log("-----------------------------------------------------------");
+                    Debug.Log("----------------- <<< END PURGING >>> ---------------------");
+                    Debug.Log("-----------------------------------------------------------");
+                }
+                catch { }
+            }
+
+            HoriPosOff += ButtonWidth;
+            
+
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE MISSING</b></color>"))
+            {
+                try
+                {
+                    int count = listTemp.Count();
+                    for (int step = 0; step < count; step++)
+                    {
+                        BaseTemplate BT = listTemp[step];
+                        if (BT.IsMissingBlocks())
+                        {
+                            listTemp.Remove(BT);
+                            count--;
+                            step--;
+                        }
+                    }
+                    Debug.Log("-----------------------------------------------------------");
+                    Debug.Log("----------------- <<< END PURGING >>> ---------------------");
+                    Debug.Log("-----------------------------------------------------------");
+                }
+                catch { }
+            }
+
+            HoriPosOff += ButtonWidth;
+            
+
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatNoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+            {
+                DevCheatNoAttackPlayer = !DevCheatNoAttackPlayer;
+            }
+            HoriPosOff += ButtonWidth;
+            
+
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+#endif
+
+            if (listTemp == null || listTemp.Count() == 0)
+            {
+                if (ShowLocal)
+                {
+                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "There's Nothing In"))
+                    {
+                        SpawnTech(SpawnBaseTypes.NotAvail);
+                    }
+                    HoriPosOff += ButtonWidth;
+
+                    if (HoriPosOff >= MaxWindowWidth)
+                    {
+                        HoriPosOff = 0;
+                        VertPosOff += 30;
+                        MaxExtensionX = true;
+                        if (VertPosOff >= MaxWindowHeight)
+                            MaxExtensionY = true;
+                    }
+                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "The Enemies Folder!"))
+                    {
+                        SpawnTech(SpawnBaseTypes.NotAvail);
+                    }
+                }
+                else
+                {
+                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "None in Mods."))
+                    {
+                        SpawnTech(SpawnBaseTypes.NotAvail);
+                    }
                 }
                 return;
             }
 
-            int Entries = TempManager.ExternalEnemyTechs.Count();
+            int Entries = listTemp.Count();
             for (int step = 0; step < Entries; step++)
             {
                 try
                 {
-                    BaseTemplate temp = TempManager.ExternalEnemyTechs[step];
+                    BaseTemplate temp = listTemp[step];
                     if (HoriPosOff >= MaxWindowWidth)
                     {
                         HoriPosOff = 0;
@@ -157,6 +512,10 @@ namespace TAC_AI.Templates
                     }
                     else
                         disp = temp.techName.ToString();
+                    if (temp.purposes.Contains(BasePurpose.NANI))
+                    {
+                        disp = "[E] " + disp;
+                    }
                     if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), disp))
                     {
                         index = step;
@@ -183,7 +542,13 @@ namespace TAC_AI.Templates
             {
                 SpawnTechLocal(index);
             }
+
             GUI.DragWindow();
+
+            if (ShowLocal)
+                TempManager.ExternalEnemyTechsLocal = listTemp;
+            else
+                TempManager.ExternalEnemyTechsMods = listTemp;
         }
         private static void GUIHandlerPreset(int ID)
         {
@@ -194,29 +559,81 @@ namespace TAC_AI.Templates
             bool MaxExtensionY = false;
             SpawnBaseTypes type = SpawnBaseTypes.NotAvail;
 
-            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width - 40, HotWindow.height), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), "<color=#f23d3dff><b>PURGE ENEMIES</b></color>"))
+            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width - 20, HotWindow.height -40), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
             {
-                try
-                {
-                    int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
-                    for (int step = 0; step < techCount; step++)
-                    {
-                        Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
-                        if (tech.IsEnemy() && tech.visible.isActive)
-                        {
-                            SpecialAISpawner.Purge(tech);
-                            techCount--;
-                            step--;
-                        }
-                    }
-                }
-                catch { }
+                RemoveAllEnemies();
             }
             HoriPosOff += ButtonWidth;
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), InstantLoad ? redStart + "Instant ON</b></color>" : redStart + "Instant Off</b></color>"))
+            {
+                InstantLoad = !InstantLoad;
+            }
+            HoriPosOff += ButtonWidth;
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugNaviLines ? redStart + "Hide Paths</b></color>" : redStart + "Show Paths</b></color>"))
+            {
+                ShowDebugNaviLines = !ShowDebugNaviLines;
+            }
+            HoriPosOff += ButtonWidth;
+#if DEBUG
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatNoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+            {
+                DevCheatNoAttackPlayer = !DevCheatNoAttackPlayer;
+            }
+            HoriPosOff += ButtonWidth;
+
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatPlayerEnemyBaseTeam ? redStart + "ENEMY Team</b></color>" : redStart + "Player Team</b></color>"))
+            {
+                DevCheatPlayerEnemyBaseTeam = !DevCheatPlayerEnemyBaseTeam;
+            }
+            HoriPosOff += ButtonWidth;
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+#endif
+            FactionTypesExt currentFaction = FactionTypesExt.NULL;
+            string disp;
             foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> temp in TempManager.techBases)
             {
-                if (HoriPosOff >= MaxWindowWidth)
+                if (currentFaction != temp.Value.faction)
+                {
+                    currentFaction = temp.Value.faction;
+                    HoriPosOff = 0;
+                    VertPosOff += 60;
+                    FactionSubTypes FST = KickStart.CorpExtToCorp(temp.Value.faction);
+                    if (FST == FactionSubTypes.EXP)
+                        disp = "RR";
+                    else if (KickStart.IsFactionExtension(temp.Value.faction))
+                        disp = temp.Value.faction.ToString();
+                    else if (ManMods.inst.IsModdedCorp(FST))
+                        disp = ManMods.inst.FindCorpShortName(FST);
+                    else
+                        disp = temp.Value.faction.ToString();
+                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff - 30, ButtonWidth * MaxCountWidth, 30), "<b>" + disp + "</b>"))
+                    {
+                        if (openedFactions.Contains(currentFaction))
+                            openedFactions.Remove(currentFaction);
+                        else
+                            openedFactions.Add(currentFaction);
+                    }
+                    MaxExtensionX = true;
+                    if (VertPosOff >= MaxWindowHeight)
+                        MaxExtensionY = true;
+                }
+                else if (HoriPosOff >= MaxWindowWidth)
                 {
                     HoriPosOff = 0;
                     VertPosOff += 30;
@@ -224,37 +641,43 @@ namespace TAC_AI.Templates
                     if (VertPosOff >= MaxWindowHeight)
                         MaxExtensionY = true;
                 }
-                string disp;
-                if (temp.Value.purposes.Contains(BasePurpose.NotStationary))
+                if (openedFactions.Contains(currentFaction))
                 {
-                    switch (temp.Value.terrain)
+                    if (temp.Value.purposes.Contains(BasePurpose.NotStationary))
                     {
-                        case BaseTerrain.Land:
-                            disp = "<color=#90ee90ff>" + temp.Key.ToString() + "</color>";
-                            break;
-                        case BaseTerrain.Air:
-                            disp = "<color=#ffa500ff>" + temp.Key.ToString() + "</color>";
-                            break;
-                        case BaseTerrain.Sea:
-                            disp = "<color=#add8e6ff>" + temp.Key.ToString() + "</color>";
-                            break;
-                        case BaseTerrain.Space:
-                            disp = "<color=#ffff00ff>" + temp.Key.ToString() + "</color>";
-                            break;
-                        default:
-                            disp = temp.Key.ToString();
-                            break;
+                        switch (temp.Value.terrain)
+                        {
+                            case BaseTerrain.Land:
+                                disp = "<color=#90ee90ff>" + temp.Key.ToString() + "</color>";
+                                break;
+                            case BaseTerrain.Air:
+                                disp = "<color=#ffa500ff>" + temp.Key.ToString() + "</color>";
+                                break;
+                            case BaseTerrain.Sea:
+                                disp = "<color=#add8e6ff>" + temp.Key.ToString() + "</color>";
+                                break;
+                            case BaseTerrain.Space:
+                                disp = "<color=#ffff00ff>" + temp.Key.ToString() + "</color>";
+                                break;
+                            default:
+                                disp = temp.Key.ToString();
+                                break;
+                        }
                     }
-                }
-                else
-                    disp = temp.Key.ToString();
+                    else
+                        disp = temp.Key.ToString();
 
-                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), disp))
-                {
-                    type = temp.Key;
-                    clicked = true;
+                    if (temp.Value.purposes.Contains(BasePurpose.NANI))
+                    {
+                        disp = "[E] " + disp;
+                    }
+                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), disp))
+                    {
+                        type = temp.Key;
+                        clicked = true;
+                    }
+                    HoriPosOff += ButtonWidth;
                 }
-                HoriPosOff += ButtonWidth;
             }
             GUI.EndScrollView();
             scrolllSize = VertPosOff + 80;
@@ -279,48 +702,84 @@ namespace TAC_AI.Templates
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
 
+            BaseTemplate val = TempManager.ExternalEnemyTechsAll[index];
+            Tank tank = null;
 
-            BaseTemplate val = TempManager.ExternalEnemyTechs[index];
             if (val.purposes.Contains(BasePurpose.NotStationary))
             {
-                RawTechLoader.SpawnEnemyTechExt(GetPlayerPos(), -1, Vector3.forward, val);
+                tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, pop: true);
             }
             else
             {
-                RawTechLoader.SpawnEnemyTechExt(GetPlayerPos(), RawTechLoader.GetRandomEnemyBaseTeam(), Vector3.forward, val);
-                /*
-                if (val.purposes.Contains(BasePurpose.Defense))
-                    RawTechLoader.spa(GetPlayerPos(), -1, type, false);
-                if (val.purposes.Contains(BasePurpose.Headquarters))
+                if (InstantLoad)
                 {
-                    int extraBB = 0;
-                    SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                    if (TempManager.techBases.TryGetValue(type2, out _))
+                    if (val.purposes.Contains(BasePurpose.Defense))
+                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, false);
+                    else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
-                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.forward * 64), 90, type2, false);
+                        int team = RawTechLoader.GetRandomBaseTeam();
+                        /*
+                        int index2;
+                        BaseTemplate val2;
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() + (Vector3.forward * 64),  Vector3.forward, team, val2, false));
+
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() - (Vector3.forward * 64), Vector3.forward, team, val2, false));
+
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() + (Vector3.right * 64), Vector3.forward, team, val2, false));
+
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() - (Vector3.right * 64), Vector3.forward, team, val2, false));
+                        */
+                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), Vector3.forward, team, val, true);
+                        Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
-                    type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                    if (TempManager.techBases.TryGetValue(type2, out _))
-                    {
-                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.forward * 64), 90, type2, false);
-                    }
-                    type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                    if (TempManager.techBases.TryGetValue(type2, out _))
-                    {
-                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.right * 64), 90, type2, false);
-                    }
-                    type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                    if (TempManager.techBases.TryGetValue(type2, out _))
-                    {
-                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), 90, type2, false);
-                    }
-                    RawTechLoader.SpawnBase(GetPlayerPos(), 90, type, true, extraBB);
-                    Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+                    else
+                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(),GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, true);
                 }
                 else
-                    RawTechLoader.SpawnBase(GetPlayerPos(), -1, type, true);
-                */
+                {
+
+                    if (val.purposes.Contains(BasePurpose.Defense))
+                        RawTechLoader.SpawnBase(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, false);
+                    else if (val.purposes.Contains(BasePurpose.Headquarters))
+                    {
+                        int extraBB = 0;
+                        int team = RawTechLoader.GetRandomBaseTeam();
+                        /*
+                        int index2;
+                        BaseTemplate val2;
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.forward * 64),  Vector3.forward, team, val2, false);
+
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.forward * 64),  Vector3.forward, team, val2, false);
+
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.right * 64),  Vector3.forward, team, val2, false);
+
+                        index2 = RawTechLoader.GetExternalIndex(val.faction, BasePurpose.Defense, val.terrain);
+                        val2 = TempManager.ExternalEnemyTechs[index2];
+                        extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), Vector3.forward, team, val2, false);
+                        */
+                        RawTechLoader.SpawnBase(GetPlayerPos(), Vector3.forward, team, val, true, ExtraBB: extraBB);
+                        Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+                    }
+                    else
+                        tank = RawTechLoader.GetSpawnBase(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, true);
+                }
             }
+            if (tank)
+                RawTechLoader.ChargeAndClean(tank);
 
         }
         public static void SpawnTech(SpawnBaseTypes type)
@@ -329,49 +788,108 @@ namespace TAC_AI.Templates
 
             if (TempManager.techBases.TryGetValue(type, out BaseTemplate val))
             {
+                Tank tank = null;
                 if (val.purposes.Contains(BasePurpose.NotStationary))
                 {
-                    RawTechLoader.SpawnMobileTech(GetPlayerPos(), Vector3.forward, -1, type);
+                    tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), type, pop: true);
                 }
                 else
                 {
-                    if (val.purposes.Contains(BasePurpose.Defense))
-                        RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomEnemyBaseTeam(), type, false);
-                    else if (val.purposes.Contains(BasePurpose.Headquarters))
+                    if (InstantLoad)
                     {
-                        int team = RawTechLoader.GetRandomEnemyBaseTeam();
-                        int extraBB = 0;
-                        SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                        if (TempManager.techBases.TryGetValue(type2, out _))
+                        if (val.purposes.Contains(BasePurpose.Defense))
+                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), type, false);
+                        else if (val.purposes.Contains(BasePurpose.Headquarters))
                         {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.forward * 64), team, type2, false);
+                            int team = RawTechLoader.GetRandomBaseTeam();
+                            /*
+                            SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() + (Vector3.forward * 64), Vector3.forward, team, type2, false));
+                            }
+                            type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() - (Vector3.forward * 64), Vector3.forward, team, type2, false));
+                            }
+                            type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() + (Vector3.right * 64), Vector3.forward, team, type2, false));
+                            }
+                            type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                RawTechLoader.ChargeAndClean(RawTechLoader.SpawnBaseInstant(GetPlayerPos() - (Vector3.right * 64), Vector3.forward, team, type2, false));
+                            }*/
+                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), Vector3.forward, team, type, true);
+                            Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                         }
-                        type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                        if (TempManager.techBases.TryGetValue(type2, out _))
-                        {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.forward * 64), team, type2, false);
-                        }
-                        type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                        if (TempManager.techBases.TryGetValue(type2, out _))
-                        {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.right * 64), team, type2, false);
-                        }
-                        type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
-                        if (TempManager.techBases.TryGetValue(type2, out _))
-                        {
-                            extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), team, type2, false);
-                        }
-                        RawTechLoader.SpawnBase(GetPlayerPos(), team, type, true, extraBB);
-                        Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+                        else
+                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), type, true);
                     }
                     else
-                        RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomEnemyBaseTeam(), type, true);
+                    {
+                        if (val.purposes.Contains(BasePurpose.Defense))
+                            RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomBaseTeam(), type, false);
+                        else if (val.purposes.Contains(BasePurpose.Headquarters))
+                        {
+                            int team = RawTechLoader.GetRandomBaseTeam();
+                            int extraBB = 0;
+                            /*
+                            SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.forward * 64), team, type2, false);
+                            }
+                            type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.forward * 64), team, type2, false);
+                            }
+                            type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                extraBB += RawTechLoader.SpawnBase(GetPlayerPos() + (Vector3.right * 64), team, type2, false);
+                            }
+                            type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
+                            if (TempManager.techBases.TryGetValue(type2, out _))
+                            {
+                                extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), team, type2, false);
+                            }*/
+                            RawTechLoader.SpawnBase(GetPlayerPos(), team, type, true, extraBB);
+                            Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+                        }
+                        else
+                            RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomBaseTeam(), type, true);
+                    }
                 }
+                if (tank)
+                    RawTechLoader.ChargeAndClean(tank);
             }
 
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
         }
 
+        public static void RemoveAllEnemies()
+        {
+            try
+            {
+                int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
+                for (int step = 0; step < techCount; step++)
+                {
+                    Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
+                    if ((RawTechLoader.IsBaseTeam(tech.Team) || tech.Team == -1 || tech.Team == 1) && tech.visible.isActive && tech.name != "DPS Target")
+                    {
+                        SpecialAISpawner.Purge(tech);
+                        techCount--;
+                        step--;
+                    }
+                }
+            }
+            catch { }
+        }
 
         public static void LaunchSubMenuClickable()
         {
@@ -389,6 +907,7 @@ namespace TAC_AI.Templates
             {
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
+                KickStart.ReleaseControl(RawTechSpawnerID);
                 Debug.Log("TACtical_AI: Closed Raw Techs Debug menu!");
             }
         }
@@ -466,6 +985,11 @@ namespace TAC_AI.Templates
 
 
         // Utilities
+#if DEBUG
+        internal static bool ShowDebugNaviLines = true;
+#else
+        internal static bool ShowDebugNaviLines = false;
+#endif
         /// <summary>
         /// endPosGlobal is GLOBAL ROTATION in relation to local tech.
         /// </summary>
@@ -475,6 +999,8 @@ namespace TAC_AI.Templates
         /// <param name="color"></param>
         internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobal, Color color)
         {
+            if (!ShowDebugNaviLines || !IsCurrentlyEnabled)
+                return;
             GameObject gO;
             var line = obj.transform.Find("DebugLine " + num);
             if (!(bool)line)
@@ -501,13 +1027,15 @@ namespace TAC_AI.Templates
         }
         private static bool CheckValidMode()
         {
-            if (EnabledAllModes)
-                return true;
-            if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeMisc>() || (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeCoOpCreative>() && ManNetwork.IsHost))
+#if DEBUG
+            return true;
+#else
+            if (KickStart.enablePainMode && (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeMisc>() || (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeCoOpCreative>() && ManNetwork.IsHost)))
             {
                 return true;
             }
             return false;
+#endif
         }
         private static Vector3 GetPlayerPos()
         {
@@ -519,6 +1047,18 @@ namespace TAC_AI.Templates
             catch 
             {
                 return PlayerLoc + (Vector3.forward * 64);
+            }
+        }
+        private static Vector3 GetPlayerForward()
+        {
+            try
+            {
+                PlayerFow = Singleton.camera.transform.forward;
+                return PlayerFow;
+            }
+            catch
+            {
+                return PlayerFow;
             }
         }
 

@@ -30,7 +30,8 @@ namespace TAC_AI
         {
             TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
             TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
-            OnAttach();
+            if (TankBlock.IsAttached)
+                OnAttach();
         }
         public void OnAttach()
         {

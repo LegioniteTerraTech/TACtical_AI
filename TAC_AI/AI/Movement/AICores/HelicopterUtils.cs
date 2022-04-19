@@ -188,7 +188,7 @@ namespace TAC_AI.AI.Movement.AICores
             control.BoostControlProps = false;
             if (pilot.NoProps)
             {
-                if (pilot.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck, AIECore.Extremes(pilot.Tank.blockBounds.extents) * 2) && !pilot.Tank.beam.IsActive)
+                if (pilot.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck, pilot.Helper.lastTechExtents * 2) && !pilot.Tank.beam.IsActive)
                     control.BoostControlJets = true;
                 else
                     control.BoostControlJets = false;

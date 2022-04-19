@@ -8,11 +8,11 @@ using UnityEngine;
 
 namespace TAC_AI
 {
-    public class ReverseCache : Module
+    public class ReverseCache : MonoBehaviour
 	{   // For blocks edited externally - we need to destroy them from affecting the pool of related blocks
 
-		private static FieldInfo minerOp = typeof(ModuleItemProducer).GetField("m_OperationMode", BindingFlags.NonPublic | BindingFlags.Instance);
-		private static FieldInfo mineOut = typeof(ModuleItemProducer).GetField("m_CompatibleChunkTypes", BindingFlags.NonPublic | BindingFlags.Instance);
+		private static readonly FieldInfo minerOp = typeof(ModuleItemProducer).GetField("m_OperationMode", BindingFlags.NonPublic | BindingFlags.Instance),
+		    mineOut = typeof(ModuleItemProducer).GetField("m_CompatibleChunkTypes", BindingFlags.NonPublic | BindingFlags.Instance);
 
 		private bool cached = false;
 		private ChunkTypes[] chunks;
@@ -36,21 +36,13 @@ namespace TAC_AI
                     tank.FixupAnchors();
                     if (tank.IsAnchored)
                         tank.Anchors.UnanchorAll(true);
-                    if (tank.IsAnchored)
+                    if (!tank.IsAnchored)
                     {
                         Debug.Log("TACtical_AI: Anchor is being stubborn");
                         tank.TryToggleTechAnchor();
-                        tank.TryToggleTechAnchor();
-                        tank.TryToggleTechAnchor();
-                        tank.TryToggleTechAnchor();
-                        tank.TryToggleTechAnchor();
-                        if (tank.IsAnchored)
+                        if (!tank.IsAnchored)
                         {
                             Debug.Log("TACtical_AI: Anchor is being stubborn 2");
-                            tank.TryToggleTechAnchor();
-                            tank.TryToggleTechAnchor();
-                            tank.TryToggleTechAnchor();
-                            tank.TryToggleTechAnchor();
                             tank.TryToggleTechAnchor();
                         }
                     }
@@ -63,6 +55,7 @@ namespace TAC_AI
                         tank.Anchors.RetryAnchorOnBeam = true;
                         tank.TryToggleTechAnchor();
                     }
+                    GetComponent<TankBlock>().AttachEvent.Subscribe(LoadNow);
                 }
                 catch
                 {
@@ -76,7 +69,8 @@ namespace TAC_AI
 			minerOp.SetValue(GetComponent<ModuleItemProducer>(), flags);
 			//Debug.Log("TACtical_AI: Loaded " + name);
 			cached = false;
-			DestroyImmediate(this);
+            GetComponent<TankBlock>().AttachEvent.Unsubscribe(LoadNow);
+            DestroyImmediate(this);
 		}
     }
 }

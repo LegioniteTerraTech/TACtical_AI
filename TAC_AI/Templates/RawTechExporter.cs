@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Reflection;
 using UnityEngine;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Ionic.Zlib;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI;
 
@@ -35,6 +37,30 @@ namespace TAC_AI.Templates
         public int Cost = 0;
     }
 
+    public class DEVTypeEnumConverter : StringEnumConverter
+    {
+        public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+        {
+            if (value is BasePurpose)
+            {
+                writer.WriteValue(Enum.GetName(typeof(BasePurpose), (BasePurpose)value));
+                return;
+            }
+            else if (value is BaseTerrain)
+            {
+                writer.WriteValue(Enum.GetName(typeof(BaseTerrain), (BaseTerrain)value));
+                return;
+            }
+            else if (value is FactionTypesExt)
+            {
+                writer.WriteValue(Enum.GetName(typeof(FactionTypesExt), (FactionTypesExt)value));
+                return;
+            }
+
+            base.WriteJson(writer, value, serializer);
+        }
+    }
+
     public class RawTechExporter : MonoBehaviour
     {
         public static RawTechExporter inst;
@@ -50,13 +76,22 @@ namespace TAC_AI.Templates
         public static string BaseDirectory;
         public static string RawTechsDirectory;
 
+
+        public static JsonSerializerSettings JSONDEV = new JsonSerializerSettings
+        {
+            Converters = new List<JsonConverter> { new DEVTypeEnumConverter() },
+        };
+
+
         // AI Icons
         public static Dictionary<AIType, Sprite> aiIcons;
         public static Dictionary<EnemySmarts, Sprite> aiIconsEnemy;
         public static AIECore.TankAIHelper lastTech;
 
         private static bool firstInit = false;
+
         // GUI
+        private const int RawTechExporterID = 846321;
         public static void Initiate()
         {
             if (inst)
@@ -77,6 +112,8 @@ namespace TAC_AI.Templates
                 {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
                 {AIType.Assault,  LoadSprite("AI_Assault.png") },
                 {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
+                {AIType.Scrapper,  LoadSprite("AI_Scrapper.png") },
+                {AIType.Energizer,  LoadSprite("AI_Energizer.png") },
                 {AIType.Aviator,  LoadSprite("AI_Pilot.png") },
                 {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
                 {AIType.Astrotech,  LoadSprite("AI_Space.png") },
@@ -91,13 +128,14 @@ namespace TAC_AI.Templates
                 Debug.Log("TACtical_AI: FirstInit RawTechExporter");
             }
             inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
-            LateInitiate();
+            inst.Invoke("LateInitiate", 0.001f);
 #else
             if (SystemInfo.operatingSystemFamily == OperatingSystemFamily.MacOSX)
             {
                 up = "/";
             }
             inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
+            inst.Invoke("LateInitiate", 0.001f);
             if (!firstInit)
             {
                 GUIWindow = new GameObject();
@@ -112,6 +150,8 @@ namespace TAC_AI.Templates
                 {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
                 {AIType.Assault,  LoadSprite("AI_Assault.png") },
                 {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
+                {AIType.Scrapper,  LoadSprite("AI_Scrapper.png") },
+                {AIType.Energizer,  LoadSprite("AI_Energizer.png") },
                 {AIType.Aviator,  LoadSprite("AI_Pilot.png") },
                 {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
                 {AIType.Astrotech,  LoadSprite("AI_Space.png") },
@@ -147,18 +187,19 @@ namespace TAC_AI.Templates
             {
                 if (isOpen)
                 {
-                    HotWindow = GUI.Window(846321, HotWindow, GUIHandler, "<b>RAW Tech Saving</b>");
+                    HotWindow = GUI.Window(RawTechExporterID, HotWindow, GUIHandler, "<b>RAW Tech Saving</b>");
                 }
             }
         }
 
         private static bool isSubbed = false;
-        public static void LateInitiate()
+        public void LateInitiate()
         {
             if (!inst || isSubbed)
                 return;
             ManPauseGame.inst.PauseEvent.Subscribe(inst.UpdatePauseStatus);
             Debug.Log("TACtical_AI: RawTechExporter - Subscribing to Pause Screen");
+            AIERepair.ConstructModdedIDList();
             isSubbed = true;
             // Was causing way too many issues with enemies
             //Globals.inst.m_BlockSurvivalChance = KickStart.EnemyBlockDropChance / 100.0f;
@@ -184,27 +225,31 @@ namespace TAC_AI.Templates
             {
                 if (Input.GetKeyDown(KeyCode.E))
                 {
-                    float timeDelay = Time.time;
-                    Debug.Log("TACtical_AI: Reloading All Raw Enemy Techs!");
-                    AIERepair.ConstructErrorBlocksList();
-                    TempManager.ValidateAndAddAllExternalTechs();
-                    timeDelay = Time.time - timeDelay;
-                    Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+                    ReloadRawTechLoader();
                     if (!SpecialAISpawner.thisActive)
                         pendingInGameReload = true;
                 }
                 if (Input.GetKeyDown(KeyCode.B))
                 {
-                    Invoke("DelayedReloadRawTechLoader", 0);
+                    Invoke("ReloadRawTechLoaderInsured", 0);
                 }
             }
         }
-        public void DelayedReloadRawTechLoader()
+        public void ReloadRawTechLoaderInsured()
         {
             float timeDelay = Time.time;
             Debug.Log("TACtical_AI: Rebuilding Raw Tech Loader!");
             AIERepair.ConstructErrorBlocksList();
-            TempManager.ValidateAndAddAllExternalTechs();
+            TempManager.ValidateAndAddAllExternalTechs(true);
+            timeDelay = Time.time - timeDelay;
+            Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+        }
+        public void ReloadRawTechLoader()
+        {
+            float timeDelay = Time.time;
+            Debug.Log("TACtical_AI: Rebuilding Raw Tech Loader!");
+            AIERepair.ConstructErrorBlocksList();
+            TempManager.ValidateAndAddAllExternalTechs(true);
             timeDelay = Time.time - timeDelay;
             Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
         }
@@ -214,7 +259,7 @@ namespace TAC_AI.Templates
             {
                 float timeDelay = Time.time;
                 Debug.Log("TACtical_AI: Reloading All Raw Enemy Techs (Ingame)!");
-                TempManager.ValidateAndAddAllExternalTechs();
+                TempManager.ValidateAndAddAllExternalTechs(true);
                 timeDelay = Time.time - timeDelay;
                 Debug.Log("TACtical_AI: Done in " + timeDelay + " seconds");
                 pendingInGameReload = false;
@@ -240,14 +285,12 @@ namespace TAC_AI.Templates
             if (GUI.Button(new Rect(20, 70, 160, 40), new GUIContent("<b>+ ENEMY POP</b>", "Save current Tech to Raw Enemies pop in eLocal.")))
             {
                 SaveEnemyTechToRawJSON(Singleton.playerTank);
+                inst.ReloadRawTechLoader();
             }
             if (GUI.Button(new Rect(20, 110, 160, 40), new GUIContent("<b>+ ALL SNAPS</b>", snapsAvail ? "Save ALL snapshots to Raw Enemies pop in eBulk." : "Open the snapshots menu at least once first!")))
             {
                 SaveEnemyTechsToRawBLK();
-            }
-            if (GUI.Button(new Rect(20, 110, 160, 40), new GUIContent("<b>+ ALL SNAPS</b>", snapsAvail ? "Save ALL snapshots to Raw Enemies pop in eBulk." : "Open the snapshots menu at least once first!")))
-            {
-                SaveEnemyTechsToRawBLK();
+                inst.ReloadRawTechLoader();
             }
             GUI.Label(new Rect(20, 160, 150, 40), GUI.tooltip);
             GUI.DragWindow();
@@ -270,6 +313,7 @@ namespace TAC_AI.Templates
             {
                 isOpen = false;
                 GUIWindow.SetActive(false);
+                KickStart.ReleaseControl(RawTechExporterID);
                 //Debug.Log("TACtical_AI: Closed RawJSON menu");
             }
         }
@@ -302,15 +346,133 @@ namespace TAC_AI.Templates
             BaseDirectory = Navi.ToString();
             RawTechsDirectory = Navi.ToString() + up + "Raw Techs";
 
-            //Debug.Log("TACtical_AI: DLL folder is at: " + DLLDirectory);
-            //Debug.Log("TACtical_AI: Raw Techs is at: " + RawTechsDirectory);
             ValidateEnemyFolder();
         }
 
 
         // Operations
+        internal static int GetRawTechsCountExternalMods()
+        {
+#if STEAM
+            int count = 0;
+            string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
+
+            UnityEngine.Debug.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            foreach (string directoryLoc in Directory.GetDirectories(location))
+            {
+                try
+                {
+                    string GO;
+                    string fileName = "RawTechs.RTList";
+                    GO = directoryLoc + up + fileName;
+                    if (File.Exists(GO))
+                    {
+                        count++;
+                    }
+                    else
+                        break;
+                }
+                catch { }
+            }
+            return count;
+#else
+            return 0;
+#endif
+        }
+
+        internal static void MakeExternalRawTechListFile(string fileNameAndPath, List<BaseTemplate> content)
+        {
+            string toWrite = JsonConvert.SerializeObject(content, Formatting.None);
+            MakeExternalRawTechListFile(fileNameAndPath, toWrite);
+        }
+        internal static void MakeExternalRawTechListFile(string fileNameAndPath, string toWrite)
+        {
+            using (FileStream FS = File.Create(fileNameAndPath))
+            {
+                using (GZipStream GZS = new GZipStream(FS, CompressionMode.Compress))
+                {
+                    using (StreamWriter SW = new StreamWriter(GZS))
+                    {
+                        SW.WriteLine(toWrite);
+                        SW.Flush();
+                    }
+                }
+            }
+        }
+
+        internal static string LoadCommunityDeployedTechs(string location)
+        {
+            string toAdd = "";
+            //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            try
+            {
+                //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
+                if (File.Exists(location))
+                {
+                    using (FileStream FS = File.Open(location, FileMode.Open, FileAccess.Read))
+                    {
+                        using (GZipStream GZS = new GZipStream(FS, CompressionMode.Decompress))
+                        {
+                            using (StreamReader SR = new StreamReader(GZS))
+                            {
+                                toAdd = SR.ReadToEnd();
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            { Debug.Log("TACtical_AI: LoadCommunityDeployedTechs - ERROR " + e);}
+            if (!toAdd.NullOrEmpty())
+                Debug.Log("TACtical_AI: LoadCommunityDeployedTechs - Added Techs");
+            else
+                Debug.Log("TACtical_AI: LoadCommunityDeployedTechs - No bundled techs found");
+            return toAdd;
+        }
+
+        internal static List<BaseTemplate> LoadAllEnemyTechsExternalMods()
+        {
+#if STEAM
+            List<BaseTemplate> toAdd = new List<BaseTemplate>();
+            string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
+
+            //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            foreach (string directoryLoc in Directory.GetDirectories(location))
+            {
+                try
+                {
+                    string fileName = "RawTechs.RTList";
+                    string GO = directoryLoc + up + fileName;
+                    //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
+                    if (File.Exists(GO))
+                    {
+                        using (FileStream FS = File.Open(GO, FileMode.Open, FileAccess.Read))
+                        {
+                            using (GZipStream GZS = new GZipStream(FS, CompressionMode.Decompress))
+                            {
+                                using (StreamReader SR = new StreamReader(GZS))
+                                {
+                                    List<BaseTemplate> ext = JsonConvert.DeserializeObject<List<BaseTemplate>>(SR.ReadToEnd());
+                                    toAdd.AddRange(ext);
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception e) { Debug.Log("TACtical_AI: LoadAllEnemyTechsExternalMods - ERROR " + e); }
+            }
+            if (toAdd.Count > 0)
+                Debug.Log("TACtical_AI: LoadAllEnemyTechsExternalMods - Added " + toAdd.Count + " techs from mods");
+            else
+                Debug.Log("TACtical_AI: LoadAllEnemyTechsExternalMods - No bundled techs found");
+            return toAdd;
+#else
+            return new List<BaseTemplate>();
+#endif
+        }
         public static List<BaseTemplate> LoadAllEnemyTechs()
         {
+            ValidateEnemyFolder();
             List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
             List<BaseTemplate> temps = new List<BaseTemplate>();
             List<string> names;
@@ -325,13 +487,14 @@ namespace TAC_AI.Templates
                     try
                     {
                         BuilderExternal ext = LoadEnemyTech(name, Dir);
-                        errorLevel++;
-                        BaseTemplate temp = new BaseTemplate();
-
-                        temp.techName = ext.Name;
-                        temp.savedTech = ext.Blueprint;
-                        temp.startingFunds = ValidateCost(ext.Blueprint, ext.Cost);
-                        errorLevel++;
+                        errorLevel++; // 1
+                        BaseTemplate temp = new BaseTemplate
+                        {
+                            techName = ext.Name,
+                            savedTech = ext.Blueprint,
+                            startingFunds = ValidateCost(ext.Blueprint, ext.Cost)
+                        };
+                        errorLevel++; // 2
                         FactionTypesExt MainCorp;
                         if (ext.Faction == FactionTypesExt.NULL)
                         {
@@ -339,7 +502,7 @@ namespace TAC_AI.Templates
                         }
                         else
                             MainCorp = ext.Faction;
-                        errorLevel++;
+                        errorLevel++; // 3
                         temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                         temp.IntendedGrade = minCorpGrade;
                         temp.faction = MainCorp;
@@ -348,9 +511,9 @@ namespace TAC_AI.Templates
                         temps.Add(temp);
                         Debug.Log("TACtical_AI: Added " + name + " to the RAW Enemy Tech Pool, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        Debug.Log("TACtical_AI: Could not add " + name + " to the RAW Enemy Tech Pool!  Corrupted BuilderExternal(Or tech too small)!! - Error Level " + errorLevel);
+                        Debug.Log("TACtical_AI: Could not add " + name + " to the RAW Enemy Tech Pool!  Corrupted BuilderExternal(Or tech too small)!! - Error Level " + errorLevel + " ERROR " + e);
                     }
                 }
             }
@@ -413,7 +576,7 @@ namespace TAC_AI.Templates
             }
             return Cleaned;
         }
-        private static bool GetNameJSON(string FolderDirectory, out string output, bool excludeJSON)
+        internal static bool GetNameJSON(string FolderDirectory, out string output, bool excludeJSON)
         {
             StringBuilder final = new StringBuilder();
             foreach (char ch in FolderDirectory)
@@ -441,7 +604,7 @@ namespace TAC_AI.Templates
             output = final.ToString();
             return true;
         }
-        private static FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance); 
+        private static readonly FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance); 
         
         public static List<BasePurpose> GetHandler(string blueprint, FactionTypesExt factionType, bool Anchored, out BaseTerrain terra, out int minCorpGrade)
         {
@@ -526,12 +689,15 @@ namespace TAC_AI.Templates
                             var recipeCase = bloc.GetComponent<ModuleRecipeProvider>();
                             if ((bool)recipeCase)
                             {
-                                List<RecipeTable.RecipeList> matters = (List<RecipeTable.RecipeList>)recipeCase.GetEnumerator();
-                                foreach (RecipeTable.RecipeList matter in matters)
-                                { 
-                                    if (matter.m_Name != "rawresources" && matter.m_Name != "gsodelicannon")
+                                using (IEnumerator<RecipeTable.RecipeList> matters = recipeCase.GetEnumerator())
+                                {
+                                    while (matters.MoveNext())
                                     {
-                                        NotMP = true;
+                                        RecipeTable.RecipeList matter = matters.Current;
+                                        if (matter.m_Name != "rawresources" && matter.m_Name != "gsodelicannon")
+                                        {
+                                            NotMP = true;
+                                        }
                                     }
                                 }
                             }
@@ -585,19 +751,6 @@ namespace TAC_AI.Templates
 
                 try
                 {
-                    /*
-                    BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
-                    int gradeM = blockList.GetMaxGrade(factionType);
-                    for (int step = 0; step > gradeM; step++)
-                    {
-                        if (blockList.GetInitialBlocksInTier(step, factionType).Contains(type))
-                        {
-                            if (step > minCorpGrade)
-                                minCorpGrade = step;
-                            break;
-                        }
-                    }*/
-
                     int tier = Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetBlockTier(type, true);
                     if (KickStart.GetCorpExtended(type) == factionType)
                     {
@@ -693,7 +846,7 @@ namespace TAC_AI.Templates
                 {
                     purposesList += purp.ToString() + "|";
                 }
-                Debug.Log("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
+                Debug.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
 
                 //Debug.Log("TACtical_AI: Purposes: Anchored (static)");
                 return purposes;
@@ -722,7 +875,7 @@ namespace TAC_AI.Templates
             if (!Anchored)
                 purposes.Add(BasePurpose.NotStationary);
 
-            if (mems.Count >= KickStart.LethalTechSize || modGunCount > 48 || modHoverCount > 18)
+            if (mems.Count >= AIGlobals.LethalTechSize || modGunCount > 48 || modHoverCount > 18)
             {
                 purposes.Add(BasePurpose.NANI);
             }
@@ -736,9 +889,263 @@ namespace TAC_AI.Templates
                 }
             }
 
-            Debug.Log("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList);
+            Debug.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList);
 
             return purposes;
+        }
+        public static BaseTerrain GetBaseTerrain(TechData tech, bool Anchored)
+        {
+            List<TankBlock> blocs = new List<TankBlock>();
+            List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(BlockSpecToJSONExternal(tech.m_BlockSpecs, out _, out _, out _, out _));
+            if (mems.Count < 1)
+            {
+                Debug.Log("TACtical_AI: TECH IS NULL!  SKIPPING!");
+                return BaseTerrain.Land;
+            }
+
+            List<BasePurpose> purposes = new List<BasePurpose>();
+            //foreach (BlockMemory mem in mems)
+            //{
+            //    blocs.Add(Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)));
+            //}
+
+            bool isFlying = false;
+            bool isFlyingDirectionForwards = true;
+
+            Vector3 biasDirection = Vector3.zero;
+            Vector3 boostBiasDirection = Vector3.zero;
+
+            int FoilCount = 0;
+            int MovingFoilCount = 0;
+
+            int modControlCount = 0;
+            int modCollectCount = 0;
+            int modEXPLODECount = 0;
+            int modBoostCount = 0;
+            int modHoverCount = 0;
+            int modGyroCount = 0;
+            int modWheelCount = 0;
+            int modAGCount = 0;
+            int modDangerCount = 0;
+            int modGunCount = 0;
+            int modDrillCount = 0;
+            bool NotMP = false;
+            bool hasAutominer = false;
+            bool hasReceiver = false;
+            bool hasBaseFunction = false;
+
+            //BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
+            //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
+            foreach (BlockMemory blocRaw in mems)
+            {
+                BlockTypes type = AIERepair.StringToBlockType(blocRaw.t);
+                TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
+                if (bloc.IsNull())
+                    continue;
+                ModuleItemPickup rec = bloc.GetComponent<ModuleItemPickup>();
+                if ((bool)rec)
+                {
+                    hasReceiver = true;
+                }
+                if (bloc.GetComponent<ModuleItemProducer>())
+                {
+                    hasAutominer = true;
+                    NotMP = true;
+                }
+                if (bloc.GetComponent<ModuleItemConveyor>())
+                {
+                    NotMP = true;
+                }
+                if (bloc.GetComponent<ModuleItemConsume>())
+                {
+                    hasBaseFunction = true;
+                    switch (type)
+                    {
+                        case BlockTypes.GSODeliCannon_221:
+                        case BlockTypes.GSODeliCannon_222:
+                        case BlockTypes.GCDeliveryCannon_464:
+                        case BlockTypes.VENDeliCannon_221:
+                        case BlockTypes.HE_DeliveryCannon_353:
+                        case BlockTypes.BF_DeliveryCannon_122:
+                            break;
+                        default:
+                            var recipeCase = bloc.GetComponent<ModuleRecipeProvider>();
+                            if ((bool)recipeCase)
+                            {
+                                List<RecipeTable.RecipeList> matters = (List<RecipeTable.RecipeList>)recipeCase.GetEnumerator();
+                                foreach (RecipeTable.RecipeList matter in matters)
+                                {
+                                    if (matter.m_Name != "rawresources" && matter.m_Name != "gsodelicannon")
+                                    {
+                                        NotMP = true;
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
+
+
+                if (bloc.GetComponent<ModuleTechController>())
+                    modControlCount++;
+                if (bloc.GetComponent<ModuleTechController>())
+                    modControlCount++;
+                if (bloc.GetComponent<ModuleItemHolder>())
+                    modCollectCount++;
+                if (bloc.GetComponent<ModuleDetachableLink>())
+                    modEXPLODECount++;
+                if (bloc.GetComponent<ModuleBooster>())
+                {
+                    var module = bloc.GetComponent<ModuleBooster>();
+                    List<FanJet> jets = module.GetComponentsInChildren<FanJet>().ToList();
+                    foreach (FanJet jet in jets)
+                    {
+                        if (jet.spinDelta <= 10)
+                        {
+                            Quaternion quat = new OrthoRotation(blocRaw.r);
+                            biasDirection -= quat * (jet.EffectorForwards * jet.force);
+                        }
+                    }
+                    List<BoosterJet> boosts = module.GetComponentsInChildren<BoosterJet>().ToList();
+                    foreach (BoosterJet boost in boosts)
+                    {
+                        //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
+                        boostBiasDirection -= boost.LocalBoostDirection * (float)forceVal.GetValue(boost);
+                    }
+                    modBoostCount++;
+                }
+                if (bloc.GetComponent<ModuleHover>())
+                    modHoverCount++;
+                if (bloc.GetComponent<ModuleGyro>())
+                    modGyroCount++;
+                if (bloc.GetComponent<ModuleWheels>())
+                    modWheelCount++;
+                if (bloc.GetComponent<ModuleAntiGravityEngine>())
+                    modAGCount++;
+                if (bloc.GetComponent<ModuleWeapon>())
+                    modDangerCount++;
+                if (bloc.GetComponent<ModuleWeaponGun>())
+                    modGunCount++;
+                if (bloc.GetComponent<ModuleDrill>())
+                    modDrillCount++;
+
+
+                if (bloc.GetComponent<ModuleWing>())
+                {
+                    //Get the slowest spooling one
+                    List<ModuleWing.Aerofoil> foils = bloc.GetComponent<ModuleWing>().m_Aerofoils.ToList();
+                    FoilCount += foils.Count();
+                    foreach (ModuleWing.Aerofoil Afoil in foils)
+                    {
+                        if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
+                            MovingFoilCount++;
+                    }
+                }
+                blocs.Add(bloc);
+            }
+            bool isDef = true;
+            if (modEXPLODECount > 0)
+            {
+                purposes.Add(BasePurpose.TechProduction);
+                isDef = false;
+            }
+            if (modCollectCount > 0 || hasBaseFunction)
+            {
+                purposes.Add(BasePurpose.Harvesting);
+                isDef = false;
+            }
+            if (NotMP)
+                purposes.Add(BasePurpose.MPUnsafe);
+            if (Anchored)
+            {
+                if (hasReceiver)
+                {
+                    purposes.Add(BasePurpose.HasReceivers);
+                    isDef = false;
+                }
+                if (hasAutominer)
+                {
+                    purposes.Add(BasePurpose.Autominer);
+                    isDef = false;
+                }
+                if (isDef)
+                    purposes.Add(BasePurpose.Defense);
+            }
+
+
+            boostBiasDirection.Normalize();
+            biasDirection.Normalize();
+
+            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (boostBiasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+            else if (biasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (biasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+
+            if (modDangerCount <= modControlCount)
+                purposes.Add(BasePurpose.NoWeapons);
+
+            BaseTerrain terra = BaseTerrain.Land;
+            string purposesList;
+            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
+            {
+                purposesList = "";
+                foreach (BasePurpose purp in purposes)
+                {
+                    purposesList += purp.ToString() + "|";
+                }
+                Debug.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
+
+                return BaseTerrain.Land;
+            }
+            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
+            {   //Starship
+                terra = BaseTerrain.Space;
+            }
+            else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
+            {   // Airplane
+                terra = BaseTerrain.Air;
+            }
+            else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
+            {   // Chopper
+                terra = BaseTerrain.Air;
+            }
+            else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
+            {   // Naval
+                terra = BaseTerrain.Sea;
+            }
+            else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
+            {   // Melee
+                terra = BaseTerrain.AnyNonSea;
+            }
+
+            if (!Anchored)
+                purposes.Add(BasePurpose.NotStationary);
+
+            if (mems.Count >= AIGlobals.LethalTechSize || modGunCount > 48 || modHoverCount > 18)
+            {
+                purposes.Add(BasePurpose.NANI);
+            }
+
+            if (purposes.Count > 0)
+            {
+                purposesList = "";
+                foreach (BasePurpose purp in purposes)
+                {
+                    purposesList += purp.ToString() + "|";
+                }
+            }
+
+            Debug.Info("TACtical_AI: Terrain: " + terra.ToString());
+
+            return terra;
         }
         public static int ValidateCost(string blueprint, int ExistingCost)
         {
@@ -753,7 +1160,7 @@ namespace TAC_AI.Templates
             return ExistingCost;
         }
 
-        private static void ValidateEnemyFolder()
+        internal static void ValidateEnemyFolder()
         {
             string destination = RawTechsDirectory + up + "Enemies";
             if (!Directory.Exists(RawTechsDirectory))
@@ -836,29 +1243,33 @@ namespace TAC_AI.Templates
         // JSON Handlers
         public static void SaveTechToRawJSON(Tank tank)
         {
-            BuilderExternal builder = new BuilderExternal();
-            builder.Name = tank.name;
-            builder.Faction = tank.GetMainCorpExt();//GetTopCorp(tank);
-            builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
-            builder.InfBlocks = false;
-            builder.IsAnchored = tank.IsAnchored;
-            builder.NonAggressive = !IsLethal(tank);
-            builder.Eradicator = tank.blockman.IterateBlocks().Count() >= KickStart.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18;
-            builder.Cost = GetBBCost(tank);
+            BuilderExternal builder = new BuilderExternal
+            {
+                Name = tank.name,
+                Faction = tank.GetMainCorpExt(),//GetTopCorp(tank);
+                Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank),
+                InfBlocks = false,
+                IsAnchored = tank.IsAnchored,
+                NonAggressive = !IsLethal(tank),
+                Eradicator = tank.blockman.blockCount >= AIGlobals.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18,
+                Cost = GetBBCost(tank)
+            };
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveTechToFile(tank.name, builderJSON);
         }
         public static void SaveEnemyTechToRawJSON(Tank tank)
         {
-            BuilderExternal builder = new BuilderExternal();
-            builder.Name = tank.name;
-            builder.Faction = tank.GetMainCorpExt();
-            builder.Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank);
-            builder.InfBlocks = false;
-            builder.IsAnchored = tank.IsAnchored;
-            builder.NonAggressive = !IsLethal(tank);
-            builder.Eradicator = tank.blockman.IterateBlocks().Count() >= KickStart.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18;
-            builder.Cost = GetBBCost(tank);
+            BuilderExternal builder = new BuilderExternal
+            {
+                Name = tank.name,
+                Faction = tank.GetMainCorpExt(),
+                Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank),
+                InfBlocks = false,
+                IsAnchored = tank.IsAnchored,
+                NonAggressive = !IsLethal(tank),
+                Eradicator = tank.blockman.blockCount >= AIGlobals.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18,
+                Cost = GetBBCost(tank)
+            };
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveEnemyTechToFile(tank.name, builderJSON);
             ReloadExternal();
@@ -873,7 +1284,7 @@ namespace TAC_AI.Templates
             builder.InfBlocks = false;
             builder.IsAnchored = tank.CheckIsAnchored();
             builder.NonAggressive = lethal;
-            builder.Eradicator = blockCount >= KickStart.LethalTechSize || weapGCount > 48 || hoveCount > 18;
+            builder.Eradicator = blockCount >= AIGlobals.LethalTechSize || weapGCount > 48 || hoveCount > 18;
             builder.Cost = tank.GetValue();
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveEnemyTechToFileBLK(tank.Name, builderJSON);
@@ -886,6 +1297,11 @@ namespace TAC_AI.Templates
         internal static BuilderExternal LoadEnemyTech(string TechName, string altDirect = "")
         {
             string loaded = LoadEnemyTechFromFile(TechName, altDirect);
+            return JsonUtility.FromJson<BuilderExternal>(loaded);
+        }
+        internal static BuilderExternal SearchAndLoadEnemyTech(string TechName)
+        {
+            string loaded = FindAndLoadEnemyTechFromFile(TechName);
             return JsonUtility.FromJson<BuilderExternal>(loaded);
         }
         internal static int GetBBCost(ManSaveGame.StoredTech tech)
@@ -966,20 +1382,20 @@ namespace TAC_AI.Templates
                 if (File.Exists(destination + up + TechName + ".JSON"))
                 {
                     output = File.ReadAllText(destination + up + TechName + ".JSON");
-                    Debug.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                    Debug.Info("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
                 }
                 else
                 {
                     output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
-                    Debug.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                    Debug.Info("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                 }
                 return output;
             }
             catch
             {
-                Debug.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                Debug.LogError("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
 
-                Debug.Log("TACtical_AI: Attempted directory - |" + destination + up + TechName + ".JSON");
+                Debug.LogDevOnly("TACtical_AI: Attempted directory - |" + destination + up + TechName + ".JSON");
                 return null;
             }
         }
@@ -988,7 +1404,7 @@ namespace TAC_AI.Templates
             string destination = RawTechsDirectory + up + "Enemies" + up + "eLocal";
             if (!Directory.Exists(RawTechsDirectory))
             {
-                Debug.Log("TACtical_AI: Generating Raw Techs folder.");
+                Debug.Info("TACtical_AI: Generating Raw Techs folder.");
                 try
                 {
                     Directory.CreateDirectory(RawTechsDirectory);
@@ -1003,7 +1419,7 @@ namespace TAC_AI.Templates
             }
             if (!Directory.Exists(RawTechsDirectory + up + "Enemies"))
             {
-                Debug.Log("TACtical_AI: Generating Enemies folder.");
+                Debug.Info("TACtical_AI: Generating Enemies folder.");
                 try
                 {
                     Directory.CreateDirectory(RawTechsDirectory + up + "Enemies");
@@ -1018,7 +1434,7 @@ namespace TAC_AI.Templates
             }
             if (!Directory.Exists(destination))
             {
-                Debug.Log("TACtical_AI: Generating eLocal folder.");
+                Debug.Info("TACtical_AI: Generating eLocal folder.");
                 try
                 {
                     Directory.CreateDirectory(destination);
@@ -1109,7 +1525,7 @@ namespace TAC_AI.Templates
                 destination = RawTechsDirectory + up + "Enemies";
                 if (!Directory.Exists(RawTechsDirectory))
                 {
-                    Debug.Log("TACtical_AI: Generating Raw Techs folder.");
+                    Debug.Info("TACtical_AI: Generating Raw Techs folder.");
                     try
                     {
                         Directory.CreateDirectory(RawTechsDirectory);
@@ -1124,7 +1540,7 @@ namespace TAC_AI.Templates
                 }
                 if (!Directory.Exists(destination))
                 {
-                    Debug.Log("TACtical_AI: Generating Enemies folder.");
+                    Debug.Info("TACtical_AI: Generating Enemies folder.");
                     try
                     {
                         Directory.CreateDirectory(destination);
@@ -1181,10 +1597,68 @@ namespace TAC_AI.Templates
                 return null;
             }
         }
+        private static string FindAndLoadEnemyTechFromFile(string TechName)
+        {
+            string destination;
+            destination = RawTechsDirectory + up + "Enemies";
+            if (!Directory.Exists(RawTechsDirectory))
+            {
+                Debug.Info("TACtical_AI: Generating Raw Techs folder.");
+                try
+                {
+                    Directory.CreateDirectory(RawTechsDirectory);
+                    Debug.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    return null;
+                }
+
+            }
+            if (!Directory.Exists(destination))
+            {
+                Debug.Info("TACtical_AI: Generating Enemies folder.");
+                try
+                {
+                    Directory.CreateDirectory(destination);
+                    Debug.Log("TACtical_AI: Made new Enemies folder successfully.");
+                }
+                catch
+                {
+                    Debug.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    return null;
+                }
+
+            }
+            try
+            {
+                List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
+                List<BaseTemplate> temps = new List<BaseTemplate>();
+                List<string> names;
+                Debug.Info("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
+                foreach (string Dir in Dirs)
+                {
+                    names = GetTechNameListDir(Dir);
+                    if (names.Contains(TechName))
+                    {
+                        return LoadEnemyTechFromFile(TechName, Dir);
+                    }
+                }
+                return null;
+            }
+            catch
+            {
+                Debug.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                return null;
+            }
+
+        }
+
 
         // Logless block loader
         private static Dictionary<string, int> ModdedBlocksGrabbed;
-        private static FieldInfo allModdedBlocks = typeof(ManMods).GetField("m_BlockIDReverseLookup", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo allModdedBlocks = typeof(ManMods).GetField("m_BlockIDReverseLookup", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void PrepareModdedBlocksSearch()
         {
             ModdedBlocksGrabbed = (Dictionary<string, int>)allModdedBlocks.GetValue(Singleton.Manager<ManMods>.inst);
@@ -1209,23 +1683,38 @@ namespace TAC_AI.Templates
             lethal = false;
             if (specs.Count == 0)
                 return null;
+            bool invalidBlocks = false;
             List<BlockMemory> mem = new List<BlockMemory>();
             foreach (TankPreset.BlockSpec spec in specs)
             {
-                BlockMemory mem1 = new BlockMemory();
-                mem1.t = spec.block;
-                mem1.p = spec.position;
-                mem1.r = new OrthoRotation(spec.orthoRotation).rot;
+                BlockMemory mem1 = new BlockMemory
+                {
+                    t = spec.block,
+                    p = spec.position,
+                    r = new OrthoRotation(spec.orthoRotation).rot
+                };
 
-                TankBlock block = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(spec.GetBlockType());
-                if (block.GetComponent<ModuleHover>())
-                    hoveCount++;
-                if (block.GetComponent<ModuleWeapon>())
-                    weapCount++;
-                if (block.GetComponent<ModuleWeaponGun>())
-                    weapGCount++;
-                if (block.GetComponent<ModuleTechController>())
-                    ctrlCount++;
+                try
+                {
+                    TankBlock block = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(spec.GetBlockType());
+                    if (block != null)
+                    {
+                        if (block.GetComponent<ModuleHover>())
+                            hoveCount++;
+                        if (block.GetComponent<ModuleWeapon>())
+                            weapCount++;
+                        if (block.GetComponent<ModuleWeaponGun>())
+                            weapGCount++;
+                        if (block.GetComponent<ModuleTechController>())
+                            ctrlCount++;
+                    }
+                    else
+                        invalidBlocks = true;
+                }
+                catch
+                {
+                    invalidBlocks = true;
+                }
                 mem.Add(mem1);
             }
 
@@ -1251,6 +1740,10 @@ namespace TAC_AI.Templates
                     JSONTech.Append(ch);
             }
             //Debug.Log("TACtical_AI: " + JSONTech.ToString());
+
+            if (invalidBlocks)
+                Debug.Log("TACtical_AI: Invalid blocks in TechData");
+
             return JSONTech.ToString();
         }
         private static Sprite LoadSprite(string pngName)

@@ -9,23 +9,63 @@ namespace TAC_AI.AI.Enemy
     // Sets up all important AI statistics based on AI core
     internal static class RWeapSetup
     {
-        private static FieldInfo deals = typeof(WeaponRound).GetField("m_Damage", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static FieldInfo bDPS = typeof(BeamWeapon).GetField("m_DamagePerSecond", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static FieldInfo burn = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo deals = typeof(WeaponRound).GetField("m_Damage", BindingFlags.NonPublic | BindingFlags.Instance),
+            bDPS = typeof(BeamWeapon).GetField("m_DamagePerSecond", BindingFlags.NonPublic | BindingFlags.Instance),
+            burn = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        private const int SmolTechThreshold = 24;
-        private const int EradDamage = 1750;
+        // Bully-like
+        private const int OHKOCapableDamage = 1750;
 
+        // Spyper AI
         private const int SnipeVelo = 140;
         private const int RangedRange = 75;
 
+        // Circle AI
         private const int CircleRange = 170;
         private const int MinCircleSpeed = 140;
+
+        public static bool HasArtilleryWeapon(BlockManager BM)
+        {
+            FireData FD;
+            foreach (var item in BM.IterateBlockComponents<ModuleWeaponGun>())
+            {
+                FD = item.GetComponent<FireData>();
+                if ((int)item.GetComponent<TankBlock>().BlockType > Enum.GetValues(typeof(BlockTypes)).Length)
+                {
+                    if (FD && FD.m_MuzzleVelocity >= SnipeVelo)
+                    {
+                        var bullet = FD.m_BulletPrefab;
+                        if (bullet)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    switch (item.GetComponent<TankBlock>().BlockType)
+                    {
+                        case BlockTypes.GSOMegatonLong_242:
+                        case BlockTypes.GSOBigBertha_845:
+                        //case BlockTypes.VENRPGLauncher_122: // More of a kiting weapon
+                        case BlockTypes.HE_Mortar_232:
+                        case BlockTypes.HE_Cannon_Naval_826:
+                        case BlockTypes.HE_Cruise_Missile_51_121:
+                        case BlockTypes.HE_CannonBattleship_216:
+                        case BlockTypes.BF_MissilePod_323:
+                        case BlockTypes.EXP_Cannon_Repulsor_444:
+                        case BlockTypes.EXP_MissilePod_424:
+                            return true;
+                    }
+                }
+            }
+            return false;
+        }
 
         public static EnemyAttack GetAttackStrat(Tank tank, EnemyMind mind)
         {
             bool smolTech = false;
-            if (KickStart.isTweakTechPresent && tank.blockman.IterateBlocks().Count() <= SmolTechThreshold)
+            if (KickStart.isTweakTechPresent && tank.blockman.blockCount <= AIGlobals.SmolTechBlockThreshold)
             {   // Small Techs should play it mobile
                 smolTech = true;
             }
@@ -71,7 +111,7 @@ namespace TAC_AI.AI.Enemy
                         var round = fD.m_BulletPrefab.GetComponent<WeaponRound>();
                         if ((bool)round)
                         {
-                            if ((int)deals.GetValue(round) >= EradDamage)
+                            if ((int)deals.GetValue(round) >= OHKOCapableDamage)
                                 strongWeaps++;
                         }
                         var fDS = weap.GetComponent<FireDataShotgun>();
@@ -120,7 +160,7 @@ namespace TAC_AI.AI.Enemy
                     var fDL = weap.GetComponentInChildren<BeamWeapon>();
                     if ((bool)fDL)
                     {
-                        if ((int)bDPS.GetValue(fDL) >= EradDamage)
+                        if ((int)bDPS.GetValue(fDL) >= OHKOCapableDamage)
                             strongWeaps++;
                         if (fDL.Range > RangedRange)
                             rangedWeaps++;

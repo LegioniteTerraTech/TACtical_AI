@@ -321,7 +321,7 @@ namespace TAC_AI.AI
                     }
                 }
             }
-            if (AIECore.Extremes(Tank.blockBounds.size) > 18)
+            if (Helper.lastTechExtents > 18)
                 LargeAircraft = true;
             else
                 LargeAircraft = false;
@@ -368,12 +368,12 @@ namespace TAC_AI.AI
 
             this.TestForMayday(thisInst, tank);
 
-            if (thisInst.AIState == 1)
+            if (thisInst.AIState == AIAlignment.Player)
             {
                 this.ForcePitchUp = false;
                 if (this.Grounded)
                 {   //Become a ground vehicle for now
-                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
                     {
                         return;
                     }
@@ -383,7 +383,7 @@ namespace TAC_AI.AI
                 thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
                 this.AICore.DriveDirector();
             }
-            else if (thisInst.AIState == 2) //enemy
+            else if (thisInst.AIState == AIAlignment.NonPlayerTech) //enemy
             {
                 Enemy.EnemyMind mind = tank.GetComponent<Enemy.EnemyMind>();
                 if (!this.TargetGrounded)
@@ -406,12 +406,12 @@ namespace TAC_AI.AI
 
             this.TestForMayday(thisInst, tank);
 
-            if (thisInst.AIState == 1)
+            if (thisInst.AIState == AIAlignment.Player)
             {
                 this.ForcePitchUp = false;
                 if (this.Grounded)
                 {   //Become a ground vehicle for now
-                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
                     {
                         return;
                     }
@@ -421,7 +421,7 @@ namespace TAC_AI.AI
                 thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.RTSDestination, thisInst);
                 this.AICore.DriveDirectorRTS();
             }
-            else if (thisInst.AIState == 2) //enemy
+            else if (thisInst.AIState == AIAlignment.NonPlayerTech) //enemy
             {
                 Enemy.EnemyMind mind = tank.GetComponent<Enemy.EnemyMind>();
                 if (!this.TargetGrounded)
@@ -544,7 +544,7 @@ namespace TAC_AI.AI
                 {
                     if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(this.Tank.rbody.velocity).z < AIControllerAir.Stallspeed + 5 && !this.Tank.beam.IsActive)
                         control3D.m_State.m_BoostJets = true;
-                    else if (this.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(this.Tank.boundsCentreWorldNoCheck, AIECore.Extremes(this.Tank.blockBounds.extents) * 2) && !this.Tank.beam.IsActive)
+                    else if (this.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(this.Tank.boundsCentreWorldNoCheck, this.Helper.lastTechExtents * 2) && !this.Tank.beam.IsActive)
                         control3D.m_State.m_BoostJets = true;
                     else
                         control3D.m_State.m_BoostJets = thisInst.BOOST;

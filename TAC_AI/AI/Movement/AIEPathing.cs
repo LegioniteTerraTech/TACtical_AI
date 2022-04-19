@@ -51,7 +51,7 @@ namespace TAC_AI.AI.Movement
             Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
-        public static Vector3 ObstDodgeOffset(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
+        public static Vector3 ObstDodgeOffset(Tank tank, AIECore.TankAIHelper thisInst, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
         {
             worked = false;
             if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
@@ -115,6 +115,13 @@ namespace TAC_AI.AI.Movement
             return Offset;
         }
 
+        /// <summary>
+        /// For inverted output
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <param name="thisInst"></param>
+        /// <param name="vis"></param>
+        /// <returns></returns>
         public static Vector3 ObstDir(Tank tank, AIECore.TankAIHelper thisInst, Visible vis)
         {
             //What actually does the avoidence
@@ -123,7 +130,7 @@ namespace TAC_AI.AI.Movement
             Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
             return Final;
         }
-        public static Vector3 ObstDodgeOffsetInv(Tank tank, AIECore.TankAIHelper thisInst, Vector3 targetIn, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
+        public static Vector3 ObstDodgeOffsetInv(Tank tank, AIECore.TankAIHelper thisInst, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
         {
             worked = false;
             if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
@@ -337,7 +344,7 @@ namespace TAC_AI.AI.Movement
                     List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
                     for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(AlliesAlt.ElementAt(stepper).blockBounds.extents);
+                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AlliesAlt.ElementAt(stepper).GetCheapBounds();
                         if (bestValue > temp && temp >= 1)
                         {
                             bestValue = temp;
@@ -351,7 +358,7 @@ namespace TAC_AI.AI.Movement
                 {
                     for (int stepper = 0; Allies.Count > stepper; stepper++)
                     {
-                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
+                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - Allies.ElementAt(stepper).GetCheapBounds();
                         if (bestValue > temp && temp >= 1)
                         {
                             bestValue = temp;
@@ -455,7 +462,7 @@ namespace TAC_AI.AI.Movement
                     List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
                     for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                     {
-                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(AlliesAlt.ElementAt(stepper).blockBounds.extents);
+                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AlliesAlt.ElementAt(stepper).GetCheapBounds();
                         if (bestValue > temp && temp != 0)
                         {
                             auxStep = bestStep;
@@ -478,7 +485,7 @@ namespace TAC_AI.AI.Movement
                 {
                     for (int stepper = 0; Allies.Count > stepper; stepper++)
                     {
-                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AIECore.Extremes(Allies.ElementAt(stepper).blockBounds.extents);
+                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - Allies.ElementAt(stepper).GetCheapBounds();
                         if (bestValue > temp && temp != 0)
                         {
                             auxStep = bestStep;
@@ -558,7 +565,7 @@ namespace TAC_AI.AI.Movement
 
         // Other navigation utilities
 
-        private static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
         public static Vector3 GetDriveApproxAir(Tank tankToCopy, AIECore.TankAIHelper AIHelp, out bool IsMoving)
         {
             //Get the position in which to drive inherited from player controls
@@ -610,7 +617,7 @@ namespace TAC_AI.AI.Movement
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && AIHelp.anchorAttempts <= 3)//Half the escort's attempts
                     {
-                        tank.TryToggleTechAnchor();
+                        AIHelp.TryAnchor();
                         AIHelp.anchorAttempts++;
                     }
                 }
@@ -619,8 +626,7 @@ namespace TAC_AI.AI.Movement
                     AIHelp.anchorAttempts = 0;
                     if (tank.Anchors.NumIsAnchored > 0)
                     {
-                        tank.TryToggleTechAnchor();
-                        AIHelp.JustUnanchored = true;
+                        AIHelp.UnAnchor();
                     }
                 }
             }
@@ -631,10 +637,10 @@ namespace TAC_AI.AI.Movement
             IsMoving = !(InputLineVal + controlOverload.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
             return end;
         }
-        public static bool AboveHeightFromGround(Vector3 input, float groundOffset = 50)
+        public static bool AboveHeightFromGround(Vector3 posScene, float groundOffset = 50)
         {
             float final_y;
-            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(posScene, out float height);
             if (terrain)
                 final_y = height + groundOffset;
             else
@@ -644,11 +650,11 @@ namespace TAC_AI.AI.Movement
                 if (KickStart.WaterHeight > height)
                     final_y = KickStart.WaterHeight + groundOffset;
             }
-            return (input.y > final_y);
+            return (posScene.y > final_y);
         }
-        public static bool AboveTheSea(Vector3 input)
+        public static bool AboveTheSea(Vector3 posScene)
         {
-            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
+            bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(posScene, out float height);
             if (terrain)
             {
                 if (height < KickStart.WaterHeight)
@@ -954,7 +960,7 @@ namespace TAC_AI.AI.Movement
         {
             if ((bool)Singleton.playerTank)
             {
-                if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight + Singleton.playerPos.y)
+                if (thisInst.tank.boundsCentreWorldNoCheck.y > AIGlobals.AirMaxHeight + Singleton.playerPos.y)
                 {
                     return ForceOffsetFromGroundA(moderate, thisInst);
                 }
@@ -963,7 +969,7 @@ namespace TAC_AI.AI.Movement
             {
                 try
                 {
-                    if (thisInst.tank.boundsCentreWorldNoCheck.y > KickStart.AirMaxHeight)
+                    if (thisInst.tank.boundsCentreWorldNoCheck.y > AIGlobals.AirMaxHeight)
                     {
                         return ForceOffsetFromGroundA(moderate, thisInst);
                     }
@@ -976,7 +982,7 @@ namespace TAC_AI.AI.Movement
         {
             if ((bool)Singleton.playerTank)
             {
-                if (Pos.y > KickStart.AirMaxHeight + Singleton.playerPos.y)
+                if (Pos.y > AIGlobals.AirMaxHeight + Singleton.playerPos.y)
                 {
                     return false;
                 }
@@ -985,7 +991,7 @@ namespace TAC_AI.AI.Movement
             {
                 try
                 {
-                    if (Pos.y > KickStart.AirMaxHeight)
+                    if (Pos.y > AIGlobals.AirMaxHeight)
                     {
                         return false;
                     }

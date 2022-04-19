@@ -2,16 +2,18 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using UnityEngine;
+using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.World
 {
-    public class EnemyBaseUnloaded : EnemyTechUnit
+    public class EnemyBaseUnit : EnemyTechUnit
     {
         public readonly EnemyPresence teamInst;
         public int revenue;
-        public int Funds { get { return funds; } set { funds = value; SetBuildBucks(funds); } }
+        public int BuildBucks { get { return funds; } set { funds = value; SetBuildBucks(funds); } }
         private int funds = 0;
+        public bool isDefense = false;
         public bool isSiegeBase = false;
         public bool isHarvestBase = false;
         public bool isTechBuilder = false;
@@ -21,10 +23,24 @@ namespace TAC_AI.World
         /// </summary>
         public bool HasTerminal = false;
 
-        public EnemyBaseUnloaded(IntVector2 tilePosition, ManSaveGame.StoredTech techIn, EnemyPresence team) : base(tilePosition, techIn)
+        public void TryPushMoneyToLoadedInstance()
+        {
+            if (funds == 0)
+                return;
+            RBases.EnemyBaseFunder EBF = RBases.EnemyBases.Find(delegate (RBases.EnemyBaseFunder cand) { return cand.Team == teamInst.Team && Name == cand.name; });
+            if (EBF)
+            {
+                Debug.Log("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " pushed funds to loaded tech of ID " + EBF.name);
+            }
+            else
+            {
+                Debug.LogError("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " failed to update funds");
+            }
+        }
+
+        public EnemyBaseUnit(IntVector2 tilePosition, ManSaveGame.StoredTech techIn, EnemyPresence team) : base(tilePosition, techIn)
         {
             tilePos = tilePosition;
-            tech = techIn;
             teamInst = team;
         }
         public void SetBuildBucks(int newVal)
@@ -32,7 +48,7 @@ namespace TAC_AI.World
             StringBuilder nameActual = new StringBuilder();
             char lastIn = 'n';
             bool doingBB = false;
-            foreach (char ch in tech.m_TechData.Name)
+            foreach (char ch in Name)
             {
                 if (!doingBB)
                 {
@@ -52,7 +68,7 @@ namespace TAC_AI.World
             }
             else
                 nameActual.Append(" ¥¥" + newVal);
-            tech.m_TechData.Name = nameActual.ToString();
+            Name = nameActual.ToString();
         }
         public static string GetActualName(string name)
         {

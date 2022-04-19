@@ -21,7 +21,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
-                if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
                 {
                     return false;
                 }
@@ -31,7 +31,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             if (tank.wheelGrounded || pilot.ForcePitchUp)
             {   // Try and takeoff like helicopter
-                pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, AIECore.Extremes(tank.blockBounds.extents) * 2));
+                pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, thisInst.lastTechExtents * 2));
                 this.pilot.UpdateThrottle(thisInst, thisControl);
                 HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck, true);
             }

@@ -55,7 +55,7 @@ namespace TAC_AI.AI
                         {
                             thisInst.OverrideAim = 3;
                             var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
-                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, AIECore.Extremes(targetTank.blockBounds.extents));
+                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
                             if (thisInst.FIRE_NOW)
                                 thisControl.m_Weapons.FireWeapons(tank);
                         }
@@ -100,7 +100,7 @@ namespace TAC_AI.AI
                     {
                         thisInst.OverrideAim = 1;
                         var targetTank = thisInst.lastEnemy.tank;
-                        thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, AIECore.Extremes(targetTank.blockBounds.extents));
+                        thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
                         if (thisInst.FIRE_NOW)
                             thisControl.m_Weapons.FireWeapons(tank);
                     }

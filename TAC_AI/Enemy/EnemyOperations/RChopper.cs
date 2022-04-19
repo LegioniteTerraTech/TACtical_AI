@@ -40,123 +40,160 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             RGeneral.Engadge(thisInst, tank, mind);
 
-            float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
+            float enemyExt = thisInst.lastEnemy.GetCheapBounds();
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
-            float range = EnemyMind.SpacingRangeAir + AIECore.Extremes(tank.blockBounds.extents);
+            float range;
+            float spacing = thisInst.lastTechExtents + enemyExt;
             thisInst.lastRange = dist;
 
-            if (mind.CommanderAttack == EnemyAttack.Coward)
+            switch (mind.CommanderAttack)
             {
-                thisInst.SideToThreat = false;
-                thisInst.Retreat = true;
-                thisInst.MoveFromObjective = true;
-                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - (Vector3.down * 50);
-                if (dist < thisInst.lastTechExtents + enemyExt + (range / 4))
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                    else
-                        thisInst.SettleDown();
-                }
-                else if (dist < thisInst.lastTechExtents + enemyExt + range)
-                {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                    else
-                        thisInst.SettleDown();
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                }
-            }
-            else if (mind.CommanderAttack == EnemyAttack.Circle)
-            {   // Orbit strafe while attacking
-                thisInst.SideToThreat = true;
-                thisInst.Retreat = false;
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                    thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                else
-                    thisInst.SettleDown();
-                if (dist < thisInst.lastTechExtents + enemyExt + 2)
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                case EnemyAttack.Coward:
+                    range = AIGlobals.SpacingRangeHoverer;
+                    thisInst.SideToThreat = false;
+                    thisInst.Retreat = true;
                     thisInst.MoveFromObjective = true;
-                }
-                else if (mind.Range < thisInst.lastTechExtents + enemyExt + range)
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    thisInst.ProceedToObjective = true;
-                }
-                else
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    thisInst.ProceedToObjective = true;
-                }
-            }
-            else if (mind.CommanderAttack == EnemyAttack.Spyper)
-            {   // Bomber
-                thisInst.SideToThreat = false;
-                thisInst.Retreat = false;
-                thisInst.ProceedToObjective = true;
-                if (dist < thisInst.lastTechExtents + (enemyExt / 2))
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    thisInst.MoveFromObjective = true;
-                }
-                else if (dist < thisInst.lastTechExtents + enemyExt + range)
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - (Vector3.down * 50);
+                    if (dist < spacing + (range / 4))
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        else
+                            thisInst.SettleDown();
+                    }
+                    else if (dist < spacing + range)
+                    {
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        else
+                            thisInst.SettleDown();
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                    }
+                    break;
+                case EnemyAttack.Circle:
+                    range = AIGlobals.SpacingRangeHoverer;
+                    thisInst.SideToThreat = true;
+                    thisInst.Retreat = false;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
-                }
-                else
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                    if (dist < spacing + 2)
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        thisInst.MoveFromObjective = true;
+                    }
+                    else if (mind.Range < spacing + range)
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        thisInst.ProceedToObjective = true;
+                    }
                     else
-                        thisInst.SettleDown();
-                }
-            }
-            else
-            {
-                thisInst.SideToThreat = false;
-                thisInst.Retreat = false;
-                if (dist < thisInst.lastTechExtents + enemyExt + 2)
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    thisInst.MoveFromObjective = true;
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        thisInst.ProceedToObjective = true;
+                    }
+                    break;
+                case EnemyAttack.Spyper:
+                    if (mind.LikelyMelee)
+                    {// Bomber
+                        range = 8;
+                        thisInst.SideToThreat = false;
+                        thisInst.Retreat = false;
+                        thisInst.ProceedToObjective = true;
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        if (dist < spacing + 2)
+                        {
+                            thisInst.MoveFromObjective = true;
+                        }
+                        else if (dist < spacing + range)
+                        {
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                            else
+                                thisInst.SettleDown();
+                        }
+                        else
+                        {
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                            else
+                                thisInst.SettleDown();
+                        }
+                    }
                     else
-                        thisInst.SettleDown();
-                }
-                else if (dist < thisInst.lastTechExtents + enemyExt + range)
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    thisInst.PivotOnly = true;
-                    thisInst.ProceedToObjective = true;
-                }
-                else if (dist < thisInst.lastTechExtents + enemyExt + (range * 1.25f))
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                    {
+                        range = AIGlobals.SpacingRangeSpyper;
+                        thisInst.SideToThreat = false;
+                        thisInst.Retreat = false;
+                        thisInst.ProceedToObjective = true;
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        if (dist < spacing + range)
+                        {
+                            thisInst.MoveFromObjective = true;
+                        }
+                        else if (dist < spacing + (range * 1.25f))
+                        {
+                            thisInst.PivotOnly = true;
+                        }
+                        else if (dist < spacing + (range * 1.75f))
+                        {
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                            else
+                                thisInst.SettleDown();
+                        }
+                        else
+                        {
+                            thisInst.featherBoost = true;
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                            else
+                                thisInst.SettleDown();
+                        }
+                    }
+
+                    break;
+                default:    // Others
+                    range = AIGlobals.SpacingRangeHoverer;
+                    thisInst.SideToThreat = false;
+                    thisInst.Retreat = false;
+                    if (dist < spacing + 2)
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        thisInst.MoveFromObjective = true;
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        else
+                            thisInst.SettleDown();
+                    }
+                    else if (dist < spacing + range)
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        thisInst.PivotOnly = true;
+                        thisInst.ProceedToObjective = true;
+                    }
+                    else if (dist < spacing + (range * 1.25f))
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        else
+                            thisInst.SettleDown();
+                        thisInst.ProceedToObjective = true;
+                    }
                     else
-                        thisInst.SettleDown();
-                    thisInst.ProceedToObjective = true;
-                }
-                else
-                {
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
-                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                    else
-                        thisInst.SettleDown();
-                    thisInst.BOOST = true;
-                    thisInst.ProceedToObjective = true;
-                }
+                    {
+                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        else
+                            thisInst.SettleDown();
+                        thisInst.BOOST = true;
+                        thisInst.ProceedToObjective = true;
+                    }
+                    break;
             }
         }
     }

@@ -354,9 +354,9 @@ namespace TAC_AI
             try
             {
                 if (reader.Starting)
-                    EnemySiege.InitSiegeWarning(reader.Team, reader.MaxHP);
+                    ManEnemySiege.InitSiegeWarning(reader.Team, reader.MaxHP);
                 else
-                    EnemySiege.EndSiege();
+                    ManEnemySiege.EndSiege();
             }
             catch
             {

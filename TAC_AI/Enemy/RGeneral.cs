@@ -35,6 +35,11 @@ namespace TAC_AI.AI.Enemy
                                 DefaultIdle(thisInst, tank, mind);
                             }
                         }
+                        else if (!holdGround && AIECore.FetchChargedChargers(tank, tank.Radar.Range, out Transform posTrans, out _, tank.Team))
+                        {
+                            thisInst.lastDestination = posTrans.position;
+                            return true;
+                        }
                         if (energy.storageTotal - 100 < (energy.storageTotal - energy.spareCapacity))
                         {
                             mind.Hurt = false;
@@ -102,7 +107,6 @@ namespace TAC_AI.AI.Enemy
                 switch (mind.CommanderMind)
                 {
                     case EnemyAttitude.Default: // do dumb stuff
-                    case EnemyAttitude.SubNeutral: // do dumb stuff
                         DefaultIdle(thisInst, tank, mind);
                         break;
                     case EnemyAttitude.Homing:  // Get nearest tech regardless of max combat range and attack them
@@ -111,9 +115,15 @@ namespace TAC_AI.AI.Enemy
                     case EnemyAttitude.Miner:   // mine resources
                         RMiner.MineYerOwnBusiness(thisInst, tank, mind);
                         break;
+                    case EnemyAttitude.NPCBaseHost: // mine resources - will run off to do missions later
+                        RMiner.MineYerOwnBusiness(thisInst, tank, mind);
+                        break;
+                    case EnemyAttitude.Boss:        // Tidy base - will run off to do missions later
+                        RScavenger.Scavenge(thisInst, tank, mind);
+                        break;
                     //The case below I still have to think of a reason for them to do the things
                     case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
-                        DefaultIdle(thisInst, tank, mind);
+                        RScavenger.Scavenge(thisInst, tank, mind);
                         break;
                 }
             }
@@ -129,7 +139,7 @@ namespace TAC_AI.AI.Enemy
         {
             if (!mind.StartedAnchored && tank.IsAnchored)
             {
-                tank.TryToggleTechAnchor();
+                thisInst.UnAnchor();
                 thisInst.anchorAttempts = 0;
             }
         }
@@ -155,7 +165,7 @@ namespace TAC_AI.AI.Enemy
             //Try find next target to assault
             try
             {
-                thisInst.lastEnemy = mind.FindEnemy(inRange: KickStart.EnemyExtendActionRange);
+                thisInst.lastEnemy = mind.FindEnemy(inRange: AIGlobals.EnemyExtendActionRange);
                 if (thisInst.lastEnemy == null)
                     DefaultIdle(thisInst, tank, mind);
             }
@@ -188,8 +198,45 @@ namespace TAC_AI.AI.Enemy
             //}
         }
 
+        /// <summary>
+        /// Only is used to keep track of enemies
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        /// <param name="mind"></param>
+        public static void Monitor(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {
+            RBases.EnemyBaseFunder funds = RBases.GetTeamFunder(tank.Team);
+            if (funds != null)
+            {
+                if ((funds.Tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude > AIGlobals.MinimumMonitorSpacingSqr)
+                    thisInst.lastEnemy = null;  // Stop following this far from base
+                else
+                    thisInst.lastEnemy = mind.FindEnemy();
+            }
+            else
+                thisInst.lastEnemy = mind.FindEnemy();
+            thisInst.DANGER = false;
+        }
+
 
         // HOSTILITIES
+        /// <summary>
+        /// Base attack
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        public static void BaseAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {
+            // Determines the weapons actions and aiming of the AI
+            thisInst.lastEnemy = mind.FindEnemy();
+            if (thisInst.lastEnemy != null)
+            {
+                thisInst.DANGER = true;
+            }
+            thisInst.DANGER = false;
+        }
+
         /// <summary>
         /// Attack like default
         /// </summary>
@@ -202,7 +249,7 @@ namespace TAC_AI.AI.Enemy
             if (thisInst.lastEnemy != null)
             {
                 //Fire even when retreating - the AI's life depends on this!
-                if (thisInst.lastRange < EnemyMind.MaxRangeFireAll)
+                if (thisInst.lastRange < AIGlobals.MaxRangeFireAll)
                 {
                     thisInst.DANGER = true;
                     return;
@@ -223,22 +270,46 @@ namespace TAC_AI.AI.Enemy
             thisInst.lastEnemy = mind.FindEnemy();
             if (thisInst.lastEnemy != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
+                Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.WeaponDelayClock += KickStart.AIClockPeriod / 5;
-                if (thisInst.SideToThreat)
+                if (thisInst.Attempt3DNavi)
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.WeaponDelayClock >= 30)
+                    if (thisInst.SideToThreat)
                     {
-                        thisInst.DANGER = true;
-                        thisInst.WeaponDelayClock = 30;
+                        float dot = Vector3.Dot(tank.rootBlockTrans.right, aimTo);
+                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
+                    }
+                    else
+                    {
+                        if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
                     }
                 }
                 else
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.WeaponDelayClock >= 30)
+                    if (thisInst.SideToThreat)
                     {
-                        thisInst.DANGER = true;
-                        thisInst.WeaponDelayClock = 30;
+                        float dot = Vector2.Dot(tank.rootBlockTrans.right.ToVector2XZ(), aimTo.ToVector2XZ());
+                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
+                    }
+                    else
+                    {
+                        if (Vector2.Dot(tank.rootBlockTrans.forward.ToVector2XZ(), aimTo.ToVector2XZ()) > 0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
                     }
                 }
             }

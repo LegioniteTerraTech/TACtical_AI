@@ -24,7 +24,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             if (pilot.Grounded) //|| thisInst.forceDrive)
             {   //Become a ground vehicle for now
-                if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, AIECore.Extremes(tank.blockBounds.extents) * 2))
+                if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
                 {
                     DriveMaintainerEmergLand(thisControl, thisInst, tank);
                     return false;
@@ -219,9 +219,8 @@ namespace TAC_AI.AI.Movement.AICores
             VehicleAICore.controlGet.SetValue(tank.control, control3D);
             Vector3 destDirect = thisInst.lastDestination - tank.boundsCentreWorldNoCheck;
             // DEBUG FOR DRIVE ERRORS
-#if DEBUG
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, destDirect, new Color(0, 1, 1));
-#endif
+
             thisControl.DriveControl = 0f;
             if (thisInst.Steer)
             {
@@ -456,7 +455,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (pilot.Helper.DediAI == AIType.Aegis)
             {
-                pilot.Helper.theResource = AIEPathing.ClosestUnanchoredAlly(pilot.Tank.boundsCentreWorldNoCheck, out float bestval, pilot.Tank).visible;
+                pilot.Helper.theResource = AIEPathing.ClosestUnanchoredAlly(pilot.Tank.boundsCentreWorldNoCheck, out _, pilot.Tank).visible;
                 Combat = this.TryAdjustForCombat();
                 if (!Combat)
                 {
@@ -541,7 +540,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (unresponsiveAir)
             {
-                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
+                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * this.pilot.Helper.lastTechExtents), pilot.AerofoilSluggishness + 25))
                 {
                     pilot.ForcePitchUp = true;
                     pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
@@ -595,7 +594,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (unresponsiveAir)
             {
-                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
+                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 5) - (Vector3.down * this.pilot.Helper.lastTechExtents), pilot.AerofoilSluggishness + 25))
                 {
                     pilot.ForcePitchUp = true;
                     pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
@@ -618,7 +617,7 @@ namespace TAC_AI.AI.Movement.AICores
             pilot.ForcePitchUp = false;
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
-                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck, AIECore.Extremes(this.pilot.Tank.blockBounds.extents) * 2))
+                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck, pilot.Helper.lastTechExtents * 2))
                 {
                     return false;
                 }
@@ -633,7 +632,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.LowerEngines = true;
                 pilot.AirborneDest = this.pilot.Helper.lastDestination;
             }
-            else if (mind.CommanderMind == EnemyAttitude.SubNeutral)
+            else if (!mind.AttackPlayer)
             {   // Fly straight, above ground in player visual distance
                 if (this.pilot.Helper.ProceedToObjective)
                 {   // Fly to target
@@ -717,7 +716,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (unresponsiveAir)
             {
-                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 2) - (Vector3.down * AIECore.Extremes(this.pilot.Tank.blockBounds.size)), pilot.AerofoilSluggishness + 25))
+                if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + ((this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness * Time.deltaTime) * 2) - (Vector3.down * this.pilot.Helper.lastTechExtents), pilot.AerofoilSluggishness + 25))
                 {
                     pilot.ForcePitchUp = true;
                     pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude;
@@ -747,7 +746,8 @@ namespace TAC_AI.AI.Movement.AICores
             if (this.pilot.Helper.PursueThreat && !this.pilot.Helper.Retreat && this.pilot.Helper.lastEnemy.IsNotNull())
             {
                 output = true;
-                float driveDyna = Mathf.Clamp(((this.pilot.Helper.lastEnemy.transform.position - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude - this.pilot.Helper.IdealRangeCombat) / 3f, -1, 1);
+                pilot.Helper.lastRangeCombat = (pilot.Helper.lastEnemy.tank.boundsCentreWorldNoCheck - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                float driveDyna = Mathf.Clamp((pilot.Helper.lastRangeCombat - this.pilot.Helper.IdealRangeCombat) / 3f, -1, 1);
                 if (this.pilot.Helper.SideToThreat)
                 {
                     if (this.pilot.Helper.FullMelee)
@@ -806,17 +806,20 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                     AircraftUtils.AdviseThrottleTarget(pilot, this.pilot.Helper, this.pilot.Tank, this.pilot.Helper.lastEnemy);
             }
+            else
+                pilot.Helper.lastRangeCombat = float.MaxValue;
             return output;
         }
         public bool TryAdjustForCombatEnemy(EnemyMind mind)
         {
             bool output = false;
 
-            bool isCombatAttitude = mind.CommanderMind != EnemyAttitude.OnRails && mind.CommanderMind != EnemyAttitude.SubNeutral;
+            bool isCombatAttitude = mind.CommanderMind != EnemyAttitude.OnRails && mind.AttackAny;
             if (!this.pilot.Helper.Retreat && this.pilot.Helper.lastEnemy.IsNotNull() && isCombatAttitude)
             {
                 output = true;
-                float driveDyna = Mathf.Clamp(((this.pilot.Helper.lastEnemy.transform.position - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude - this.pilot.Helper.IdealRangeCombat) / 3f, -1, 1);
+                pilot.Helper.lastRangeCombat = (pilot.Helper.lastEnemy.tank.boundsCentreWorldNoCheck - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                float driveDyna = Mathf.Clamp((pilot.Helper.lastRangeCombat - this.pilot.Helper.IdealRangeCombat) / 3f, -1, 1);
                 if (this.pilot.Helper.SideToThreat)
                 {
                     if (this.pilot.Helper.FullMelee)
@@ -880,6 +883,8 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                     pilot.AdvisedThrottle = 1;  //if Ai not smrt enough just hold shift
             }
+            else
+                pilot.Helper.lastRangeCombat = float.MaxValue;
             return output;
         }
 
@@ -896,9 +901,9 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.SecondAvoidence)// MORE processing power
                 {
                     lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(predictionOffset, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
-                    if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
+                    if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                     {
-                        if (lastAuxVal < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
+                        if (lastAuxVal < thisInst.lastTechExtents + lastCloseAlly2.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                         {
                             IntVector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2);
                             return (targetIn + ProccessedVal2) / 3;
@@ -911,7 +916,7 @@ namespace TAC_AI.AI.Movement.AICores
                 lastCloseAlly = AIEPathing.ClosestAllyPrecision(predictionOffset, out lastAllyDist, tank);
                 if (lastCloseAlly == null)
                     Debug.Log("TACtical_AI: ALLY IS NULL");
-                if (lastAllyDist < thisInst.lastTechExtents + AIECore.Extremes(lastCloseAlly.blockBounds.extents) + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
+                if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
                     IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly);
                     return (targetIn + ProccessedVal) / 2;

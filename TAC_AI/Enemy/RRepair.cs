@@ -4,18 +4,21 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Enemy
 {
     public static class RRepair
     {
+        // Timing Information inherited from AIERepair
+
         private static bool PreRepairPrep(Tank tank, EnemyMind mind, bool overrideChecker = false)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             if (mind.TechMemor.IsNull())
             {
                 Debug.Log("TACtical_AI: EnemyRepairLerp called with no valid EnemyDesignMemory!!!");
-                mind.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                mind.AIControl.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                 mind.TechMemor.Initiate();
                 return false;
             }
@@ -46,17 +49,41 @@ namespace TAC_AI.AI.Enemy
             //int attachAttempts = fBlocks.Count();
             //Debug.Log("TACtical AI: EnemyRepairLerp - Found " + attachAttempts + " loose blocks to use");
 
-            if (AIERepair.TryAttachExistingBlockFromList(tank, mind.TechMemor, ref fBlocks, hardest))
+            if (AIERepair.TryAttachExistingBlockFromListInst(tank, mind.TechMemor, ref typesMissing, ref fBlocks, hardest))
                 return true;
 
             if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks || KickStart.AllowEnemiesToStartBases) && mind.CommanderSmarts >= EnemySmarts.Smrt)
             {
                 //Debug.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
+                RawTechLoader.ResetSkinIDSet();
+                if (AIERepair.TrySpawnAndAttachBlockFromListWithSkinInst(tank, mind.TechMemor, ref typesMissing, false, true))
+                    return true;
+            }
+            return false;
+        }
+        private static bool QueueEnemyRepairLerp(Tank tank, EnemyMind mind, ref List<TankBlock> fBlocks, ref List<BlockTypes> typesMissing, bool overrideChecker = false)
+        {
+            if (ManNetwork.IsNetworked)
+                return EnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing, overrideChecker);
+            bool hardest = KickStart.EnemyBlockDropChance == 0;
+            //Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
+
+            //int attachAttempts = fBlocks.Count();
+            //Debug.Log("TACtical AI: EnemyRepairLerp - Found " + attachAttempts + " loose blocks to use");
+
+            if (AIERepair.TryAttachExistingBlockFromList(tank, mind.TechMemor, ref typesMissing, ref fBlocks, hardest))
+                return true;
+
+            if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks || KickStart.AllowEnemiesToStartBases) && mind.CommanderSmarts >= EnemySmarts.Smrt)
+            {
+                //Debug.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
+                RawTechLoader.ResetSkinIDSet();
                 if (AIERepair.TrySpawnAndAttachBlockFromListWithSkin(tank, mind.TechMemor, ref typesMissing, false, true))
                     return true;
             }
             return false;
         }
+
         public static bool EnemyInstaRepair(Tank tank, EnemyMind mind, int RepairAttempts = 0)
         {
             if (!KickStart.AllowAISelfRepair)
@@ -67,14 +94,15 @@ namespace TAC_AI.AI.Enemy
             {
                 if (AIERepair.SystemsCheck(tank, mind.TechMemor) && PreRepairPrep(tank, mind))
                 {
-                    List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
+                    mind.TechMemor.RushAttachOpIfNeeded();
                     if (RepairAttempts == 0)
                         RepairAttempts = mind.TechMemor.ReturnContents().Count();
 
-                    bool hardest = KickStart.EnemyBlockDropChance == 0;
-                    List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3), hardest && !ManNetwork.IsNetworked);
-                    List<BlockTypes> typesMissing = AIERepair.GetMissingBlockTypes(mind.TechMemor, cBlocks);
+                    //bool hardest = KickStart.EnemyBlockDropChance == 0;
+                    List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, mind.TechMemor);
+                    List<BlockTypes> typesMissing = mind.TechMemor.GetMissingBlockTypes();
 
+                    RawTechLoader.ResetSkinIDSet();
                     while (RepairAttempts > 0)
                     {
                         bool worked = EnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing, true);
@@ -87,11 +115,12 @@ namespace TAC_AI.AI.Enemy
                         }
                         RepairAttempts--;
                     }
-                    if (mind.StartedAnchored)
-                        RBases.MakeMinersMineUnlimited(tank);
+                    mind.TechMemor.UpdateMissingBlockTypes(typesMissing);
                 }
             }
             catch { } // it failed - [patch later]
+            if (ManNetwork.IsNetworked)
+                return true;
             return success;
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
@@ -106,11 +135,6 @@ namespace TAC_AI.AI.Enemy
                 thisInst.PendingSystemsCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.ReserveSuperGrabs);
                 mind.TechMemor.ReserveSuperGrabs = 0;
             }
-            if (thisInst.repairStepperClock == 1)
-            {
-                //thisInst.AttemptedRepairs = 0;
-                thisInst.repairStepperClock = 0;
-            }
             else if (thisInst.repairStepperClock <= 0)
             {
                 //thisInst.AttemptedRepairs = 0;
@@ -121,7 +145,7 @@ namespace TAC_AI.AI.Enemy
                     thisInst.TechMemor.ReserveSuperGrabs = 9;
                 }
                 else if (tank.IsAnchored)
-                {   // Enemy bases must be allowed to build or they will 
+                {   // Enemy bases must be allowed to build or they will not work!
                     if (mind.Provoked == 0)
                     {
                         if (!Super)
@@ -162,31 +186,46 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (thisInst.repairStepperClock < 1)
                             thisInst.repairStepperClock = 1;
+                        int initialBlockCount = tank.blockman.blockCount;
                         int OverdueTime = Mathf.Abs(prevVal / thisInst.repairStepperClock);
                         if (OverdueTime > 1)
                         {
                             thisInst.PendingSystemsCheck = !EnemyInstaRepair(tank, mind, OverdueTime);
-                            if (mind.StartedAnchored && !tank.IsAnchored && !(bool)thisInst.lastEnemy)   // Keep those anchors updating!
-                                tank.Anchors.TryAnchorAll(true);
-                            if (mind.StartedAnchored)
-                                RBases.MakeMinersMineUnlimited(tank);
                         }
                         else if (AIERepair.SystemsCheck(tank, mind.TechMemor) && PreRepairPrep(tank, mind))
                         {   // Cheaper to check twice than to use GetMissingBlockTypes when not needed.
-                            bool hardest = KickStart.EnemyBlockDropChance == 0;
-                            List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, (mind.Range / 3), hardest && !ManNetwork.IsNetworked);
-                            List<BlockTypes> typesMissing = AIERepair.GetMissingBlockTypes(mind.TechMemor, tank.blockman.IterateBlocks().ToList());
-                            EnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing);
-                            thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
+                            mind.TechMemor.RushAttachOpIfNeeded();
+                            //bool hardest = KickStart.EnemyBlockDropChance == 0;
+                            List<TankBlock> fBlocks = AIERepair.FindBlocksNearbyTank(tank, mind.TechMemor);
+                            List<BlockTypes> typesMissing = mind.TechMemor.GetMissingBlockTypes();
+                            if (ManNetwork.IsNetworked)
+                            {
+                                if (EnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing))
+                                {
+                                    thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
+                                }
+                                else
+                                    thisInst.PendingSystemsCheck = false; // cannot repair as invalid block
+                            }
+                            else
+                            {
+                                QueueEnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing);
+                                thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
+                            }
+                            mind.TechMemor.UpdateMissingBlockTypes(typesMissing);
                             //thisInst.AttemptedRepairs = 1;
-                            if (mind.StartedAnchored && !tank.IsAnchored && !(bool)thisInst.lastEnemy)   // Keep those anchors updating!
-                                tank.Anchors.TryAnchorAll(true);
-                            if (mind.StartedAnchored)
-                                RBases.MakeMinersMineUnlimited(tank);
                         }
                         else
                             thisInst.PendingSystemsCheck = false;
 
+                        if (!thisInst.PendingSystemsCheck && initialBlockCount != tank.blockman.blockCount)
+                        {
+                            mind.AIControl.AdjustAnchors();
+                            if (mind.StartedAnchored)
+                                mind.TechMemor.MakeMinersMineUnlimited();
+                            Debug.Log("TACtical_AI: EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
+                            thisInst.FinishedRepairEvent.Send();
+                        }
                     }
                     catch (Exception e)
                     {
@@ -194,7 +233,8 @@ namespace TAC_AI.AI.Enemy
                     }
                 }
             }
-            thisInst.repairStepperClock -= KickStart.AIClockPeriod;
+            else
+                thisInst.repairStepperClock -= KickStart.AIClockPeriod;
 
             if (mind.TechMemor.ReserveSuperGrabs < 0)
                 mind.TechMemor.ReserveSuperGrabs = 0;

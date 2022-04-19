@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI
 {
@@ -57,22 +58,46 @@ namespace TAC_AI.AI
             thisInst.lastEnemy = GetTarget(thisInst, tank);
             if (thisInst.lastEnemy != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
+                Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.WeaponDelayClock++;
-                if (thisInst.SideToThreat)
+                if (thisInst.Attempt3DNavi)
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.WeaponDelayClock >= 30)
+                    if (thisInst.SideToThreat)
                     {
-                        thisInst.DANGER = true;
-                        thisInst.WeaponDelayClock = 30;
+                        float dot = Vector3.Dot(tank.rootBlockTrans.right, aimTo);
+                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
+                    }
+                    else
+                    {
+                        if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
                     }
                 }
                 else
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.WeaponDelayClock >= 30)
+                    if (thisInst.SideToThreat)
                     {
-                        thisInst.DANGER = true;
-                        thisInst.WeaponDelayClock = 30;
+                        float dot = Vector2.Dot(tank.rootBlockTrans.right.ToVector2XZ(), aimTo.ToVector2XZ());
+                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
+                    }
+                    else
+                    {
+                        if (Vector2.Dot(tank.rootBlockTrans.forward.ToVector2XZ(), aimTo.ToVector2XZ()) > 0.45f || thisInst.WeaponDelayClock >= 30)
+                        {
+                            thisInst.DANGER = true;
+                            thisInst.WeaponDelayClock = 30;
+                        }
                     }
                 }
             }
@@ -89,9 +114,18 @@ namespace TAC_AI.AI
             if ((bool)thisInst.lastPlayer)
             {
                 target = thisInst.lastPlayer.tank.Weapons.GetManualTarget();
+                // If the player fires while locked-on to a neutral/SubNeutral, the AI will assume this
+                //   is an attack request
             }
             if (target == null)
-                return tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            {
+                target = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                if (target)
+                {
+                    if (RawTechLoader.IsNonAggressiveTeam(target.tank.Team))
+                        return null; // Don't want to accidently fire at a neutral
+                }
+            }
             return target;
         }
         public static void SelfDefend(AIECore.TankAIHelper thisInst, Tank tank)

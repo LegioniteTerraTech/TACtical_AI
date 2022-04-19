@@ -15,7 +15,7 @@ namespace TAC_AI.World
         private AIECore.TankAIHelper tech;
         private ParticleSystem ps;
         private GameObject circleInst;
-        private readonly float rescale = 5;
+        private readonly float rescale = 2;
 
         public void Initiate(AIECore.TankAIHelper TechUnit)
         {
@@ -32,7 +32,7 @@ namespace TAC_AI.World
             tech.tank.DetachEvent.Subscribe(OnSizeUpdate);
             ps = circleInst.GetComponent<ParticleSystem>();
             var m = ps.main;
-            m.startSize = AIECore.Extremes(TechUnit.tank.blockBounds.extents) * rescale;
+            m.startSize = TechUnit.tank.blockBounds.extents.magnitude * rescale;
             ps.Play(false);
             circleInst.SetActive(true);
         }
@@ -42,8 +42,13 @@ namespace TAC_AI.World
             {
                 if (techCase == tech.tank)
                 {
+                    if (techCase.blockman.blockCount == 0)
+                    {
+                        Remove();
+                        return;
+                    }
                     var m = ps.main;
-                    m.startSize = AIECore.Extremes(tech.tank.blockBounds.extents) * rescale;
+                    m.startSize = tech.tank.blockBounds.extents.magnitude * rescale;
                 }
             }
             catch { }
@@ -115,9 +120,15 @@ namespace TAC_AI.World
         {
             if (!inst)
                 return;
+            inst.PurgeAllNull();
+            inst.ClearList();
             Singleton.Manager<ManGameMode>.inst.ModeSwitchEvent.Unsubscribe(OnWorldReset);
             Singleton.Manager<CameraManager>.inst.CameraSwitchEvent.Unsubscribe(OnCameraChange);
+            Destroy(SelectWindow);
+            Destroy(autoWindow);
             Destroy(inst.gameObject);
+            SelectWindow = null;
+            autoWindow = null;
             inst = null;
             Debug.Log("TACtical_AI: Removed PlayerRTSControl.");
 
@@ -153,7 +164,7 @@ namespace TAC_AI.World
             var e = ps.emission;
             e.rateOverTime = 10;
             var psr = SelectHalo.SelectCirclePrefab.GetComponent<ParticleSystemRenderer>();
-            psr.renderMode = ParticleSystemRenderMode.HorizontalBillboard;
+            psr.renderMode = ParticleSystemRenderMode.Billboard;
             psr.material = mat;
             psr.maxParticleSize = 3000;
             ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
@@ -163,6 +174,8 @@ namespace TAC_AI.World
 
             SelectWindow = Instantiate(new GameObject("TechSelectRect"));
             SelectWindow.AddComponent<GUIRectSelect>();
+            autoWindow = Instantiate(new GameObject("AutoPilot"));
+            autoWindow.AddComponent<GUIRectAuto>();
         }
         public static void OnWorldReset()
         {
@@ -438,7 +451,7 @@ namespace TAC_AI.World
                         {
                             continue;
                         }
-                        if (!(PlayerIsInRTS && TechUnit.tank == Singleton.playerTank) && TechUnit.AIState != 1)
+                        if (!(PlayerIsInRTS && TechUnit.tank == Singleton.playerTank) && TechUnit.AIState != AIAlignment.Player)
                             continue;
 
                         if (!LocalPlayerTechsControlled.Contains(TechUnit))
@@ -469,7 +482,7 @@ namespace TAC_AI.World
                         return;
                     }
                     var TechUnit = grabbedTech.GetComponent<AIECore.TankAIHelper>();
-                    if (!(PlayerIsInRTS && grabbedTech == Singleton.playerTank) && TechUnit.AIState != 1)
+                    if (!(PlayerIsInRTS && grabbedTech == Singleton.playerTank) && TechUnit.AIState != AIAlignment.Player)
                         return;
 
                     if (KickStart.UseClassicRTSControls)
@@ -714,27 +727,16 @@ namespace TAC_AI.World
         {
             if (!(bool)TechUnit)
                 return;
-            if (AIECore.Extremes(TechUnit.tank.blockBounds.extents) <= MaxAllowedSizeForHighlight)
+            
+            if (selectedHalo)
             {
-                TechUnit.tank.visible.EnableOutlineGlow(selectedHalo, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
-
-                var halo = TechUnit.gameObject.GetComponent<SelectHalo>();
-                if ((bool)halo)
-                    TechUnit.GetComponent<SelectHalo>().Remove();
-            }
-            else if (selectedHalo)
-            {
-                var halo = TechUnit.gameObject.GetComponent<SelectHalo>();
-                if (!(bool)halo)
-                    halo = TechUnit.gameObject.AddComponent<SelectHalo>();
+                var halo = TechUnit.gameObject.GetOrAddComponent<SelectHalo>();
                 halo.Initiate(TechUnit);
             }
             else
             {
                 try
                 {
-                    TechUnit.tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
-
                     var halo = TechUnit.gameObject.GetComponent<SelectHalo>();
                     if ((bool)halo)
                         TechUnit.GetComponent<SelectHalo>().Remove();
@@ -745,32 +747,29 @@ namespace TAC_AI.World
         public void GrabAllSameName(AIECore.TankAIHelper techToFindNameOf)
         {
             bool working = false;
-            foreach (Tank tech in ManTechs.inst.CurrentTechs)
+            foreach (Tank tech in ManTechs.inst.IteratePlayerTechs())
             {
                 if (!(bool)tech)
                     continue;
                 try
                 {
-                    if (tech.Team == ManPlayer.inst.PlayerTeam)
+                    if (tech.name == techToFindNameOf.tank.name)
                     {
-                        if (tech.name == techToFindNameOf.tank.name)
+                        if (!PlayerIsInRTS && tech == Singleton.playerTank)
                         {
-                            if (!PlayerIsInRTS && tech == Singleton.playerTank)
-                            {
-                                continue;
-                            }
-                            AIECore.TankAIHelper TechUnit = tech.GetComponent<AIECore.TankAIHelper>();
-                            if (!(PlayerIsInRTS && tech == Singleton.playerTank) && TechUnit.AIState != 1)
-                                continue;
+                            continue;
+                        }
+                        AIECore.TankAIHelper TechUnit = tech.GetComponent<AIECore.TankAIHelper>();
+                        if (!(PlayerIsInRTS && tech == Singleton.playerTank) && TechUnit.AIState != AIAlignment.Player)
+                            continue;
 
-                            if (!LocalPlayerTechsControlled.Contains(TechUnit))
-                            {
-                                working = true;
-                                LocalPlayerTechsControlled.Add(TechUnit);
-                                SetSelectHalo(TechUnit, true);
-                                //TechUnit.SetRTSState(true);
-                                Debug.Log("TACtical_AI: Selected Tank " + tech.name + ".");
-                            }
+                        if (!LocalPlayerTechsControlled.Contains(TechUnit))
+                        {
+                            working = true;
+                            LocalPlayerTechsControlled.Add(TechUnit);
+                            SetSelectHalo(TechUnit, true);
+                            //TechUnit.SetRTSState(true);
+                            Debug.Log("TACtical_AI: Selected Tank " + tech.name + ".");
                         }
                     }
                 }
@@ -907,6 +906,16 @@ namespace TAC_AI.World
         private int LastClickFrameTimer = 0;
         private void Update()
         {
+            if (!KickStart.AllowStrategicAI)
+            {
+                if (LocalPlayerTechsControlled.Count > 0)
+                {
+                    PurgeAllNull();
+                    ClearList();
+                }
+                SetVisOfAll(false);
+                return;
+            }
             if (!ManPauseGame.inst.IsPaused && ManGameMode.inst.GetIsInPlayableMode() && !GUIAIManager.MouseIsOverSubMenu())
             {
                 GrabbedThisFrame = null;
@@ -1036,13 +1045,18 @@ namespace TAC_AI.World
         {
             private void OnGUI()
             {
-                if (isBoxSelecting)
+                if (KickStart.IsIngame)
                 {
-                    if (modifStyle == null)
-                        HotWindow = GUI.Window(8006, HotWindow, GUIHandler, "");//"<b>BoxSelect</b>"
-                    else
-                        HotWindow = GUI.Window(8006, HotWindow, GUIHandler, "", modifStyle);
+                    if (isBoxSelecting)
+                    {
+                        if (modifStyle == null)
+                            HotWindow = GUI.Window(8006, HotWindow, GUIHandler, "");//"<b>BoxSelect</b>"
+                        else
+                            HotWindow = GUI.Window(8006, HotWindow, GUIHandler, "", modifStyle);
+                    }
                 }
+                else
+                    isBoxSelecting = false;
             }
         }
         private static void GUIHandler(int ID)
@@ -1070,5 +1084,47 @@ namespace TAC_AI.World
             HotWindow = new Rect(LowX - 25, highYCorrect - 25, HighX - LowX + 50, HighY - LowY + 50);
         }
 
+
+        // Player autopilot
+        private static GameObject autoWindow;
+        private const int AIBoxSelectID = 8009;
+        internal class GUIRectAuto : MonoBehaviour
+        {
+            private void OnGUI()
+            {
+                if (PlayerIsInRTS && !ManPauseGame.inst.IsPaused)
+                {
+                    autopilotMenu = GUI.Window(AIBoxSelectID, autopilotMenu, GUIHandlerPlayerAutopilot, "");
+                    KickStart.ReleaseControl(AIBoxSelectID); // we aren't supposed to be able to select this
+                }
+                else
+                {
+                    autopilotMenu.x = 0;
+                    autopilotMenu.y = 0;
+                }
+            }
+        }
+        internal static bool autopilotPlayer = false;
+        internal static bool DevLockToCam = false;
+#if DEBUG
+        private static Rect autopilotMenu = new Rect(0, 0, 160, 80);   // the "window"
+#else
+        private static Rect autopilotMenu = new Rect(0, 0, 160, 50);   // the "window"
+#endif
+
+        private static void GUIHandlerPlayerAutopilot(int ID)
+        {
+            if (GUI.Button(new Rect(10, 10, 140, 30), autopilotPlayer ? "<b>AUTOPILOT ON</b>" : "AUTOPILOT Off"))
+            {
+                autopilotPlayer = !autopilotPlayer;
+            }
+#if DEBUG
+            if (GUI.Button(new Rect(10, 40, 140, 30), DevLockToCam ? "<b>LOCKED TO CAM</b>" : "Lock to Cam"))
+            {
+                DevLockToCam = !DevLockToCam;
+            }
+#endif
+            GUI.DragWindow();
+        }
     }
 }

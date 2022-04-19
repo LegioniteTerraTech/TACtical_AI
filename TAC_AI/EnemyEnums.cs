@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace TAC_AI.AI.Enemy
 {
-    //class EEnemy
-    //{
-    //}
+    /// <summary>
+    /// How the AI handles it's Tech
+    /// </summary>
     public enum EnemyHandling
     {
         Wheeled,
@@ -19,17 +19,37 @@ namespace TAC_AI.AI.Enemy
         SuicideMissile, // set for bolt tech splitoffs with less than 2 weapons (excluding cabs)
         Stationary,     // sit there like a good wingnut
     }
+
+    /// <summary>
+    /// What the AI does when Idle
+    /// </summary>
     public enum EnemyAttitude
     {
         Default,    // Wander around
         Homing,     // Beeline for the nearest enemy tech
         Miner,      // Attack resources
         Junker,     // Move towards patches of loose blocks
-        OnRails,    // Follow set destinations instead for MissionManager
+        OnRails,    // Follow set RTS destinations instead for MissionManager
+        NPCBaseHost,// Build a base and manage it, plus go off and do "missions"
         Boss,       // Build a big base and show off your power on the off-world
         Invader,    // One. job.   INVADE      end the player  REALLY PAINFULLY
-        SubNeutral, // Don't attack unless attacked
     }
+
+    /// <summary>
+    /// How the AI reacts to the Player
+    /// </summary>
+    public enum EnemyStanding
+    {
+        Enemy,      // Attack. Always
+        Friendly,   // Fight on the player's side
+        SubNeutral, // Don't attack unless attacked once -> Attack everyone
+        Neutral,    // Don't attack unless a block falls off -> Attack attacker
+        MissionControl,// Only follow mission requests
+    }
+
+    /// <summary>
+    /// What the AI does when attacking
+    /// </summary>
     public enum EnemyAttack
     {
         Circle,     // Circle the enemy while shooting at them
@@ -46,6 +66,10 @@ namespace TAC_AI.AI.Enemy
         Spyper,     // Attack player from afar because we are a F^bro-fracker
         // Use for: Artillery, Motherships
     }
+
+    /// <summary>
+    /// The AI's skill level and abilities
+    /// </summary>
     public enum EnemySmarts
     {               // retroactive for each step lower on this, also meaning more lag lol
         Default,    // literally default AI
@@ -54,6 +78,10 @@ namespace TAC_AI.AI.Enemy
         Smrt,       // anchors when left alone
         IntAIligent // enemies nearby this ai ALLY with this AI! - (still planned but not functional yet)
     }
+
+    /// <summary>
+    /// The conditions of which the AI decides to press X
+    /// </summary>
     public enum EnemyBolts
     {                   // Handler for how you want your bolts used
         Default,        // Explode IMMEDEATELY

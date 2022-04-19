@@ -23,7 +23,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             if (thisInst.lastEnemy == null)
             {
-                RGeneral.LollyGag(thisInst, tank, mind);
+                RGeneral.LollyGag(thisInst, tank, mind, true);
                 return;
             }
             RGeneral.Engadge(thisInst, tank, mind);

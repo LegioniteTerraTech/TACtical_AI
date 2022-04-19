@@ -52,7 +52,7 @@ namespace TAC_AI.AI
 
             this.Helper.Steer = false;
             this.Helper.DriveDir = EDriveType.Forwards;
-            if (this.Helper.AIState == 1)// Allied
+            if (this.Helper.AIState == AIAlignment.Player)// Allied
             {
                 if (this.AICore == null)
                 {
@@ -78,7 +78,7 @@ namespace TAC_AI.AI
 
             this.Helper.Steer = false;
             this.Helper.DriveDir = EDriveType.Forwards;
-            if (this.Helper.AIState == 1)// Allied
+            if (this.Helper.AIState == AIAlignment.Player)// Allied
             {
                 if (this.AICore == null)
                 {

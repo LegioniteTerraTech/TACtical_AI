@@ -7,10 +7,11 @@ namespace TAC_AI.AI.AlliedOperations
 {
     public static class BProspector
     {
-        const float FindBaseExtension = 500;
-
         public static void MotivateMine(AIECore.TankAIHelper thisInst, Tank tank)
         {
+            thisInst.IsMultiTech = false;
+            thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
+
             Vector3 veloFlat = Vector3.zero;
             if ((bool)tank.rbody)   // So that drifting is minimized
             {
@@ -29,17 +30,17 @@ namespace TAC_AI.AI.AlliedOperations
             {   // BRANCH - RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (theBase == null)
                         return; // There's no base!
-                    thisInst.lastBaseExtremes = AIECore.Extremes(theBase.blockBounds.extents);
+                    thisInst.lastBaseExtremes = theBase.GetCheapBounds();
                 }
                 else if (thisInst.theBase == null)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
-                    thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                    thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     return;
                 }
@@ -96,14 +97,16 @@ namespace TAC_AI.AI.AlliedOperations
             // Our Chunk-Carrying tractor pads are filled to the brim with Chunks
             if (thisInst.areWeFull || thisInst.ActionPause > 10)
             {   // BRANCH - Head back to base
-                thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
                         return; // There's no base!
-                    thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                    thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
+                    thisInst.lastDestination = thisInst.theBase.boundsCentreWorld;
+                    dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
                 }
                 /*
                 else if (thisInst.lastBasePos.IsNull())
@@ -119,14 +122,14 @@ namespace TAC_AI.AI.AlliedOperations
 
                 if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() == 0)
                 {
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. |Tech is at " + tank.boundsCentreWorldNoCheck);
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. | Tech is at " + tank.boundsCentreWorldNoCheck);
                     StopByBase(thisInst, tank, dist, ref hasMessaged);
                     thisInst.ProceedToBase = true;
                     return;
                 }
                 if (thisInst.DriverType == AIDriverType.Pilot)
                 {
-                    if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
+                    if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + AIGlobals.AircraftHailMaryRange)
                     {   // Final approach - turn off avoidence
                         thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                         thisInst.AvoidStuff = false;
@@ -231,13 +234,21 @@ namespace TAC_AI.AI.AlliedOperations
                 {   
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");
+                        thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
-                        thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                        thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
+                    }
+                    else
+                    {
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Found a Resource Node...");
+                        thisInst.lastDestination = thisInst.theResource.centrePosition;
+                        thisInst.ProceedToBase = true;
+                        StopByBase(thisInst, tank, dist, ref hasMessaged);
+                        return;
                     }
                     thisInst.ProceedToBase = true;
                     StopByBase(thisInst, tank, dist, ref hasMessaged);

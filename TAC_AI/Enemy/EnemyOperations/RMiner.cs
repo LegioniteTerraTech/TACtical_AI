@@ -56,7 +56,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
                         return; // There's no base!
-                    thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                    thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                 }
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
@@ -143,7 +143,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
-                        thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                        thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     }
                     thisInst.ProceedToBase = true;
                     StopByBase(thisInst, tank, dist, ref hasMessaged);
@@ -159,8 +159,6 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         return;
                     }
                 }
-                thisInst.forceDrive = true;
-                thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
                 {
@@ -169,10 +167,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.Yield = true;
                     if (!thisInst.FullMelee)
                         thisInst.PivotOnly = true;
-                    thisInst.SettleDown();
-                    thisInst.RemoveObstruction();
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
-                else if (thisInst.recentSpeed < 3)
+                else if (thisInst.recentSpeed < 2.5f)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
@@ -184,6 +181,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                     thisInst.RemoveObstruction();
+                    thisInst.forceDrive = true;
+                    thisInst.DriveVar = 1;
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.trans.position + "|| Current pos " + tank.boundsCentreWorldNoCheck);
                 thisInst.ProceedToMine = true;

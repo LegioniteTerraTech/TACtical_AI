@@ -21,28 +21,28 @@ namespace TAC_AI
 		SPE,	// Special
 		BF,		// Better Future
 		SJ,		// Space Junkers
-		LEG,    // LEGION!!1!
+		LEG,    // Legion
 
 		// Community
-		AER,    // Aerion
-		BL,     // Black Labs (EXT OF HE)
-		CC,     // CrystalCorp
-		DC,     // DEVCorp
-		DL,     // DarkLight
-		EYM,    // Ellydium
-		GT,     // GreenTech
-		HS,     // Hyperion Systems
-		IEC,    // Independant Earthern Colonies
-		LK,     // Lemon Kingdom
-		OS,     // Old Stars
-		TC,		// Tofuu Corp
-		TAC,	// Technocratic AI Colony
+		AER = 256,    // Aerion
+		BL = 257,     // Black Labs (EXT OF HE)
+		CC = 258,     // CrystalCorp
+		DC = 259,     // DEVCorp
+		DL = 260,     // DarkLight
+		EYM = 261,    // Ellydium
+		GT = 262,     // GreenTech
+		HS = 263,     // Hyperion Systems
+		IEC = 264,    // Independant Earthern Colonies
+		LK = 265,     // Lemon Kingdom
+		OS = 266,     // Old Stars
+		TC = 267,     // Tofuu Corp
+		TAC = 268,    // Technocratic AI Colony
 
 		// idk
-		EFF,    // Emperical Forge Fabrication
-		MCC,	// Mechaniccoid Cooperative Confederacy 
-		BLN,	// BuLwark Nation (Bulin)
-		CNC,	// ClaNg Clads (ChanClas)
-		LOL,	// Larry's Overlord Laser
+		EFF = 269,    // Emperical Forge Fabrication
+		MCC = 270,    // Mechaniccoid Cooperative Confederacy 
+		BLN = 271,    // BuLwark Nation (Bulin)
+		CNC = 272,    // ClaNg Clads (ChanClas)
+		LOL = 273,	  // Larry's Overlord Laser
 	}
 }

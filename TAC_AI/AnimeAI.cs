@@ -25,7 +25,7 @@ namespace TAC_AI
         Space,   
         Base,   
     }
-    public static class AnimeAI
+    public static class AnimeAICompat
     {   //Attempt hook with the AnimeAI sub-mod
         //  WIP
         const bool UseErrorChecking = false;

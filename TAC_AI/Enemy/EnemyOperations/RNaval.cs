@@ -32,9 +32,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             RGeneral.Engadge(thisInst, tank, mind);
 
-            float enemyExt = AIECore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents);
+            float enemyExt = thisInst.lastEnemy.GetCheapBounds();
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
-            float range = EnemyMind.SpacingRange + AIECore.Extremes(tank.blockBounds.extents);
+            float range = AIGlobals.SpacingRange + thisInst.lastTechExtents;
             thisInst.lastRange = dist;
             float spacer = thisInst.lastTechExtents + enemyExt;
             if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EnemyAttack.Coward)

@@ -12,6 +12,9 @@ namespace TAC_AI.AI.AlliedOperations
         public static void MotivateKill(AIECore.TankAIHelper thisInst, Tank tank)
         {
             //The Handler that tells the Tank (Assassin) what to do movement-wise
+            thisInst.IsMultiTech = false;
+            thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
+
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
@@ -48,7 +51,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
                         return; // There's no base!
-                    thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                    thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                 }
                 thisInst.forceDrive = true;
                 thisInst.DriveVar = 1;
@@ -139,7 +142,7 @@ namespace TAC_AI.AI.AlliedOperations
                         thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
-                        thisInst.lastBaseExtremes = AIECore.Extremes(thisInst.theBase.blockBounds.extents);
+                        thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     }
                     return; // There's no enemies left!
                 }

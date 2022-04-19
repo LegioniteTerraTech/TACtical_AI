@@ -122,35 +122,28 @@ namespace TAC_AI
                 return;
             TankBlock = gameObject.GetComponent<TankBlock>();
             Invoke("DelayedSub", 1f);
-            OnAttach();
+            if (TankBlock.IsAttached)
+                OnAttach();
         }
         public void DelayedSub()
         {
             TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
             TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
-            LoadToTech();
+            if (TankBlock.IsAttached)
+                LoadToTech();
         }
         public void OnAttach()
         {
+            TankBlock.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            TankBlock.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             if (!KickStart.EnableBetterAI)
                 return;
             var tankInst = TankBlock.transform.root.GetComponent<Tank>();
-            if (tankInst)
+            if (!tankInst)
             {
-                if (!tankInst.GetComponent<AIECore.TankAIHelper>())
-                {
-                    Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL - making new...");
-                    tankInst.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe(tankInst);
-                }
-            }
-            else
-            {
-                //Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
-                //Debug.Log("TACtical_AI: ModuleAIExtention - TANK IS NULL!!!");
+                Debug.Log("TACtical_AI: ModuleAIExtention - TANK IS NULL!!!");
                 return;
             }
-            TankBlock.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
-            TankBlock.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             SavedAI = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI;
             //var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
             //thisInst.AIList.Add(this);
@@ -158,33 +151,25 @@ namespace TAC_AI
         }
         public void OnDetach()
         {
+            TankBlock.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            TankBlock.serializeTextEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             if (!KickStart.EnableBetterAI)
                 return;
             if (!TankBlock?.transform?.root?.GetComponent<AIECore.TankAIHelper>())
             {
-                if (TankBlock?.transform?.root)
-                {
-                    Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL - making new...");
-                    TankBlock.transform.root.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe(TankBlock.transform.root.GetComponent<Tank>());
-                }
-                else
-                {
-                    Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
-                }
+                Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
                 return;
             }
             var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
             //thisInst.AIList.Remove(this);
             //if (!TankBlock.IsBeingRecycled())
             //    thisInst.RefreshAI();
-            TankBlock.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
-            TankBlock.serializeTextEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
             SavedAI = AIType.Escort;
         }
 
         [Serializable]
         // Now obsolete
-        private new class SerialData : Module.SerialData<SerialData>
+        public class SerialData : Module.SerialData<SerialData>
         {
             public AIType savedMode;
             public bool wasRTS;
@@ -206,7 +191,7 @@ namespace TAC_AI
                         }
                         thisInst.DriverType = SavedAIDriver;
                         thisInst.DediAI = SavedAI;
-                        Debug.Log("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
+                        Debug.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
                         thisInst.RefreshAI();
                         if (SavedAIDriver == AIDriverType.Pilot)
                             thisInst.TestForFlyingAIRequirement();
@@ -224,10 +209,11 @@ namespace TAC_AI
 
         internal bool Serialize(bool Saving)
         {
+            KickStart.TryHookUpToSafeSavesIfNeeded();
             if (Saving)
                 return this.SerializeToSafe();
             bool deserial = this.DeserializeFromSafe();
-            Debug.Log("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
+            Debug.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
             return deserial;
         }
         private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)

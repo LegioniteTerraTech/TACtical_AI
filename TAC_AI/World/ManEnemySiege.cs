@@ -10,14 +10,14 @@ using TAC_AI.Templates;
 
 namespace TAC_AI.World
 {
-    public class EnemySiege : MonoBehaviour
+    public class ManEnemySiege : MonoBehaviour
     {
         private const float RaidCooldownTimeSecs = 1200;
 
-        private static EnemySiege inst;
+        private static ManEnemySiege inst;
         private UIMultiplayerHUD warningBanner;
 
-        private static string displayName = "Enemy Raid Health: ";
+        private static readonly string displayName = "Enemy Siege Health: ";
         private static int MaxHP = 100;
         private static float RaidCooldown = 0;
         private static bool ready = false;
@@ -32,18 +32,18 @@ namespace TAC_AI.World
         }
         private EnemyPresence EP;
         private int Team = 0;
-        private List<Tank> techsInvolved = new List<Tank>();
+        private readonly List<Tank> techsInvolved = new List<Tank>();
 
 
-        private static FieldInfo attackBar = typeof(ManBlockLimiter).GetField("m_MaximumUsage", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static FieldInfo attackName = typeof(UIBlockLimit).GetField("m_TotalCountLabel", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo attackBar = typeof(ManBlockLimiter).GetField("m_MaximumUsage", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo attackName = typeof(UIBlockLimit).GetField("m_TotalCountLabel", BindingFlags.NonPublic | BindingFlags.Instance);
 
 
         public static void Init()
         {
             if (!inst)
             {
-                inst = new GameObject("EnemySiege").AddComponent<EnemySiege>();
+                inst = new GameObject("ManEnemySiege").AddComponent<ManEnemySiege>();
                 inst.warningBanner = (UIMultiplayerHUD)Singleton.Manager<ManHUD>.inst.GetHudElement(ManHUD.HUDElementType.Multiplayer);
             }
         }
@@ -53,7 +53,7 @@ namespace TAC_AI.World
                 return false;
             if (RaidCooldown <= 0)
             {
-                if (RaidCooldown <= 0 && enemyTeamInvolved.ETUs.Count * 2f > KickStart.EnemyTeamTechLimit)
+                if (RaidCooldown <= 0 && enemyTeamInvolved.GlobalMobileTechCount() + 1 > KickStart.EnemyTeamTechLimit)
                 {
                     inst.EP = enemyTeamInvolved;
                     WarnPlayers();
@@ -107,14 +107,14 @@ namespace TAC_AI.World
                         inst.techsFrozen.RemoveAt(0);
                         if ((bool)tech?.visible)
                         {
-                            EnemyBaseWorld.RecycleLoadedTechToTeam(tech);
+                            UnloadedBases.RecycleLoadedTechToTeam(tech);
                             SpecialAISpawner.Purge(tech);
                         }
                     }
                     inst.techsFrozen.Clear();
-                    var mainBase = EnemyBaseWorld.GetTeamFunder(inst.EP);
-                    bool defeatedAllUnits = inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs();
-                    if ((mainBase != null && !EnemyBaseWorld.IsPlayerWithinProvokeDist(mainBase.tilePos)) || defeatedAllUnits)
+                    var mainBase = UnloadedBases.GetTeamFunder(inst.EP);
+                    bool defeatedAllUnits = !Tank.IsEnemy(inst.Team, ManPlayer.inst.PlayerTeam) || (inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs());
+                    if ((mainBase != null && !UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos)) || defeatedAllUnits)
                     {
                         NetworkHandler.TryBroadcastNewEnemySiege(inst.Team, MaxHP, false);
                         EndSiege(shouldCooldown: defeatedAllUnits);
@@ -173,7 +173,7 @@ namespace TAC_AI.World
         public static void InitSiegeWarning(int team, long tempHPIn)
         {
             if (!inst)
-                Debug.Log("TACtical_AI: EnemySiege - InitSiegeWarning inst IS NULL");
+                Debug.Log("TACtical_AI: ManEnemySiege - InitSiegeWarning inst IS NULL");
             inst.Team = team;
             tempHP = tempHPIn;
             inProgress = true;
@@ -185,7 +185,7 @@ namespace TAC_AI.World
                 inst.warningBanner = (UIMultiplayerHUD)Singleton.Manager<ManHUD>.inst.GetHudElement(ManHUD.HUDElementType.Multiplayer);
             if (!inst.warningBanner)
             {
-                Debug.Log("TACtical_AI: EnemySiege - warningBanner IS NULL");
+                Debug.Log("TACtical_AI: ManEnemySiege - warningBanner IS NULL");
                 return;
             }
 
@@ -221,7 +221,7 @@ namespace TAC_AI.World
             Text tex = (Text)attackName.GetValue(UIBL);
             tex.text = displayName +" <b>EN-ROUTE</b>";
             attackName.SetValue(UIBL, tex);
-            Debug.Log("TACtical_AI: EnemySiege - Hyjacked unused ManBlockLimiter and UIBlockLimit for Raid UI");
+            Debug.Log("TACtical_AI: ManEnemySiege - Repurposed ManBlockLimiter and UIBlockLimit for Raid UI");
 
         }
         public void RemoveWarning()
@@ -231,7 +231,7 @@ namespace TAC_AI.World
         }
 
         float delay = 0;
-        private List<Tank> techsFrozen = new List<Tank>();
+        private readonly List<Tank> techsFrozen = new List<Tank>();
         public void Update()
         {
             if (!ManPauseGame.inst.IsPaused && RaidCooldown > 0)
@@ -270,7 +270,7 @@ namespace TAC_AI.World
                         totalHealth += tech.blockman.blockCount;
                     }
                 }
-                UpdatePercentBar(totalHealth, Team);
+                UpdatePercentBar(totalHealth);
                 delay = 0;
             }
         }
@@ -279,8 +279,8 @@ namespace TAC_AI.World
         // Red is -1
         // Green is 1
         // Yellow is 2
-        int dispVal = 100;
-        public void UpdatePercentBar(int combinedEnemyHealth, int raidingTeam = 101)
+        const int dispVal = 100;
+        public void UpdatePercentBar(int combinedEnemyHealth)
         {
             if (dispVal == combinedEnemyHealth || combinedEnemyHealth <= 0)
                 return;
@@ -293,7 +293,7 @@ namespace TAC_AI.World
                 m_TechCategory = ManBlockLimiter.TechCategory.Player,
                 m_TeamColour = 5
             };
-            //Debug.Log("TACtical_AI: EnemySiege - Color case " + teamC);
+            //Debug.Log("TACtical_AI: ManEnemySiege - Color case " + teamC);
             ManBlockLimiter.inst.CostChangedEvent.Send(CCI);
             UIBlockLimit UIBL = (UIBlockLimit)Singleton.Manager<ManHUD>.inst.GetHudElement(ManHUD.HUDElementType.BlockLimit);
             if (!UIBL)

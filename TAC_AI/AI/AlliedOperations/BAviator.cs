@@ -10,6 +10,9 @@ namespace TAC_AI.AI.AlliedOperations
     public static class BAviator {
         public static void MotivateFly(AIECore.TankAIHelper thisInst, Tank tank)
         {   // Will have to account for the different types of flight methods available
+            thisInst.lastPlayer = thisInst.GetPlayerTech();
+            thisInst.IsMultiTech = false;
+
             BGeneral.ResetValues(thisInst);
             thisInst.AvoidStuff = true;
 
@@ -22,13 +25,13 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             }
 
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
-            float range = (thisInst.RangeToStopRush * 4) + AIECore.Extremes(tank.blockBounds.extents);
+            float thisExtentsDouble = thisInst.lastTechExtents * 2;
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - thisInst.lastPlayer.GetCheapBounds();
+            float range = (thisInst.RangeToStopRush * 4) + thisExtentsDouble;
             // The range is nearly quadrupled here due to dogfighting conditions
             thisInst.lastRange = dist;
 
-            float playerExt = AIECore.Extremes(thisInst.lastPlayer.tank.blockBounds.extents);
-            thisInst.lastTechExtents = AIECore.Extremes(tank.blockBounds.extents) * 2;
+            float playerExt = thisInst.lastPlayer.GetCheapBounds();
 
             if (tank.wheelGrounded)
             {
@@ -38,7 +41,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
             }
 
-            float spacing = thisInst.lastTechExtents + playerExt;
+            float spacing = thisExtentsDouble + playerExt;
             if (dist < ((spacing) * 2) + 5)
             {   // TOO CLOSE!!! WE DODGE!!!
                 if (thisInst.lastEnemy != null && !thisInst.Retreat)

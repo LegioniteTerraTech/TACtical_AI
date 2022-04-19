@@ -46,6 +46,18 @@
     <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="0Nuterra.NativeOptions">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2685130411\0Nuterra.NativeOptions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="ConfigHelper">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2758915184\ConfigHelper.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Ionic.Zlib">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Ionic.Zlib.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
@@ -59,14 +71,19 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="RandomAdditions">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\RandomAdditions\RandomAdditions.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="SafeSaves">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\LocalMods\Mod Saves\SafeSaves.dll</HintPath>
+      <HintPath>..\..\..\..\Desktop\SafeSaves\GitAccess\SafeSaves\SafeSaves.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.Composition.Registration" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -158,11 +175,6 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\AnimeAI\AnimeAI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="0Nuterra.NativeOptions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\0Nuterra.NativeOptions\0Nuterra.NativeOptions.dll</HintPath>
-      <SpecificVersion>False</SpecificVersion>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="AcModHelper.Config">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\ModHelper.Config\AcModHelper.Config.dll</HintPath>
       <Private>False</Private>
@@ -185,6 +197,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AIAlignment.cs" />
+    <Compile Include="AIGlobals.cs" />
     <Compile Include="AI\AIESplitHandler.cs" />
     <Compile Include="AI\AlliedOperations\BAssassin.cs" />
     <Compile Include="AI\AlliedOperations\BEnergizer.cs" />
@@ -210,6 +224,9 @@
     <Compile Include="AI\Movement\AICores\IMovementAICore.cs" />
     <Compile Include="AI\Movement\AICores\VehicleAICore.cs" />
     <Compile Include="AI\Movement\AICores\VtolAICore.cs" />
+    <Compile Include="CustomAttract.cs" />
+    <Compile Include="Debug.cs" />
+    <Compile Include="Enemy\EnemyOperations\RScavenger.cs" />
     <Compile Include="FactionTypesExt.cs" />
     <Compile Include="EDriveType.cs" />
     <Compile Include="AI\AlliedOperations\BAstrotech.cs" />
@@ -219,7 +236,7 @@
     <Compile Include="AI\AlliedOperations\BBuccaneer.cs" />
     <Compile Include="AI\AlliedOperations\BProspector.cs" />
     <Compile Include="AI\AIECore.cs" />
-    <Compile Include="EEnemy.cs" />
+    <Compile Include="EnemyEnums.cs" />
     <Compile Include="Enemy\EnemyMind.cs" />
     <Compile Include="Enemy\EnemyOperations\EnemyOperationsController.cs" />
     <Compile Include="Enemy\EnemyOperations\RAircraft.cs" />
@@ -239,6 +256,7 @@
     <Compile Include="Enemy\RCore.cs" />
     <Compile Include="Enemy\RWeapSetup.cs" />
     <Compile Include="GUIAIManager.cs" />
+    <Compile Include="GUIEvictionNotice.cs" />
     <Compile Include="ReverseCache.cs" />
     <Compile Include="ModuleAIExtension.cs" />
     <Compile Include="ModuleChargerTracker.cs" />
@@ -248,12 +266,14 @@
     <Compile Include="PatchBatch.cs" />
     <Compile Include="AnimeAI.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="World\EnemySiege.cs" />
+    <Compile Include="TeamNamer.cs" />
+    <Compile Include="Templates\CommunityCluster.cs" />
+    <Compile Include="World\ManEnemySiege.cs" />
     <Compile Include="World\PlayerRTSControl.cs" />
     <Compile Include="Templates\CommunityStorage.cs" />
     <Compile Include="Templates\DebugRawTechSpawner.cs" />
     <Compile Include="Templates\EBasePurpose.cs" />
-    <Compile Include="Templates\ESpawnBaseTypes.cs" />
+    <Compile Include="Templates\SpawnBaseTypes.cs" />
     <Compile Include="Templates\OverrideManPop.cs" />
     <Compile Include="Templates\PlayerSpawnAid.cs" />
     <Compile Include="Templates\RawTechExporter.cs" />
@@ -262,11 +282,11 @@
     <Compile Include="Templates\TempManager.cs" />
     <Compile Include="Templates\TempStorage.cs" />
     <Compile Include="UnityEngineExtensions.cs" />
-    <Compile Include="World\EnemyBaseUnloaded.cs" />
-    <Compile Include="World\EnemyBaseWorld.cs" />
+    <Compile Include="World\EnemyBaseUnit.cs" />
+    <Compile Include="World\UnloadedBases.cs" />
     <Compile Include="World\EnemyPresence.cs" />
     <Compile Include="World\EnemyTechUnit.cs" />
-    <Compile Include="World\EnemyWorldManager.cs" />
+    <Compile Include="World\ManEnemyWorld.cs" />
     <Compile Include="World\PlayerRTSUI.cs" />
     <Compile Include="World\TileMoveCommand.cs" />
   </ItemGroup>
@@ -319,6 +339,14 @@
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AI_Icons\AI_Energizer.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+    <EmbeddedResource Include="AI_Icons\AI_Scrapper.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>del *.pdb
@@ -356,6 +384,16 @@ if $(ConfigurationName) == Steam (
 echo Copying to SteamModLocalDirect
 set e=$(TargetDir)&gt;nul
 xcopy /S /Y /R "!e:~0,-1!" !modpath3!
+)
+)
+
+set modpath4="C:\Program Files (x86)\Steam\steamapps\workshop\content\285920\2765217410"
+
+if exist !modpath4! (
+if $(ConfigurationName) == Steam (
+echo Copying to SteamModWorkshopDirect
+set e=$(TargetDir)&gt;nul
+xcopy /S /Y /R "!e:~0,-1!" !modpath4!
 )
 )</PostBuildEvent>
   </PropertyGroup>
