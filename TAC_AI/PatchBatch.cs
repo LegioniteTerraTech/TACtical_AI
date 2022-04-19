@@ -600,19 +600,6 @@ namespace TAC_AI
                 }
             }
         }
-#if STEAM
-        /*
-        [HarmonyPatch(typeof(ManSaveGame))]
-        [HarmonyPatch("Save")]// SAAAAAVVE
-        private static class SaveTheSaves
-        {
-            private static void Prefix(ref ManGameMode.GameType gameType, ref string saveName)
-            {
-                Debug.Log("SafeSaves: Saving!");
-                ManSafeSaves.SaveData(saveName, ManGameMode.inst.GetCurrentGameMode());
-            }
-        }*/
-#endif
 
         /*
         [HarmonyPatch(typeof(LocatorPanel))]
@@ -1074,6 +1061,25 @@ namespace TAC_AI
                             {   // Allow the enemy AI to finely select targets
                                 //Debug.Log("TACtical_AI: Overriding targeting to aim at " + AICommand.lastEnemy.name + "  pos " + AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
 
+                                if (AICommand.lastPlayer.IsNotNull())
+                                {
+                                    var playerTarg = AICommand.lastPlayer.tank.Weapons.GetManualTarget();
+                                    if (playerTarg != null)
+                                    {
+                                        if ((bool)playerTarg.tank)
+                                        {
+                                            try
+                                            {
+                                                if (playerTarg.tank.CentralBlock && playerTarg.isActive)
+                                                {   // Relay position from player to allow artillery support
+                                                    __result = playerTarg;
+                                                    return;
+                                                }
+                                            }
+                                            catch { }
+                                        }
+                                    }
+                                }
                                 __result = AICommand.lastEnemy;
                             }
                         }
@@ -1089,80 +1095,15 @@ namespace TAC_AI
                                 }
                             }
                         }
-                    }
-                }
-            }
-        }
-        [HarmonyPatch(typeof(TargetAimer))]//
-        [HarmonyPatch("UpdateTarget")]//On targeting
-        private static class PatchAimingToHelpAI
-        {
-            static readonly FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
-            private static void Postfix(TargetAimer __instance)
-            {
-                if (!KickStart.EnableBetterAI && !KickStart.isWeaponAimModPresent)
-                    return;
-                var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
-                if (AICommand.IsNotNull())
-                {
-                    var tank = AICommand.tank;
-                    if (AICommand.OverrideAim == 1)
-                    {
-                        if (AICommand.lastEnemy.IsNotNull())
-                        {   // Allow the enemy AI to finely select targets
-                            //Debug.Log("TACtical_AI: Overriding targeting to aim at " + AICommand.lastEnemy.name + "  pos " + AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
-                            //FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
-                            //targ.SetValue(__instance, AICommand.lastEnemy);
-
-                            //targPos.SetValue(__instance, tank.control.TargetPositionWorld);
-
-                            if (AICommand.lastPlayer.IsNotNull())
-                            {
-                                var playerTarg = AICommand.lastPlayer.tank.Weapons.GetManualTarget();
-                                if (playerTarg != null)
-                                {
-                                    if ((bool)playerTarg.tank)
-                                    {
-                                        try
-                                        {
-                                            if (playerTarg.tank.CentralBlock && playerTarg.isActive)
-                                            {   // Relay position from player to allow artillery support
-                                                targPos.SetValue(__instance, playerTarg.GetAimPoint(tank.boundsCentreWorldNoCheck));
-                                                return;
-                                            }
-                                        }
-                                        catch { }
-                                    }
-                                }
-                            }
-                            if (AICommand.lastEnemy.tank?.CentralBlock && AICommand.lastEnemy.isActive)
-                            {
-                                targPos.SetValue(__instance, AICommand.lastEnemy.GetAimPoint(__instance.transform.position));
-                            }
-                            else
-                                targPos.SetValue(__instance, tank.control.TargetPositionWorld);
-                            //Debug.Log("TACtical_AI: final aim is " + targPos.GetValue(__instance));
-
-                        }
-                    }
-                    else if (AICommand.OverrideAim == 2)
-                    {
-                        if (AICommand.Obst.IsNotNull())
+                        else if (AICommand.OverrideAim == 3)
                         {
-                            //Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
-
-                            //targPos.SetValue(__instance, AICommand.Obst.position + (Vector3.up * 2));
-
-                        }
-                    }
-                    else if (AICommand.OverrideAim == 3)
-                    {
-                        if (AICommand.LastCloseAlly.IsNotNull())
-                        {
-                            //Debug.Log("TACtical_AI: Overriding targeting to aim at player's target");
-
-                            targPos.SetValue(__instance, AICommand.LastCloseAlly.control.TargetPositionWorld);
-
+                            if (AICommand.LastCloseAlly.IsNotNull())
+                            {
+                                //Debug.Log("TACtical_AI: Overriding targeting to aim at player's target");
+                                var helperAlly = AICommand.LastCloseAlly.GetComponent<AIECore.TankAIHelper>();
+                                if (helperAlly.OverrideAim == 1)
+                                    __result = helperAlly.lastEnemy;
+                            }
                         }
                     }
                 }

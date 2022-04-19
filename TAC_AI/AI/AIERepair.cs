@@ -1099,7 +1099,7 @@ namespace TAC_AI.AI
                 {
                     if (Enemy.RBases.TryMakePurchase(canidate.BlockType, tank.Team))
                     {
-                        Debug.Log("TACtical_AI: AI " + tank.name + ": bought " + canidate + " from the shop for " + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(canidate.BlockType, true));
+                        Debug.Info("TACtical_AI: AI " + tank.name + ": bought " + canidate + " from the shop for " + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(canidate.BlockType, true));
 
                         if (!KickStart.MuteNonPlayerRacket)
                             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Buy);
@@ -1142,7 +1142,7 @@ namespace TAC_AI.AI
                 {
                     if (Enemy.RBases.TryMakePurchase(canidate.BlockType, tank.Team))
                     {
-                        Debug.Log("TACtical_AI: AI " + tank.name + ": bought " + canidate + " from the shop for " + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(canidate.BlockType, true));
+                        Debug.Info("TACtical_AI: AI " + tank.name + ": bought " + canidate + " from the shop for " + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(canidate.BlockType, true));
 
                         if (!KickStart.MuteNonPlayerRacket)
                             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Buy);
@@ -1192,7 +1192,7 @@ namespace TAC_AI.AI
                 {
                     if (Enemy.RBases.TryMakePurchase(canidate.BlockType, tank.Team))
                     {
-                        Debug.Log("TACtical_AI: AI " + tank.name + ": bought " + canidate + " from the shop for " + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(canidate.BlockType, true));
+                        Debug.Info("TACtical_AI: AI " + tank.name + ": bought " + canidate + " from the shop for " + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(canidate.BlockType, true));
 
                         if (!KickStart.MuteNonPlayerRacket)
                             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Buy);
