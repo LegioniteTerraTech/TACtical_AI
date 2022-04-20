@@ -1449,7 +1449,7 @@ namespace TAC_AI.AI
 
             public bool TestForFlyingAIRequirement()
             {
-                var enemy = gameObject.GetComponent<Enemy.EnemyMind>();
+                var enemy = gameObject.GetComponent<EnemyMind>();
                 if (AIState == AIAlignment.Player && DriverType == AIDriverType.Pilot)
                 {
                     if (!(MovementController is AIControllerAir))
@@ -1496,6 +1496,9 @@ namespace TAC_AI.AI
                 }
             }
 
+            /// <summary>
+            /// Does not remove EnemyMind
+            /// </summary>
             public void RefreshAI()
             {
                 AvoidStuff = true;
@@ -1657,22 +1660,42 @@ namespace TAC_AI.AI
                 MovementController = null;
                 EnemyMind enemy = gameObject.GetComponent<EnemyMind>();
 
-                if (!isAviatorAvail)
+                if (enemy)
                 {
-                    if (DriverType == AIDriverType.Pilot)
-                        DriverType = AIDriverType.Tank;
-
-                    AIControllerAir airController = gameObject.GetComponent<AIControllerAir>();
-                    if (airController.IsNotNull())
+                    if (enemy.EvilCommander == EnemyHandling.Airplane || enemy.EvilCommander == EnemyHandling.Chopper)
                     {
-                        airController.Recycle();
+                        TestForFlyingAIRequirement();
                     }
+                    else
+                    {
+                        AIControllerAir airController = gameObject.GetComponent<AIControllerAir>();
+                        if (airController.IsNotNull())
+                        {
+                            airController.Recycle();
+                        }
 
-                    MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                        MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                    }
                 }
-                else if (DriverType == AIDriverType.Pilot)
+                else
                 {
-                    TestForFlyingAIRequirement();
+                    if (!isAviatorAvail)
+                    {
+                        if (DriverType == AIDriverType.Pilot)
+                            DriverType = AIDriverType.Tank;
+
+                        AIControllerAir airController = gameObject.GetComponent<AIControllerAir>();
+                        if (airController.IsNotNull())
+                        {
+                            airController.Recycle();
+                        }
+
+                        MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                    }
+                    else if (DriverType == AIDriverType.Pilot)
+                    {
+                        TestForFlyingAIRequirement();
+                    }
                 }
 
                 if (MovementController != null)

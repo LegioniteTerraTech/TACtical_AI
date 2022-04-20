@@ -24,7 +24,7 @@ namespace TAC_AI.AI.Movement.AICores
             forwardFlat.y = 0;
             if (ForceAccend || !isInControl)
             {
-                turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat), tank.rootBlockTrans.InverseTransformDirection(Vector3.one)).eulerAngles;
+                turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
             }
             else
             {

@@ -72,7 +72,7 @@ namespace TAC_AI.AI.Movement.AICores
                 //Debug.Log("TACtical_AI: Tech " + tank.name + "  Stage 3 Immelmann");
                 direct = Vector3.down;
             }
-            else if (tank.rootBlockTrans.up.y < -0.2f)
+            else if (tank.rootBlockTrans.up.y < -0.4f)
             {   // handle invalid request to go upside down
                 //Debug.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
                 // Stay upright
@@ -96,26 +96,14 @@ namespace TAC_AI.AI.Movement.AICores
                 if (Heading.x > 0f && Heading.z < 0.925f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
                     //Debug.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Right");
-                    Vector3 rFlat;
-                    if (tank.rootBlockTrans.up.y > 0)
-                        rFlat = tank.rootBlockTrans.right;
-                    else
-                        rFlat = -tank.rootBlockTrans.right;
-                    rFlat.y = 0;
-                    rFlat.Normalize();
+                    Vector3 rFlat = GetExactRightAlignedWorld(tank);
                     rFlat.y = -pilot.RollStrength / 2;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
                 else if (Heading.x < 0f && Heading.z < 0.925f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
                     //Debug.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Left");
-                    Vector3 rFlat;
-                    if (tank.rootBlockTrans.up.y > 0)
-                        rFlat = tank.rootBlockTrans.right;
-                    else
-                        rFlat = -tank.rootBlockTrans.right;
-                    rFlat.y = 0;
-                    rFlat.Normalize();
+                    Vector3 rFlat = GetExactRightAlignedWorld(tank);
                     rFlat.y = pilot.RollStrength / 2;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
@@ -125,26 +113,14 @@ namespace TAC_AI.AI.Movement.AICores
                 if (Heading.x > 0f && Heading.z < 0.85f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
                     //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Right");
-                    Vector3 rFlat;
-                    if (tank.rootBlockTrans.up.y > 0)
-                        rFlat = tank.rootBlockTrans.right;
-                    else
-                        rFlat = -tank.rootBlockTrans.right;
-                    rFlat.y = 0;
-                    rFlat.Normalize();
+                    Vector3 rFlat = GetExactRightAlignedWorld(tank);
                     rFlat.y = -pilot.RollStrength;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
                 else if (Heading.x < 0f && Heading.z < 0.85f - (0.2f / pilot.RollStrength))
                 { // We roll to aim at target
                     //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Left");
-                    Vector3 rFlat;
-                    if (tank.rootBlockTrans.up.y > 0)
-                        rFlat = tank.rootBlockTrans.right;
-                    else
-                        rFlat = -tank.rootBlockTrans.right;
-                    rFlat.y = 0;
-                    rFlat.Normalize();
+                    Vector3 rFlat = GetExactRightAlignedWorld(tank);
                     rFlat.y = pilot.RollStrength;
                     direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                 }
@@ -158,17 +134,23 @@ namespace TAC_AI.AI.Movement.AICores
             //AI Steering Rotational
             TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(thisControl);
 
+            Transform root = tank.rootBlockTrans;
+
             Vector3 insureUpright = (position - tank.boundsCentreWorldNoCheck).normalized;
-            if (Vector3.Dot(tank.rootBlockTrans.forward, insureUpright) < -0.25f)
-            {
-                insureUpright.y = 0f;
+            if (Vector3.Dot(root.forward, insureUpright) < -0.25f)
+            {   // If we are turning far more than 90 degrees and looking down, we level our nose
+                if (insureUpright.y < 0)
+                    insureUpright.y = 0f;
+            }
+            else if (insureUpright.y < -0.65f)
+            {   // Do not dive greater than approx -45 degrees
+                insureUpright.y = -0.7f;
             }
             thisInst.Navi3DDirect = insureUpright.normalized;
           
             thisInst.Navi3DUp = DetermineRoll(tank, pilot, thisInst.Navi3DDirect);
 
             // We must make the controls local to the cab to insure predictable performance
-            Transform root = tank.rootBlockTrans;
             Vector3 ForwardsLocal = root.InverseTransformDirection(thisInst.Navi3DDirect);
             Vector3 turnVal = Quaternion.LookRotation(ForwardsLocal, Vector3.up).eulerAngles;
             Vector3 turnValUp = Quaternion.LookRotation(root.InverseTransformDirection(root.forward.SetY(0).normalized), root.InverseTransformDirection(thisInst.Navi3DUp)).eulerAngles;
@@ -330,6 +312,34 @@ namespace TAC_AI.AI.Movement.AICores
             if (tank.rbody.IsNotNull())
                 return tank.boundsCentreWorldNoCheck + (tank.rbody.velocity * pilot.AerofoilSluggishness);
             return tank.boundsCentreWorldNoCheck;
+        }
+
+        public static Vector3 GetExactRightAlignedWorld(Tank tank)
+        {
+            if (tank.rootBlockTrans.right.y < -0.5f || tank.rootBlockTrans.right.y > 0.5f)
+            {
+                return Vector3.Cross(-tank.rootBlockTrans.forward.SetY(0).normalized, Vector3.up).SetY(0).normalized;
+            }
+            else
+            {
+                if (tank.rootBlockTrans.up.y < 0)
+                    return -Vector3.Cross(-tank.rootBlockTrans.forward.SetY(0).normalized, Vector3.up).SetY(0).normalized;
+                else
+                    return Vector3.Cross(-tank.rootBlockTrans.forward.SetY(0).normalized, Vector3.up).SetY(0).normalized;
+            }
+
+        }
+
+        public static Vector3 GetExactRightAlignedWorldLegacy(Tank tank)
+        {
+            Vector3 rFlat;
+            if (tank.rootBlockTrans.up.y > 0)
+                rFlat = tank.rootBlockTrans.right;
+            else
+                rFlat = -tank.rootBlockTrans.right;
+            rFlat.y = 0;
+            rFlat.Normalize();
+            return rFlat;
         }
     }
 }
