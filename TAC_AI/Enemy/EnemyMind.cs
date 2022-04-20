@@ -241,7 +241,7 @@ namespace TAC_AI.AI.Enemy
             {
                 if (Tank.blockman.IterateBlockComponents<ModuleItemHolderBeam>().Count() != 0)
                     CommanderMind = EnemyAttitude.Miner;
-                else if (AIECore.FetchClosestBlockReceiver(Tank.boundsCentreWorldNoCheck, Tank.Radar.Range, out _, out _, Tank.Team))
+                else if (AIECore.FetchClosestBlockReceiver(Tank.boundsCentreWorldNoCheck, Range, out _, out _, Tank.Team))
                     CommanderMind = EnemyAttitude.Junker;
                 if (Range == 500)
                 {

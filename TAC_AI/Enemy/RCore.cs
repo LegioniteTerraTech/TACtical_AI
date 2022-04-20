@@ -140,10 +140,14 @@ namespace TAC_AI.AI.Enemy
             if (Mind.Provoked <= 0)
             {
                 if (thisInst.lastEnemy)
+                {
                     if (!Mind.InRangeOfTarget())
                     {
                         Mind.EndAggro();
                     }
+                }
+                else
+                    Mind.EndAggro();
                 Mind.Provoked = 0;
             }
             else

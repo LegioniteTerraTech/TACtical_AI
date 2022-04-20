@@ -30,7 +30,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {   //RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
                     if (!thisInst.foundBase)
                     {
                         mind.CommanderMind = EnemyAttitude.Default;
@@ -44,7 +44,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (thisInst.theBase == null)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                     if (!thisInst.foundBase)
                     {
                         mind.CommanderMind = EnemyAttitude.Default;
@@ -116,7 +116,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             //Debug.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
             if (thisInst.areWeFull || thisInst.ActionPause > 10)
             {   // BRANCH - Return to base
-                thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
@@ -221,7 +221,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
+                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, mind.Range, out thisInst.theResource);
                     if (!thisInst.foundGoal)
                     {
                         mind.CommanderMind = EnemyAttitude.Default;

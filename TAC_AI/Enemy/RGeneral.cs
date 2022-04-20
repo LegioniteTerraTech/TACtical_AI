@@ -35,7 +35,7 @@ namespace TAC_AI.AI.Enemy
                                 DefaultIdle(thisInst, tank, mind);
                             }
                         }
-                        else if (!holdGround && AIECore.FetchChargedChargers(tank, tank.Radar.Range, out Transform posTrans, out _, tank.Team))
+                        else if (!holdGround && AIECore.FetchChargedChargers(tank, mind.Range, out Transform posTrans, out _, tank.Team))
                         {
                             thisInst.lastDestination = posTrans.position;
                             return true;
