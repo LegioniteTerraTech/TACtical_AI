@@ -844,21 +844,38 @@ namespace TAC_AI
             }
         }
 
-        /*
+        
         [HarmonyPatch(typeof(TankBeam))]
         [HarmonyPatch("Update")]//Give the AI some untangle help
         private class PatchTankBeamToHelpAI
         {
+            static readonly FieldInfo beamPush = typeof(TankBeam).GetField("m_NudgeStrafe", BindingFlags.NonPublic | BindingFlags.Instance);
+
             private static void Postfix(TankBeam __instance)
             {
                 //Debug.Log("TACtical_AI: Patched TankBeam Update(TankAIHelper)");
-                var ModuleCheck = __instance.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>();
-                if (ModuleCheck != null)
+                if (__instance.IsActive && !ManNetwork.IsNetworked && !ManGameMode.inst.IsCurrent<ModeSumo>())
                 {
+                    var helper = __instance.GetComponent<AIECore.TankAIHelper>();
+                    if (helper != null && (!helper.tank.PlayerFocused || (PlayerRTSControl.autopilotPlayer && PlayerRTSControl.PlayerIsInRTS)))
+                    {
+                        if (helper.AIState != AIAlignment.Static)
+                        {
+                            Vector2 headingSquare = (helper.lastDestination - helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().normalized;
+                            if (helper.ProceedToObjective)
+                            {
+                                beamPush.SetValue(__instance, helper.tank.rootBlockTrans.InverseTransformVector(headingSquare * helper.DriveVar));
+                            }
+                            else if (helper.MoveFromObjective)
+                            {
+                                beamPush.SetValue(__instance, helper.tank.rootBlockTrans.InverseTransformVector(-headingSquare * helper.DriveVar));
+                            }
+                        }
+                    }
                 }
             }
         }
-        */
+        
 
         // Enemy AI's ability to "Lock On"
         [HarmonyPatch(typeof(ModuleAIBot))]

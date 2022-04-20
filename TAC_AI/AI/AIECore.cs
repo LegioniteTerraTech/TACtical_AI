@@ -863,7 +863,7 @@ namespace TAC_AI.AI
                     if (Singleton.playerTank)
                     {
                         var helper = Singleton.playerTank.GetComponent<TankAIHelper>();
-                        if (Input.GetMouseButton(0) && ManPointer.inst.targetVisible)
+                        if (Input.GetMouseButton(0) && Singleton.playerTank.control.FireControl && ManPointer.inst.targetVisible)
                         {
                             Visible couldBeObst = ManPointer.inst.targetVisible;
                             if (couldBeObst.GetComponent<ResourceDispenser>())
@@ -879,8 +879,11 @@ namespace TAC_AI.AI
                                 }
                             }
                         }
-                        helper.Obst = null;
-                        helper.OverrideAim = 0;
+                        if (helper.Obst != null)
+                        {
+                            helper.Obst = null;
+                            helper.OverrideAim = 0;
+                        }
                     conclusion:;
                     }
                     if (lastCombatTime > 6)
@@ -1384,6 +1387,7 @@ namespace TAC_AI.AI
             {
                 //Debug.Log("TACtical_AI: Resetting all for " + tank.name);
                 SuppressFiring(false);
+                lastLockedTarget = null;
                 Hibernate = false;
                 AIState = AIAlignment.Static;
                 PendingSystemsCheck = true;
@@ -3256,6 +3260,7 @@ namespace TAC_AI.AI
                     var aI = tank.AI;
                     hasAI = aI.CheckAIAvailable();
 
+                    lastLockedTarget = null;
                     SuppressFiring(false);
                     try
                     {
@@ -3265,7 +3270,7 @@ namespace TAC_AI.AI
                             {   // Is Client
                                 if (ManSpawn.IsPlayerTeam(tank.Team))
                                 {   //MP
-                                    if (hasAI || (World.PlayerRTSControl.PlayerIsInRTS && tank.PlayerFocused))
+                                    if ((hasAI && !tank.PlayerFocused) || (World.PlayerRTSControl.PlayerIsInRTS && tank.PlayerFocused))
                                     {
                                         //Player-Allied AI
                                         if (AIState != AIAlignment.Player)
@@ -3320,7 +3325,7 @@ namespace TAC_AI.AI
                             }
                             if (ManSpawn.IsPlayerTeam(tank.Team))
                             {   //MP
-                                if (hasAI || (World.PlayerRTSControl.PlayerIsInRTS && tank.PlayerFocused))
+                                if ((hasAI && !tank.PlayerFocused) || (World.PlayerRTSControl.PlayerIsInRTS && tank.PlayerFocused))
                                 {
                                     //Player-Allied AI
                                     if (AIState != AIAlignment.Player)
