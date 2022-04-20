@@ -1052,60 +1052,8 @@ namespace TAC_AI
                 var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
                 if (AICommand.IsNotNull())
                 {
-                    var tank = AICommand.tank;
-                    if (tank.IsNotNull())
-                    {
-                        if (AICommand.OverrideAim == 1)
-                        {
-                            if (AICommand.lastEnemy.IsNotNull())
-                            {   // Allow the enemy AI to finely select targets
-                                //Debug.Log("TACtical_AI: Overriding targeting to aim at " + AICommand.lastEnemy.name + "  pos " + AICommand.lastEnemy.tank.boundsCentreWorldNoCheck);
-
-                                if (AICommand.lastPlayer.IsNotNull())
-                                {
-                                    var playerTarg = AICommand.lastPlayer.tank.Weapons.GetManualTarget();
-                                    if (playerTarg != null)
-                                    {
-                                        if ((bool)playerTarg.tank)
-                                        {
-                                            try
-                                            {
-                                                if (playerTarg.tank.CentralBlock && playerTarg.isActive)
-                                                {   // Relay position from player to allow artillery support
-                                                    __result = playerTarg;
-                                                    return;
-                                                }
-                                            }
-                                            catch { }
-                                        }
-                                    }
-                                }
-                                __result = AICommand.lastEnemy;
-                            }
-                        }
-                        else if (AICommand.OverrideAim == 2)
-                        {
-                            if (AICommand.Obst.IsNotNull())
-                            {
-                                var resTarget = AICommand.Obst.GetComponent<Visible>();
-                                if (resTarget)
-                                {
-                                    //Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
-                                    __result = resTarget;
-                                }
-                            }
-                        }
-                        else if (AICommand.OverrideAim == 3)
-                        {
-                            if (AICommand.LastCloseAlly.IsNotNull())
-                            {
-                                //Debug.Log("TACtical_AI: Overriding targeting to aim at player's target");
-                                var helperAlly = AICommand.LastCloseAlly.GetComponent<AIECore.TankAIHelper>();
-                                if (helperAlly.OverrideAim == 1)
-                                    __result = helperAlly.lastEnemy;
-                            }
-                        }
-                    }
+                    if (AICommand.lastLockedTarget)
+                        __result = AICommand.lastLockedTarget;
                 }
             }
         }

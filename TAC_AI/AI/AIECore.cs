@@ -1043,6 +1043,7 @@ namespace TAC_AI.AI
 
             public Visible lastPlayer;
             public Visible lastEnemy;
+            public Visible lastLockedTarget;
             public Transform Obst;
 
             internal Tank LastCloseAlly;
@@ -2448,6 +2449,82 @@ namespace TAC_AI.AI
             //           ACTIONS
             //-----------------------------
 
+
+            public void ManageAILockOn()
+            {
+                if (OverrideAim == 1)
+                {
+                    if (lastEnemy.IsNotNull())
+                    {   // Allow the enemy AI to finely select targets
+                        //Debug.Log("TACtical_AI: Overriding targeting to aim at " + lastEnemy.name + "  pos " + lastEnemy.tank.boundsCentreWorldNoCheck);
+
+                        if (lastPlayer.IsNotNull())
+                        {
+                            var playerTarg = lastPlayer.tank.Weapons.GetManualTarget();
+                            if (playerTarg != null)
+                            {
+                                if ((bool)playerTarg.tank)
+                                {
+                                    try
+                                    {
+                                        if (playerTarg.tank.CentralBlock && playerTarg.isActive)
+                                        {   // Relay position from player to allow artillery support
+                                            lastLockedTarget = playerTarg;
+                                            return;
+                                        }
+                                    }
+                                    catch { }
+                                }
+                            }
+                        }
+                        lastLockedTarget = lastEnemy;
+                    }
+                }
+                else if (OverrideAim == 2)
+                {
+                    if (Obst.IsNotNull())
+                    {
+                        var resTarget = Obst.GetComponent<Visible>();
+                        if (resTarget)
+                        {
+                            //Debug.Log("TACtical_AI: Overriding targeting to aim at obstruction");
+                            lastLockedTarget = resTarget;
+                        }
+                    }
+                }
+                else if (OverrideAim == 3)
+                {
+                    if (LastCloseAlly.IsNotNull())
+                    {
+                        //Debug.Log("TACtical_AI: Overriding targeting to aim at player's target");
+                        var helperAlly = LastCloseAlly.GetComponent<TankAIHelper>();
+                        if (helperAlly.OverrideAim == 1)
+                            lastLockedTarget = helperAlly.lastEnemy;
+                    }
+                }
+                if (lastLockedTarget)
+                {
+                    if (!lastLockedTarget.isActive)
+                    {
+                        lastLockedTarget = null;
+                        return;
+                    }
+                    float maxDist;
+                    if (ManNetwork.IsNetworked)
+                    {
+                        maxDist = tank.Weapons.m_ManualTargetingSettingsMAndKB.m_ManualTargetingRadiusMP;
+                    }
+                    else
+                    {
+                        maxDist = tank.Weapons.m_ManualTargetingSettingsMAndKB.m_ManualTargetingRadiusSP;
+                    }
+                    if ((lastLockedTarget.centrePosition - tank.boundsCentreWorldNoCheck).sqrMagnitude > maxDist * maxDist)
+                    {
+                        lastLockedTarget = null;
+                    }
+                }
+            }
+
             // Allow allies to approach mobile base techs
             internal bool techIsApproaching = false;
             public void AllowApproach()
@@ -2969,6 +3046,7 @@ namespace TAC_AI.AI
                     UpdateAIModules();
                     UpdateCollectors();
                     UpdateBlockHold();
+                    ManageAILockOn();
                     if (ManNetwork.IsNetworked)
                     {
                         if (!ManNetwork.IsHost)// && tank != Singleton.playerTank)
