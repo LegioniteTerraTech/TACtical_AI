@@ -2524,7 +2524,7 @@ namespace TAC_AI.AI
                 }
                 if (lastLockedTarget)
                 {
-                    if (!lastLockedTarget.isActive)
+                    if (!lastLockedTarget.isActive || (tank.PlayerFocused && !(PlayerRTSControl.autopilotPlayer && PlayerRTSControl.PlayerIsInRTS)))
                     {
                         lastLockedTarget = null;
                         return;
