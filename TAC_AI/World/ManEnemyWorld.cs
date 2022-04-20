@@ -393,7 +393,7 @@ namespace TAC_AI.World
                         ETU.Faction = tech.m_TechData.GetMainCorpExt();
                         ETU.MoveSpeed = 0;
                         level++;
-                        if (!tech.m_TechData.CheckIsAnchored() && !tech.m_TechData.Name.Contains(" â"))
+                        if (!tech.m_TechData.CheckIsAnchored() && !tech.m_TechData.Name.Contains(" " + RawTechLoader.turretChar))
                         {
                             ETU.MoveSpeed = 25;
                             if (corpSpeeds.TryGetValue(ETU.Faction, out float sped))

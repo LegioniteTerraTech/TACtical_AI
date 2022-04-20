@@ -128,7 +128,7 @@ namespace TAC_AI.AI.Enemy
             {
                 if (tech.Team == Team)
                 {
-                    if (tech.name.Contains('â'))
+                    if (tech.name.Contains(RawTechLoader.turretChar))
                     {
                         Count++;
                     }
@@ -291,7 +291,7 @@ namespace TAC_AI.AI.Enemy
             StringBuilder nameActual = new StringBuilder();
             foreach (char ch in name)
             {
-                if (ch == 'â')
+                if (ch == RawTechLoader.turretChar)
                 {
                     nameActual.Remove(nameActual.Length - 1, 1);
                     break;
@@ -959,7 +959,7 @@ namespace TAC_AI.AI.Enemy
                     DidFire = true;
                 }
             }
-            else if (name.Contains(" â"))
+            else if (name.Contains(RawTechLoader.turretChar))
             {   // Defense
                 if (name.Contains("#"))
                 {

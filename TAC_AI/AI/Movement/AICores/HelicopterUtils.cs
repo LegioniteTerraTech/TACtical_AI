@@ -14,12 +14,15 @@ namespace TAC_AI.AI.Movement.AICores
         public static void AngleTowardsUp(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position, bool ForceAccend = false)
         {
             //AI Steering Rotational
-            TankControl.ControlState control3D = (TankControl.ControlState) HelicopterUtils.controlGet.GetValue(thisControl);
+            TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(thisControl);
             Vector3 turnVal;
-            DeterminePitchRoll(tank, pilot, position - tank.rbody.velocity, thisInst);
+            float upVal = Vector3.Dot(tank.rootBlockTrans.up, Vector3.up);
+            bool isMostlyInControl = upVal > 0.4f;
+            bool isInControl = upVal > 0.25f;
+                DeterminePitchRoll(tank, pilot, position, thisInst, !isInControl, thisInst.PivotOnly && isMostlyInControl);
             Vector3 forwardFlat = thisInst.Navi3DDirect;
             forwardFlat.y = 0;
-            if (ForceAccend)
+            if (ForceAccend || !isInControl)
             {
                 turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat), tank.rootBlockTrans.InverseTransformDirection(Vector3.one)).eulerAngles;
             }
@@ -29,10 +32,12 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             //Convert turnVal to runnable format
+
+            float chillFactorMulti = thisInst.lastTechExtents;
             if (turnVal.x > 180)
-                turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / pilot.FlyingChillFactor.x), -1, 1);
+                turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / (pilot.FlyingChillFactor.x * chillFactorMulti)), -1, 1);
             else
-                turnVal.x = Mathf.Clamp(-(turnVal.x / pilot.FlyingChillFactor.x), -1, 1);
+                turnVal.x = Mathf.Clamp(-(turnVal.x / (pilot.FlyingChillFactor.x * chillFactorMulti)), -1, 1);
 
             if (turnVal.y > 180)
                 turnVal.y = Mathf.Clamp(-((turnVal.y - 360) / pilot.FlyingChillFactor.y), -1, 1);
@@ -40,9 +45,9 @@ namespace TAC_AI.AI.Movement.AICores
                 turnVal.y = Mathf.Clamp(-(turnVal.y / pilot.FlyingChillFactor.y), -1, 1);
 
             if (turnVal.z > 180)
-                turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / pilot.FlyingChillFactor.z), -1, 1);
+                turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / (pilot.FlyingChillFactor.z * chillFactorMulti)), -1, 1);
             else
-                turnVal.z = Mathf.Clamp(-(turnVal.z / pilot.FlyingChillFactor.z), -1, 1);
+                turnVal.z = Mathf.Clamp(-(turnVal.z / (pilot.FlyingChillFactor.z * chillFactorMulti)), -1, 1);
 
             //Stop Wobble
             if (Mathf.Abs(turnVal.x) < 0.05f)
@@ -72,73 +77,87 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                     xOffset = -0.4f;
             }
+
             Vector3 DriveVar = tank.rootBlockTrans.InverseTransformVector(-tank.rbody.velocity) / pilot.PropLerpValue;
             DriveVar.x = Mathf.Clamp(DriveVar.x + xOffset, -1, 1);
-            DriveVar.z = Mathf.Clamp(DriveVar.z, -1, 1);
+            DriveVar.z = Mathf.Clamp(DriveVar.z , -1, 1);
             DriveVar.y = 0;
-            if (thisInst.PivotOnly) 
+            if (isInControl)
             {
-                // Do nothing and let the inertia dampener kick in
+                Vector3 nudge = tank.rootBlockTrans.InverseTransformPoint(thisInst.lastDestination) / thisInst.lastTechExtents;
+                if (thisInst.PivotOnly)
+                {
+                    // Do nothing and let the inertia dampener kick in
+                }
+                else if (thisInst.MoveFromObjective)
+                {
+                    DriveVar.x = -nudge.x;
+                    DriveVar.z = -nudge.z;
+                }
+                else if (thisInst.ProceedToObjective)
+                {
+                    DriveVar.x = nudge.x;
+                    DriveVar.z = nudge.z;
+                }
             }
-            else if (thisInst.MoveFromObjective)
-                DriveVar.z = -1;
-            else if (thisInst.ProceedToObjective)
-                DriveVar.z = 1;
             //DriveVar = DriveVar.normalized;
             DriveVar.y = pilot.CurrentThrottle;
+
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, (tank.rootBlockTrans.TransformPoint(DriveVar) - tank.trans.position) * 12, new Color(0, 0, 1));
+
 
             //Turn our work in to processing
             //Debug.Log("TACtical_AI: Tech " + tank.name + " | steering " + turnVal + " | drive " + DriveVar);
             control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
             controlGet.SetValue(tank.control, control3D);
-            return;
         }
-        public static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestinationVector, AIECore.TankAIHelper thisInst, bool PointAtTarget = false)
+        public static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestPosWorld, AIECore.TankAIHelper thisInst, bool avoidCrash = false, bool PointAtTarget = false)
         {
-            Vector3 Heading = (DestinationVector - tank.boundsCentreWorldNoCheck).normalized;
+            float pitchDampening = 64 * thisInst.lastTechExtents;
+            Vector3 Heading = (DestPosWorld - tank.boundsCentreWorldNoCheck).normalized;
             Vector3 fFlat = Heading;
-            fFlat.y = 0;
 
             Vector3 directUp;
             Vector3 rFlat;
+
+            // Other axis turning
+            if (!PointAtTarget)
+            {
+                fFlat.y = 0;
+                
+                // Rotors on some chopper designs were acting funky and cutting out due to pitch so I disabled pitching
+                if (pilot.LowerEngines || avoidCrash)
+                    fFlat.y = 0;
+                else if (thisInst.MoveFromObjective || thisInst.AdviseAway)
+                    fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed)) + 0.15f, -0.25f, 0.25f);
+                else if (thisInst.ProceedToObjective)
+                    fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed)) - 0.15f, -0.25f, 0.25f);
+                else
+                    fFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed), -0.15f, 0.25f);
+                
+            }
+            // Because tilting forwards too hard causes the chopper to stall on some builds
+            //fFlat.y = fFlat.y - (fFlat.y * pilot.CurrentThrottle);
+
+
 
             // X-axis turning
             if (tank.rootBlockTrans.up.y > 0)
                 rFlat = tank.rootBlockTrans.right;
             else
-                rFlat = -tank.rootBlockTrans.right;
+                rFlat = -tank.rootBlockTrans.right.SetY(0).normalized;
             if (thisInst.DriveDir == EDriveType.Perpendicular)
             {   // orbit while firing
-                if (tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).x >= 0)
-                    rFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).x / (10 / pilot.SlowestPropLerpSpeed)) - 0.5f, -0.75f, 0.75f);
+                if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x >= 0)
+                    rFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x / (pitchDampening / pilot.SlowestPropLerpSpeed)) - 0.15f, -0.25f, 0.25f);
                 else
-                    rFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).x / (10 / pilot.SlowestPropLerpSpeed)) + 0.5f, -0.75f, 0.75f);
+                    rFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x / (pitchDampening / pilot.SlowestPropLerpSpeed)) + 0.15f, -0.25f, 0.25f);
             }
             else
-                rFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).x / (10 / pilot.SlowestPropLerpSpeed), -0.75f, 0.75f);
+                rFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x / (pitchDampening / pilot.SlowestPropLerpSpeed), -0.15f, 0.25f);
             directUp = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
 
 
-            // Other axis turning
-            if (PointAtTarget)
-                fFlat.y = Heading.y;
-            else
-            {
-                fFlat.y = 0;
-                /*
-                // Rotors on some chopper designs were acting funky and cutting out due to pitch so I disabled pitching
-                if (pilot.LowerEngines)
-                    fFlat.y = 0;
-                else if (thisInst.MoveFromObjective || thisInst.AdviseAway)
-                    fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).z / (10 / pilot.SlowestPropLerpSpeed)) + 0.1f, -0.35f, 0.35f);
-                else if (thisInst.ProceedToObjective)
-                    fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).z / (10 / pilot.SlowestPropLerpSpeed)) - 0.1f, -0.35f, 0.35f);
-                else
-                    fFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformPoint(tank.rbody.velocity).z / (10 / pilot.SlowestPropLerpSpeed), -0.35f, 0.35f);
-                */
-            }
-            // Because tilting forwards too hard causes the chopper to stall on some builds
-            //fFlat.y = fFlat.y - (fFlat.y * pilot.CurrentThrottle);
 
             thisInst.Navi3DDirect = fFlat.normalized;
             thisInst.Navi3DUp = directUp;

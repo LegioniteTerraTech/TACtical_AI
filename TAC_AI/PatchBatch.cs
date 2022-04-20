@@ -861,14 +861,14 @@ namespace TAC_AI
                     {
                         if (helper.AIState != AIAlignment.Static)
                         {
-                            Vector2 headingSquare = (helper.lastDestination - helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().normalized;
+                            Vector2 headingSquare = (helper.lastDestination - helper.tank.boundsCentreWorldNoCheck).ToVector2XZ();
                             if (helper.ProceedToObjective)
                             {
-                                beamPush.SetValue(__instance, helper.tank.rootBlockTrans.InverseTransformVector(headingSquare * helper.DriveVar));
+                                beamPush.SetValue(__instance, Vector3.ClampMagnitude(helper.tank.rootBlockTrans.InverseTransformVector(headingSquare * helper.DriveVar), 1));
                             }
                             else if (helper.MoveFromObjective)
                             {
-                                beamPush.SetValue(__instance, helper.tank.rootBlockTrans.InverseTransformVector(-headingSquare * helper.DriveVar));
+                                beamPush.SetValue(__instance, Vector3.ClampMagnitude(helper.tank.rootBlockTrans.InverseTransformVector(-headingSquare * helper.DriveVar), 1));
                             }
                         }
                     }

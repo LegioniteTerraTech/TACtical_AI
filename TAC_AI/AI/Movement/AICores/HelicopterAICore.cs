@@ -185,7 +185,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (this.pilot.Helper.MoveFromObjective)
                     {   // Fly away from target
                         //this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper, 44);
-                        pilot.AirborneDest = ((this.pilot.Tank.trans.position - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
+                        pilot.AirborneDest = this.pilot.Helper.lastDestination;
                     }
                     else
                     {
@@ -221,16 +221,21 @@ namespace TAC_AI.AI.Movement.AICores
                 combat = TryAdjustForCombat(); // When set to chase then chase
             if (combat)
             {
-                pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                pilot.AirborneDest = pilot.Helper.lastDestination;
             }
             else
-                pilot.AirborneDest = this.pilot.Helper.RTSDestination;
+            {
+                pilot.Helper.Steer = true;
+                pilot.Helper.DriveDir = EDriveType.Forwards;
+                pilot.AirborneDest = pilot.Helper.RTSDestination;
+                pilot.Helper.MinimumRad = Mathf.Max(pilot.Helper.lastTechExtents - 2, 0.5f);
+            }
 
-            pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper, 32);
-            pilot.AirborneDest = this.AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
+            pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, pilot.Helper, 32);
+            pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, pilot.Tank.boundsCentreWorldNoCheck + (pilot.Tank.rbody.velocity * pilot.AerofoilSluggishness));
             pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
 
-            if (!AIEPathing.AboveHeightFromGround(this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.Tank.rbody.velocity * Time.deltaTime), 26))
+            if (!AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck + (pilot.Tank.rbody.velocity * Time.deltaTime), 26))
             {
                 //Debug.Log("TACtical_AI: Tech " + this.pilot.tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;

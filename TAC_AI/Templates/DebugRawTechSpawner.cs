@@ -997,7 +997,7 @@ namespace TAC_AI.Templates
         /// <param name="num"></param>
         /// <param name="endPosGlobal"></param>
         /// <param name="color"></param>
-        internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobal, Color color)
+        internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobalSpaceOffset, Color color)
         {
             if (!ShowDebugNaviLines || !IsCurrentlyEnabled)
                 return;
@@ -1021,7 +1021,7 @@ namespace TAC_AI.Templates
             lr.startColor = color;
             lr.endColor = color;
             Vector3 pos = obj.transform.position;
-            Vector3[] vecs = new Vector3[2] { pos, endPosGlobal + pos };
+            Vector3[] vecs = new Vector3[2] { pos, endPosGlobalSpaceOffset + pos };
             lr.SetPositions(vecs);
             Destroy(gO, Time.deltaTime);
         }

@@ -415,16 +415,36 @@ namespace TAC_AI
         /// <param name="driver"></param>
         public static void SetOptionDriver(AIDriverType driver)
         {
-            if (!lastTank)
-                return;
-            if (!lastTank.tank)
-                return;
-            if (ManNetwork.IsNetworked)
+            try
             {
-                try
+                if (!lastTank)
+                    return;
+                if (!lastTank.tank)
+                    return;
+                if (ManNetwork.IsNetworked)
                 {
-                    NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, (AIType)(-1), driver);
+                    try
+                    {
+                        NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, (AIType)(-1), driver);
 
+                        lastTank.OnSwitchAI(false);
+                        if (lastTank.DriverType != driver)
+                        {
+                            WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
+                            Patches.PopupAllyInfo(driver.ToString(), worPos);
+                        }
+                        lastTank.DriverType = driver;
+                        lastTank.ForceAllAIsToEscort();
+                        lastTank.TestForFlyingAIRequirement();
+
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                    }
+                }
+                else
+                {
                     lastTank.OnSwitchAI(false);
                     if (lastTank.DriverType != driver)
                     {
@@ -435,33 +455,13 @@ namespace TAC_AI
                     lastTank.ForceAllAIsToEscort();
                     lastTank.TestForFlyingAIRequirement();
 
-                    TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
-                    overlay.Update();
                 }
-                catch (Exception e)
-                {
-                    Debug.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
-                }
+                windowTimer = 4;
+                inst.TrySetOptionDriverRTS(driver);
+                Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
+                //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
             }
-            else
-            {
-                lastTank.OnSwitchAI(false);
-                if (lastTank.DriverType != driver)
-                {
-                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                    Patches.PopupAllyInfo(driver.ToString(), worPos);
-                }
-                lastTank.DriverType = driver;
-                lastTank.ForceAllAIsToEscort();
-                lastTank.TestForFlyingAIRequirement();
-
-                TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
-                overlay.Update();
-            }
-            windowTimer = 4;
-            inst.TrySetOptionDriverRTS(driver);
-            Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
-            //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
+            catch { }
         }
         private void TrySetOptionDriverRTS(AIDriverType driver)
         {
@@ -526,8 +526,6 @@ namespace TAC_AI
                     tankInst.DriverType = locDediAI;
                     tankInst.TestForFlyingAIRequirement();
 
-                    TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(tankInst.tank);
-                    overlay.Update();
                 }
                 catch (Exception e)
                 {
@@ -546,8 +544,6 @@ namespace TAC_AI
                 tankInst.DriverType = locDediAI;
                 tankInst.TestForFlyingAIRequirement();
 
-                TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(tankInst.tank);
-                overlay.Update();
             }
         }
 
@@ -572,8 +568,6 @@ namespace TAC_AI
                     fetchAI = dediAI;
                     lastTank.TestForFlyingAIRequirement();
 
-                    TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
-                    overlay.Update();
                 }
                 catch (Exception e)
                 {
@@ -593,8 +587,6 @@ namespace TAC_AI
                 fetchAI = dediAI;
                 lastTank.TestForFlyingAIRequirement();
 
-                TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(lastTank.tank);
-                overlay.Update();
             }
             inst.TrySetOptionRTS(dediAI);
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
@@ -686,8 +678,6 @@ namespace TAC_AI
                     tankInst.DediAI = locDediAI;
                     tankInst.TestForFlyingAIRequirement();
 
-                    TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(tankInst.tank);
-                    overlay.Update();
                 }
                 catch (Exception e)
                 {
@@ -706,8 +696,6 @@ namespace TAC_AI
                 tankInst.DediAI = locDediAI;
                 tankInst.TestForFlyingAIRequirement();
 
-                TankDescriptionOverlay overlay = (TankDescriptionOverlay)bubble.GetValue(tankInst.tank);
-                overlay.Update();
             }
         }
         public void DelayedExtraNoise()

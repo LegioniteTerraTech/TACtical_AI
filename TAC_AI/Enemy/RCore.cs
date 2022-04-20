@@ -739,6 +739,7 @@ namespace TAC_AI.AI.Enemy
                         break;
                 }
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
+                Patches.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
                 return;
             }
 
@@ -867,6 +868,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.SuppressFiring(!toSet.AttackAny);
                 thisInst.FullMelee = toSet.LikelyMelee;
             }
+            Patches.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
         }
         public static void SetFromScheme(EnemyMind toSet, Tank tank)
         {

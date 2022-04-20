@@ -869,7 +869,7 @@ namespace TAC_AI
                 Debug.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
                 return false;
             }
-            return tank.CheckIsAnchored() || tank.Name.Contains('¥') || tank.Name.Contains('â');
+            return tank.CheckIsAnchored() || tank.Name.Contains('¥') || tank.Name.Contains(RawTechLoader.turretChar);
         }
         public static bool IsBase(this Tank tank)
         {
@@ -878,7 +878,7 @@ namespace TAC_AI
                 Debug.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
                 return false;
             }
-            return tank.IsAnchored || tank.name.Contains('¥') || tank.name.Contains('â');
+            return tank.IsAnchored || tank.name.Contains('¥') || tank.name.Contains(RawTechLoader.turretChar);
         }
         public static float GetCheapBounds(this Visible vis)
         {

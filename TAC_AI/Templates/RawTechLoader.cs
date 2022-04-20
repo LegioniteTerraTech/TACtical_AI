@@ -93,6 +93,7 @@ namespace TAC_AI.Templates
         static readonly SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
         private static readonly List<QueueInstantTech> TechBacklog = new List<QueueInstantTech>();
 
+        public const char turretChar = '⛨';
 
         public const int EnemyBaseTeamsStart = 26;
         public const int EnemyBaseTeamsEnd = 175;
@@ -522,7 +523,7 @@ namespace TAC_AI.Templates
             }
             else
             {
-                theBase = TechFromBlock(block, Team, toSpawn.techName + " â");
+                theBase = TechFromBlock(block, Team, toSpawn.techName + " " + turretChar);
                 theBase.FixupAnchors(true);
                 theBase.gameObject.GetOrAddComponent<RequestAnchored>();
 
@@ -560,7 +561,7 @@ namespace TAC_AI.Templates
             }
             else
             {
-                theBase = TechFromBlock(block, Team, toSpawn.techName + " â");
+                theBase = TechFromBlock(block, Team, toSpawn.techName + " " + turretChar);
             }
             theBase.gameObject.GetOrAddComponent<RequestAnchored>();
             theBase.FixupAnchors(true);
@@ -591,7 +592,7 @@ namespace TAC_AI.Templates
                 theBase = InstantTech(pos, forwards, Team, toSpawn.techName + " ¥¥" + (toSpawn.startingFunds + ExtraBB), baseBlueprint, true, true, UseTeam: true);
             else
             {
-                theBase = InstantTech(pos, forwards, Team, toSpawn.techName + " â", baseBlueprint, true, true, UseTeam: true);
+                theBase = InstantTech(pos, forwards, Team, toSpawn.techName + " " + turretChar, baseBlueprint, true, true, UseTeam: true);
             }
 
 
@@ -643,7 +644,7 @@ namespace TAC_AI.Templates
                 theBase = TechFromBlock(block, Team, toSpawn.techName + " ¥¥" + SpawnBB);
             else
             {
-                theBase = TechFromBlock(block, Team, toSpawn.techName + " â");
+                theBase = TechFromBlock(block, Team, toSpawn.techName + " " + turretChar);
             }
             
             
@@ -678,7 +679,7 @@ namespace TAC_AI.Templates
                 theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + (GetBaseStartingFunds(toSpawn) + ExtraBB));
             else
             {
-                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " â");
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " " + turretChar);
             }
 
 
@@ -713,7 +714,7 @@ namespace TAC_AI.Templates
                 theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " ¥¥" + (GetBaseStartingFunds(toSpawn) + ExtraBB));
             else
             {
-                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " â");
+                theBase = TechFromBlock(block, Team, GetEnglishName(toSpawn) + " " + turretChar);
             }
 
 
@@ -727,7 +728,7 @@ namespace TAC_AI.Templates
             return GetBaseBBCost(baseBlueprint);
             */
         }
-       
+
 
 
         // UNLOADED
@@ -757,7 +758,7 @@ namespace TAC_AI.Templates
                 name = BT.techName + " ¥¥" + SpawnBB;
             else
             {
-                name = BT.techName + " â";
+                name = BT.techName + " " + turretChar;
             }
             return ExportRawTechToTechData(name, baseBlueprint, team, out blocIDs);
         }
@@ -940,7 +941,7 @@ namespace TAC_AI.Templates
             {
                 if (Blueprint.purposes.Contains(BasePurpose.Defense))
                 {
-                    theTech = InstantTech(pos, facingDirect, Team, Blueprint.techName + " â", baseBlueprint, AutoTerrain, MustBeAnchored, pop);
+                    theTech = InstantTech(pos, facingDirect, Team, Blueprint.techName + " " + turretChar, baseBlueprint, AutoTerrain, MustBeAnchored, pop);
                     theTech.gameObject.AddComponent<RequestAnchored>();
                 }
                 else
@@ -987,7 +988,7 @@ namespace TAC_AI.Templates
                 {
                     if (Blueprint.purposes.Contains(BasePurpose.Defense))
                     {
-                        theTech = TechFromBlock(block, Team, Blueprint.techName + " â");
+                        theTech = TechFromBlock(block, Team, Blueprint.techName + " " + turretChar);
                         theTech.gameObject.AddComponent<RequestAnchored>();
                     }
                     else
@@ -1059,7 +1060,7 @@ namespace TAC_AI.Templates
             {
                 if (baseTemplate.purposes.Contains(BasePurpose.Defense))
                 {
-                    theTech = InstantTech(pos, facingDirect, Team, baseTemplate.techName + " â", baseTemplate.savedTech, AutoTerrain, MustBeAnchored, isPopulation);
+                    theTech = InstantTech(pos, facingDirect, Team, baseTemplate.techName + " " + turretChar, baseTemplate.savedTech, AutoTerrain, MustBeAnchored, isPopulation);
                     theTech.gameObject.AddComponent<RequestAnchored>();
                 }
                 else
@@ -1099,7 +1100,7 @@ namespace TAC_AI.Templates
                 {
                     if (baseTemplate.purposes.Contains(BasePurpose.Defense))
                     {
-                        theTech = TechFromBlock(block, Team, baseTemplate.techName + " â");
+                        theTech = TechFromBlock(block, Team, baseTemplate.techName + " " + turretChar);
                         theTech.gameObject.AddComponent<RequestAnchored>();
                     }
                     else
@@ -1169,7 +1170,7 @@ namespace TAC_AI.Templates
             else
             {
                 if (baseTemplate.purposes.Contains(BasePurpose.Defense))
-                    InstantTechSafe(pos, facingDirect, Team, baseTemplate.techName + " â", baseTemplate.savedTech, AutoTerrain, MustBeAnchored, isPopulation, fallbackOp);
+                    InstantTechSafe(pos, facingDirect, Team, baseTemplate.techName + " " + turretChar, baseTemplate.savedTech, AutoTerrain, MustBeAnchored, isPopulation, fallbackOp);
                 else
                     InstantTechSafe(pos, facingDirect, Team, baseTemplate.techName, baseTemplate.savedTech, AutoTerrain, MustBeAnchored, isPopulation, fallbackOp);
             }
@@ -1832,19 +1833,22 @@ namespace TAC_AI.Templates
                         theTech = item;
                     }
                 }
-                    /*
-                int count = data.m_BlockSpecs.Count;
-                uint[] specs = new uint[count];
-                for (int step = 0; step < count; step++)
-                    specs[step] = Singleton.Manager<ManNetwork>.inst.GetNextHostBlockPoolID();
+                /*
+            int count = data.m_BlockSpecs.Count;
+            uint[] specs = new uint[count];
+            for (int step = 0; step < count; step++)
+                specs[step] = Singleton.Manager<ManNetwork>.inst.GetNextHostBlockPoolID();
 
-                TrackedVisible TV = ManNetwork.inst.SpawnNetworkedNonPlayerTech(data, specs, block.trans.position, block.trans.rotation, true);
-                theTech = TV.visible.tank;
-                    */
+            TrackedVisible TV = ManNetwork.inst.SpawnNetworkedNonPlayerTech(data, specs, block.trans.position, block.trans.rotation, true);
+            theTech = TV.visible.tank;
+                */
                 ManLooseBlocks.inst.RequestDespawnBlock(block, DespawnReason.Host);
             }
             else
+            {
                 theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, name);
+                TrackTank(theTech);
+            }
             if ((bool)theTech)
                 TryForceIntoPop(theTech);
             return theTech;
@@ -2170,6 +2174,20 @@ namespace TAC_AI.Templates
 
 
         private static readonly FieldInfo forceInsert = typeof(ManPop).GetField("m_SpawnedTechs", BindingFlags.NonPublic | BindingFlags.Instance);
+        internal static void TrackTank(Tank tank)
+        {
+            if (ManNetwork.IsNetworked)
+            {
+            }
+            else
+            {
+                if (ManVisible.inst.GetTrackedVisible(tank.visible.ID) != null)
+                    return;
+                TrackedVisible tracked = new TrackedVisible(tank.visible.ID, tank.visible, ObjectTypes.Vehicle, RadarTypes.Vehicle);
+                ManVisible.inst.TrackVisible(tracked);
+                Debug.Log("TACtical_AI: RawTechLoader - Forced " + tank.name + " into population");
+            }
+        }
         internal static void TryForceIntoPop(Tank tank)
         {
             if (tank.Team == -1) // the wild tech pop number
@@ -2203,6 +2221,8 @@ namespace TAC_AI.Templates
         // Determination
         public static void TryClearAreaForBase(Vector3 vector3)
         {   //N/A
+            // We don't want trees vanishing
+            return;
             int removeCount = 0;
             foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(vector3, 8, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })))
             {   // Does not compensate for bases that are 64x64 diagonally!

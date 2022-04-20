@@ -1508,16 +1508,32 @@ namespace TAC_AI.AI
                 SideToThreat = false;
                 useInventory = false;
 
-                isAegisAvail = false;
-                isAssassinAvail = false;
+                if (tank.PlayerFocused)
+                {   // player gets full control
+                    isAegisAvail = true;
+                    isAssassinAvail = true;
 
-                isProspectorAvail = false;
-                isScrapperAvail = false;
-                isEnergizerAvail = false;
+                    isProspectorAvail = true;
+                    isScrapperAvail = true;
+                    isEnergizerAvail = true;
 
-                isAstrotechAvail = false;
-                isAviatorAvail = false;
-                isBuccaneerAvail = false;
+                    isAstrotechAvail = true;
+                    isAviatorAvail = true;
+                    isBuccaneerAvail = true;
+                }
+                else
+                {
+                    isAegisAvail = false;
+                    isAssassinAvail = false;
+
+                    isProspectorAvail = false;
+                    isScrapperAvail = false;
+                    isEnergizerAvail = false;
+
+                    isAstrotechAvail = false;
+                    isAviatorAvail = false;
+                    isBuccaneerAvail = false;
+                }
 
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
                 control3D.m_State.m_Beam = false;
