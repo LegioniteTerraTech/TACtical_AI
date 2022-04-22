@@ -32,11 +32,11 @@ namespace TAC_AI.AI.Enemy
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemy.IsNotNull() && RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tank, mind.TechMemor))
+                    if (thisInst.lastEnemy.IsNotNull() && RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tank, mind.TechMemor))
                         BlowBolts(tank, mind);
                     break;
                 default:                        // Unimplemented
@@ -134,7 +134,7 @@ namespace TAC_AI.AI.Enemy
                 for (int stepper = 0; techCount > stepper; stepper++)
                 {
                     Tank tech = allTechs.ElementAt(stepper);
-                    if (RawTechLoader.IsEnemyBaseTeam(tech.Team) || tech.Team == -1)
+                    if (AIGlobals.IsEnemyBaseTeam(tech.Team) || tech.Team == -1)
                         Counter++;
                 }
             }

@@ -96,6 +96,10 @@ namespace TAC_AI.AI
         public bool TargetGrounded = false;     // Are we dealing with a target that is on the ground?
         public bool LowerEngines = false;       // Choppers: Too high! Too high!  Airplanes: Conserve booster fuel
 
+        internal Vector3 deltaMovementClock;
+
+
+
         public void Initiate(Tank tank, AIECore.TankAIHelper thisInst, Enemy.EnemyMind mind = null)
         {
             this.Tank = tank;
@@ -198,7 +202,7 @@ namespace TAC_AI.AI
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }
                 }
-                Debug.Log("TACtical_AI: Tech " + tank.name + " has been assigned aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + this.FlyStyle.ToString() + ", Roll intensity of " + this.RollStrength + " and flying chill of " + this.FlyingChillFactor);
+                Debug.Log("TACtical_AI: Tech " + tank.name + " has been assigned Non-Player aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + this.FlyStyle.ToString() + ", Roll intensity of " + this.RollStrength + " and flying chill of " + this.FlyingChillFactor);
             }
         }
         public void UpdateEnemyMind(Enemy.EnemyMind mind)
@@ -366,6 +370,7 @@ namespace TAC_AI.AI
                 return;
             }
 
+            deltaMovementClock = Tank.rbody.velocity * Time.deltaTime * KickStart.AIDodgeCheapness;
             this.TestForMayday(thisInst, tank);
 
             if (thisInst.AIState == AIAlignment.Player)
@@ -383,7 +388,7 @@ namespace TAC_AI.AI
                 thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
                 this.AICore.DriveDirector();
             }
-            else if (thisInst.AIState == AIAlignment.NonPlayerTech) //enemy
+            else if (thisInst.AIState == AIAlignment.NonPlayer) //enemy
             {
                 Enemy.EnemyMind mind = tank.GetComponent<Enemy.EnemyMind>();
                 if (!this.TargetGrounded)
@@ -421,7 +426,7 @@ namespace TAC_AI.AI
                 thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.RTSDestination, thisInst);
                 this.AICore.DriveDirectorRTS();
             }
-            else if (thisInst.AIState == AIAlignment.NonPlayerTech) //enemy
+            else if (thisInst.AIState == AIAlignment.NonPlayer) //enemy
             {
                 Enemy.EnemyMind mind = tank.GetComponent<Enemy.EnemyMind>();
                 if (!this.TargetGrounded)
@@ -449,6 +454,13 @@ namespace TAC_AI.AI
             this.AICore.DriveMaintainer(thisControl, thisInst, tank);
             return;
         }
+
+
+        public void OnMoveWorldOrigin(IntVector3 move)
+        {
+            AirborneDest += move;
+        }
+
 
         // Action Updaters
         /// <summary>

@@ -13,11 +13,12 @@ namespace TAC_AI.Templates
         /*  
          * REMINDERS FOR SUBMISSION TESTING:
          *   MAKE SURE THE TECH WORKS ON IT'S OWN (Some may fail due to Cab Issues)
-         *   
-         * 
+         *   Note: due to editor lag issues, this will now be handled in an automatically compiled 
+         *    external .RTList file
+         *   (RawTech List)
          * 
          * Maker Preferences:
-         *   Lemon Kingdom - *UNDECIDED* - Do not allow Community Spawns into the population
+         *   Lemon Kingdom - *UNDECIDED* - Do not allow Community Spawns into the population?
          *   Old Stars - Only permit Combat Cab to be used in designs as enemy AI is broken
          * 
          * 

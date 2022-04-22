@@ -11,6 +11,14 @@ using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI.Enemy
 {
+    public enum RequestSeverity
+    {
+        ThinkMcFly,
+        Warn,
+        SameTeam,
+        AllHandsOnDeck,
+    }
+
     public static class RBases
     {
         internal static int MaxSingleBaseType { get { return KickStart.MaxBasesPerTeam / 3; } }
@@ -28,6 +36,22 @@ namespace TAC_AI.AI.Enemy
             {
                 if (item.Team == Team && !item.IsBase())
                     activeCount.Add(item);
+            }
+            return activeCount;
+        }
+        public static List<Tank> TeamActiveMobileTechsInCombat(int Team)
+        {
+            List<Tank> activeCount = new List<Tank>();
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item.Team == Team && !item.IsBase())
+                {
+                    var help = item.GetComponent<AIECore.TankAIHelper>();
+                    if (help && help.DANGER && help.lastEnemy)
+                    {
+                        activeCount.Add(item);
+                    }
+                }
             }
             return activeCount;
         }
@@ -197,7 +221,7 @@ namespace TAC_AI.AI.Enemy
             WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tank.visible);
             int tankCost = RawTechExporter.GetBBCost(tank);
             string compressed = CompressIfNeeded(tankCost, out int smaller);
-            Patches.PopupEnemyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(smaller) + compressed, worPos);
+            AIGlobals.PopupEnemyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(smaller) + compressed, worPos);
             TryAddMoney(tankCost, tank.Team);
             SpecialAISpawner.Eradicate(tank);
         }
@@ -340,7 +364,7 @@ namespace TAC_AI.AI.Enemy
             if (!BaseFunderManager.TeamsBuildRequested.Contains(Team))
                 BaseFunderManager.TeamsBuildRequested.Add(Team);
         }
-        public static void RequestFocusFire(Tank tank, Visible Target)
+        public static void RequestFocusFire(Tank tank, Visible Target, RequestSeverity priority)
         {
             if (Target.IsNull())
                 return;
@@ -352,7 +376,7 @@ namespace TAC_AI.AI.Enemy
             else
                 AIECore.AIMessage(tank, tank.name + ": Requesting assistance!  Cover me!");
             if (!BaseFunderManager.targetingRequests.ContainsKey(Team))
-                BaseFunderManager.targetingRequests.Add(Team, Target);
+                BaseFunderManager.targetingRequests.Add(Team, new KeyValuePair<RequestSeverity, Visible>(priority,Target));
         }
         public static void PoolTeamMoney(int Team)
         {
@@ -429,7 +453,7 @@ namespace TAC_AI.AI.Enemy
             public static BaseFunderManager inst;
 
             public static List<int> TeamsBuildRequested = new List<int>();
-            public static Dictionary<int, Visible> targetingRequests = new Dictionary<int, Visible>();
+            public static Dictionary<int, KeyValuePair<RequestSeverity, Visible>> targetingRequests = new Dictionary<int, KeyValuePair<RequestSeverity, Visible>>();
             private static readonly List<int> teamsCache = new List<int>();
             private float timeStep = 0;
 
@@ -484,16 +508,27 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (teamsCache.Contains(tech.Team))
                         continue;
-                    var funder = tech.GetComponent<EnemyBaseFunder>();
+                    var funder = GetTeamFunder(tech.Team);
                     if (!(bool)funder)
                         continue;
-                    if (funder == GetTeamFunder(tech.Team))
+                    var enemyMind = funder.GetComponent<EnemyMind>();
+                    if ((bool)enemyMind)
                     {
-                        var enemyMind = tech.GetComponent<EnemyMind>();
-                        if ((bool)enemyMind)
+                        TryBaseOperations(enemyMind);
+                        teamsCache.Add(tech.Team);
+                        if (AIECore.RetreatingTeams.Contains(tech.Team))
                         {
-                            TryBaseOperations(enemyMind);
-                            teamsCache.Add(tech.Team);
+                            List<Tank> techs = TeamActiveMobileTechs(tech.Team);
+                            if (techs.Count == 0)
+                                return;
+                            float averageTechDMG = 0;
+                            foreach (var item in techs.Select(x => x.GetComponent<AIECore.TankAIHelper>()))
+                            {
+                                averageTechDMG += item.DamageThreshold;
+                            }
+                            averageTechDMG /= techs.Count;
+                            if (averageTechDMG <= 8)
+                                AIECore.TeamRetreat(tech.Team, false, true);
                         }
                     }
                 }
@@ -528,35 +563,145 @@ namespace TAC_AI.AI.Enemy
             }
             private void RunFocusFireRequests()
             {
-                foreach (KeyValuePair<int, Visible> request in targetingRequests)
+                foreach (KeyValuePair<int, KeyValuePair<RequestSeverity, Visible>> request in targetingRequests)
                 {
-                    FocusFireRequest(request.Key, request.Value);
+                    FocusFireRequest(request.Key, request.Value.Value, request.Value.Key);
                 }
                 targetingRequests.Clear();
             }
-            private static void FocusFireRequest(int requestingTeam, Visible Target)
+            private static void FocusFireRequest(int requestingTeam, Visible Target, RequestSeverity Priority)
             {
                 try
                 {
-                    foreach (Tank tech in AIECore.TankAIManager.GetNonEnemyTanks(requestingTeam))
+                    if (Priority == RequestSeverity.AllHandsOnDeck)
                     {
-                        var helper = tech.GetComponent<AIECore.TankAIHelper>();
-                        var mind = tech.GetComponent<EnemyMind>();
-                        if ((bool)helper && (bool)mind)
+                        foreach (Tank tech in AIECore.TankAIManager.GetNonEnemyTanks(requestingTeam))
                         {
-                            var baseFunds = tech.GetComponent<EnemyBaseFunder>();
-                            if (!mind.StartedAnchored)
+                            var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                            var mind = tech.GetComponent<EnemyMind>();
+                            if ((bool)helper && (bool)mind)
                             {
-                                mind.Provoked = AIGlobals.ProvokeTime;
-                                if (!(bool)helper.lastEnemy)
-                                    mind.GetRevengeOn(Target, true);
-                            }
-                            else if ((bool)baseFunds)
-                            {
-                                if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                                var baseFunds = tech.GetComponent<EnemyBaseFunder>();
+                                if (!mind.StartedAnchored)
                                 {
-                                    if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && !AIERepair.SystemsCheckBolts(tech, mind.TechMemor))
-                                        RBolts.BlowBolts(tech, mind);
+                                    mind.Provoked = AIGlobals.ProvokeTime;
+                                    if (!(bool)helper.lastEnemy)
+                                        mind.GetRevengeOn(Target, true);
+                                }
+                                else if ((bool)baseFunds)
+                                {
+                                    if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                                    {
+                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                            RBolts.BlowBolts(tech, mind);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (Priority == RequestSeverity.SameTeam)
+                    {
+                        foreach (Tank tech in AIECore.TankAIManager.GetNonEnemyTanks(requestingTeam))
+                        {
+                            if (tech.Team != requestingTeam)
+                                continue;
+                            var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                            var mind = tech.GetComponent<EnemyMind>();
+                            if ((bool)helper && (bool)mind)
+                            {
+                                var baseFunds = tech.GetComponent<EnemyBaseFunder>();
+                                if (!mind.StartedAnchored)
+                                {
+                                    mind.Provoked = AIGlobals.ProvokeTime;
+                                    if (!(bool)helper.lastEnemy)
+                                        mind.GetRevengeOn(Target, true);
+                                }
+                                else if ((bool)baseFunds)
+                                {
+                                    if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                                    {
+                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                            RBolts.BlowBolts(tech, mind);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (Priority == RequestSeverity.Warn)
+                    {
+                        foreach (Tank tech in AIECore.TankAIManager.GetNonEnemyTanks(requestingTeam))
+                        {
+                            var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                            var mind = tech.GetComponent<EnemyMind>();
+                            if ((bool)helper && (bool)mind)
+                            {
+                                if (helper.CanStoreEnergy())
+                                    if (helper.GetEnergyPercent() < 0.9f)
+                                        continue;
+                                if (helper.DamageThreshold > 15)
+                                    continue;
+                                var baseFunds = tech.GetComponent<EnemyBaseFunder>();
+                                if (!mind.StartedAnchored)
+                                {
+                                    mind.Provoked = AIGlobals.ProvokeTime;
+                                    if (!(bool)helper.lastEnemy)
+                                        mind.GetRevengeOn(Target, true);
+                                }
+                                else if ((bool)baseFunds)
+                                {
+                                    if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                                    {
+                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                            RBolts.BlowBolts(tech, mind);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else if (Priority == RequestSeverity.ThinkMcFly)
+                    {
+                        List<Tank> techs = TeamActiveMobileTechsInCombat(requestingTeam);
+                        if (techs.Count == 0)
+                            return;
+
+                        float averageTechDMG = 0;
+                        foreach (var item in techs.Select(x => x.GetComponent<AIECore.TankAIHelper>()))
+                        {
+                            averageTechDMG += item.DamageThreshold;
+                        }
+                        averageTechDMG /= techs.Count;
+                        if (averageTechDMG > 25)
+                        {
+                            AIECore.TeamRetreat(requestingTeam, true, true);
+                        }
+                        else
+                        {
+                            foreach (Tank tech in AIECore.TankAIManager.GetNonEnemyTanks(requestingTeam))
+                            {
+                                var helper = tech.GetComponent<AIECore.TankAIHelper>();
+                                var mind = tech.GetComponent<EnemyMind>();
+                                if ((bool)helper && (bool)mind)
+                                {
+                                    if (helper.CanStoreEnergy())
+                                        if (helper.GetEnergyPercent() < 0.9f)
+                                            continue;
+                                    if (helper.DamageThreshold > 15)
+                                        continue;
+                                    var baseFunds = tech.GetComponent<EnemyBaseFunder>();
+                                    if (!mind.StartedAnchored)
+                                    {
+                                        mind.Provoked = AIGlobals.ProvokeTime;
+                                        if (!(bool)helper.lastEnemy)
+                                            mind.GetRevengeOn(Target, true);
+                                    }
+                                    else if ((bool)baseFunds)
+                                    {
+                                        if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
+                                        {
+                                            if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                                RBolts.BlowBolts(tech, mind);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1108,7 +1253,7 @@ namespace TAC_AI.AI.Enemy
                                     if (KickStart.DisplayEnemyEvents)
                                     {
                                         WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTankGrab.visible);
-                                        Patches.PopupEnemyInfo("Bribed!", pos2);
+                                        AIGlobals.PopupPlayerInfo("Bribed!", pos2);
 
                                         try
                                         {
@@ -1494,7 +1639,8 @@ namespace TAC_AI.AI.Enemy
         {   // Make sure at least one harvester is on scene
             try
             {
-                if (GetCountOfPurpose(BasePurpose.HasReceivers, funders) > 0)
+                int harvestBases = GetCountOfPurpose(BasePurpose.HasReceivers, funders);
+                if (harvestBases > 0)
                 {
                     foreach (var item in ManTechs.inst.IterateTechs())
                     {
@@ -1502,7 +1648,11 @@ namespace TAC_AI.AI.Enemy
                         if (mindItem && !item.GetComponent<EnemyBaseFunder>())
                         {
                             if (mindItem.CommanderMind == EnemyAttitude.Miner)
-                                return false;
+                            {
+                                harvestBases--;
+                                if (harvestBases == 0)
+                                    return false;
+                            }
                         }
                     }
                     if (TryFindExpansionLocationGrid(mind.Tank.boundsCentreWorld, mind.Tank.trans.forward * 128, out Vector3 pos))

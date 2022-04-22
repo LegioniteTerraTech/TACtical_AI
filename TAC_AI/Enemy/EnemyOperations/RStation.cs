@@ -18,7 +18,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             thisInst.Attempt3DNavi = true;
             thisInst.Retreat = true;    //Prevent the auto-driveaaaa
 
-            float dist = (mind.HoldPos - tank.boundsCentreWorldNoCheck).magnitude;
+            float dist = (mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck).magnitude;
             thisInst.lastRange = dist;
 
             if (thisInst.lastEnemy == null)
@@ -33,8 +33,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
                 thisInst.ProceedToObjective = true;
                 thisInst.Steer = true;
-                thisInst.lastDestination = mind.HoldPos;
-                if (Mathf.Abs(Vector3.Dot(mind.HoldPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.6f)
+                thisInst.lastDestination = mind.sceneStationaryPos;
+                if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.6f)
                 {   //Move
                     thisInst.forceDrive = true;
                     thisInst.DriveVar = -1;

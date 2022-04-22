@@ -431,10 +431,11 @@ namespace TAC_AI
                         if (lastTank.DriverType != driver)
                         {
                             WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                            Patches.PopupAllyInfo(driver.ToString(), worPos);
+                            AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                         }
                         lastTank.DriverType = driver;
                         lastTank.ForceAllAIsToEscort();
+                        lastTank.ForceRebuildAlignment();
                         lastTank.TestForFlyingAIRequirement();
 
                     }
@@ -449,10 +450,11 @@ namespace TAC_AI
                     if (lastTank.DriverType != driver)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                        Patches.PopupAllyInfo(driver.ToString(), worPos);
+                        AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                     }
                     lastTank.DriverType = driver;
                     lastTank.ForceAllAIsToEscort();
+                    lastTank.ForceRebuildAlignment();
                     lastTank.TestForFlyingAIRequirement();
 
                 }
@@ -460,6 +462,7 @@ namespace TAC_AI
                 inst.TrySetOptionDriverRTS(driver);
                 Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
                 //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
+                Debug.Log("TACtical_AI: Set " + lastTank.name + " to driver " + driver);
             }
             catch { }
         }
@@ -520,10 +523,11 @@ namespace TAC_AI
                     if (tankInst.DriverType != driver)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
-                        Patches.PopupAllyInfo(driver.ToString(), worPos);
+                        AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                     }
                     tankInst.ForceAllAIsToEscort();
                     tankInst.DriverType = locDediAI;
+                    lastTank.ForceRebuildAlignment();
                     tankInst.TestForFlyingAIRequirement();
 
                 }
@@ -538,10 +542,11 @@ namespace TAC_AI
                 if (tankInst.DriverType != driver)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
-                    Patches.PopupAllyInfo(driver.ToString(), worPos);
+                    AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                 }
                 tankInst.ForceAllAIsToEscort();
                 tankInst.DriverType = locDediAI;
+                lastTank.ForceRebuildAlignment();
                 tankInst.TestForFlyingAIRequirement();
 
             }
@@ -561,11 +566,12 @@ namespace TAC_AI
                     if (lastTank.DediAI != dediAI)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                        Patches.PopupAllyInfo(dediAI.ToString(), worPos);
+                        AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     lastTank.DediAI = dediAI;
                     lastTank.ForceAllAIsToEscort();
                     fetchAI = dediAI;
+                    lastTank.ForceRebuildAlignment();
                     lastTank.TestForFlyingAIRequirement();
 
                 }
@@ -580,11 +586,12 @@ namespace TAC_AI
                 if (lastTank.DediAI != dediAI)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                    Patches.PopupAllyInfo(dediAI.ToString(), worPos);
+                    AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 lastTank.DediAI = dediAI;
                 lastTank.ForceAllAIsToEscort();
                 fetchAI = dediAI;
+                lastTank.ForceRebuildAlignment();
                 lastTank.TestForFlyingAIRequirement();
 
             }
@@ -673,9 +680,10 @@ namespace TAC_AI
                     if (tankInst.DediAI != dediAI)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
-                        Patches.PopupAllyInfo(dediAI.ToString(), worPos);
+                        AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     tankInst.DediAI = locDediAI;
+                    lastTank.ForceRebuildAlignment();
                     tankInst.TestForFlyingAIRequirement();
 
                 }
@@ -691,9 +699,10 @@ namespace TAC_AI
                 if (tankInst.DediAI != dediAI)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
-                    Patches.PopupAllyInfo(dediAI.ToString(), worPos);
+                    AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 tankInst.DediAI = locDediAI;
+                lastTank.ForceRebuildAlignment();
                 tankInst.TestForFlyingAIRequirement();
 
             }

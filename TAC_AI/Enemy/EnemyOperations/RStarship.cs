@@ -9,7 +9,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
     public static class RStarship
     {
         //Same as RWheeled but has multi-plane support
-
+        /// <summary>
+        /// Positions are handled by the AI Core
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        /// <param name="mind"></param>
         public static void TryAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
@@ -54,7 +59,6 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                         thisInst.BOOST = true;
                     }
                     else if (dist < spacing + (range*2))
@@ -63,7 +67,6 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     break;
                 case EnemyAttack.Circle:
@@ -80,18 +83,15 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (!mind.LikelyMelee && dist < spacing + 2)
                     {
                         thisInst.MoveFromObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else if (mind.Range < spacing + range)
                     {
                         thisInst.ProceedToObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else
                     {
                         thisInst.BOOST = true;
                         thisInst.ProceedToObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     break;
                 case EnemyAttack.Spyper:// Spyper does not support melee
@@ -105,12 +105,11 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                             thisInst.SettleDown();
                         thisInst.MoveFromObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else if (dist < spacing + (range * 1.5f))
                     {
                         thisInst.PivotOnly = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        
                     }
                     else if (dist < spacing + (range * 2))
                     {
@@ -119,7 +118,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                             thisInst.SettleDown();
                         thisInst.ProceedToObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        
                     }
                     else
                     {
@@ -129,7 +128,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.SettleDown();
                         thisInst.BOOST = true;
                         thisInst.ProceedToObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        
                     }
                     break;
                 default:
@@ -143,13 +142,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                             thisInst.SettleDown();
                         thisInst.MoveFromObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        
                     }
                     else if (!mind.LikelyMelee && dist < spacing + range)
                     {
                         thisInst.PivotOnly = true;
                         thisInst.ProceedToObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        
                     }
                     else if (dist < spacing + (range * 1.25f))
                     {
@@ -158,7 +157,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                             thisInst.SettleDown();
                         thisInst.ProceedToObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        
                     }
                     else
                     {
@@ -168,7 +167,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.SettleDown();
                         thisInst.BOOST = true;
                         thisInst.ProceedToObjective = true;
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                        
                     }
                     break;
             }

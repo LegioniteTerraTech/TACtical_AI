@@ -33,7 +33,7 @@ namespace TAC_AI.AI.Movement.AICores
             {   // Try and takeoff like helicopter
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, thisInst.lastTechExtents * 2));
                 this.pilot.UpdateThrottle(thisInst, thisControl);
-                HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck, true);
+                HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck, thisInst.lastDestination, true);
             }
             else
             {   //Fly like plane

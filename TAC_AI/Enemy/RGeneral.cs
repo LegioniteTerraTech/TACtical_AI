@@ -18,10 +18,9 @@ namespace TAC_AI.AI.Enemy
             bool isRegenerating = false;
             if (mind.Hurt)// && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10)
             {
-                var energy = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
                 if (mind.CommanderSmarts >= EnemySmarts.Meh)
                 {
-                    if (energy.storageTotal > 500)
+                    if (thisInst.CanStoreEnergy())
                     {
                         if (mind.SolarsAvail && !Singleton.Manager<ManTimeOfDay>.inst.NightTime && tank.Anchors.NumPossibleAnchors > 0 && !tank.IsAnchored)
                         {
@@ -40,7 +39,7 @@ namespace TAC_AI.AI.Enemy
                             thisInst.lastDestination = posTrans.position;
                             return true;
                         }
-                        if (energy.storageTotal - 100 < (energy.storageTotal - energy.spareCapacity))
+                        if (thisInst.GetEnergyPercent() > 0.9f)
                         {
                             mind.Hurt = false;
                         }
@@ -73,7 +72,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 4)
                     {
-                        if ((energy.storageTotal - energy.spareCapacity) / energy.storageTotal > 0.5)
+                        if (thisInst.GetEnergyPercent() > 0.5f)
                         {
                             //flex yee building speeds on them players
                             thisInst.PendingSystemsCheck = !RRepair.EnemyInstaRepair(tank, mind);
@@ -101,7 +100,7 @@ namespace TAC_AI.AI.Enemy
             //Debug.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
-                thisInst.lastDestination = mind.HoldPos;
+                thisInst.lastDestination = mind.sceneStationaryPos;
             else
             {
                 switch (mind.CommanderMind)
@@ -127,12 +126,7 @@ namespace TAC_AI.AI.Enemy
                         break;
                 }
             }
-            if (mind.EvilCommander == EnemyHandling.Naval)
-                thisInst.lastDestination = AIEPathing.OffsetToSea(thisInst.lastDestination, tank, thisInst);
-            else if (mind.EvilCommander == EnemyHandling.Starship)
-                thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst);
-            else //Snap to ground
-                thisInst.lastDestination = AIEPathing.OffsetFromGround(thisInst.lastDestination, thisInst, tank.blockBounds.size.y);
+
             return isRegenerating;
         }
         public static void Engadge(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
@@ -166,7 +160,9 @@ namespace TAC_AI.AI.Enemy
             try
             {
                 thisInst.lastEnemy = mind.FindEnemy(inRange: AIGlobals.EnemyExtendActionRange);
-                if (thisInst.lastEnemy == null)
+                if (thisInst.lastEnemy)
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                else
                     DefaultIdle(thisInst, tank, mind);
             }
             catch { }//No tanks available
@@ -216,6 +212,8 @@ namespace TAC_AI.AI.Enemy
             }
             else
                 thisInst.lastEnemy = mind.FindEnemy();
+            if (thisInst.lastEnemy)
+                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
             thisInst.DANGER = false;
         }
 

@@ -12,7 +12,7 @@ namespace TAC_AI.World
     // The enemy base in world-relations
     public class EnemyPresence
     {
-        public int team = RawTechLoader.EnemyBaseTeamsStart;
+        public int team = AIGlobals.EnemyBaseTeamsStart;
         public int Team => team;
         private float lastAttackedTimestep = 0;
         internal EnemyTechUnit teamFounder;

@@ -289,7 +289,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             //Debug.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
-                thisInst.lastDestination = mind.HoldPos;
+                thisInst.lastDestination = mind.sceneStationaryPos;
             else
             {
                 switch (mind.CommanderMind)

@@ -125,6 +125,10 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
         {
+            /*
+            Debug.Log("TACtical_AI: Enemy AI " + tank.name + ": - EnemyRepairStepper "
+                + mind.TechMemor.blockIntegrityDirty + " | " + thisInst.PendingSystemsCheck);
+            */
             if (!(bool)mind.TechMemor)
             {
                 Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Tried to call EnemyRepairStepper when TechMemor is NULL");
@@ -209,8 +213,10 @@ namespace TAC_AI.AI.Enemy
                             }
                             else
                             {
-                                QueueEnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing);
-                                thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
+                                if (QueueEnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing))
+                                    thisInst.PendingSystemsCheck = AIERepair.SystemsCheck(tank, mind.TechMemor);
+                                else
+                                    thisInst.PendingSystemsCheck = false; // cannot repair as invalid block
                             }
                             mind.TechMemor.UpdateMissingBlockTypes(typesMissing);
                             //thisInst.AttemptedRepairs = 1;
@@ -218,13 +224,18 @@ namespace TAC_AI.AI.Enemy
                         else
                             thisInst.PendingSystemsCheck = false;
 
-                        if (!thisInst.PendingSystemsCheck && initialBlockCount != tank.blockman.blockCount)
+                        if (!thisInst.PendingSystemsCheck)
                         {
-                            mind.AIControl.AdjustAnchors();
-                            if (mind.StartedAnchored)
-                                mind.TechMemor.MakeMinersMineUnlimited();
-                            Debug.Log("TACtical_AI: EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
-                            thisInst.FinishedRepairEvent.Send();
+                            //Debug.Log("TACtical_AI: EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
+                            if (initialBlockCount != tank.blockman.blockCount)
+                            {
+                                if (mind.StartedAnchored)
+                                {
+                                    mind.AIControl.AdjustAnchors();
+                                    mind.TechMemor.MakeMinersMineUnlimited();
+                                }
+                                thisInst.FinishedRepairEvent.Send();
+                            }
                         }
                     }
                     catch (Exception e)

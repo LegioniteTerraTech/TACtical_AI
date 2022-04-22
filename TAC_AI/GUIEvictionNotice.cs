@@ -77,7 +77,7 @@ namespace TAC_AI.AI
         {
             if (button == ManPointer.Event.RMB && down && KickStart.IsIngame && Input.GetKey(KeyCode.T))
             {
-                if (ManPointer.inst.targetTank && RawTechLoader.IsFriendlyBaseTeam(ManPointer.inst.targetTank.Team))
+                if (ManPointer.inst.targetTank && AIGlobals.IsFriendlyBaseTeam(ManPointer.inst.targetTank.Team))
                 {
                     GetTank(ManPointer.inst.targetTank);
                 }
@@ -146,7 +146,7 @@ namespace TAC_AI.AI
             if (GUI.Button(new Rect(10, 100, 140, 30), randomEvict))
             {
                 ManSFX.inst.PlayUISFX(ManSFX.UISfxType.LoadTech);
-                ManEnemyWorld.ChangeTeam(lastTank.Team, RawTechLoader.GetRandomEnemyBaseTeam());
+                ManEnemyWorld.ChangeTeam(lastTank.Team, AIGlobals.GetRandomEnemyBaseTeam());
                 CloseSubMenuClickable();
             }
             GUI.DragWindow();

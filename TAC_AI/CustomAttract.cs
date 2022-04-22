@@ -191,7 +191,7 @@ namespace TAC_AI
                     {
                         case AttractType.SpaceInvader: // space invader
 
-                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, RawTechLoader.GetRandomEnemyBaseTeam(), BaseTerrain.Space);
+                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space);
                             break;
 
                         case AttractType.Harvester: // Peaceful harvesting
@@ -205,7 +205,7 @@ namespace TAC_AI
                             for (int step = 0; numToSpawn > step; step++)
                             {
                                 Vector3 position = tanksToConsider[step] + (Vector3.up * 20);
-                                if (!RawTechLoader.SpawnAttractTech(position,  -(spawn - tanksToConsider[step]).normalized, RawTechLoader.GetRandomEnemyBaseTeam(), BaseTerrain.Air, silentFail: false))
+                                if (!RawTechLoader.SpawnAttractTech(position,  -(spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Air, silentFail: false))
                                     Debug.Log("TACtical_AI: ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
                             }
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);

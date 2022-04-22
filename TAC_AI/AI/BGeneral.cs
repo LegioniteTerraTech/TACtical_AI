@@ -122,7 +122,7 @@ namespace TAC_AI.AI
                 target = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
                 if (target)
                 {
-                    if (RawTechLoader.IsNonAggressiveTeam(target.tank.Team))
+                    if (AIGlobals.IsNonAggressiveTeam(target.tank.Team))
                         return null; // Don't want to accidently fire at a neutral
                 }
             }

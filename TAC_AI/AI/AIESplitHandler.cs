@@ -49,11 +49,9 @@ namespace TAC_AI.AI
                 }
                 else
                 {   // We assume flares or a drone/infantry to launch
-                    if (help.isAstrotechAvail)
-                        help.DriverType = AIDriverType.Astronaut;
-                    else
-                        help.DriverType = AIDriverType.Tank;
+                    help.DediAI = AIType.Escort;
                 }
+                help.DriverType = AIECore.HandlingDetermine(tank);
                 help.LastCloseAlly = mother;
                 Debug.Log("TACtical_AI: AIESplitHandler - Set to " + help.DediAI + " for " + tank.name);
             }

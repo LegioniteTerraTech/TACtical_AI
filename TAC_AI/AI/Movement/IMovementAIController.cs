@@ -39,6 +39,8 @@ namespace TAC_AI.AI {
 
         void DriveMaintainer(TankControl tankControl);
 
+        void OnMoveWorldOrigin(IntVector3 move);
+
         void Recycle();
     }
 }

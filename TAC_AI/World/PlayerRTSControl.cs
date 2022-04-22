@@ -137,40 +137,42 @@ namespace TAC_AI.World
         {
             if (!KickStart.AllowStrategicAI)
                 return;
-            Debug.Log("TACtical_AI: Creating SelectCircle.");
-            SelectHalo.SelectCirclePrefab = new GameObject("SelectCircle");
-            SelectHalo.SelectCirclePrefab.AddComponent<SelectHalo>();
-            Material[] mats = Resources.FindObjectsOfTypeAll<Material>();
-            mats = mats.Where(cases => cases.name == "MAT_SFX_Explosion_01_Shockwave").ToArray();
-            foreach (Material matcase in mats)
+            if (SelectHalo.SelectCirclePrefab == null)
             {
-                Debug.Log("TACtical_AI: Getting " + matcase.name + "...");
+                Debug.Log("TACtical_AI: Creating SelectCircle.");
+                SelectHalo.SelectCirclePrefab = new GameObject("SelectCircle");
+                SelectHalo.SelectCirclePrefab.AddComponent<SelectHalo>();
+                Material[] mats = Resources.FindObjectsOfTypeAll<Material>();
+                mats = mats.Where(cases => cases.name == "MAT_SFX_Explosion_01_Shockwave").ToArray();
+                foreach (Material matcase in mats)
+                {
+                    Debug.Log("TACtical_AI: Getting " + matcase.name + "...");
+                }
+                Material mat = mats.ElementAt(0);
+                //SelectHalo.SelectCirclePrefab.AddComponent<MeshRenderer>().material = mat;
+                var ps = SelectHalo.SelectCirclePrefab.AddComponent<ParticleSystem>();
+                var s = ps.shape;
+                //s.texture = (Texture2D)mat.mainTexture;
+                s.textureColorAffectsParticles = false;
+                s.shapeType = ParticleSystemShapeType.Circle;
+                s.radius = 0;
+                s.sphericalDirectionAmount = 0;
+                var m = ps.main;
+                m.startColor = new Color(1f, 0.35f, 0.25f, 0.125f);
+                m.startLifetime = 3;
+                m.maxParticles = 1;
+                m.startSpeed = 0;
+                m.startSize = 1;
+                var e = ps.emission;
+                e.rateOverTime = 10;
+                var psr = SelectHalo.SelectCirclePrefab.GetComponent<ParticleSystemRenderer>();
+                psr.renderMode = ParticleSystemRenderMode.Billboard;
+                psr.material = mat;
+                psr.maxParticleSize = 3000;
+                ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                SelectHalo.SelectCirclePrefab.SetActive(false);
+                Debug.Log("TACtical_AI: Created SelectCircle.");
             }
-            Material mat = mats.ElementAt(0);
-            //SelectHalo.SelectCirclePrefab.AddComponent<MeshRenderer>().material = mat;
-            var ps = SelectHalo.SelectCirclePrefab.AddComponent<ParticleSystem>();
-            var s = ps.shape;
-            //s.texture = (Texture2D)mat.mainTexture;
-            s.textureColorAffectsParticles = false;
-            s.shapeType = ParticleSystemShapeType.Circle;
-            s.radius = 0;
-            s.sphericalDirectionAmount = 0;
-            var m = ps.main;
-            m.startColor = new Color(1f, 0.35f, 0.25f, 0.125f);
-            m.startLifetime = 3;
-            m.maxParticles = 1;
-            m.startSpeed = 0;
-            m.startSize = 1;
-            var e = ps.emission;
-            e.rateOverTime = 10;
-            var psr = SelectHalo.SelectCirclePrefab.GetComponent<ParticleSystemRenderer>();
-            psr.renderMode = ParticleSystemRenderMode.Billboard;
-            psr.material = mat;
-            psr.maxParticleSize = 3000;
-            ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
-            SelectHalo.SelectCirclePrefab.SetActive(false);
-            Debug.Log("TACtical_AI: Created SelectCircle.");
-
 
             SelectWindow = Instantiate(new GameObject("TechSelectRect"));
             SelectWindow.AddComponent<GUIRectSelect>();
@@ -819,7 +821,7 @@ namespace TAC_AI.World
                     if (lastTank.DediAI != dediAI)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                        Patches.PopupAllyInfo(dediAI.ToString(), worPos);
+                        AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     lastTank.DediAI = dediAI;
                     lastTank.TestForFlyingAIRequirement();
@@ -838,7 +840,7 @@ namespace TAC_AI.World
                 if (lastTank.DediAI != dediAI)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                    Patches.PopupAllyInfo(dediAI.ToString(), worPos);
+                    AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 lastTank.DediAI = dediAI;
                 lastTank.TestForFlyingAIRequirement();

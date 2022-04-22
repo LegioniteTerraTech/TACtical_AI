@@ -39,7 +39,7 @@ namespace TAC_AI.AI.Enemy
         public bool PursuingTarget = false;     // Chasing specified target?
         public int Range = AIGlobals.DefaultEnemyRange;// Aggro range
         public int TargetLockDuration = 0;      // Updates to wait before target swatching
-        public Vector3 HoldPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
+        public Vector3 sceneStationaryPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
 
         internal bool BuildAssist = false;
 
@@ -105,6 +105,10 @@ namespace TAC_AI.AI.Enemy
             }
             catch { }
         }
+        public void OnWorldMove(IntVector3 move)
+        {
+            sceneStationaryPos += move;
+        }
 
         public void OnHit(ManDamage.DamageInfo dingus)
         {
@@ -115,10 +119,18 @@ namespace TAC_AI.AI.Enemy
                 {
                     AIControl.lastEnemy = dingus.SourceTank.visible;
                     GetRevengeOn(AIControl.lastEnemy);
-                    if (Tank.IsAnchored || CommanderSmarts > EnemySmarts.Mild)
+                    if (Tank.IsAnchored && Tank.GetComponent<RBases.EnemyBaseFunder>())
                     {
                         // Execute remote orders to allied units - Attack that threat!
-                        RBases.RequestFocusFire(Tank, AIControl.lastEnemy);
+                        RBases.RequestFocusFire(Tank, AIControl.lastEnemy, RequestSeverity.AllHandsOnDeck);
+                    }
+                    else if (CommanderSmarts > EnemySmarts.Mild)
+                    {
+                        // Execute remote orders to allied units - Attack that threat!
+                        if (AIGlobals.IsNeutralBaseTeam(Tank.Team))
+                            RBases.RequestFocusFire(Tank, AIControl.lastEnemy, RequestSeverity.Warn);
+                        else
+                            RBases.RequestFocusFire(Tank, AIControl.lastEnemy, RequestSeverity.ThinkMcFly);
                     }
                 }
                 Provoked = AIGlobals.ProvokeTime;
@@ -190,8 +202,8 @@ namespace TAC_AI.AI.Enemy
                     if (!TechMemor.ranOutOfParts && Tank.name.Contains('⟰'))
                     {
                         Tank.SetName(Tank.name.Replace(" ⟰", ""));
-                        AIControl.AIState = AIAlignment.NonPlayerTech;
                         RCore.RandomizeBrain(AIControl, Tank);
+                        AIControl.AIState = AIAlignment.NonPlayer;
                         Debug.Log("TACtical_AI: (Rechecking blocks) Enemy AI " + Tank.name + " of Team " + Tank.Team + ":  Ready to kick some Tech!");
                         BuildAssist = false;
                     }

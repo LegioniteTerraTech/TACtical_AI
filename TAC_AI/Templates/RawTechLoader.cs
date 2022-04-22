@@ -95,26 +95,6 @@ namespace TAC_AI.Templates
 
         public const char turretChar = '⛨';
 
-        public const int EnemyBaseTeamsStart = 26;
-        public const int EnemyBaseTeamsEnd = 175;
-
-        public const int SubNeutralBaseTeamsStart = 176;
-        public const int SubNeutralBaseTeamsEnd = 225;
-
-        public const int NeutralBaseTeamsStart = 226;
-        public const int NeutralBaseTeamsEnd = 275;
-
-        public const int FriendlyBaseTeamsStart = 276;
-        public const int FriendlyBaseTeamsEnd = 325;
-
-        public const int BaseTeamsStart = 26;
-        public const int BaseTeamsEnd = 325;
-
-        public static float BaseChanceGoodMulti => 1 - ((KickStart.difficulty + 50) / 200f); // 25%
-        public static float NonHostileBaseChance => 0.5f * BaseChanceGoodMulti; // 50% at easiest
-        public static float FriendlyBaseChance => 0.25f * BaseChanceGoodMulti;  // 12.5% at easiest
-
-
 
         public static void Initiate()
         {
@@ -232,7 +212,7 @@ namespace TAC_AI.Templates
                         {
                             WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
 
-                            Patches.PopupEnemyInfo("Enemy HQ!", pos2);
+                            AIGlobals.PopupEnemyInfo("Enemy HQ!", pos2);
 
                             Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Enemy HQ!");
                             Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
@@ -250,12 +230,15 @@ namespace TAC_AI.Templates
                     {
                         if (KickStart.DisplayEnemyEvents)
                         {
-                            WorldPosition pos3 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
+                            if (AIGlobals.IsEnemyBaseTeam(spawnerTank.Team))
+                            {
+                                WorldPosition pos3 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
 
-                            Patches.PopupEnemyInfo("Rival!", pos3);
+                                AIGlobals.PopupEnemyInfo("Rival!", pos3);
 
-                            Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
-                            Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                                Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
+                                Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
+                            }
                         }
                     }
                     catch { }
@@ -1657,7 +1640,7 @@ namespace TAC_AI.Templates
                 theTech = TechFromBlock(block, Team, Blueprint.Name);
                 AIERepair.TurboconstructExt(theTech, AIERepair.DesignMemory.JSONToMemoryExternal(baseBlueprint), Charged);
 
-                if (IsEnemyBaseTeam(Team) || Team == -1)//enemy
+                if (AIGlobals.IsEnemyBaseTeam(Team) || Team == -1)//enemy
                 {
                     var namesav = theTech.gameObject.GetOrAddComponent<BookmarkBuilder>();
                     namesav.blueprint = baseBlueprint;
@@ -2029,7 +2012,7 @@ namespace TAC_AI.Templates
             List<int> BTs = new List<int>();
 
             bool skinChaotic = UnityEngine.Random.Range(0, 100) < 2;
-            bool baseTeamColors = IsEnemyBaseTeam(team);
+            bool baseTeamColors = AIGlobals.IsEnemyBaseTeam(team);
 
             ResetSkinIDSet();
             foreach (BlockMemory mem in mems)
@@ -2799,80 +2782,11 @@ namespace TAC_AI.Templates
         }
 
 
-        // Utilities
-        public static bool IsBaseTeam(int team)
-        {
-            return (team >= BaseTeamsStart && team <= BaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
-        }
-
-        public static bool IsEnemyBaseTeam(int team)
-        {
-            return (team >= EnemyBaseTeamsStart && team <= EnemyBaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
-        }
-        public static bool IsNonAggressiveTeam(int team)
-        {
-            return team >= SubNeutralBaseTeamsStart && team <= NeutralBaseTeamsEnd;
-        }
-        public static bool IsSubNeutralBaseTeam(int team)
-        {
-            return team >= SubNeutralBaseTeamsStart && team <= SubNeutralBaseTeamsEnd;
-        }
-        public static bool IsNeutralBaseTeam(int team)
-        {
-            return team >= NeutralBaseTeamsStart && team <= NeutralBaseTeamsEnd;
-        }
-        public static bool IsFriendlyBaseTeam(int team)
-        {
-            return team >= FriendlyBaseTeamsStart && team <= FriendlyBaseTeamsEnd;
-        }
-
-        public static int GetRandomBaseTeam()
-        {
-            if (DebugRawTechSpawner.IsCurrentlyEnabled)
-            {
-                bool shift = Input.GetKey(KeyCode.LeftShift);
-                bool ctrl = Input.GetKey(KeyCode.LeftControl);
-                if (ctrl)
-                {
-                    if (shift)
-                        return ManSpawn.FirstEnemyTeam;
-                    else
-                        return GetRandomAllyBaseTeam();
-                }
-                else if (shift)
-                    return GetRandomNeutralBaseTeam();
-            }
-
-            if (UnityEngine.Random.Range(0f, 1f) <= NonHostileBaseChance)
-            {
-                if (UnityEngine.Random.Range(0f, 1f) <= FriendlyBaseChance)
-                    return GetRandomAllyBaseTeam();
-                else
-                    return GetRandomNeutralBaseTeam();
-            }
-            return GetRandomEnemyBaseTeam();
-        }
-        public static int GetRandomEnemyBaseTeam()
-        {
-            return UnityEngine.Random.Range(EnemyBaseTeamsStart, EnemyBaseTeamsEnd);
-        }
-        public static int GetRandomSubNeutralBaseTeam()
-        {
-            return UnityEngine.Random.Range(SubNeutralBaseTeamsStart, SubNeutralBaseTeamsEnd);
-        }
-        public static int GetRandomNeutralBaseTeam()
-        {
-            return UnityEngine.Random.Range(NeutralBaseTeamsStart, NeutralBaseTeamsEnd);
-        }
-        public static int GetRandomAllyBaseTeam()
-        {
-            return UnityEngine.Random.Range(FriendlyBaseTeamsStart, FriendlyBaseTeamsEnd);
-        }
         private static void MakeSureCanExistWithBase(Tank tank)
         {
             if (tank.IsPopulation || !tank.IsFriendly(tank.Team) || tank.Team == ManSpawn.FirstEnemyTeam || tank.Team == ManSpawn.NewEnemyTeam)
             {
-                int set = GetRandomBaseTeam();
+                int set = AIGlobals.GetRandomBaseTeam();
                 Debug.Log("TACtical_AI: Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");
                 tank.SetTeam(set, false);
                 TryRemoveFromPop(tank);
@@ -2885,7 +2799,7 @@ namespace TAC_AI.Templates
             for (int step = 0; step < tanks.Count; step++)
             {
                 Tank tech = tanks.ElementAt(step);
-                if (tech.IsAnchored && IsEnemyBaseTeam(tech.Team))
+                if (tech.IsAnchored && AIGlobals.IsEnemyBaseTeam(tech.Team))
                     enemyBaseTeams.Add(tech.Team);
             }
             if (enemyBaseTeams.Count == 0)
@@ -2896,7 +2810,7 @@ namespace TAC_AI.Templates
         }
 
 
-        private static void ReconstructConveyorSequencing(Tank tank)
+        internal static void ReconstructConveyorSequencing(Tank tank)
         {
             try
             {
@@ -2934,6 +2848,7 @@ namespace TAC_AI.Templates
                     }
                 }
 
+                AIERepair.BulkAdding = true;
                 foreach (BlockMemory mem in mems)
                 {   // reconstruct
                     try
@@ -2946,6 +2861,7 @@ namespace TAC_AI.Templates
                         Debug.Log("TACtical_AI: ReconstructConveyorSequencing - error 2");
                     }
                 }
+                AIERepair.BulkAdding = false;
             }
             catch
             {

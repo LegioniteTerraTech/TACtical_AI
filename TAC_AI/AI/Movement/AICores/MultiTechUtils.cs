@@ -13,7 +13,7 @@ namespace TAC_AI.AI.Movement.AICores
         /// </summary>
         /// <param name="help"></param>
         /// <param name="tank"></param>
-        internal static void HandleMultiTech(AIECore.TankAIHelper help, Tank tank)
+        internal static Vector3 HandleMultiTech(AIECore.TankAIHelper help, Tank tank)
         {
             if (help.DediAI == AIType.MTSlave && help.lastEnemy != null)
             {   // act like a trailer
@@ -75,6 +75,7 @@ namespace TAC_AI.AI.Movement.AICores
                     help.Steer = false;
                 }
             }
+            return help.lastDestination;
         }
     }
 }

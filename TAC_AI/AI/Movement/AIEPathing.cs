@@ -54,7 +54,7 @@ namespace TAC_AI.AI.Movement
         public static Vector3 ObstDodgeOffset(Tank tank, AIECore.TankAIHelper thisInst, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
         {
             worked = false;
-            if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
+            if (KickStart.AIDodgeCheapness >= 75 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
                 return Vector3.zero;    // don't bother with this
             Vector3 Offset = Vector3.zero;
 

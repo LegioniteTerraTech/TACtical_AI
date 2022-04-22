@@ -68,6 +68,10 @@ namespace TAC_AI
         /// Maker bases (excludes defenses)
         /// </summary>
         internal static int MaxBasesPerTeam = 6;    // How many base expansions can a single team perform?
+
+        /// <summary>
+        /// For handling Operations
+        /// </summary>
         internal static short AIClockPeriod // How frequently we update
         {
             get
@@ -82,6 +86,10 @@ namespace TAC_AI
 #else
         public static bool EnableBetterAI = true;
 #endif
+
+        /// <summary>
+        /// For handing Directors
+        /// </summary>
         public static int AIDodgeCheapness = 30;
         public static int AIPopMaxLimit = 6;
         public static bool MuteNonPlayerRacket = true;

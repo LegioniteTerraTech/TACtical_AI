@@ -210,8 +210,10 @@ namespace TAC_AI.AI.Movement.AICores
 
             // Blue is the target destination, Red is up  
 
-            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.Navi3DDirect * pilot.Helper.lastTechExtents, new Color(0, 0, 1));
-            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, thisInst.Navi3DUp * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
+            // DEBUG FOR DRIVE ERRORS
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, position - tank.boundsCentreWorldNoCheck, new Color(0, 1, 1));
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, thisInst.Navi3DDirect * pilot.Helper.lastTechExtents, new Color(0, 0, 1));
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, thisInst.Navi3DUp * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
 
 
             controlGet.SetValue(tank.control, control3D);

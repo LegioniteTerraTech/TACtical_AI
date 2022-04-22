@@ -112,7 +112,16 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    listTemp = listTemp.OrderBy(x => x.terrain).ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary)).ThenBy(x => x.techName).ToList();
+                    if (ShowLocal)
+                    {
+                        Organize(ref TempManager.ExternalEnemyTechsLocal);
+                        listTemp = TempManager.ExternalEnemyTechsLocal;
+                    }
+                    else
+                    {
+                        Organize(ref TempManager.ExternalEnemyTechsMods);
+                        listTemp = TempManager.ExternalEnemyTechsMods;
+                    }
                 }
                 catch { }
             }
@@ -160,7 +169,7 @@ namespace TAC_AI.Templates
                 {
                     try
                     {
-                        listTemp = listTemp.OrderBy(x => x.terrain).ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary)).ThenBy(x => x.techName).ToList();
+                        OrganizeDeploy(ref listTemp);
 
                         RawTechExporter.ValidateEnemyFolder();
                         string export = RawTechExporter.RawTechsDirectory + RawTechExporter.up + "Bundled";
@@ -189,7 +198,7 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    listTemp = listTemp.OrderBy(x => x.terrain).ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary)).ThenBy(x => x.techName).ToList();
+                    OrganizeDeploy(ref listTemp);
 
                     string export = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
                     Directory.CreateDirectory(export);
@@ -540,15 +549,10 @@ namespace TAC_AI.Templates
                 HotWindow.width = HoriPosOff + 60;
             if (clicked)
             {
-                SpawnTechLocal(index);
+                SpawnTechLocal(listTemp, index);
             }
 
             GUI.DragWindow();
-
-            if (ShowLocal)
-                TempManager.ExternalEnemyTechsLocal = listTemp;
-            else
-                TempManager.ExternalEnemyTechsMods = listTemp;
         }
         private static void GUIHandlerPreset(int ID)
         {
@@ -608,11 +612,23 @@ namespace TAC_AI.Templates
             string disp;
             foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> temp in TempManager.techBases)
             {
+                if (HoriPosOff >= MaxWindowWidth)
+                {
+                    HoriPosOff = 0;
+                    VertPosOff += 30;
+                    MaxExtensionX = true;
+                    if (VertPosOff >= MaxWindowHeight)
+                        MaxExtensionY = true;
+                }
                 if (currentFaction != temp.Value.faction)
                 {
                     currentFaction = temp.Value.faction;
-                    HoriPosOff = 0;
-                    VertPosOff += 60;
+
+                    if (HoriPosOff > 0)
+                    {
+                        VertPosOff += 30;
+                        HoriPosOff = 0;
+                    }
                     FactionSubTypes FST = KickStart.CorpExtToCorp(temp.Value.faction);
                     if (FST == FactionSubTypes.EXP)
                         disp = "RR";
@@ -622,7 +638,7 @@ namespace TAC_AI.Templates
                         disp = ManMods.inst.FindCorpShortName(FST);
                     else
                         disp = temp.Value.faction.ToString();
-                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff - 30, ButtonWidth * MaxCountWidth, 30), "<b>" + disp + "</b>"))
+                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * MaxCountWidth, 30), "<b>" + disp + "</b>"))
                     {
                         if (openedFactions.Contains(currentFaction))
                             openedFactions.Remove(currentFaction);
@@ -630,14 +646,7 @@ namespace TAC_AI.Templates
                             openedFactions.Add(currentFaction);
                     }
                     MaxExtensionX = true;
-                    if (VertPosOff >= MaxWindowHeight)
-                        MaxExtensionY = true;
-                }
-                else if (HoriPosOff >= MaxWindowWidth)
-                {
-                    HoriPosOff = 0;
                     VertPosOff += 30;
-                    MaxExtensionX = true;
                     if (VertPosOff >= MaxWindowHeight)
                         MaxExtensionY = true;
                 }
@@ -698,26 +707,26 @@ namespace TAC_AI.Templates
             GUI.DragWindow();
         }
 
-        public static void SpawnTechLocal(int index)
+        public static void SpawnTechLocal(List<BaseTemplate> temps, int index)
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
 
-            BaseTemplate val = TempManager.ExternalEnemyTechsAll[index];
+            BaseTemplate val = temps[index];
             Tank tank = null;
 
             if (val.purposes.Contains(BasePurpose.NotStationary))
             {
-                tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, pop: true);
+                tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, pop: true);
             }
             else
             {
                 if (InstantLoad)
                 {
                     if (val.purposes.Contains(BasePurpose.Defense))
-                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, false);
+                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, false);
                     else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
-                        int team = RawTechLoader.GetRandomBaseTeam();
+                        int team = AIGlobals.GetRandomBaseTeam();
                         /*
                         int index2;
                         BaseTemplate val2;
@@ -741,17 +750,17 @@ namespace TAC_AI.Templates
                         Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                     else
-                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(),GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, true);
+                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(),GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, true);
                 }
                 else
                 {
 
                     if (val.purposes.Contains(BasePurpose.Defense))
-                        RawTechLoader.SpawnBase(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, false);
+                        RawTechLoader.SpawnBase(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, false);
                     else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
                         int extraBB = 0;
-                        int team = RawTechLoader.GetRandomBaseTeam();
+                        int team = AIGlobals.GetRandomBaseTeam();
                         /*
                         int index2;
                         BaseTemplate val2;
@@ -775,7 +784,7 @@ namespace TAC_AI.Templates
                         Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                     else
-                        tank = RawTechLoader.GetSpawnBase(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), val, true);
+                        tank = RawTechLoader.GetSpawnBase(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, true);
                 }
             }
             if (tank)
@@ -791,17 +800,17 @@ namespace TAC_AI.Templates
                 Tank tank = null;
                 if (val.purposes.Contains(BasePurpose.NotStationary))
                 {
-                    tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), type, pop: true);
+                    tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, pop: true);
                 }
                 else
                 {
                     if (InstantLoad)
                     {
                         if (val.purposes.Contains(BasePurpose.Defense))
-                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), type, false);
+                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, false);
                         else if (val.purposes.Contains(BasePurpose.Headquarters))
                         {
-                            int team = RawTechLoader.GetRandomBaseTeam();
+                            int team = AIGlobals.GetRandomBaseTeam();
                             /*
                             SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
                             if (TempManager.techBases.TryGetValue(type2, out _))
@@ -827,15 +836,15 @@ namespace TAC_AI.Templates
                             Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                         }
                         else
-                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), RawTechLoader.GetRandomBaseTeam(), type, true);
+                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, true);
                     }
                     else
                     {
                         if (val.purposes.Contains(BasePurpose.Defense))
-                            RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomBaseTeam(), type, false);
+                            RawTechLoader.SpawnBase(GetPlayerPos(), AIGlobals.GetRandomBaseTeam(), type, false);
                         else if (val.purposes.Contains(BasePurpose.Headquarters))
                         {
-                            int team = RawTechLoader.GetRandomBaseTeam();
+                            int team = AIGlobals.GetRandomBaseTeam();
                             int extraBB = 0;
                             /*
                             SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
@@ -862,7 +871,7 @@ namespace TAC_AI.Templates
                             Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                         }
                         else
-                            RawTechLoader.SpawnBase(GetPlayerPos(), RawTechLoader.GetRandomBaseTeam(), type, true);
+                            RawTechLoader.SpawnBase(GetPlayerPos(), AIGlobals.GetRandomBaseTeam(), type, true);
                     }
                 }
                 if (tank)
@@ -880,7 +889,7 @@ namespace TAC_AI.Templates
                 for (int step = 0; step < techCount; step++)
                 {
                     Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
-                    if ((RawTechLoader.IsBaseTeam(tech.Team) || tech.Team == -1 || tech.Team == 1) && tech.visible.isActive && tech.name != "DPS Target")
+                    if ((AIGlobals.IsBaseTeam(tech.Team) || tech.Team == -1 || tech.Team == 1) && tech.visible.isActive && tech.name != "DPS Target")
                     {
                         SpecialAISpawner.Purge(tech);
                         techCount--;
@@ -1062,5 +1071,19 @@ namespace TAC_AI.Templates
             }
         }
 
+        internal static void Organize(ref List<BaseTemplate> list)
+        {
+            list = list.OrderBy(x => x.terrain)
+                .ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary))
+                .ThenBy(x => x.purposes.Contains(BasePurpose.NANI))
+                .ThenBy(x => x.techName).ToList();
+        }
+        internal static void OrganizeDeploy(ref List<BaseTemplate> list)
+        {
+            list = list.OrderBy(x => x.faction).ThenBy(x => x.terrain)
+                .ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary))
+                .ThenBy(x => x.purposes.Contains(BasePurpose.NANI))
+                .ThenBy(x => x.techName).ToList();
+        }
     }
 }

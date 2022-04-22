@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using TAC_AI.AI.Movement.AICores;
 
 namespace TAC_AI.AI.AlliedOperations
 {
@@ -129,29 +130,60 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 if (thisInst.DriverType == AIDriverType.Pilot)
                 {
-                    if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + AIGlobals.AircraftHailMaryRange)
-                    {   // Final approach - turn off avoidence
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
-                        thisInst.AvoidStuff = false;
-                        if (thisInst.recentSpeed == 1)
-                        {
-                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                            thisInst.DriveVar = -1;
-                            //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                    if (thisInst.MovementController.AICore is HelicopterAICore)
+                    {   // Float over target and unload
+                        float distFlat = (tank.boundsCentreWorldNoCheck - thisInst.theBase.boundsCentreWorldNoCheck).ToVector2XZ().magnitude;
+                        if (distFlat < thisInst.lastBaseExtremes)
+                        {   // Final approach - turn off avoidence
+                            thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                            thisInst.AvoidStuff = false;
+                            if (thisInst.recentSpeed == 1)
+                            {
+                                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
+                                thisInst.DriveVar = -1;
+                                //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                            }
+                            else
+                            {
+                                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
+                                thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                                thisInst.Yield = true;
+                                thisInst.SettleDown();
+                                thisInst.DropAllItemsInCollectors();
+                            }
                         }
-                        else
+                        else if (thisInst.recentSpeed < 3)
                         {
-                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
-                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
-                            thisInst.Yield = true;
-                            thisInst.SettleDown();
-                            thisInst.DropAllItemsInCollectors();
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
+                            thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                         }
                     }
-                    else if (thisInst.recentSpeed < 3)
-                    {
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    else
+                    {   // Fly aircraft
+                        if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + AIGlobals.AircraftHailMaryRange)
+                        {   // Final approach - turn off avoidence
+                            thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                            thisInst.AvoidStuff = false;
+                            if (thisInst.recentSpeed == 1)
+                            {
+                                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
+                                thisInst.DriveVar = -1;
+                                //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                            }
+                            else
+                            {
+                                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
+                                thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                                thisInst.Yield = true;
+                                thisInst.SettleDown();
+                                thisInst.DropAllItemsInCollectors();
+                            }
+                        }
+                        else if (thisInst.recentSpeed < 3)
+                        {
+                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
+                            thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                        }
                     }
                 }
                 else

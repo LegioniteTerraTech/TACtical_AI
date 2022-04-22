@@ -33,7 +33,7 @@ namespace TAC_AI.AI
                     {   //Become a ground vehicle for now
                         if (tank.grounded && IsTechTippedOver(tank, thisInst))
                         {
-                            thisInst.beamTimeoutClock = 1;
+                            thisInst.beamTimeoutClock = 10;
                         }
                         return;
                     }

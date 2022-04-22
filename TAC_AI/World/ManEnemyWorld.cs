@@ -292,7 +292,7 @@ namespace TAC_AI.World
         public static void RegisterTechUnloaded(ManSaveGame.StoredTech tech, IntVector2 tilePos, bool isNew = true, bool forceRegister = false)
         {
             int level = 0;
-            if (RawTechLoader.IsBaseTeam(tech.m_TeamID) || forceRegister)
+            if (AIGlobals.IsBaseTeam(tech.m_TeamID) || forceRegister)
             {   // Enemy Team
                 List<TankPreset.BlockSpec> specs = tech.m_TechData.m_BlockSpecs;
                 long healthAll = 0;

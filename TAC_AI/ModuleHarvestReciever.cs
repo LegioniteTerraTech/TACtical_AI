@@ -24,13 +24,13 @@ namespace TAC_AI
             Invoke("DelayedSub", 0.001f);
             trans = transform;
             holder = gameObject.GetComponent<ModuleItemHolder>();
+            TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
+            if (TankBlock.IsAttached)
+                OnAttach();
         }
         public void DelayedSub()
         {
             TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
-            TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
-            if (TankBlock.IsAttached)
-                OnAttach();
         }
         public void OnAttach()
         {
@@ -38,10 +38,12 @@ namespace TAC_AI
             {
                 if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Blocks))
                 {
+                    //Debug.Log("Block " + name + " is a Block Receiver");
                     AIECore.BlockHandlers.Add(this);
                 }
                 if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Chunks))
                 {
+                    //Debug.Log("Block " + name + " is a Chunk Receiver");
                     AIECore.Depots.Add(this);
                 }
             }

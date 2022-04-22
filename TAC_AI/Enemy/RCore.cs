@@ -172,6 +172,15 @@ namespace TAC_AI.AI.Enemy
             }
 
             //CommanderMind is handled in each seperate class
+            if (AIGlobals.IsBaseTeam(tank.Team))
+            {
+                RBases.EnemyBaseFunder funds = RBases.GetTeamFunder(tank.Team);
+                if (thisInst.Retreat && funds)
+                {
+                    BGeneral.ResetValues(thisInst);
+                    thisInst.lastDestination = funds.Tank.boundsCentreWorldNoCheck;
+                }
+            }
             Mind.EnemyOpsController.Execute();
         }
         public static Vector3 GetTargetCoordinates(Tank tank, Visible target, EnemyMind mind)
@@ -202,9 +211,9 @@ namespace TAC_AI.AI.Enemy
                 if (thisInst.lastEnemy?.tank)
                 {
                     int teamAttacker = thisInst.lastEnemy.tank.Team;
-                    if (RawTechLoader.IsBaseTeam(teamAttacker) || teamAttacker == ManPlayer.inst.PlayerTeam)
+                    if (AIGlobals.IsBaseTeam(teamAttacker) || teamAttacker == ManPlayer.inst.PlayerTeam)
                     {
-                        ManEnemyWorld.ChangeTeam(tank.Team, RawTechLoader.GetRandomEnemyBaseTeam());
+                        ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomEnemyBaseTeam());
                         RandomSetMindAttack(Mind, tank);
                         Mind.CommanderAlignment = EnemyStanding.Enemy;
                         return;
@@ -222,14 +231,14 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.lastEnemy.tank.Team == ManPlayer.inst.PlayerTeam)
                     {
-                        ManEnemyWorld.ChangeTeam(tank.Team, RawTechLoader.GetRandomEnemyBaseTeam());
+                        ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomEnemyBaseTeam());
                         RandomSetMindAttack(Mind, tank);
                         Mind.CommanderAlignment = EnemyStanding.Enemy;
                         return;
                     }
-                    else if (RawTechLoader.IsBaseTeam(thisInst.lastEnemy.tank.Team))
+                    else if (AIGlobals.IsBaseTeam(thisInst.lastEnemy.tank.Team))
                     {
-                        ManEnemyWorld.ChangeTeam(tank.Team, RawTechLoader.GetRandomAllyBaseTeam());
+                        ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomAllyBaseTeam());
                         RandomSetMindAttack(Mind, tank);
                         Mind.CommanderAlignment = EnemyStanding.Enemy;
                         return;
@@ -292,7 +301,7 @@ namespace TAC_AI.AI.Enemy
 
             thisInst.ResetToDefaultAIController();
 
-            toSet.HoldPos = tank.boundsCentreWorldNoCheck;
+            toSet.sceneStationaryPos = tank.boundsCentreWorldNoCheck;
             toSet.Refresh();
             toSet.Range = 100;
             try
@@ -570,7 +579,8 @@ namespace TAC_AI.AI.Enemy
                 if (bloc.GetComponent<ModuleEnergy>())
                 {
                     ModuleEnergy.OutputConditionFlags flagG = (ModuleEnergy.OutputConditionFlags)generator.GetValue(bloc.GetComponent<ModuleEnergy>());
-                    toSet.SolarsAvail = flagG.HasFlag(ModuleEnergy.OutputConditionFlags.Anchored) && flagG.HasFlag(ModuleEnergy.OutputConditionFlags.DayTime);
+                    if (flagG.HasFlag(ModuleEnergy.OutputConditionFlags.Anchored) && flagG.HasFlag(ModuleEnergy.OutputConditionFlags.DayTime))
+                        toSet.SolarsAvail = true;
                 }
 
                 if (bloc.GetComponent<ModulePacemaker>())
@@ -739,7 +749,7 @@ namespace TAC_AI.AI.Enemy
                         break;
                 }
                 Debug.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
-                Patches.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
+                AIGlobals.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
                 return;
             }
 
@@ -797,7 +807,7 @@ namespace TAC_AI.AI.Enemy
                         if (!tank.name.Contains('Ω'))
                             tank.SetName(tank.name + " Ω");
                         toSet.CommanderMind = EnemyAttitude.NPCBaseHost;
-                        if (!RawTechLoader.IsBaseTeam(tank.Team))
+                        if (!AIGlobals.IsBaseTeam(tank.Team))
                         {
                             if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
                                 RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
@@ -809,7 +819,7 @@ namespace TAC_AI.AI.Enemy
                     case EnemyAttitude.Boss:
                         if (!tank.name.Contains('⦲'))
                             tank.SetName(tank.name + " ⦲");
-                        if (!RawTechLoader.IsBaseTeam(tank.Team))
+                        if (!AIGlobals.IsBaseTeam(tank.Team))
                             RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.Headquarters);
                         Debug.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
                         break;
@@ -843,15 +853,15 @@ namespace TAC_AI.AI.Enemy
                 }
 
                 int Team = tank.Team;
-                if (RawTechLoader.IsEnemyBaseTeam(Team))
+                if (AIGlobals.IsEnemyBaseTeam(Team))
                 {
                     toSet.CommanderAlignment = EnemyStanding.Enemy;
                 }
-                else if (RawTechLoader.IsSubNeutralBaseTeam(Team))
+                else if (AIGlobals.IsSubNeutralBaseTeam(Team))
                 {
                     toSet.CommanderAlignment = EnemyStanding.SubNeutral;
                 }
-                else if (RawTechLoader.IsNeutralBaseTeam(Team))
+                else if (AIGlobals.IsNeutralBaseTeam(Team))
                 {
                     toSet.CommanderAlignment = EnemyStanding.Neutral;
                 }
@@ -868,7 +878,12 @@ namespace TAC_AI.AI.Enemy
                 thisInst.SuppressFiring(!toSet.AttackAny);
                 thisInst.FullMelee = toSet.LikelyMelee;
             }
-            Patches.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
+            if (AIGlobals.IsNeutralBaseTeam(tank.Team))
+                AIGlobals.PopupNeutralInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
+            else if (AIGlobals.IsFriendlyBaseTeam(tank.Team))
+                AIGlobals.PopupAllyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
+            else
+                AIGlobals.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
         }
         public static void SetFromScheme(EnemyMind toSet, Tank tank)
         {

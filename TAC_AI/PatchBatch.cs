@@ -114,205 +114,6 @@ namespace TAC_AI
     internal static class Patches
     {
 
-        //static readonly FieldInfo panelData = typeof(FloatingTextOverlay).GetField("m_Data", BindingFlags.NonPublic | BindingFlags.Instance);
-        static readonly FieldInfo textInput = typeof(FloatingTextPanel).GetField("m_AmountText", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        static readonly FieldInfo listOverlays = typeof(ManOverlay).GetField("m_ActiveOverlays", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        static readonly FieldInfo rects = typeof(FloatingTextPanel).GetField("m_Rect", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        static readonly FieldInfo sScale = typeof(FloatingTextPanel).GetField("m_InitialScale", BindingFlags.NonPublic | BindingFlags.Instance);
-        static readonly FieldInfo scale = typeof(FloatingTextPanel).GetField("m_scaler", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        static readonly FieldInfo canvas = typeof(FloatingTextPanel).GetField("m_CanvasGroup", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        static readonly FieldInfo CaseThis = typeof(ManOverlay).GetField("m_ConsumptionAddMoneyOverlayData", BindingFlags.NonPublic | BindingFlags.Instance);
-
-
-        private static bool savedOverlay = false;
-        private static FloatingTextOverlayData overlayEdit;
-        private static GameObject textStor;
-        private static CanvasGroup canGroup;
-        internal static void PopupEnemyInfo(string text, WorldPosition pos)
-        {
-            // Big mess trying to get some hard-locked code working
-
-            if (!savedOverlay)
-            {
-                textStor = new GameObject("NewTextEnemy", typeof(RectTransform));
-
-                RectTransform rTrans = textStor.GetComponent<RectTransform>();
-                Text texter = rTrans.gameObject.AddComponent<Text>();
-                FloatingTextOverlayData refer = (FloatingTextOverlayData)CaseThis.GetValue(ManOverlay.inst);
-                Text textRefer = (Text)textInput.GetValue(refer.m_PanelPrefab);
-
-
-
-                //texter = (Text)textInput.GetValue(refer.m_PanelPrefab);
-
-                texter.horizontalOverflow = HorizontalWrapMode.Overflow;
-                texter.fontStyle = textRefer.fontStyle;
-                texter.material = textRefer.material;
-                texter.alignment = textRefer.alignment;
-                texter.font = textRefer.font;
-                texter.color = new Color(0.95f, 0.1f, 0.1f, 0.95f);
-                texter.fontSize = (int)((float)texter.fontSize * 2f);
-                texter.SetAllDirty();
-
-                FloatingTextPanel panel = textStor.AddComponent<FloatingTextPanel>();
-
-                //panel = refer.m_PanelPrefab;
-                //canGroup = (CanvasGroup)canvas.GetValue(refer.m_PanelPrefab);
-
-                try
-                {
-                    CanvasGroup cG = (CanvasGroup)canvas.GetValue(refer.m_PanelPrefab);
-                    canGroup = rTrans.gameObject.AddComponent<CanvasGroup>();
-                    canGroup.alpha = 0.95f;
-                    canGroup.blocksRaycasts = false;
-                    canGroup.hideFlags = 0;
-                    canGroup.ignoreParentGroups = true;
-                    canGroup.interactable = false;
-                }
-                catch { }
-
-                canvas.SetValue(panel, canGroup);
-                rects.SetValue(panel, rTrans);
-                sScale.SetValue(panel, Vector3.one * 2.5f);
-                scale.SetValue(panel, 2.5f);
-
-                textInput.SetValue(panel, texter);
-
-
-                overlayEdit = textStor.AddComponent<FloatingTextOverlayData>();
-                overlayEdit.m_HiddenInModes = new List<ManGameMode.GameType>
-                {
-                    ManGameMode.GameType.Attract,
-                    ManGameMode.GameType.Gauntlet,
-                    ManGameMode.GameType.SumoShowdown,
-                };
-                overlayEdit.m_StayTime = refer.m_StayTime;
-                overlayEdit.m_FadeOutTime = refer.m_FadeOutTime;
-                overlayEdit.m_MaxCameraResizeDist = refer.m_MaxCameraResizeDist;
-                overlayEdit.m_HiddenInModes = refer.m_HiddenInModes;
-                overlayEdit.m_MinCameraResizeDist = refer.m_MinCameraResizeDist;
-                overlayEdit.m_CamResizeCurve = refer.m_CamResizeCurve;
-                overlayEdit.m_AboveDist = refer.m_AboveDist;
-                overlayEdit.m_PanelPrefab = panel;
-
-                savedOverlay = true;
-            }
-
-            FloatingTextOverlay fOverlay = new FloatingTextOverlay(overlayEdit);
-
-            fOverlay.Set(text, pos);
-
-            FloatingTextOverlayData textCase = (FloatingTextOverlayData)CaseThis.GetValue(ManOverlay.inst);
-            if (textCase.VisibleInCurrentMode && fOverlay != null)
-            {
-                List<Overlay> over = (List<Overlay>)listOverlays.GetValue(ManOverlay.inst);
-                over.Add(fOverlay);
-                listOverlays.SetValue(ManOverlay.inst, over);
-                //Debug.Log("TACtical_AI: PopupEnemyInfo - Force inserted popup");
-            }
-            //Debug.Log("TACtical_AI: PopupEnemyInfo - Threw popup \"" + text + "\"");
-
-
-            // ManOverlay.inst.AddFloatingTextOverlay(text, pos);
-        }
-
-        private static bool savedOverlayA = false;
-        private static FloatingTextOverlayData overlayEditA;
-        private static GameObject textStorA;
-        private static CanvasGroup canGroupA;
-        internal static void PopupAllyInfo(string text, WorldPosition pos)
-        {
-            // Big mess trying to get some hard-locked code working
-
-            if (!savedOverlayA)
-            {
-                textStorA = new GameObject("NewTextAlly", typeof(RectTransform));
-
-                RectTransform rTrans = textStorA.GetComponent<RectTransform>();
-                Text texter = rTrans.gameObject.AddComponent<Text>();
-                FloatingTextOverlayData refer = (FloatingTextOverlayData)CaseThis.GetValue(ManOverlay.inst);
-                Text textRefer = (Text)textInput.GetValue(refer.m_PanelPrefab);
-
-
-
-                //texter = (Text)textInput.GetValue(refer.m_PanelPrefab);
-
-                texter.horizontalOverflow = HorizontalWrapMode.Overflow;
-                texter.fontStyle = textRefer.fontStyle;
-                texter.material = textRefer.material;
-                texter.alignment = textRefer.alignment;
-                texter.font = textRefer.font;
-                texter.color = new Color(0.2f, 0.95f, 0.2f, 0.95f);
-                texter.fontSize = (int)((float)texter.fontSize * 2f);
-                texter.SetAllDirty();
-
-                FloatingTextPanel panel = textStorA.AddComponent<FloatingTextPanel>();
-
-                //panel = refer.m_PanelPrefab;
-                //canGroup = (CanvasGroup)canvas.GetValue(refer.m_PanelPrefab);
-
-                try
-                {
-                    CanvasGroup cG = (CanvasGroup)canvas.GetValue(refer.m_PanelPrefab);
-                    canGroupA = rTrans.gameObject.AddComponent<CanvasGroup>();
-                    canGroupA.alpha = 0.95f;
-                    canGroupA.blocksRaycasts = false;
-                    canGroupA.hideFlags = 0;
-                    canGroupA.ignoreParentGroups = true;
-                    canGroupA.interactable = false;
-                }
-                catch { }
-
-                canvas.SetValue(panel, canGroupA);
-                rects.SetValue(panel, rTrans);
-                sScale.SetValue(panel, Vector3.one * 2.5f);
-                scale.SetValue(panel, 2.5f);
-
-                textInput.SetValue(panel, texter);
-
-
-                overlayEditA = textStorA.AddComponent<FloatingTextOverlayData>();
-                overlayEditA.m_HiddenInModes = new List<ManGameMode.GameType>
-                {
-                    ManGameMode.GameType.Attract,
-                    ManGameMode.GameType.Gauntlet,
-                    ManGameMode.GameType.SumoShowdown,
-                };
-                overlayEditA.m_StayTime = refer.m_StayTime;
-                overlayEditA.m_FadeOutTime = refer.m_FadeOutTime;
-                overlayEditA.m_MaxCameraResizeDist = refer.m_MaxCameraResizeDist;
-                overlayEditA.m_HiddenInModes = refer.m_HiddenInModes;
-                overlayEditA.m_MinCameraResizeDist = refer.m_MinCameraResizeDist;
-                overlayEditA.m_CamResizeCurve = refer.m_CamResizeCurve;
-                overlayEditA.m_AboveDist = refer.m_AboveDist;
-                overlayEditA.m_PanelPrefab = panel;
-
-                savedOverlayA = true;
-            }
-
-            FloatingTextOverlay fOverlay = new FloatingTextOverlay(overlayEditA);
-
-            fOverlay.Set(text, pos);
-
-            FloatingTextOverlayData textCase = (FloatingTextOverlayData)CaseThis.GetValue(ManOverlay.inst);
-            if (textCase.VisibleInCurrentMode && fOverlay != null)
-            {
-                List<Overlay> over = (List<Overlay>)listOverlays.GetValue(ManOverlay.inst);
-                over.Add(fOverlay);
-                listOverlays.SetValue(ManOverlay.inst, over);
-                //Debug.Log("TACtical_AI: PopupAllyInfo - Force inserted popup");
-            }
-            //Debug.Log("TACtical_AI: PopupAllyInfo - Threw popup \"" + text + "\"");
-
-
-            // ManOverlay.inst.AddFloatingTextOverlay(text, pos);
-        }
-
 #if DEBUG
         // Leg testing
         [HarmonyPatch(typeof(Tank))]
@@ -326,7 +127,7 @@ namespace TAC_AI
                     playerTeam = Singleton.playerTank.Team;
                 else
                     playerTeam = ManPlayer.inst.PlayerTeam;
-                if ((teamID1 == playerTeam && RawTechLoader.IsFriendlyBaseTeam(teamID2)) || (teamID2 == playerTeam && RawTechLoader.IsFriendlyBaseTeam(teamID1)))
+                if ((teamID1 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (teamID2 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID1)))
                 {
                     __result = false;
                     return false;
@@ -370,7 +171,7 @@ namespace TAC_AI
                     playerTeam = Singleton.playerTank.Team;
                 else
                     playerTeam = ManPlayer.inst.PlayerTeam;
-                if ((teamID1 == playerTeam && RawTechLoader.IsFriendlyBaseTeam(teamID2)) || (teamID2 == playerTeam && RawTechLoader.IsFriendlyBaseTeam(teamID1)))
+                if ((teamID1 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (teamID2 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID1)))
                 {
                     __result = false;
                     return false;
@@ -449,22 +250,22 @@ namespace TAC_AI
                                 int Team = lastTech.tank.Team;
 
                                 Panel.BottomName = TeamNamer.GetTeamName(Team).ToString();
-                                if (RawTechLoader.IsFriendlyBaseTeam(Team))
+                                if (AIGlobals.IsFriendlyBaseTeam(Team))
                                 {
-                                    cache.color = new Color(0, 1, 0);
-                                    cacheB.color = new Color(0, 1, 0);
+                                    cache.color = AIGlobals.FriendlyColor;
+                                    cacheB.color = AIGlobals.FriendlyColor;
                                     back.SetValue(Panel, cacheB);
                                 }
-                                else if (RawTechLoader.IsNeutralBaseTeam(Team))
+                                else if (AIGlobals.IsNeutralBaseTeam(Team))
                                 {
-                                    cache.color = new Color(0.5f, 0, 0.5f);
-                                    cacheB.color = new Color(0.5f, 0, 0.5f);
+                                    cache.color = AIGlobals.NeutralColor;
+                                    cacheB.color = AIGlobals.NeutralColor;
                                     back.SetValue(Panel, cacheB);
                                 }
-                                else if (RawTechLoader.IsSubNeutralBaseTeam(Team))
+                                else if (AIGlobals.IsSubNeutralBaseTeam(Team))
                                 {
-                                    cache.color = new Color(1, 0.8f, 0);
-                                    cacheB.color = new Color(1, 0.8f, 0);
+                                    cache.color = AIGlobals.EnemyColor;
+                                    cacheB.color = AIGlobals.EnemyColor;
                                     back.SetValue(Panel, cacheB);
                                 }
                                 if (tank.IsAnchored)
@@ -482,7 +283,7 @@ namespace TAC_AI
                                         }
                                     }
                                 }
-                                else if (lastTech.AIState == AIAlignment.NonPlayerTech)
+                                else if (lastTech.AIState == AIAlignment.NonPlayer)
                                 {   // Enemy AI
                                     if (KickStart.enablePainMode)
                                     {
@@ -595,7 +396,7 @@ namespace TAC_AI
                     }
                     catch
                     {
-                        Debug.Log("TACtical_AI: SendUpdateAIDisp - failiure on send!");
+                        Debug.Log("TACtical_AI: SendUpdateAIDisp - Player not close enough");
                     }
                 }
             }
@@ -721,7 +522,7 @@ namespace TAC_AI
         {
             private static bool Prefix(ManLooseBlocks __instance, ref NetworkMessage netMsg)
             {
-                if (AIERepair.AIAttaching)
+                if (AIERepair.NonPlayerAttachAllow)
                 {
                     BlockAttachedMessage BAM = netMsg.ReadMessage<BlockAttachedMessage>();
                     NetTech NetT = NetworkServer.FindLocalObject(BAM.m_TechNetId).GetComponent<NetTech>();
@@ -752,15 +553,6 @@ namespace TAC_AI
                                 Singleton.Manager<ManNetwork>.inst.ServerNetBlockAttachedToTech.Send(tank, netBlock, canidate);
                                 tank.GetComponent<AIECore.TankAIHelper>().dirty = true;
 
-                                //Debug.Log("TACtical_AI: BlockAttachNetworkOverrideServer - NetBlock " + canidate.transform.localPosition + " | " + canidate.transform.localRotation);
-                                /*
-                                BlockAttachedMessage message = new BlockAttachedMessage
-                                {
-                                    m_TechNetId = tank.netTech.netId,
-                                    m_BlockPosition = BAM.m_BlockPosition,
-                                    m_BlockOrthoRotation = BAM.m_BlockOrthoRotation,
-                                    m_BlockPoolID = canidate.blockPoolID,
-                                };*/
                                 Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.BlockAttach, BAM);
                                 if (netBlock.block != null)
                                 {
@@ -1265,6 +1057,7 @@ namespace TAC_AI
                         if (!ModuleAdd)
                         {
                             ModuleAdd = __instance.gameObject.AddComponent<ModuleHarvestReciever>();
+                            ModuleAdd.enabled = true;
                             ModuleAdd.OnPool();
                         }
                     }
@@ -1301,33 +1094,34 @@ namespace TAC_AI
                 {
                     team = __instance.block.tank.Team;
                 }
-                if ((ManNetwork.IsHost || !ManNetwork.IsNetworked) && RawTechLoader.IsBaseTeam(team))
+                if (AIGlobals.IsBaseTeam(team))
                 {
                     ModuleItemConsume.Progress pog = (ModuleItemConsume.Progress)progress.GetValue(__instance);
                     if (pog.currentRecipe.m_OutputType == RecipeTable.Recipe.OutputType.Money && sellStolen.GetValue(__instance) == null)
                     {
                         WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
                         int sellGain = (int)(pog.currentRecipe.m_MoneyOutput * KickStart.EnemySellGainModifier);
-                        if (KickStart.DisplayEnemyEvents)
+
+                        string moneyGain = Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain);
+                        if (AIGlobals.IsNeutralBaseTeam(team))
                         {
-                            if (Singleton.Manager<ManNetwork>.inst.IsServer)
-                            {
-                                PopupNumberMessage message = new PopupNumberMessage
-                                {
-                                    m_Type = PopupNumberMessage.Type.Money,
-                                    m_Number = sellGain,
-                                    m_Position = pos
-                                };
-                                Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
-                            }
+                            if (KickStart.DisplayEnemyEvents)
+                                AIGlobals.PopupNeutralInfo(moneyGain, pos);
+                            RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                            return false;
                         }
-                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
-                        if (RawTechLoader.IsEnemyBaseTeam(team))
-                            PopupEnemyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
+                        else if (AIGlobals.IsFriendlyBaseTeam(team))
+                        {
+                            if (KickStart.DisplayEnemyEvents)
+                                AIGlobals.PopupAllyInfo(moneyGain, pos);
+                            RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                            return false;
+                        }
                         else
                         {
-                            PopupAllyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
-                            return false;
+                            if (KickStart.DisplayEnemyEvents)
+                                AIGlobals.PopupEnemyInfo(moneyGain, pos);
+                            RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                         }
                     }
                 }
@@ -1346,7 +1140,7 @@ namespace TAC_AI
                 if (valid)
                 {
                     int team = __instance.block.tank.Team;
-                    if (RawTechLoader.IsBaseTeam(team))
+                    if (ManNetwork.IsHost && AIGlobals.IsBaseTeam(team))
                     {
                         ModuleItemHolder.Stack stack = valid.SingleStack;
                         Vector3 vec = stack.BasePosWorld();
@@ -1358,26 +1152,28 @@ namespace TAC_AI
                                 float magnitude = (vis.centrePosition - vec).magnitude;
                                 if (magnitude <= (float)PNR.GetValue(__instance) && Singleton.Manager<ManPointer>.inst.DraggingItem != vis)
                                 {
+                                    WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
                                     int sellGain = (int)(KickStart.EnemySellGainModifier * Singleton.Manager<RecipeManager>.inst.GetBlockSellPrice(vis.block.BlockType));
-                                    if (KickStart.DisplayEnemyEvents)
+                                    
+                                    string moneyGain = Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain);
+                                    if (AIGlobals.IsNeutralBaseTeam(team))
                                     {
-                                        WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
-                                        if (RawTechLoader.IsEnemyBaseTeam(team))
-                                            PopupEnemyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
-                                        else
-                                            PopupAllyInfo(Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain), pos);
-                                        if (Singleton.Manager<ManNetwork>.inst.IsServer)
-                                        {
-                                            PopupNumberMessage message = new PopupNumberMessage
-                                            {
-                                                m_Type = PopupNumberMessage.Type.Money,
-                                                m_Number = sellGain,
-                                                m_Position = pos
-                                            };
-                                            Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.AddFloatingNumberPopupMessage, message);
-                                        }
+                                        if (KickStart.DisplayEnemyEvents)
+                                            AIGlobals.PopupNeutralInfo(moneyGain, pos);
+                                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                                     }
-                                    RBases.TryAddMoney(sellGain, team);
+                                    else if (AIGlobals.IsFriendlyBaseTeam(team))
+                                    {
+                                        if (KickStart.DisplayEnemyEvents)
+                                            AIGlobals.PopupAllyInfo(moneyGain, pos);
+                                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                                    }
+                                    else
+                                    {
+                                        if (KickStart.DisplayEnemyEvents)
+                                            AIGlobals.PopupEnemyInfo(moneyGain, pos);
+                                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                                    }
                                 }
                             }
                         }

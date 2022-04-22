@@ -40,6 +40,7 @@ namespace TAC_AI.AI
 
         public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
         public float BoosterThrustBias = 0.5f;
+        public Vector3 ProcessedDest = Vector3.zero;// Where land and spaceships coordinate movement
 
         public void DriveDirector()
         {
@@ -111,6 +112,7 @@ namespace TAC_AI.AI
 
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
+            CheckBoosters();
             Debug.Log("TACtical_AI: Added ground AI for " + Tank.name);
         }
         private void CheckBoosters()
@@ -182,6 +184,11 @@ namespace TAC_AI.AI
             }
         }
 
+
+        public void OnMoveWorldOrigin(IntVector3 move)
+        {
+
+        }
 
         public void UpdateEnemyMind(EnemyMind mind)
         {

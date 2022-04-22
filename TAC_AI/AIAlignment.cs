@@ -10,7 +10,7 @@ namespace TAC_AI
     {
         Static,
         Player,
-        NonPlayerTech,
+        NonPlayer,
         Neutral,
     }
 }
