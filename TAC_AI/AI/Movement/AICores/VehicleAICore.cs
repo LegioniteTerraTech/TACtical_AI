@@ -564,7 +564,7 @@ namespace TAC_AI.AI.Movement.AICores
                     if (thisControl.BoostControlJets)
                         Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, tank.rootBlockTrans.TransformDirection(controller.BoostBias) * thisInst.lastTechExtents, new Color(1, 0, 0));
                 }
-                else if (thisInst.lastEnemy)
+                else if (thisInst.DANGER && thisInst.lastEnemy)
                 {
                     if (thisInst.lastEnemy.tank.IsEnemy(tank.Team))
                         Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.lastEnemy.centrePosition - tank.trans.position, new Color(0, 1, 1));
@@ -951,7 +951,7 @@ namespace TAC_AI.AI.Movement.AICores
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
             }
-            else if (thisInst.lastEnemy)
+            else if (thisInst.DANGER && thisInst.lastEnemy)
             {
                 if (thisInst.lastEnemy.tank.IsEnemy(tank.Team))
                     Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.lastEnemy.centrePosition - tank.trans.position, new Color(0, 1, 1));

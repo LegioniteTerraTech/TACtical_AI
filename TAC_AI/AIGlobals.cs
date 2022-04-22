@@ -81,8 +81,8 @@ namespace TAC_AI
         // Combat Spacing Ranges
         public const float SpacingRange = 12;
         public const float SpacingRangeSpyper = 64;
-        public const float SpacingRangeAircraft = 32;
-        public const float SpacingRangeHoverer = 26;
+        public const float SpacingRangeAircraft = 24;
+        public const float SpacingRangeHoverer = 18;
 
         // Enemy Base Checks
         public const int MinimumBBRequired = 10000; // Before expanding

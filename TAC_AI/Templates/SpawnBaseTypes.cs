@@ -328,7 +328,11 @@ namespace TAC_AI.Templates
 
         // Other
         HEArtyFactory,
-        BFDrifter,
+        BFDrifter, 
+        GCDigginFlyDual,
+        GCDiggersBee,
+        GCHelicross,
+        GCMadMiner,
     }
 
 }

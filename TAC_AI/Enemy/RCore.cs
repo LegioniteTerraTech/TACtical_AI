@@ -179,6 +179,21 @@ namespace TAC_AI.AI.Enemy
                 {
                     BGeneral.ResetValues(thisInst);
                     thisInst.lastDestination = funds.Tank.boundsCentreWorldNoCheck;
+                    return;
+                }
+                else
+                {
+                    EnemyPresence EP = ManEnemyWorld.GetTeam(tank.Team);
+                    if (EP != null)
+                    {
+                        EnemyBaseUnit EBU = UnloadedBases.GetTeamFunder(EP);
+                        if (EBU != null)
+                        {
+                            BGeneral.ResetValues(thisInst);
+                            thisInst.lastDestination = EBU.PosScene;
+                            return;
+                        }
+                    }
                 }
             }
             Mind.EnemyOpsController.Execute();

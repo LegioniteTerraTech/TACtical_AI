@@ -1129,7 +1129,6 @@ namespace TAC_AI.World
                             {
                                 StrategicMoveConcluded(move.Value);
                                 QueuedUnitMoves.RemoveAt(step);
-                                step--;
                             }
                             else
                             {

@@ -141,7 +141,7 @@ namespace TAC_AI.World
                     eventTile = lastEventTile;
                 else
                 {
-                    if (mainBase != null && !ManEnemySiege.InProgress && Tank.IsEnemy(ManPlayer.inst.PlayerTeam, Team) && UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos))
+                    if (mainBase != null && !ManEnemySiege.InProgress && AIGlobals.IsEnemyBaseTeam(Team) && UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos))
                     {
                         PresenceDebug("This team can attack your base!  Threshold: " + ETUs.Count + " / " + (KickStart.EnemyTeamTechLimit / 2f));
                         if (ManEnemySiege.LaunchSiege(this))

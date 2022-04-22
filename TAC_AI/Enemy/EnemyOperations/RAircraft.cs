@@ -163,7 +163,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.SideToThreat = false;
                     thisInst.Retreat = false;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    if (dist < spacing + 2)
+                    if (dist < spacing + range)
                     {
                         thisInst.MoveFromObjective = true;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -175,11 +175,11 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                                 thisInst.SettleDown();
                         }
                     }
-                    else if (dist < spacing + range)
+                    else if (dist < spacing + (range * 2 ))
                     {
-                        thisInst.ProceedToObjective = true;
+                        thisInst.MoveFromObjective = true;
                     }
-                    else if (dist < spacing + (range * 1.25f))
+                    else if (dist < spacing + (range * 3))
                     {
                         thisInst.ProceedToObjective = true;
                         if (tank.wheelGrounded)

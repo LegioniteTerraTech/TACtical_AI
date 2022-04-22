@@ -706,7 +706,7 @@ namespace TAC_AI.AI.Movement.AICores
                 else if (this.pilot.Helper.MoveFromObjective)
                 {   // Fly away from target
                     this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper);
-                    pilot.AirborneDest = ((this.pilot.Tank.trans.position - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
+                    pilot.AirborneDest = ((this.pilot.Tank.boundsCentreWorldNoCheck - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
                 }
                 else
                 {   // Orbit above player height to invoke trouble

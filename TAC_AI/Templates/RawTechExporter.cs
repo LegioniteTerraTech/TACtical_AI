@@ -660,7 +660,8 @@ namespace TAC_AI.Templates
                 if (bloc.IsNull())
                     continue;
                 ModuleItemPickup rec = bloc.GetComponent<ModuleItemPickup>();
-                if ((bool)rec)
+                ModuleItemHolder conv = bloc.GetComponent<ModuleItemHolder>();
+                if ((bool)rec && conv && conv.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Chunks) && conv.IsFlag(ModuleItemHolder.Flags.Receiver))
                 {
                     hasReceiver = true;
                 }

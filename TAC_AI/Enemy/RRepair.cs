@@ -226,15 +226,15 @@ namespace TAC_AI.AI.Enemy
 
                         if (!thisInst.PendingSystemsCheck)
                         {
-                            //Debug.Log("TACtical_AI: EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
+                            if (mind.StartedAnchored)
+                            {
+                                mind.AIControl.AdjustAnchors();
+                                mind.TechMemor.MakeMinersMineUnlimited();
+                            }
+                            thisInst.FinishedRepairEvent.Send();
                             if (initialBlockCount != tank.blockman.blockCount)
                             {
-                                if (mind.StartedAnchored)
-                                {
-                                    mind.AIControl.AdjustAnchors();
-                                    mind.TechMemor.MakeMinersMineUnlimited();
-                                }
-                                thisInst.FinishedRepairEvent.Send();
+                                Debug.Log("TACtical_AI: EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
                             }
                         }
                     }
