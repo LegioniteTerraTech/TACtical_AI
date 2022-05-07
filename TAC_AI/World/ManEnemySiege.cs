@@ -12,8 +12,6 @@ namespace TAC_AI.World
 {
     public class ManEnemySiege : MonoBehaviour
     {
-        private const float RaidCooldownTimeSecs = 1200;
-
         private static ManEnemySiege inst;
         private UIMultiplayerHUD warningBanner;
 
@@ -62,6 +60,15 @@ namespace TAC_AI.World
                 }
             }
             return false;
+        }
+        public static void CancelSiege(EnemyPresence enemyTeamInvolved)
+        {
+            if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
+                return;
+            if (enemyTeamInvolved == SiegingEnemyTeam)
+            {
+                EndSiege(true, true);
+            }
         }
 
         public static void UpdateThis()
@@ -141,7 +148,7 @@ namespace TAC_AI.World
                 inst.Invoke("EndSiege2", 1);
             }
             if (shouldCooldown)
-                RaidCooldown = RaidCooldownTimeSecs;
+                RaidCooldown = AIGlobals.RaidCooldownTimeSecs;
             else
                 RaidCooldown = 0;
         }
@@ -173,7 +180,7 @@ namespace TAC_AI.World
         public static void InitSiegeWarning(int team, long tempHPIn)
         {
             if (!inst)
-                Debug.Log("TACtical_AI: ManEnemySiege - InitSiegeWarning inst IS NULL");
+                DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - InitSiegeWarning inst IS NULL");
             inst.Team = team;
             tempHP = tempHPIn;
             inProgress = true;
@@ -185,7 +192,7 @@ namespace TAC_AI.World
                 inst.warningBanner = (UIMultiplayerHUD)Singleton.Manager<ManHUD>.inst.GetHudElement(ManHUD.HUDElementType.Multiplayer);
             if (!inst.warningBanner)
             {
-                Debug.Log("TACtical_AI: ManEnemySiege - warningBanner IS NULL");
+                DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - warningBanner IS NULL");
                 return;
             }
 
@@ -221,7 +228,7 @@ namespace TAC_AI.World
             Text tex = (Text)attackName.GetValue(UIBL);
             tex.text = displayName +" <b>EN-ROUTE</b>";
             attackName.SetValue(UIBL, tex);
-            Debug.Log("TACtical_AI: ManEnemySiege - Repurposed ManBlockLimiter and UIBlockLimit for Raid UI");
+            DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - Repurposed ManBlockLimiter and UIBlockLimit for Raid UI");
 
         }
         public void RemoveWarning()

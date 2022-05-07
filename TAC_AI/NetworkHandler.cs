@@ -185,10 +185,10 @@ namespace TAC_AI
         {
             if (HostExists) try
                 {
+                    DebugTAC_AI.LogNet("Sent new TryBroadcastRTSCommand update to all");
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRTSPosCommand, new AIRTSCommandMessage(netTechID, Pos), Host);
-                    Debug.Log("Sent new TryBroadcastRTSCommand update to all");
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSCommand!"); }
+                catch { DebugTAC_AI.LogNet("TACtical_AI: Failed to send TryBroadcastRTSCommand!"); }
         }
         public static void OnClientAcceptRTSCommand(NetworkMessage netMsg)
         {
@@ -198,11 +198,26 @@ namespace TAC_AI
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
                 find.tech.GetComponent<AIECore.TankAIHelper>().DirectRTSDest(reader.Position);
-                Debug.Log("TACtical_AI: Received new TryBroadcastRTSCommand update, ordering to " + reader.Position);
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientAcceptRTSCommand update, ordering tech " + find.name + " to " + reader.Position);
             }
             catch
             {
-                Debug.Log("TACtical_AI: OnClientAcceptRTSCommand Receive failiure! Could not decode intake!?");
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnClientAcceptRTSCommand  - Receive failiure! \n Our techs are now desynched!");
+            }
+        }
+        public static void OnServerAcceptRTSCommand(NetworkMessage netMsg)
+        {
+            var reader = new AIRTSCommandMessage();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
+                find.tech.GetComponent<AIECore.TankAIHelper>().DirectRTSDest(reader.Position);
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerAcceptRTSCommand update, ordering tech " + find.name + " to " + reader.Position);
+            }
+            catch
+            {
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnServerAcceptRTSCommand  - Receive failiure! \n Our techs are now desynched!");
             }
         }
 
@@ -211,10 +226,10 @@ namespace TAC_AI
         {
             if (HostExists) try
                 {
+                    DebugTAC_AI.LogNet("Sent new TryBroadcastRTSControl update to all");
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRTSPosControl, new AIRTSControlMessage(netTechID, isRTS), Host);
-                    Debug.Log("Sent new TryBroadcastRTSControl update to all");
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSControl!"); }
+                catch { DebugTAC_AI.LogNet("TACtical_AI: Failed to send TryBroadcastRTSControl!"); }
         }
         public static void OnClientAcceptRTSControl(NetworkMessage netMsg)
         {
@@ -224,11 +239,27 @@ namespace TAC_AI
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
                 find.tech.GetComponent<AIECore.TankAIHelper>().isRTSControlled = reader.RTSControl;
-                Debug.Log("TACtical_AI: Received new TryBroadcastRTSControl update, RTS control is " + reader.RTSControl);
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientAcceptRTSControl update,  Tech " + find.name + "'s RTS control is " + reader.RTSControl);
             }
             catch
             {
-                Debug.Log("TACtical_AI: OnClientAcceptRTSControl Receive failiure! Could not decode intake!?");
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnClientAcceptRTSControl  - Receive failiure! \n Our techs are now desynched!");
+            }
+        }
+        public static void OnServerAcceptRTSControl(NetworkMessage netMsg)
+        {
+            var reader = new AIRTSControlMessage();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
+                find.tech.GetComponent<AIECore.TankAIHelper>().isRTSControlled = reader.RTSControl;
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerAcceptRTSControl update, Tech " + find.name + "'s RTS control is " + reader.RTSControl);
+            }
+            catch
+            {
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnServerAcceptRTSControl  - Receive failiure! \n Our techs are now desynched!");
+
             }
         }
 
@@ -237,10 +268,10 @@ namespace TAC_AI
         {
             if (HostExists) try
                 {
+                    DebugTAC_AI.LogNet("Sent new TryBroadcastRTSAttack update to all");
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRTSAttack, new AIRTSAttackComm(netTechID, TargetNetTechID), Host);
-                    Debug.Log("Sent new TryBroadcastRTSAttack update to all");
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastRTSAttack!"); }
+                catch { DebugTAC_AI.LogNet("TACtical_AI: Failed to send TryBroadcastRTSAttack!"); }
         }
         public static void OnClientAcceptRTSAttack(NetworkMessage netMsg)
         {
@@ -250,12 +281,30 @@ namespace TAC_AI
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
                 NetTech targeting = ManNetTechs.inst.FindTech(reader.targetNetTechID);
-                find.tech.GetComponent<AIECore.TankAIHelper>().lastEnemy = targeting.tech.visible;
-                Debug.Log("TACtical_AI: Received new TryBroadcastRTSAttack update, RTS target is " + targeting.tech.name);
+                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                helper.lastEnemy = targeting.tech.visible;
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientAcceptRTSAttack update,  tech " + find.name + "'s RTS target is " + targeting.tech.name);
             }
             catch
             {
-                Debug.Log("TACtical_AI: OnClientAcceptRTSAttack Receive failiure! Could not decode intake!?");
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnClientAcceptRTSAttack  - Receive failiure! \n Our techs are now desynched!");
+            }
+        }
+        public static void OnServerAcceptRTSAttack(NetworkMessage netMsg)
+        {
+            var reader = new AIRTSAttackComm();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
+                NetTech targeting = ManNetTechs.inst.FindTech(reader.targetNetTechID);
+                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                helper.lastEnemy = targeting.tech.visible;
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerAcceptRTSAttack update,  tech " + find.name + "'s RTS target is " + targeting.tech.name);
+            }
+            catch
+            {
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnServerAcceptRTSAttack  - Receive failiure! \n Our techs are now desynched!");
             }
         }
 
@@ -266,75 +315,124 @@ namespace TAC_AI
             {
                 try
                 {
+                    DebugTAC_AI.LogNet("Sent new AdvancedAI update to all");
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIADVTypeChange, new AITypeChangeMessage(netTechID, AIType, AIDriver), Host);
-                    Debug.Log("Sent new AdvancedAI update to all");
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send new AdvancedAI update, shouldn't be too bad in the long run"); }
+                catch { DebugTAC_AI.LogNet("TACtical_AI: Failed to send new AdvancedAI update, shouldn't be too bad in the long run"); }
             }
         }
-        public static void OnClientChangeNewAIState(NetworkMessage netMsg)
+        public static void OnClientSetNewAIState(NetworkMessage netMsg)
         {
             var reader = new AITypeChangeMessage();
             netMsg.ReadMessage(reader);
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                find.tech.GetComponent<AIECore.TankAIHelper>().TrySetAITypeRemote(netMsg.GetSender(), reader.AIType, reader.AIDriving);
-                Debug.Log("TACtical_AI: Received new AdvancedAI update, changing to " + find.tech.GetComponent<AIECore.TankAIHelper>().DediAI.ToString());
+                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                helper.TrySetAITypeRemote(netMsg.GetSender(), reader.AIType, reader.AIDriving);
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientSetNewAIState update, tech " + find.name + " changing to " + helper.DediAI.ToString()
+                    + " | Driver: " + helper.DriverType.ToString());
             }
             catch
             {
-                Debug.Log("TACtical_AI: Receive failiure! Could not decode intake!?");
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnClientSetNewAIState - Receive failiure! \n Our techs are now desynched!");
+            }
+        }
+        public static void OnServerSetNewAIState(NetworkMessage netMsg)
+        {
+            var reader = new AITypeChangeMessage();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
+                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                helper.TrySetAITypeRemote(netMsg.GetSender(), reader.AIType, reader.AIDriving);
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerSetNewAIState update, tech " + find.name + " changing to " + helper.DediAI.ToString() 
+                    + " | Driver: " + helper.DriverType.ToString());
+            }
+            catch
+            {
+                DebugTAC_AI.Assert(true, "TACtical_AI: OnServerSetNewAIState - Receive failiure! \n Our techs are now desynched!");
             }
         }
 
         // AIRetreatMessage
+        /// <summary>
+        /// sent from both clients and server
+        /// </summary>
+        /// <param name="team"></param>
+        /// <param name="retreat"></param>
         public static void TryBroadcastNewRetreatState(int team, bool retreat)
         {
             if (HostExists) try
                 {
+                    DebugTAC_AI.LogNet("Sent new TryBroadcastNewRetreatState update to all");
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptClient(localConnectionID, AIRetreatRequest, new AIRetreatMessage(team, retreat), Host);
-                    Debug.Log("Sent new TryBroadcastNewRetreatState update to all");
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastNewRetreatState update, shouldn't be too bad in the long run"); }
+                catch { DebugTAC_AI.LogNet("TACtical_AI: Failed to send TryBroadcastNewRetreatState update, shouldn't be too bad in the long run"); }
         }
-        public static void OnClientChangeNewRetreatState(NetworkMessage netMsg)
+        public static void OnClientSetRetreatState(NetworkMessage netMsg)
         {
             var reader = new AIRetreatMessage();
             netMsg.ReadMessage(reader);
             try
             {
                 AIECore.TeamRetreat(reader.Team, reader.Retreat);
-                //Debug.Log("TACtical_AI: Received new AdvancedAI update, changing retreat states");
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientSetRetreatState update, changing retreat states of (" + reader.Team + ") to retreat " + reader.Retreat);
             }
             catch
             {
-                Debug.Log("TACtical_AI: Retreat receive failiure! Could not decode intake!?");
+                DebugTAC_AI.LogNet("TACtical_AI: OnClientSetRetreatState - receive failiure! Could not decode intake!?");
+            }
+        }
+        public static void OnServerSetRetreatState(NetworkMessage netMsg)
+        {
+            var reader = new AIRetreatMessage();
+            netMsg.ReadMessage(reader);
+            try
+            {
+                AIECore.TeamRetreat(reader.Team, reader.Retreat);
+                DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerSetRetreatState update, changing retreat states of (" + reader.Team +") to retreat " + reader.Retreat);
+            }
+            catch
+            {
+                DebugTAC_AI.LogNet("TACtical_AI: OnServerSetRetreatState - receive failiure! Could not decode intake!?");
             }
         }
 
         // AIEnemyState
+        /// <summary>
+        /// SERVER SENT
+        /// </summary>
+        /// <param name="netTechID"></param>
+        /// <param name="smartz"></param>
         public static void TryBroadcastNewEnemyState(uint netTechID, EnemySmarts smartz)
         {
             if (HostExists && ManNetwork.IsHost) try
                 {
-                    Singleton.Manager<ManNetwork>.inst.SendToAllClients(AIRetreatRequest, new AIEnemySet(netTechID, smartz));
-                    Debug.Log("Sent new TryBroadcastNewEnemyState update to all");
+                    DebugTAC_AI.LogNet("Sent new TryBroadcastNewEnemyState update to all");
+                    Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(AIRetreatRequest, new AIEnemySet(netTechID, smartz));
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastNewEnemyState update, shouldn't be too bad in the long run"); }
+                catch { DebugTAC_AI.LogNet("TACtical_AI: Failed to send TryBroadcastNewEnemyState update, shouldn't be too bad in the long run"); }
         }
-        public static void OnClientChangeNewEnemyState(NetworkMessage netMsg)
+        public static void OnClientEnemyAISetup(NetworkMessage netMsg)
         {
             var reader = new AIEnemySet();
             netMsg.ReadMessage(reader);
             try
             {
-                ManNetTechs.inst.FindTech(reader.netTechID).GetComponent<EnemyMind>().CommanderSmarts = (EnemySmarts)reader.enemyType;
+                NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
+                find.GetComponent<EnemyMind>().CommanderSmarts = (EnemySmarts)reader.enemyType;
+                DebugTAC_AI.LogNet("TACtical_AI: OnClientEnemyAISetup - Enemy AI's (" + find.name + ") smarts is " + (EnemySmarts)reader.enemyType);
             }
             catch
             {
-                Debug.Log("TACtical_AI: EnemyState receive failiure! Could not decode intake or input was too early!?");
+                DebugTAC_AI.LogNet("TACtical_AI: OnClientEnemyAISetup - receive failiure! Could not decode intake or input was too early!?");
             }
+        }
+        public static void OnServerEnemyAISetup(NetworkMessage netMsg)
+        {
+            DebugTAC_AI.Assert(true, "TACtical_AI: OnServerEnemyAISetup should not be sent to host.  This should not be happening.");
         }
 
         // AIEnemySiege
@@ -342,12 +440,12 @@ namespace TAC_AI
         {
             if (HostExists && ManNetwork.IsHost) try
                 {
+                    DebugTAC_AI.LogNet("Sent new TryBroadcastNewEnemySiege update to all but host");
                     Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(AIRetreatRequest, new AIEnemyStagedSiege(Team, HP, starting));
-                    Debug.Log("Sent new TryBroadcastNewEnemySiege update to all");
                 }
-                catch { Debug.Log("TACtical_AI: Failed to send TryBroadcastNewEnemySiege update, shouldn't be too bad in the long run"); }
+                catch { DebugTAC_AI.LogNet("TACtical_AI: Failed to send TryBroadcastNewEnemySiege update, shouldn't be too bad in the long run"); }
         }
-        public static void OnClientChangeNewEnemySiege(NetworkMessage netMsg)
+        public static void OnClientEnemySiegeUpdate(NetworkMessage netMsg)
         {
             var reader = new AIEnemyStagedSiege();
             netMsg.ReadMessage(reader);
@@ -357,33 +455,41 @@ namespace TAC_AI
                     ManEnemySiege.InitSiegeWarning(reader.Team, reader.MaxHP);
                 else
                     ManEnemySiege.EndSiege();
+                DebugTAC_AI.LogNet("TACtical_AI: OnClientEnemySiegeUpdate received.  Attacker is " + reader.Team + " | HP: " + reader.MaxHP + " | is starting: " + reader.Starting);
             }
             catch
             {
-                Debug.Log("TACtical_AI: EnemySiege receive failiure! Could not decode intake or input was too early!?");
+                DebugTAC_AI.LogNet("TACtical_AI: OnClientEnemySiegeUpdate receive failiure! Could not decode intake or input was too early!?");
             }
+        }
+        public static void OnServerEnemySiegeUpdate(NetworkMessage netMsg)
+        {
+            DebugTAC_AI.Assert(true, "TACtical_AI: OnServerEnemySiegeUpdate should not be sent to host.  This should not be happening.");
         }
 
 
         public static class Patches
         {
+            /// <summary>
+            /// Note: Both sides must subscribe to work!
+            /// </summary>
             [HarmonyPatch(typeof(NetPlayer), "OnStartClient")]
             static class OnStartClient
             {
                 static void Postfix(NetPlayer __instance)
                 {
                     // Standard
-                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRetreatRequest, new ManNetwork.MessageHandler(OnClientChangeNewRetreatState));
-                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIADVTypeChange, new ManNetwork.MessageHandler(OnClientChangeNewAIState));
-                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIEnemyType, new ManNetwork.MessageHandler(OnClientChangeNewEnemyState));
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRetreatRequest, new ManNetwork.MessageHandler(OnClientSetRetreatState));
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIADVTypeChange, new ManNetwork.MessageHandler(OnClientSetNewAIState));
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIEnemyType, new ManNetwork.MessageHandler(OnClientEnemyAISetup));
 
                     // RTS
                     Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRTSPosCommand, new ManNetwork.MessageHandler(OnClientAcceptRTSCommand));
                     Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRTSPosControl, new ManNetwork.MessageHandler(OnClientAcceptRTSControl));
                     Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIRTSAttack, new ManNetwork.MessageHandler(OnClientAcceptRTSAttack));
-                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIEnemySiege, new ManNetwork.MessageHandler(OnClientChangeNewEnemySiege));
+                    Singleton.Manager<ManNetwork>.inst.SubscribeToClientMessage(__instance.netId, AIEnemySiege, new ManNetwork.MessageHandler(OnClientEnemySiegeUpdate));
 
-                    Debug.Log("Subscribed " + __instance.netId.ToString() + " to AdvancedAI updates from host.");
+                    DebugTAC_AI.Log("Subscribed " + __instance.netId.ToString() + " to AdvancedAI updates from host.");
                 }
             }
 
@@ -394,7 +500,18 @@ namespace TAC_AI
                 {
                     if (!HostExists)
                     {
-                        Debug.Log("Host started, hooked AdvancedAI update broadcasting to " + __instance.netId.ToString());
+                        // Standard
+                        Singleton.Manager<ManNetwork>.inst.SubscribeToServerMessage(__instance.netId, AIRetreatRequest, new ManNetwork.MessageHandler(OnServerSetRetreatState));
+                        Singleton.Manager<ManNetwork>.inst.SubscribeToServerMessage(__instance.netId, AIADVTypeChange, new ManNetwork.MessageHandler(OnServerSetNewAIState));
+                        Singleton.Manager<ManNetwork>.inst.SubscribeToServerMessage(__instance.netId, AIEnemyType, new ManNetwork.MessageHandler(OnServerEnemyAISetup));
+
+                        // RTS
+                        Singleton.Manager<ManNetwork>.inst.SubscribeToServerMessage(__instance.netId, AIRTSPosCommand, new ManNetwork.MessageHandler(OnServerAcceptRTSCommand));
+                        Singleton.Manager<ManNetwork>.inst.SubscribeToServerMessage(__instance.netId, AIRTSPosControl, new ManNetwork.MessageHandler(OnServerAcceptRTSControl));
+                        Singleton.Manager<ManNetwork>.inst.SubscribeToServerMessage(__instance.netId, AIRTSAttack, new ManNetwork.MessageHandler(OnServerAcceptRTSAttack));
+                        Singleton.Manager<ManNetwork>.inst.SubscribeToServerMessage(__instance.netId, AIEnemySiege, new ManNetwork.MessageHandler(OnServerEnemySiegeUpdate));
+
+                        DebugTAC_AI.Log("Host started, hooked AdvancedAI update broadcasting to " + __instance.netId.ToString());
                         Host = __instance.netId;
                         HostExists = true;
                     }

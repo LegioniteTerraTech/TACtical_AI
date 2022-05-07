@@ -27,7 +27,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
-                Debug.Log("TACtical_AI: " + tank.name + " is GROUNDED!!!");
+                DebugTAC_AI.Log("TACtical_AI: " + tank.name + " is GROUNDED!!!");
                 if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
                 {
                     return false;
@@ -235,9 +235,10 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
+                pilot.Helper.ProceedToObjective = true;
                 pilot.Helper.Steer = true;
                 pilot.Helper.DriveDir = EDriveType.Forwards;
-                pilot.AirborneDest = pilot.Helper.RTSDestination;
+                pilot.AirborneDest = pilot.Helper.lastDestination;
                 pilot.Helper.MinimumRad = Mathf.Max(pilot.Helper.lastTechExtents - 2, 0.5f);
             }
 
@@ -324,9 +325,10 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.SecondAvoidence)// MORE processing power
                 {
                     lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(predictionOffset, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
-                    if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
+                    float predictOffset = (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude;
+                    if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + predictOffset)
                     {
-                        if (lastAuxVal < thisInst.lastTechExtents + lastCloseAlly2.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
+                        if (lastAuxVal < thisInst.lastTechExtents + lastCloseAlly2.GetCheapBounds() + 12 + predictOffset)
                         {
                             IntVector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2);
                             return (targetIn + ProccessedVal2) / 3;
@@ -338,7 +340,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 lastCloseAlly = AIEPathing.ClosestAllyPrecision(predictionOffset, out lastAllyDist, tank);
                 if (lastCloseAlly == null)
-                    Debug.Log("TACtical_AI: ALLY IS NULL");
+                    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
                 if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
                     IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly);
@@ -347,12 +349,12 @@ namespace TAC_AI.AI.Movement.AICores
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on AvoidAssistAir " + e);
+                DebugTAC_AI.Log("TACtical_AI: Crash on AvoidAssistAir " + e);
                 return targetIn;
             }
             if (targetIn.IsNaN())
             {
-                Debug.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
+                DebugTAC_AI.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
                 //AIECore.TankAIManager.FetchAllAllies();
             }
             return targetIn;

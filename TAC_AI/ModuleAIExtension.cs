@@ -23,6 +23,8 @@ namespace TAC_AI
         public bool WasRTS = false;
         [SSaveField]
         public Vector3 RTSPos = Vector3.zero;
+        [SSaveField]
+        public bool WasMobileAnchor = false;
 
         /*
         // What can this new AI do? 
@@ -141,7 +143,7 @@ namespace TAC_AI
             var tankInst = TankBlock.transform.root.GetComponent<Tank>();
             if (!tankInst)
             {
-                Debug.Log("TACtical_AI: ModuleAIExtention - TANK IS NULL!!!");
+                DebugTAC_AI.Log("TACtical_AI: ModuleAIExtention - TANK IS NULL!!!");
                 return;
             }
             SavedAI = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI;
@@ -157,7 +159,7 @@ namespace TAC_AI
                 return;
             if (!TankBlock?.transform?.root?.GetComponent<AIECore.TankAIHelper>())
             {
-                Debug.Log("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
+                DebugTAC_AI.Info("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
                 return;
             }
             var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
@@ -191,10 +193,13 @@ namespace TAC_AI
                         }
                         thisInst.DriverType = SavedAIDriver;
                         thisInst.DediAI = SavedAI;
-                        Debug.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
+                        DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
                         thisInst.RefreshAI();
                         if (SavedAIDriver == AIDriverType.Pilot)
                             thisInst.TestForFlyingAIRequirement();
+                        if (WasMobileAnchor)
+                        { 
+                        }
                     }
                     if (WasRTS)
                     {
@@ -203,7 +208,7 @@ namespace TAC_AI
                     return true;
                 }
             }
-            catch (Exception e){ Debug.Log("TACtical AI: error on fetch " + e); }
+            catch (Exception e){ DebugTAC_AI.Log("TACtical AI: error on fetch " + e); }
             return false;
         }
 
@@ -213,7 +218,7 @@ namespace TAC_AI
             if (Saving)
                 return this.SerializeToSafe();
             bool deserial = this.DeserializeFromSafe();
-            Debug.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
+            DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
             return deserial;
         }
         private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)
@@ -248,6 +253,7 @@ namespace TAC_AI
                         SavedAI = Helper.DediAI;
                         WasRTS = Helper.RTSControlled;
                         RTSPos = Helper.RTSDestination;
+                        WasMobileAnchor = Helper.PlayerAllowAnchoring;
                         Serialize(true);
                         // OBSOLETE - CAN CAUSE CRASHES
                         //serialData.Store(blockSpec.saveState);
@@ -284,6 +290,7 @@ namespace TAC_AI
                                 }
                                 thisInst.DriverType = SavedAIDriver;
                                 thisInst.DediAI = SavedAI;
+                                thisInst.PlayerAllowAnchoring = WasMobileAnchor;
                                 //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                             }
                         }

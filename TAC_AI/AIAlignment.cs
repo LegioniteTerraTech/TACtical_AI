@@ -13,4 +13,18 @@ namespace TAC_AI
         NonPlayer,
         Neutral,
     }
+    public enum AIWeaponState
+    { // 0 is sleep, 1 is target, 2 is obsticle, 3 is mimic
+        Off,
+        Enemy,
+        Obsticle,
+        Mimic,
+    }
+    public enum AIDriveState
+    {
+        None,
+        Driving,
+        NonPlayer,
+        Neutral,
+    }
 }

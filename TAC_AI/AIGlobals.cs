@@ -41,11 +41,18 @@ namespace TAC_AI
 
         // Pathfinding
         public const float DodgeStrengthMultiplier = 1.75f;  // The motivation in trying to move away from a tech in the way
+        public const float FindItemExtension = 50;
         public const float FindBaseExtension = 500;
+        public const int ReverseDelay = 60;
+
         // Control the aircrafts and AI
         public const float AirMaxHeightOffset = 250;
         public const float AirMaxHeight = 150;
         public const float AirPromoteHeight = 200;
+
+        /// <summary> IN m/s !!!</summary>
+        public const float AirStallSpeed = 25;             // The speed of which most wings begin to stall at
+        public const float GroundAttackStagingDist = 250;   // Distance to fly (in meters!) before turning back
 
 
         // Item Handling
@@ -93,7 +100,8 @@ namespace TAC_AI
         public const int EnemyBaseMiningMaxRange = 250;
         public const int EnemyExtendActionRange = 500 + 32; //the extra 32 to account for tech sizes
 
-        public const int MPEachBaseProfits = 25000;
+        public const int MPEachBaseProfits = 250;
+        public const float RaidCooldownTimeSecs = 1200;
 
 
         internal static Color PlayerColor = new Color(0.5f, 0.75f, 0.95f, 1);
@@ -121,10 +129,278 @@ namespace TAC_AI
         public static float NonHostileBaseChance => 0.5f * BaseChanceGoodMulti; // 50% at easiest
         public static float FriendlyBaseChance => 0.25f * BaseChanceGoodMulti;  // 12.5% at easiest
 
+        internal static bool TurboAICheat
+        {
+            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace); }
+        }
 
 
+        // INIT
+        internal static GUISkin MenuGUI;
+        internal static float UIAlpha = 0.65f;
+        internal static string UIAlphaText = "<color=#454545ff>";
+
+        internal static GUIStyle MenuLeft;
+        private static Texture2D MenuTexRect;
+        private static GUIStyleState MenuLeftStyle;
+
+
+        internal static GUIStyle ButtonBlue;
+        private static Texture2D ButtonTexMain;
+        private static Texture2D ButtonTexHover;
+        private static GUIStyleState ButtonStyle;
+        private static GUIStyleState ButtonStyleHover;
+
+        internal static GUIStyle ButtonGreen;
+        private static Texture2D ButtonTexAccept;
+        private static Texture2D ButtonTexAcceptHover;
+        private static GUIStyleState ButtonStyleAccept;
+        private static GUIStyleState ButtonStyleAcceptHover;
+
+        internal static GUIStyle ButtonRed;
+        private static Texture2D ButtonTexDisabled;
+        private static Texture2D ButtonTexDisabledHover;
+        private static GUIStyleState ButtonStyleDisabled;
+        private static GUIStyleState ButtonStyleDisabledHover;
+
+
+        internal static GUIStyle ButtonGrey;
+        private static Texture2D ButtonTexInactive;
+        private static GUIStyleState ButtonStyleInactive;
+
+        internal static GUIStyle ButtonBlueActive;
+        private static GUIStyleState ButtonStyleActive;
+        private static Texture2D ButtonTexSelect;
+
+        internal static GUIStyle ButtonGreenActive;
+        private static GUIStyleState ButtonStyleGActive;
+        private static Texture2D ButtonTexSelectGreen;
+
+        internal static GUIStyle ButtonRedActive;
+        private static GUIStyleState ButtonStyleRActive;
+        private static Texture2D ButtonTexSelectRed;
+
+        public static void FetchResourcesFromGame()
+        {
+            if (MenuLeft == null)
+            {
+                try
+                {
+                    Texture2D[] res = Resources.FindObjectsOfTypeAll<Texture2D>();
+                    for (int step = 0; step < res.Length; step++)
+                    {
+                        Texture2D resCase = res[step];
+                        if (resCase && !resCase.name.NullOrEmpty())
+                        {
+                            if (resCase.name == "ACTION_MENU_SHORT_BKG")
+                                MenuTexRect = resCase;
+                            else if (resCase.name == "Button_BLUE")       // HUD_Button_BG
+                                ButtonTexMain = resCase;
+                            else if (resCase.name == "Button_BLUE_Highlight")// HUD_Button_Highlight
+                                ButtonTexHover = resCase;
+                            else if (resCase.name == "Button_BLUE_Pressed") // HUD_Button_Selected
+                                ButtonTexSelect = resCase;
+                            else if (resCase.name == "Button_GREEN")        // ????
+                                ButtonTexAccept = resCase;
+                            else if (resCase.name == "Button_GREEN_Highlight")// ????
+                                ButtonTexAcceptHover = resCase;
+                            else if (resCase.name == "Button_GREEN_Pressed")// ????
+                                ButtonTexSelectGreen = resCase;
+                            else if (resCase.name == "Button_RED")          // HUD_Button_Disabled_BG
+                                ButtonTexDisabled = resCase;
+                            else if (resCase.name == "Button_RED_Highlight")        // ????
+                                ButtonTexDisabledHover = resCase;
+                            else if (resCase.name == "Button_RED_Pressed")        // ????
+                                ButtonTexSelectRed = resCase;
+                            else if (resCase.name == "HUD_Button_InActive") // HUD_Button_InActive
+                                ButtonTexInactive = resCase;
+                        }
+                    }
+                }
+                catch
+                {
+                    DebugTAC_AI.Assert(true, "TACtical_AI: AIGlobals - failed to fetch textures");
+                    return;
+                }
+
+
+                // Setup Menu
+                MenuLeft = new GUIStyle(GUI.skin.window);
+                try
+                {
+                    MenuLeft.font = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(delegate (Font cand)
+                    { return cand.name == "Exo-SemiBoldItalic"; });
+                }
+                catch { }
+                MenuLeftStyle = new GUIStyleState() { background = MenuTexRect, textColor = new Color(0, 0, 0, 1),}; 
+                MenuLeft.padding = new RectOffset(MenuTexRect.width / 6, MenuTexRect.width / 6, MenuTexRect.height / 12, MenuTexRect.height / 12);
+                MenuLeft.border = new RectOffset(MenuTexRect.width / 3, MenuTexRect.width / 3, MenuTexRect.height / 6, MenuTexRect.height / 6);
+                MenuLeft.normal = MenuLeftStyle;
+                MenuLeft.hover = MenuLeftStyle;
+                MenuLeft.active = MenuLeftStyle;
+                MenuLeft.focused = MenuLeftStyle;
+                MenuLeft.onNormal = MenuLeftStyle;
+                MenuLeft.onHover = MenuLeftStyle;
+                MenuLeft.onActive = MenuLeftStyle;
+                MenuLeft.onFocused = MenuLeftStyle;
+
+                GUIStyle ButtonBase = new GUIStyle(GUI.skin.button);
+                ButtonBase.padding = new RectOffset(0, 0, 0, 0);
+                ButtonBase.border = new RectOffset(ButtonTexMain.width / 4, ButtonTexMain.width / 4, ButtonTexMain.height / 4, ButtonTexMain.height / 4);
+
+                try
+                {
+                    ButtonBase.font = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(delegate (Font cand)
+                    { return cand.name == "Exo-ExtraBold"; });
+                }
+                catch { }
+
+                // Setup Button Default
+                ButtonBlue = new GUIStyle(ButtonBase);
+                ButtonStyle = new GUIStyleState() { background = ButtonTexMain, textColor = new Color(1, 1, 1, 1), };
+                ButtonStyleHover = new GUIStyleState() { background = ButtonTexHover, textColor = new Color(1, 1, 1, 1), };
+                ButtonBlue.normal = ButtonStyle;
+                ButtonBlue.hover = ButtonStyleHover;
+                ButtonBlue.active = ButtonStyle;
+                ButtonBlue.focused = ButtonStyle;
+                ButtonBlue.onNormal = ButtonStyle;
+                ButtonBlue.onHover = ButtonStyleHover;
+                ButtonBlue.onActive = ButtonStyle;
+                ButtonBlue.onFocused = ButtonStyle;
+
+                // Setup Button Accept
+                ButtonGreen = new GUIStyle(ButtonBase);
+                ButtonStyleAccept = new GUIStyleState() { background = ButtonTexAccept, textColor = new Color(1, 1, 1, 1), };
+                ButtonStyleAcceptHover = new GUIStyleState() { background = ButtonTexAcceptHover, textColor = new Color(1, 1, 1, 1), };
+                ButtonGreen.normal = ButtonStyleAccept;
+                ButtonGreen.hover = ButtonStyleAcceptHover;
+                ButtonGreen.active = ButtonStyleAccept;
+                ButtonGreen.focused = ButtonStyleAccept;
+                ButtonGreen.onNormal = ButtonStyleAccept;
+                ButtonGreen.onHover = ButtonStyleAcceptHover;
+                ButtonGreen.onActive = ButtonStyleAccept;
+                ButtonGreen.onFocused = ButtonStyleAccept;
+
+                // Setup Button Disabled
+                ButtonRed = new GUIStyle(ButtonBase);
+                ButtonStyleDisabled = new GUIStyleState() { background = ButtonTexDisabled, textColor = new Color(1, 1, 1, 1), };
+                ButtonStyleDisabledHover = new GUIStyleState() { background = ButtonTexDisabledHover, textColor = new Color(1, 1, 1, 1), };
+                ButtonRed.normal = ButtonStyleDisabled;
+                ButtonRed.hover = ButtonStyleDisabledHover;
+                ButtonRed.active = ButtonStyleDisabled;
+                ButtonRed.focused = ButtonStyleDisabled;
+                ButtonRed.onNormal = ButtonStyleDisabled;
+                ButtonRed.onHover = ButtonStyleDisabledHover;
+                ButtonRed.onActive = ButtonStyleDisabled;
+                ButtonRed.onFocused = ButtonStyleDisabled;
+
+                // Setup Button Not Active
+                ButtonGrey = new GUIStyle(ButtonBase);
+                ButtonStyleInactive = new GUIStyleState() { background = ButtonTexInactive, textColor = new Color(1, 1, 1, 1), };
+                ButtonGrey.normal = ButtonStyleInactive;
+                ButtonGrey.hover = ButtonStyleInactive;
+                ButtonGrey.active = ButtonStyleInactive;
+                ButtonGrey.focused = ButtonStyleInactive;
+                ButtonGrey.onNormal = ButtonStyleInactive;
+                ButtonGrey.onHover = ButtonStyleInactive;
+                ButtonGrey.onActive = ButtonStyleInactive;
+                ButtonGrey.onFocused = ButtonStyleInactive;
+
+
+                // Setup Button Active
+                ButtonBlueActive = new GUIStyle(ButtonBase);
+                ButtonStyleActive = new GUIStyleState() { background = ButtonTexSelect, textColor = new Color(1, 1, 1, 1), };
+                ButtonBlueActive.normal = ButtonStyleActive;
+                ButtonBlueActive.hover = ButtonStyleActive;
+                ButtonBlueActive.active = ButtonStyleActive;
+                ButtonBlueActive.focused = ButtonStyleActive;
+                ButtonBlueActive.onNormal = ButtonStyleActive;
+                ButtonBlueActive.onHover = ButtonStyleActive;
+                ButtonBlueActive.onActive = ButtonStyleActive;
+                ButtonBlueActive.onFocused = ButtonStyleActive;
+
+                // Setup Button Green Active
+                ButtonGreenActive = new GUIStyle(ButtonBase);
+                ButtonStyleGActive = new GUIStyleState() { background = ButtonTexSelectGreen, textColor = new Color(1, 1, 1, 1), };
+                ButtonGreenActive.normal = ButtonStyleGActive;
+                ButtonGreenActive.hover = ButtonStyleGActive;
+                ButtonGreenActive.active = ButtonStyleGActive;
+                ButtonGreenActive.focused = ButtonStyleGActive;
+                ButtonGreenActive.onNormal = ButtonStyleGActive;
+                ButtonGreenActive.onHover = ButtonStyleGActive;
+                ButtonGreenActive.onActive = ButtonStyleGActive;
+                ButtonGreenActive.onFocused = ButtonStyleGActive;
+
+                // Setup Button Red Active
+                ButtonRedActive = new GUIStyle(ButtonBase);
+                ButtonStyleRActive = new GUIStyleState() { background = ButtonTexSelectRed, textColor = new Color(1, 1, 1, 1), };
+                ButtonRedActive.normal = ButtonStyleRActive;
+                ButtonRedActive.hover = ButtonStyleRActive;
+                ButtonRedActive.active = ButtonStyleRActive;
+                ButtonRedActive.focused = ButtonStyleRActive;
+                ButtonRedActive.onNormal = ButtonStyleRActive;
+                ButtonRedActive.onHover = ButtonStyleRActive;
+                ButtonRedActive.onActive = ButtonStyleRActive;
+                ButtonRedActive.onFocused = ButtonStyleRActive;
+
+                Font idealFont = GUI.skin.font;
+                try
+                {
+                    idealFont = Resources.FindObjectsOfTypeAll<Font>().ToList().Find(delegate (Font cand)
+                    { return cand.name == "Exo-SemiBold"; });
+                }
+                catch { }
+                MenuGUI = new GUISkin();
+                MenuGUI.font = idealFont;
+                MenuGUI.window = MenuLeft;
+
+                MenuGUI.label = new GUIStyle(GUI.skin.label);
+                MenuGUI.label.font = idealFont;
+                MenuGUI.label.alignment = TextAnchor.MiddleLeft;
+                MenuGUI.label.fontStyle = FontStyle.Normal;
+
+                MenuGUI.button = ButtonBlue;
+                MenuGUI.box = new GUIStyle(GUI.skin.box);
+                MenuGUI.box.font = idealFont;
+            }
+        }
+
+        private static GUISkin cache;
+        private static Color cacheColor;
+        private static Color GUIColor = new Color(1,1,1, UIAlpha);
+        public static void StartUI()
+        {
+            cache = GUI.skin;
+            cacheColor = GUI.color;
+            GUI.skin = MenuGUI;
+            GUI.color = GUIColor;
+        }
+        public static void EndUI()
+        {
+            GUI.color = cacheColor;
+            GUI.skin = cache;
+        }
 
         // Utilities
+        public static bool AtSceneTechMax()
+        {
+            int Counter = 0;
+            try
+            {
+                foreach (var tech in Singleton.Manager<ManTechs>.inst.IterateTechs())
+                {
+                    if (IsBaseTeam(tech.Team) || tech.Team == -1)
+                        Counter++;
+                }
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log("TACtical_AI: AtSceneTechMax - Error on The World");
+                DebugTAC_AI.Log(e);
+            }
+            return Counter >= KickStart.MaxEnemyWorldCapacity;
+        }
+
         public static bool IsBaseTeam(int team)
         {
             return (team >= BaseTeamsStart && team <= BaseTeamsEnd) || team == SpecialAISpawner.trollTeam;

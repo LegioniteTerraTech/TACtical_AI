@@ -32,11 +32,11 @@ namespace TAC_AI.AI.Enemy
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tank, mind.TechMemor))
+                    if (RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && mind.TechMemor.HasFullHealth())
                         BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemy.IsNotNull() && RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tank, mind.TechMemor))
+                    if (thisInst.lastEnemy.IsNotNull() && RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && mind.TechMemor.HasFullHealth())
                         BlowBolts(tank, mind);
                     break;
                 default:                        // Unimplemented
@@ -49,7 +49,7 @@ namespace TAC_AI.AI.Enemy
         }
         public static void BlowBolts(Tank tank, EnemyMind mind)
         {
-            if (AtWorldTechMax())
+            if (AIGlobals.AtSceneTechMax())
                 return; // world is too stressed to handle more
             if (mind.TechMemor)
             {
@@ -59,11 +59,8 @@ namespace TAC_AI.AI.Enemy
             tank.control.ServerDetonateExplosiveBolt();
         }
 
-        public static int AllyCostCountOld(int Team)
-        {
-            return RBases.TeamGlobalMobileTechCount(Team);
-        }
 
+        /*
         // Tech Accounting (OBSOLETE)
         private static readonly Dictionary<int, int> teamTechs = new Dictionary<int, int>();
         private static readonly List<int> teamUnfiltered = new List<int>();
@@ -117,33 +114,13 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: AllyCostCount - Error on ally counting");
-                Debug.Log(e);
+                DebugTAC_AI.Log("TACtical_AI: AllyCostCount - Error on ally counting");
+                DebugTAC_AI.Log(e);
             }
             lastTechsCount = techCount;
             teamUnfiltered.Clear();
             return AllyCount;
         }
-        public static bool AtWorldTechMax()
-        {
-            int Counter = 0;
-            var allTechs = Singleton.Manager<ManTechs>.inst.CurrentTechs;
-            int techCount = allTechs.Count();
-            try
-            {
-                for (int stepper = 0; techCount > stepper; stepper++)
-                {
-                    Tank tech = allTechs.ElementAt(stepper);
-                    if (AIGlobals.IsEnemyBaseTeam(tech.Team) || tech.Team == -1)
-                        Counter++;
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.Log("TACtical_AI: AtWorldTechMax - Error on The World");
-                Debug.Log(e);
-            }
-            return Counter >= KickStart.MaxEnemyWorldCapacity;
-        }
+        */
     }
 }

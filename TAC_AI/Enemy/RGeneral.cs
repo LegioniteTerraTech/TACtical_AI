@@ -62,7 +62,7 @@ namespace TAC_AI.AI.Enemy
                         if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
                         thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                         //thisInst.AttemptedRepairs++;
-                        Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else

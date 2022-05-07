@@ -43,7 +43,7 @@ namespace TAC_AI.Templates
             #if DEBUG
                 Debug.Log("TACtical_AI: Raw Techs Debugger launched (DEV)");
             #else
-                Debug.Log("TACtical_AI: Raw Techs Debugger launched");
+                DebugTAC_AI.Log("TACtical_AI: Raw Techs Debugger launched");
             #endif
 
             Instantiate(new GameObject()).AddComponent<DebugRawTechSpawner>();
@@ -57,6 +57,16 @@ namespace TAC_AI.Templates
         }
 
 
+        public static bool IsOverMenu()
+        {
+            if (isCurrentlyOpen && KickStart.CanUseMenu)
+            {
+                Vector3 Mous = Input.mousePosition;
+                Mous.y = Display.main.renderingHeight - Mous.y;
+                return HotWindow.Contains(Mous);
+            }
+            return false;
+        }
 
         internal class GUIDisplayTechLoader : MonoBehaviour
         {
@@ -64,6 +74,7 @@ namespace TAC_AI.Templates
             {
                 if (isCurrentlyOpen && KickStart.CanUseMenu)
                 {
+                    AIGlobals.FetchResourcesFromGame();
                     if (!isPrefabs)
                     {
                         HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, "<b>Debug Local Spawns</b>");
@@ -136,9 +147,9 @@ namespace TAC_AI.Templates
 
             HoriPosOff += ButtonWidth;
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugNaviLines ? redStart + "Hide Paths</b></color>" : redStart + "Show Paths</b></color>"))
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>"))
             {
-                ShowDebugNaviLines = !ShowDebugNaviLines;
+                ShowDebugFeedBack = !ShowDebugFeedBack;
             }
 
             HoriPosOff = 0;
@@ -194,6 +205,21 @@ namespace TAC_AI.Templates
             }
 
 #if DEBUG
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "CLEAR TRACKED</b></color>"))
+            {
+                RemoveOrphanTrackedVisibles();
+            }
+
+            HoriPosOff += ButtonWidth;
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "LOCAL TO COM</b></color>"))
             {
                 try
@@ -574,9 +600,9 @@ namespace TAC_AI.Templates
                 InstantLoad = !InstantLoad;
             }
             HoriPosOff += ButtonWidth;
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugNaviLines ? redStart + "Hide Paths</b></color>" : redStart + "Show Paths</b></color>"))
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>"))
             {
-                ShowDebugNaviLines = !ShowDebugNaviLines;
+                ShowDebugFeedBack = !ShowDebugFeedBack;
             }
             HoriPosOff += ButtonWidth;
 #if DEBUG
@@ -900,12 +926,71 @@ namespace TAC_AI.Templates
             catch { }
         }
 
+        public static void RemoveOrphanTrackedVisibles()
+        {
+            try
+            {
+                List<TrackedVisible> toDestroy = ManVisible.inst.AllTrackedVisibles.ToList();
+                int length = toDestroy.Count;
+                int removed = 0;
+                for (int step = 0; step < length;)
+                {
+                    TrackedVisible remove = toDestroy[step];
+                    if (remove.ObjectType != ObjectTypes.Vehicle)
+                    {
+                        step++;
+                        continue;
+                    }
+                    WorldPosition WP = remove.GetWorldPosition();
+                    WorldTile WT = ManWorld.inst.TileManager.LookupTile(WP.TileCoord);
+                    if (WT != null && WT.IsLoaded)
+                    {
+                        if (WT.StoredVisiblesWaitingToLoad != null && WT.StoredVisiblesWaitingToLoad.Count > 0)
+                        {
+                            step++;
+                            continue; // TECHS ARE LOADING AND IF WE REMOVE IT NOW IT WILL IGNORE TEAMS
+                        }
+
+                        if (remove.TeamID != ManPlayer.inst.PlayerTeam && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
+                        {
+                            
+                            Debug.Log("TACtical_AI: RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | " 
+                                + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | " 
+                                + (remove.visible ? "active" : "inactive"));
+                            
+                            toDestroy.RemoveAt(step);
+                            try
+                            {
+                                //ManVisible.inst.ObliterateTrackedVisibleFromWorld(remove.ID); 
+                                ManWorld.inst.TileManager.GetStoredTileIfNotSpawned(remove.Position, false).RemoveSavedVisible(ObjectTypes.Vehicle, remove.ID);
+                                
+                            }
+                            catch { }
+                            try
+                            {
+                                ManVisible.inst.StopTrackingVisible(remove.ID);
+                            }
+                            catch { }
+                            remove.StopTracking();
+                            removed++;
+                            length--;
+                            continue;
+                        }
+                    }
+                    step++;
+                }
+                if (removed > 0)
+                    DebugTAC_AI.Log("TACtical_AI: RemoveOrphanTrackedVisibles - removed " + removed);
+            }
+            catch { }
+        }
+
         public static void LaunchSubMenuClickable()
         {
             if (!isCurrentlyOpen)
             {
                 RawTechExporter.ReloadExternal();
-                Debug.Log("TACtical_AI: Opened Raw Techs Debug menu!");
+                DebugTAC_AI.Log("TACtical_AI: Opened Raw Techs Debug menu!");
                 isCurrentlyOpen = true;
                 GUIWindow.SetActive(true);
             }
@@ -917,7 +1002,7 @@ namespace TAC_AI.Templates
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl(RawTechSpawnerID);
-                Debug.Log("TACtical_AI: Closed Raw Techs Debug menu!");
+                DebugTAC_AI.Log("TACtical_AI: Closed Raw Techs Debug menu!");
             }
         }
 
@@ -995,9 +1080,9 @@ namespace TAC_AI.Templates
 
         // Utilities
 #if DEBUG
-        internal static bool ShowDebugNaviLines = true;
+        internal static bool ShowDebugFeedBack = true;
 #else
-        internal static bool ShowDebugNaviLines = false;
+        internal static bool ShowDebugFeedBack = false;
 #endif
         /// <summary>
         /// endPosGlobal is GLOBAL ROTATION in relation to local tech.
@@ -1008,7 +1093,7 @@ namespace TAC_AI.Templates
         /// <param name="color"></param>
         internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobalSpaceOffset, Color color)
         {
-            if (!ShowDebugNaviLines || !IsCurrentlyEnabled)
+            if (!ShowDebugFeedBack || !IsCurrentlyEnabled)
                 return;
             GameObject gO;
             var line = obj.transform.Find("DebugLine " + num);

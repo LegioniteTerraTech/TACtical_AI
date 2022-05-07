@@ -22,8 +22,8 @@ namespace TAC_AI
             { AttractType.Dogfight,         3.25f },
             { AttractType.Harvester,        3.75f },
             { AttractType.HQSiege,          0.25f },
-            { AttractType.Invader,          1.3f },
-            { AttractType.Misc,             1.2f },
+            { AttractType.Invader,          0.75f },
+            { AttractType.Misc,             0.65f },
             { AttractType.NavalWarfare,     3.25f },
             { AttractType.SpaceBattle,      3.25f },
             { AttractType.SpaceInvader,     1.6f },
@@ -50,6 +50,12 @@ namespace TAC_AI
         {
             FieldInfo state = typeof(ModeAttract).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);
             int mode = (int)state.GetValue(__instance);
+            if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Equals))
+            {
+                UILoadingScreenHints.SuppressNextHint = true;
+                Singleton.Manager<ManUI>.inst.FadeToBlack();
+                state.SetValue(__instance, 3);
+            }
             if (mode == 2)
             {
                 if (KickStart.SpecialAttractNum == AttractType.Harvester)
@@ -105,7 +111,7 @@ namespace TAC_AI
         {
             // Testing
             bool caseOverride = true;
-            AttractType outNum = AttractType.Dogfight;
+            AttractType outNum = AttractType.Harvester;
 
 #if DEBUG
                 caseOverride = true;
@@ -115,7 +121,7 @@ namespace TAC_AI
 
             if (UnityEngine.Random.Range(1, 100) > 20 || KickStart.retryForBote == 1 || caseOverride)
             {
-                Debug.Log("TACtical_AI: Ooop - the special threshold has been met");
+                DebugTAC_AI.Log("TACtical_AI: Ooop - the special threshold has been met");
                 KickStart.SpecialAttract = true;
                 if (KickStart.retryForBote == 1)
                     outNum = AttractType.NavalWarfare;
@@ -146,6 +152,11 @@ namespace TAC_AI
                         Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
 
                         return false;
+                    }
+                    else
+                    {
+                        KickStart.retryForBote = 0;
+                        outNum = WeightedDetermineRAND();
                     }
                 }
             }
@@ -186,7 +197,7 @@ namespace TAC_AI
                     }
 
                     AttractType randNum = KickStart.SpecialAttractNum;
-                    Debug.Log("TACtical_AI: Pre-Setup for attract type " + randNum.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: Pre-Setup for attract type " + randNum.ToString());
                     switch (randNum)
                     {
                         case AttractType.SpaceInvader: // space invader
@@ -206,7 +217,7 @@ namespace TAC_AI
                             {
                                 Vector3 position = tanksToConsider[step] + (Vector3.up * 20);
                                 if (!RawTechLoader.SpawnAttractTech(position,  -(spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Air, silentFail: false))
-                                    Debug.Log("TACtical_AI: ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
+                                    DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
                             }
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
@@ -217,7 +228,7 @@ namespace TAC_AI
                             {
                                 Vector3 position = tanksToConsider[step] + (Vector3.up * 14);
                                 if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), BaseTerrain.Space, silentFail: false))
-                                    Debug.Log("TACtical_AI: ThrowCoolAIInAttract(SpaceBattle) - error ~ could not find Tech");
+                                    DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(SpaceBattle) - error ~ could not find Tech");
                             }
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
@@ -236,7 +247,7 @@ namespace TAC_AI
                                         removed++;
                                     }
                                 }
-                                Debug.Log("TACtical_AI: removed " + removed);
+                                DebugTAC_AI.Log("TACtical_AI: removed " + removed);
                                 for (int step = 0; numToSpawn > step; step++)
                                 {
                                     Vector3 offset = Quaternion.Euler(0f, (float)step * rad, 0f) * Vector3.forward * 16;
@@ -281,7 +292,7 @@ namespace TAC_AI
                                 Vector3 position = tanksToConsider[step] + (Vector3.up * 10);
 
                                 if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), BaseTerrain.AnyNonSea))
-                                    Debug.Log("TACtical_AI: ThrowCoolAIInAttract(Misc) - error ~ could not find Tech");
+                                    DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(Misc) - error ~ could not find Tech");
                             }
                             RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, 749, BaseTerrain.Air);
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);

@@ -47,7 +47,7 @@ namespace TAC_AI.AI
             if (this.Helper == null)
             {
                 string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                Debug.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -58,7 +58,7 @@ namespace TAC_AI.AI
                 if (this.AICore == null)
                 {
                     string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                    Debug.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
+                    DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
                     return;
                 }
                 this.AICore.DriveDirector();
@@ -73,7 +73,7 @@ namespace TAC_AI.AI
             if (this.Helper == null)
             {
                 string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                Debug.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -84,7 +84,7 @@ namespace TAC_AI.AI
                 if (this.AICore == null)
                 {
                     string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                    Debug.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
+                    DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
                     return;
                 }
                 this.AICore.DriveDirectorRTS();
@@ -113,7 +113,7 @@ namespace TAC_AI.AI
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
             CheckBoosters();
-            Debug.Log("TACtical_AI: Added ground AI for " + Tank.name);
+            DebugTAC_AI.Log("TACtical_AI: Added ground AI for " + Tank.name);
         }
         private void CheckBoosters()
         {
@@ -188,6 +188,10 @@ namespace TAC_AI.AI
         public void OnMoveWorldOrigin(IntVector3 move)
         {
 
+        }
+        public Vector3 GetDestination()
+        {
+            return ProcessedDest;
         }
 
         public void UpdateEnemyMind(EnemyMind mind)

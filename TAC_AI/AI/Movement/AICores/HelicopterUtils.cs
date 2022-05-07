@@ -25,7 +25,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
                 isInControl = upVal > 0.35f;
-            DeterminePitchRoll(tank, pilot, positionToMoveTo, positionToLookAt, thisInst, !isInControl, thisInst.PivotOnly && isInControl);
+            DeterminePitchRoll(tank, pilot, positionToMoveTo, positionToLookAt, thisInst, !isInControl, isInControl);
             Vector3 forwardFlat = thisInst.Navi3DDirect;
             forwardFlat.y = 0;
             if (ForceAccend || !isInControl)
@@ -72,7 +72,7 @@ namespace TAC_AI.AI.Movement.AICores
 
 
             //Turn our work in to process
-            control3D.m_State.m_InputRotation = turnVal;
+            control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
 
             // DRIVE
             float xOffset = 0;
@@ -125,7 +125,9 @@ namespace TAC_AI.AI.Movement.AICores
             float pitchDampening = 64 * thisInst.lastTechExtents;
             Vector3 Heading;
             if (PointAtTarget)
+            {
                 Heading = (LookPosWorld - tank.boundsCentreWorldNoCheck).normalized;
+            }
             else
                 Heading = (DestPosWorld - tank.boundsCentreWorldNoCheck).normalized;
             Vector3 fFlat = Heading;
@@ -178,7 +180,7 @@ namespace TAC_AI.AI.Movement.AICores
         public static float ModerateUpwardsThrust(Tank tank, AIECore.TankAIHelper thisInst, AIControllerAir pilot, Vector3 targetHeight, bool ForceUp = false)
         {
             pilot.LowerEngines = false;
-            float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + 0.5f;
+            float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + 1f;
             //Debug.Log("TACtical_AI: " + tank.name + " thrust = " + final + " | velocity " + tank.rbody.velocity);
             if (ForceUp)
             {
@@ -191,7 +193,7 @@ namespace TAC_AI.AI.Movement.AICores
                 final = -0.1f;
                 if (tank.rbody.velocity.y < 0)
                 {
-                    final = Mathf.Pow(tank.rbody.velocity.y, 2) / 24;
+                    final = Mathf.Pow(tank.rbody.velocity.y, 2) /12;
                 }
             }
             else if (tank.rbody.velocity.y < 0 && final > -0.4f && final < 0)  // try ease fall
@@ -211,7 +213,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (final > 1.25f && pilot.BoostBias.y > 0.6f)
                 thisInst.BOOST = true;
             else
-                thisInst.BOOST = thisInst.lastRange > AIControllerAir.GroundAttackStagingDist / 3;
+                thisInst.BOOST = thisInst.lastRange > AIGlobals.GroundAttackStagingDist / 3;
 
             return Mathf.Clamp(final, -0.1f, 1);
         }

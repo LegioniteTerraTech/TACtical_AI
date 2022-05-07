@@ -46,7 +46,7 @@ namespace TAC_AI.AI.AlliedOperations
                     return;
                 }
 
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
@@ -67,36 +67,36 @@ namespace TAC_AI.AI.AlliedOperations
 
 
             // VALIDATION CHECKS OF TRACTOR BED FILL STATUS
-            if (thisInst.areWeFull)
+            if (thisInst.CollectedTarget)
             {
-                thisInst.areWeFull = false;
+                thisInst.CollectedTarget = false;
                 foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
                 {
                     ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
                     if (!hold.IsEmpty && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
                     {
-                        thisInst.areWeFull = true;
+                        thisInst.CollectedTarget = true;
                         break;//Checking if tech is empty when unloading at base
                     }
                 }
-                thisInst.ActionPause = 20;
+                thisInst.ActionPause = AIGlobals.ReverseDelay;
             }
             else
             {
-                thisInst.areWeFull = true;
+                thisInst.CollectedTarget = true;
                 foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
                 {
                     ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
                     if (!hold.IsFull && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
                     {
-                        thisInst.areWeFull = false;
+                        thisInst.CollectedTarget = false;
                         break;//Checking if tech is full after destroying a node
                     }
                 }
             }
 
             // Our Chunk-Carrying tractor pads are filled to the brim with Chunks
-            if (thisInst.areWeFull || thisInst.ActionPause > 10)
+            if (thisInst.CollectedTarget || thisInst.ActionPause > 10)
             {   // BRANCH - Head back to base
                 thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
@@ -118,7 +118,7 @@ namespace TAC_AI.AI.AlliedOperations
                     return;
                 }
                 */
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() == 0)
@@ -257,7 +257,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (thisInst.ActionPause > 0)
             {
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
             }
             else
@@ -265,7 +265,7 @@ namespace TAC_AI.AI.AlliedOperations
                 if (!thisInst.foundGoal)
                 {   
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
+                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindItemExtension, out thisInst.theResource);
                     if (!thisInst.foundGoal)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");
@@ -296,7 +296,7 @@ namespace TAC_AI.AI.AlliedOperations
                         return;
                     }
                 }
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastTechExtents + 3 + thisInst.MinimumRad && thisInst.recentSpeed < 3)
@@ -339,7 +339,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                 thisInst.AvoidStuff = false;
                 thisInst.AdviseAway = true;
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
                 thisInst.SettleDown();
             }

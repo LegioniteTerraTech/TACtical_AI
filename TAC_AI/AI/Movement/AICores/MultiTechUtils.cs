@@ -31,14 +31,14 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (help.DediAI == AIType.MTMimic && help.MTMimicHostAvail)
             {
-                if (help.LastCloseAlly != null)
+                if (help.lastCloseAlly != null)
                 {
                     try
                     {
-                        help.lastDestination = AIEPathing.GetDriveApproxAir(help.LastCloseAlly, help, out bool IsMoving);
+                        help.lastDestination = AIEPathing.GetDriveApproxAir(help.lastCloseAlly, help, out bool IsMoving);
                         if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
                         {
-                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
+                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.lastCloseAlly.name + " and idle.");
                             help.MinimumRad = 0.1f;
                             if (Vector3.Dot(tank.rootBlockTrans.forward, (help.lastDestination - tank.boundsCentreWorldNoCheck).normalized) >= 0)
                             {
@@ -54,10 +54,10 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.LastCloseAlly.name + " and idle.");
+                            //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.lastCloseAlly.name + " and idle.");
                             help.MinimumRad = 0f;
                             help.lastDestination = tank.boundsCentreWorldNoCheck;
-                            help.forceDrive = true;
+                            help.ForceSetDrive = true;
                             help.DriveVar = 0;
                             help.Steer = false;
                             help.PivotOnly = true;
@@ -70,7 +70,7 @@ namespace TAC_AI.AI.Movement.AICores
                     //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
                     help.MinimumRad = 0f;
                     help.lastDestination = tank.boundsCentreWorldNoCheck;
-                    help.forceDrive = true;
+                    help.ForceSetDrive = true;
                     help.DriveVar = 0;
                     help.Steer = false;
                 }

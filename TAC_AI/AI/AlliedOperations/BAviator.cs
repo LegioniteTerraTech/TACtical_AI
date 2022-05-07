@@ -21,7 +21,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (!(thisInst.MovementController is AIControllerAir))
             {
-                Debug.Log("TACtical_AI: AI " + tank.name + ":  FIRED MotivateFly WITHOUT THE REQUIRED AIControllerAir MODULE!!!");
+                DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  FIRED MotivateFly WITHOUT THE REQUIRED AIControllerAir MODULE!!!");
                 return;
             }
 

@@ -44,7 +44,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             float spacing = thisInst.lastTechExtents + enemyExt;
             thisInst.lastRange = dist;
 
-            thisInst.forceDrive = true;
+            thisInst.ForceSetDrive = true;
             thisInst.DriveVar = 1;
             switch (mind.CommanderAttack)
             {

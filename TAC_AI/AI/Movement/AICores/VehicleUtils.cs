@@ -22,7 +22,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (helper.DriveDir == EDriveType.Perpendicular)
                 {
-                    if (!(bool)helper.LastCloseAlly)
+                    if (!(bool)helper.lastCloseAlly)
                     {
                         float strength = 1 - forwards;
                         turnVal = Mathf.Clamp(strength, 0, 1);
@@ -37,13 +37,13 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (thisControl.DriveControl <= MaxThrottleToTurnAccurate)
                     {
-                        if (!(bool)helper.LastCloseAlly && forwards > 0.7f)
+                        if (!(bool)helper.lastCloseAlly && forwards > 0.7f)
                         {
                             float strength = 1 - Mathf.Log10(1 + (forwards * 9));
                             turnVal = Mathf.Clamp(strength, 0, 1);
                         }
                     }
-                    else if (!(bool)helper.LastCloseAlly && forwards > 0.7f)
+                    else if (!(bool)helper.lastCloseAlly && forwards > 0.7f)
                     {
                         float strength = 1 - forwards;
                         turnVal = Mathf.Clamp(strength, 0, 1);

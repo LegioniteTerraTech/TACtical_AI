@@ -252,7 +252,7 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Bully;
                         else if (isFast && (isRaider || isStrong))
                             attack = EnemyAttack.Pesterer;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                         else if ((isStrong || Forwards) && isRanged)
                             attack = EnemyAttack.Spyper;
@@ -263,7 +263,7 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Bully;
                         else if (isFast && (isRaider || isStrong))
                             attack = EnemyAttack.Pesterer;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                         else if((isStrong || Forwards) && isRanged)
                             attack = EnemyAttack.Spyper;
@@ -278,7 +278,7 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Spyper;
                         else if (isStrong && (isMelee || isFast || Forwards))
                             attack = EnemyAttack.Bully;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                     }
                     else
@@ -289,7 +289,7 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Bully;
                         else if (isFast && (isRaider || isStrong))
                             attack = EnemyAttack.Pesterer;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                     }
                     break;
@@ -300,7 +300,7 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Pesterer;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
                             attack = EnemyAttack.Spyper;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                         else if (isStrong && (isMelee || isFast || Forwards))
                             attack = EnemyAttack.Bully;
@@ -316,14 +316,14 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Spyper; // Most large Spaceships feature a large forwards weapons array
                         else if (isFast && (isRaider || isStrong))
                             attack = EnemyAttack.Pesterer;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                     }
                     break;
                 case EnemyHandling.Naval: // Abuse the sea
                     if (smolTech)
                     {
-                        if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        if (!Forwards)
                             attack = EnemyAttack.Circle;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
                             attack = EnemyAttack.Spyper;
@@ -338,7 +338,7 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Spyper;
                         else if (isStrong && (isMelee || isFast || Forwards))
                             attack = EnemyAttack.Bully;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                         else if (isFast && (isRaider || isStrong))
                             attack = EnemyAttack.Pesterer;
@@ -351,14 +351,14 @@ namespace TAC_AI.AI.Enemy
                             attack = EnemyAttack.Pesterer;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
                             attack = EnemyAttack.Spyper;
-                        else if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        else if (!Forwards)
                             attack = EnemyAttack.Circle;
                         else if (isStrong && (isMelee || isFast || Forwards))
                             attack = EnemyAttack.Bully;
                     }
                     else
                     {
-                        if (!Forwards && (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent))
+                        if (!Forwards)
                             attack = EnemyAttack.Circle;
                         else if (isFast && (isRaider || isStrong))
                             attack = EnemyAttack.Pesterer;

@@ -91,7 +91,7 @@ namespace TAC_AI
         /// For handing Directors
         /// </summary>
         public static int AIDodgeCheapness = 30;
-        public static int AIPopMaxLimit = 6;
+        public static int AIPopMaxLimit = 8;
         public static bool MuteNonPlayerRacket = true;
         public static bool DisplayEnemyEvents = true;
         public static bool AllowOverleveledBlockDrops { get { return EnemyBlockDropChance == 100; } } // Obsolete - true when 
@@ -199,7 +199,7 @@ namespace TAC_AI
         {
             if (GUIUtility.hotControl == ID)
             {
-                Debug.Log("TACtical_AI: GUI - Releasing control");
+                DebugTAC_AI.Log("TACtical_AI: GUI - Releasing control");
                 GUI.FocusControl(null);
                 GUI.UnfocusWindow();
                 GUIUtility.hotControl = 0;
@@ -244,19 +244,19 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    Debug.Log("TACtical_AI: Error on patch");
-                    Debug.Log(e);
+                    DebugTAC_AI.Log("TACtical_AI: Error on patch");
+                    DebugTAC_AI.Log(e);
                 }
             }
 
             try
             {
                 Assembly assemble = Assembly.GetExecutingAssembly();
-                Debug.Log("TACtical_AI: DLL is " + assemble.GetName());
+                DebugTAC_AI.Log("TACtical_AI: DLL is " + assemble.GetName());
                 ManSafeSaves.RegisterSaveSystem(assemble);
                 HasHookedUpToSafeSaves = true;
             }
-            catch { Debug.Log("TACtical_AI: Error on RegisterSaveSystem"); }
+            catch { DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem"); }
 
             AIECore.TankAIManager.Initiate();
             GUIAIManager.Initiate();
@@ -278,8 +278,8 @@ namespace TAC_AI
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Error on Option & Config setup");
-                Debug.Log(e);
+                DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
+                DebugTAC_AI.Log(e);
             }
 
             EnableBetterAI = true;
@@ -305,8 +305,8 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    Debug.Log("TACtical_AI: Error on un-patch");
-                    Debug.Log(e);
+                    DebugTAC_AI.Log("TACtical_AI: Error on un-patch");
+                    DebugTAC_AI.Log(e);
                 }
             }
 
@@ -384,7 +384,7 @@ namespace TAC_AI
 
         public static void DelayedBaseLoader()
         {
-            Debug.Log("TACtical_AI: LAUNCHED MODDED BLOCKS BASE VALIDATOR");
+            DebugTAC_AI.Log("TACtical_AI: LAUNCHED MODDED BLOCKS BASE VALIDATOR");
             AIERepair.ConstructErrorBlocksList();
             TempManager.ValidateAllStringTechs();
             DebugRawTechSpawner.Initiate();
@@ -412,7 +412,7 @@ namespace TAC_AI
                     ManSafeSaves.RegisterSaveSystem(Assembly.GetExecutingAssembly());
                     HasHookedUpToSafeSaves = true;
                 }
-                catch { Debug.Log("TACtical_AI: Error on RegisterSaveSystem"); }
+                catch { DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem"); }
             }
         }
 
@@ -435,35 +435,35 @@ namespace TAC_AI
         {
             if (LookForMod("RandomAdditions"))
             {
-                Debug.Log("TACtical_AI: Found RandomAdditions!  Enabling advanced AI for parts!");
+                DebugTAC_AI.Log("TACtical_AI: Found RandomAdditions!  Enabling advanced AI for parts!");
                 IsRandomAdditionsPresent = true;
             }
             else IsRandomAdditionsPresent = false;
 
             if (LookForMod("WaterMod"))
             {
-                Debug.Log("TACtical_AI: Found Water Mod!  Enabling water-related features!");
+                DebugTAC_AI.Log("TACtical_AI: Found Water Mod!  Enabling water-related features!");
                 isWaterModPresent = true;
             }
             else isWaterModPresent = false;
 
             if (LookForMod("Control Block"))
             {
-                Debug.Log("TACtical_AI: Control Blocks!  Letting RawTech loader override unassigned swivels to auto-target!");
+                DebugTAC_AI.Log("TACtical_AI: Control Blocks!  Letting RawTech loader override unassigned swivels to auto-target!");
                 isControlBlocksPresent = true;
             }
             else isControlBlocksPresent = false;
 
             if (LookForMod("WeaponAimMod"))
             {
-                Debug.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
+                DebugTAC_AI.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
                 isWeaponAimModPresent = true;
             }
             else isWeaponAimModPresent = false;
 
             if (LookForMod("TweakTech"))
             {
-                Debug.Log("TACtical_AI: Found TweakTech!  Applying changes to AI!");
+                DebugTAC_AI.Log("TACtical_AI: Found TweakTech!  Applying changes to AI!");
                 isTweakTechPresent = true;
             }
             else isTweakTechPresent = false;
@@ -476,21 +476,21 @@ namespace TAC_AI
 
             if (LookForMod("BlockInjector"))
             {
-                Debug.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
+                DebugTAC_AI.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
                 isBlockInjectorPresent = true;
             }
             else isBlockInjectorPresent = false;
 
             if (LookForMod("PopulationInjector"))
             {
-                Debug.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
+                DebugTAC_AI.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
                 isPopInjectorPresent = true;
             }
             else isPopInjectorPresent = false;
 
             if (LookForMod("AnimeAI"))
             {
-                Debug.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
+                DebugTAC_AI.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
                 isAnimeAIPresent = true;
             }
             else isAnimeAIPresent = false;
@@ -728,7 +728,7 @@ namespace TAC_AI
                 {
                     ManEnemyWorld.Initiate();
                     ManEnemyWorld.LateInitiate();
-                    PlayerRTSControl.DelayedInitiate();
+                    ManPlayerRTS.DelayedInitiate();
                 }
                 else
                 {
@@ -856,7 +856,7 @@ namespace TAC_AI
         {
             if (tank == null)
             {
-                Debug.LogError("TACtical_AI: IsTeamFounder - CALLED ON NULL OBJECT");
+                DebugTAC_AI.LogError("TACtical_AI: IsTeamFounder - CALLED ON NULL OBJECT");
                 return false;
             }
             return tank.Name.Contains('Ω') || tank.Name.Contains('⦲');
@@ -865,7 +865,7 @@ namespace TAC_AI
         {
             if (!tank)
             {
-                Debug.LogError("TACtical_AI: IsTeamFounder - CALLED ON NULL OBJECT");
+                DebugTAC_AI.LogError("TACtical_AI: IsTeamFounder - CALLED ON NULL OBJECT");
                 return false;
             }
             return tank.name.Contains('Ω') || tank.name.Contains('⦲');
@@ -874,7 +874,7 @@ namespace TAC_AI
         {
             if (tank == null)
             {
-                Debug.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
+                DebugTAC_AI.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
                 return false;
             }
             return tank.CheckIsAnchored() || tank.Name.Contains('¥') || tank.Name.Contains(RawTechLoader.turretChar);
@@ -883,7 +883,7 @@ namespace TAC_AI
         {
             if (!tank)
             {
-                Debug.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
+                DebugTAC_AI.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
                 return false;
             }
             return tank.IsAnchored || tank.name.Contains('¥') || tank.name.Contains(RawTechLoader.turretChar);
@@ -892,7 +892,7 @@ namespace TAC_AI
         {
             if (!vis)
             {
-                Debug.LogError("TACtical_AI: GetCheapBounds - CALLED ON NULL OBJECT");
+                DebugTAC_AI.LogError("TACtical_AI: GetCheapBounds - CALLED ON NULL OBJECT");
                 return 1;
             }
             if (!vis.tank)
@@ -1030,6 +1030,14 @@ namespace TAC_AI
     }
     public static class VectorExtentions
     {
+        public static bool WithinBox(this Vector3 vec, float extents)
+        {
+            return vec.x >= -extents && vec.x <= extents && vec.y >= -extents && vec.y <= extents && vec.z >= -extents && vec.z <= extents;
+        }
+        public static bool WithinSquareXZ(this Vector3 vec, float extents)
+        {
+            return vec.x >= -extents && vec.x <= extents && vec.z >= -extents && vec.z <= extents;
+        }
         public static bool WithinBox(this IntVector2 vec, int extents)
         {
             return vec.x >= -extents && vec.x <= extents && vec.y >= -extents && vec.y <= extents;

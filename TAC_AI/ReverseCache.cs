@@ -38,11 +38,11 @@ namespace TAC_AI
                         tank.Anchors.UnanchorAll(true);
                     if (!tank.IsAnchored)
                     {
-                        Debug.Log("TACtical_AI: Anchor is being stubborn");
+                        DebugTAC_AI.Log("TACtical_AI: Anchor is being stubborn");
                         tank.TryToggleTechAnchor();
                         if (!tank.IsAnchored)
                         {
-                            Debug.Log("TACtical_AI: Anchor is being stubborn 2");
+                            DebugTAC_AI.Log("TACtical_AI: Anchor is being stubborn 2");
                             tank.TryToggleTechAnchor();
                         }
                     }
@@ -59,7 +59,7 @@ namespace TAC_AI
                 }
                 catch
                 {
-                    Debug.Log("TACtical_AI: fired prematurely");
+                    DebugTAC_AI.Log("TACtical_AI: fired prematurely");
                 }
 			}
 		}

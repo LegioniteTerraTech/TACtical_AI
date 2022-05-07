@@ -6,10 +6,11 @@ using UnityEngine;
 
 namespace TAC_AI
 {
-    internal static class Debug
+    internal static class DebugTAC_AI
     {
         internal static bool LogAll = false;
         internal static bool ShouldLog = true;
+        private static bool ShouldLogNet = true;
         private static bool LogDev = false;
 
         internal static void Info(string message)
@@ -30,6 +31,14 @@ namespace TAC_AI
                 return;
             UnityEngine.Debug.Log(e);
         }
+
+        internal static void LogNet(string message)
+        {
+            if (!ShouldLogNet)
+                return;
+            UnityEngine.Debug.Log(message);
+        }
+
         internal static void Assert(bool shouldAssert, string message)
         {
             if (!ShouldLog || !shouldAssert)
@@ -47,6 +56,12 @@ namespace TAC_AI
             if (!LogDev)
                 return;
             UnityEngine.Debug.Log(message + "\n" + StackTraceUtility.ExtractStackTrace().ToString());
+        }
+        internal static void FatalError()
+        {
+            ManUI.inst.ShowErrorPopup("TACtical_AI: ENCOUNTERED CRITICAL ERROR");
+            UnityEngine.Debug.Log("TACtical_AI: ENCOUNTERED CRITICAL ERROR");
+            UnityEngine.Debug.Log("TACtical_AI: MAY NOT WORK PROPERLY AFTER THIS ERROR, PLEASE REPORT!");
         }
         internal static void FatalError(Exception e)
         {

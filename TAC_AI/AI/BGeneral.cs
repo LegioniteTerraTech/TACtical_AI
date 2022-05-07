@@ -15,9 +15,9 @@ namespace TAC_AI.AI
             thisInst.PivotOnly = false;
             thisInst.FIRE_NOW = false;
             thisInst.BOOST = false;
-            thisInst.forceBeam = false;
-            thisInst.forceDrive = false;
-            thisInst.featherBoost = false;
+            thisInst.ForceSetBeam = false;
+            thisInst.ForceSetDrive = false;
+            thisInst.FeatherBoost = false;
 
             thisInst.MoveFromObjective = false;
             thisInst.ProceedToObjective = false;

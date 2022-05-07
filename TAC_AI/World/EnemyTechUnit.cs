@@ -33,7 +33,7 @@ namespace TAC_AI.World
                 }
                 catch
                 {
-                    Debug.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update name!");
+                    DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update name!");
                 }
             }
         }
@@ -45,7 +45,7 @@ namespace TAC_AI.World
                 try { return tech.m_WorldPosition; }
                 catch
                 {
-                    Debug.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to fetch worldPosition!");
+                    DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to fetch worldPosition!");
                     return WorldPosition.FromGameWorldPosition(Vector3.zero);
                 }
             }
@@ -58,7 +58,7 @@ namespace TAC_AI.World
                 }
                 catch
                 {
-                    Debug.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update position!");
+                    DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update position!");
                 }
             }
         }
@@ -77,7 +77,7 @@ namespace TAC_AI.World
                 }
                 catch
                 {
-                    Debug.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to fetch posWorld!");
+                    DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to fetch posWorld!");
                     return Vector3.zero;
                 }
             }
@@ -91,7 +91,7 @@ namespace TAC_AI.World
                 }
                 catch
                 {
-                    Debug.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update position!");
+                    DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update position!");
                 }
             }
         }
@@ -122,7 +122,7 @@ namespace TAC_AI.World
                 }
                 catch
                 {
-                    Debug.LogError("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " failed to update position!");
+                    DebugTAC_AI.LogError("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " failed to update position!");
                 }
             }
         }

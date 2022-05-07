@@ -52,12 +52,12 @@ namespace TAC_AI.AI
                     help.DediAI = AIType.Escort;
                 }
                 help.DriverType = AIECore.HandlingDetermine(tank);
-                help.LastCloseAlly = mother;
-                Debug.Log("TACtical_AI: AIESplitHandler - Set to " + help.DediAI + " for " + tank.name);
+                help.lastCloseAlly = mother;
+                DebugTAC_AI.Log("TACtical_AI: AIESplitHandler - Set to " + help.DediAI + " for " + tank.name);
             }
             catch
             {
-                Debug.Log("TACtical_AI: AIESplitHandler - CRITICAL ERROR ON UPDATE");
+                DebugTAC_AI.Log("TACtical_AI: AIESplitHandler - CRITICAL ERROR ON UPDATE");
             }
             Destroy(this);
         }

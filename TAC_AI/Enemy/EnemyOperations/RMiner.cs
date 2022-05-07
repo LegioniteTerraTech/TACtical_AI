@@ -12,42 +12,48 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         public static void MineYerOwnBusiness(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
+            Vector3 veloFlat = Vector3.zero;
+            if ((bool)tank.rbody)   // So that drifting is minimized
+            {
+                veloFlat = tank.rbody.velocity;
+                veloFlat.y = 0;
+            }
+            float dist = (tank.boundsCentreWorldNoCheck + veloFlat - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
             thisInst.lastRange = dist;
             thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);
 
-            if (thisInst.areWeFull)
+            if (thisInst.CollectedTarget)
             {
-                thisInst.areWeFull = false;
+                thisInst.CollectedTarget = false;
                 foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
                 {
                     ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
                     if (!hold.IsEmpty && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
                     {
-                        thisInst.areWeFull = true;
+                        thisInst.CollectedTarget = true;
                         break;//Checking if tech is empty when unloading at base
                     }
                 }
-                thisInst.ActionPause = 20;
+                thisInst.ActionPause = AIGlobals.ReverseDelay;
             }
             else
             {
-                thisInst.areWeFull = true;
+                thisInst.CollectedTarget = true;
                 foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
                 {
                     ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
                     if (!hold.IsFull && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
                     {
-                        thisInst.areWeFull = false;
+                        thisInst.CollectedTarget = false;
                         break;//Checking if tech is full after destroying a node
                     }
                 }
             }
 
-            if (thisInst.areWeFull || thisInst.ActionPause > 10)
+            if (thisInst.CollectedTarget || thisInst.ActionPause > 10)
             {
                 thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
@@ -58,10 +64,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         return; // There's no base!
                     thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                 }
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
-                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents)
+                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 1)
                 {
                     if (thisInst.recentSpeed == 1)
                     {
@@ -128,7 +134,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             else if (thisInst.ActionPause > 0)
             {
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
             }
             else
@@ -165,9 +171,15 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.trans.position);
                     thisInst.AvoidStuff = false;
                     thisInst.Yield = true;
-                    if (!thisInst.FullMelee)
+                    if (!mind.LikelyMelee)
                         thisInst.PivotOnly = true;
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    else
+                    {
+                        thisInst.ForceSetDrive = true;
+                        thisInst.DriveVar = 1;
+                    }
+                    thisInst.SettleDown();
+                    thisInst.RemoveObstruction(48);
                 }
                 else if (thisInst.recentSpeed < 2.5f)
                 {
@@ -181,7 +193,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.Yield = true;
                     thisInst.SettleDown();
                     thisInst.RemoveObstruction();
-                    thisInst.forceDrive = true;
+                    thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1;
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.trans.position + "|| Current pos " + tank.boundsCentreWorldNoCheck);
@@ -200,7 +212,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                 thisInst.AvoidStuff = false;
                 thisInst.AdviseAway = true;
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
                 thisInst.SettleDown();
             }

@@ -63,7 +63,7 @@ namespace TAC_AI.AI.Enemy
         public void Refresh()
         {
             if (GetComponents<EnemyMind>().Count() > 1)
-                Debug.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
+                DebugTAC_AI.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
 
             //Debug.Log("TACtical_AI: Refreshing Enemy AI for " + Tank.name);
             EnemyOpsController = new EnemyOperationsController(this);
@@ -195,16 +195,16 @@ namespace TAC_AI.AI.Enemy
         {
             try
             {
-                Debug.Log("TACtical_AI: OnFinishedRepair");
+                //Debug.Log("TACtical_AI: OnFinishedRepair");
                 if (TechMemor)
                 {
-                    Debug.Log("TACtical_AI: TechMemor");
-                    if (!TechMemor.ranOutOfParts && Tank.name.Contains('⟰'))
+                    //Debug.Log("TACtical_AI: TechMemor");
+                    if (Tank.name.Contains('⟰'))
                     {
                         Tank.SetName(Tank.name.Replace(" ⟰", ""));
                         RCore.RandomizeBrain(AIControl, Tank);
                         AIControl.AIState = AIAlignment.NonPlayer;
-                        Debug.Log("TACtical_AI: (Rechecking blocks) Enemy AI " + Tank.name + " of Team " + Tank.Team + ":  Ready to kick some Tech!");
+                        DebugTAC_AI.Log("TACtical_AI: (Rechecking blocks) Enemy AI " + Tank.name + " of Team " + Tank.Team + ":  Ready to kick some Tech!");
                         BuildAssist = false;
                     }
                 }

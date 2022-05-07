@@ -62,7 +62,7 @@ namespace TAC_AI
             {
                 if (tank == null)
                 {
-                    Debug.Log("TACtical_AI: Tried to request docking to a charger that was not attached to anything");
+                    DebugTAC_AI.Log("TACtical_AI: Tried to request docking to a charger that was not attached to anything");
                     return;
                 }
                 DockingRequested = true;

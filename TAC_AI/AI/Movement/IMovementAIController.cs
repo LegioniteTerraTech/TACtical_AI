@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using UnityEngine;
 using TAC_AI.AI.Movement.AICores;
 
 
@@ -40,6 +41,7 @@ namespace TAC_AI.AI {
         void DriveMaintainer(TankControl tankControl);
 
         void OnMoveWorldOrigin(IntVector3 move);
+        Vector3 GetDestination();
 
         void Recycle();
     }

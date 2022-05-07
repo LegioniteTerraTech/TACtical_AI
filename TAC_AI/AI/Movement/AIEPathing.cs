@@ -38,8 +38,8 @@ namespace TAC_AI.AI.Movement
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Error on ObstructionAwareness");
-                Debug.Log(e);
+                DebugTAC_AI.Log("TACtical_AI: Error on ObstructionAwareness");
+                DebugTAC_AI.Log(e);
             }
             return ObstList;
         }
@@ -109,8 +109,8 @@ namespace TAC_AI.AI.Movement
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Error on ObstDodgeOffset");
-                Debug.Log(e);
+                DebugTAC_AI.Log("TACtical_AI: Error on ObstDodgeOffset");
+                DebugTAC_AI.Log(e);
             }
             return Offset;
         }
@@ -188,8 +188,8 @@ namespace TAC_AI.AI.Movement
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Error on ObstDodgeOffset");
-                Debug.Log(e);
+                DebugTAC_AI.Log("TACtical_AI: Error on ObstDodgeOffset");
+                DebugTAC_AI.Log(e);
             }
             return Offset;
         }
@@ -258,8 +258,8 @@ namespace TAC_AI.AI.Movement
                 }
                 catch (Exception e)
                 {
-                    Debug.Log("TACtical_AI: Error on ObstructionAwarenessMonument");
-                    Debug.Log(e);
+                    DebugTAC_AI.Log("TACtical_AI: Error on ObstructionAwarenessMonument");
+                    DebugTAC_AI.Log(e);
                 }
             }
             return false;
@@ -441,7 +441,7 @@ namespace TAC_AI.AI.Movement
             {
                 //Debug.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
             }
-            Debug.Log("TACtical_AI: SecondClosestAlly - COULD NOT FETCH TANK");
+            DebugTAC_AI.Log("TACtical_AI: SecondClosestAlly - COULD NOT FETCH TANK");
             secondTank = null;
             return null;
         }
@@ -511,7 +511,7 @@ namespace TAC_AI.AI.Movement
             {
                 //Debug.Log("TACtical_AI: Crash on SecondClosestAllyPrecisionProcess " + e);
             }
-            Debug.Log("TACtical_AI: SecondClosestAllyPrecision - COULD NOT FETCH TANK");
+            DebugTAC_AI.Log("TACtical_AI: SecondClosestAllyPrecision - COULD NOT FETCH TANK");
             secondTank = null;
             return null;
         }
@@ -579,7 +579,7 @@ namespace TAC_AI.AI.Movement
 
 
             Vector3 InputLineVal = controlOverload.m_State.m_InputMovement;
-            if (tankToCopy.GetComponent<AIECore.TankAIHelper>().lastAIType != AITreeType.AITypes.Escort || tankToCopy.PlayerFocused)
+            if (tankToCopy.GetComponent<AIECore.TankAIHelper>().CanCopyControls || tankToCopy.PlayerFocused)
             {
                 if (tankToCopy.control.GetThrottle(0, out float throttleX))
                 {   // X 

@@ -17,21 +17,21 @@ namespace TAC_AI.AI.Movement.AICores
             //Debug.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
             pilot.MainThrottle = 1;
             pilot.UpdateThrottle(thisInst, thisControl);
-            if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIControllerAir.Stallspeed)
+            if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIGlobals.AirStallSpeed)
             {   //ABORT!!!
-                Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
+                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
                 pilot.PerformUTurn = -1;
                 pilot.ErrorsInUTurn++;
                 if (pilot.ErrorsInUTurn > 3)
-                    Debug.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
             }
             else if (Vector3.Dot(Vector3.down, tank.rbody.velocity.normalized) > 0.3f)
             {   //ABORT!!!
-                Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
+                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
                 pilot.PerformUTurn = -1;
                 pilot.ErrorsInUTurn++;
                 if (pilot.ErrorsInUTurn > 3)
-                    Debug.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
             }
             if (pilot.PerformUTurn == 1)
             {   // Accelerate
@@ -137,7 +137,11 @@ namespace TAC_AI.AI.Movement.AICores
             Transform root = tank.rootBlockTrans;
 
             Vector3 insureUpright = (position - tank.boundsCentreWorldNoCheck).normalized;
-            if (Vector3.Dot(root.forward, insureUpright) < -0.25f)
+            if (root.forward.y < -0.8f)
+            {   // CRASH LIKELY, PULL UP! 
+                insureUpright = Vector3.up;
+            }
+            else if (Vector3.Dot(root.forward, insureUpright) < -0.25f)
             {   // If we are turning far more than 90 degrees and looking down, we level our nose
                 if (insureUpright.y < 0)
                     insureUpright.y = 0f;
@@ -195,7 +199,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             //Turn our work in to process
             turnVal.z = turnValUp.z;
-            control3D.m_State.m_InputRotation = turnVal;
+            control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
 
             // DRIVE
             Vector3 DriveVar = Vector3.forward * pilot.CurrentThrottle;
@@ -225,7 +229,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (tank.rbody.IsNotNull())
                 {
-                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIControllerAir.Stallspeed)
+                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIGlobals.AirStallSpeed)
                     {
                         float ExtAvoid = thisInst.MinimumRad;
                         if (thisInst.lastPlayer.IsNotNull())
@@ -269,7 +273,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (tank.rbody.IsNotNull())
                 {
-                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIControllerAir.Stallspeed)
+                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z > AIGlobals.AirStallSpeed)
                     {
                         float throttleToSet = 1;
                         float foreTarg = tank.rootBlockTrans.InverseTransformPoint(target.tank.boundsCentreWorldNoCheck).z;

@@ -11,10 +11,9 @@ namespace TAC_AI
     {
         public static StringBuilder GetTeamName(int Team)
         {
-#if !STEAM
-            if (KickStart.isAnimeAIPresent)
-                return AnimeAI.Dialect.ManDialogDetail.TeamName(Team);
-#endif
+            //if (KickStart.isAnimeAIPresent)
+            //    return AnimeAI.Dialect.ManDialogDetail.TeamName(Team);
+
             StringBuilder build = new StringBuilder();
             int teamNameDetermine = Team;
             if (teamNameDetermine == ManSpawn.FirstEnemyTeam || teamNameDetermine == ManSpawn.NewEnemyTeam)
@@ -49,10 +48,9 @@ namespace TAC_AI
         }
         public static StringBuilder EnemyTeamName(EnemyMind mind)
         {
-#if !STEAM
-            if (KickStart.isAnimeAIPresent)
-                return AnimeAI.Dialect.ManDialogDetail.EnemyTeamName(mind);
-#endif
+            //if (KickStart.isAnimeAIPresent)
+            //    return AnimeAI.Dialect.ManDialogDetail.EnemyTeamName(mind);
+
             StringBuilder build = new StringBuilder();
             int teamNameDetermine = mind.AIControl.tank.Team;
             if (teamNameDetermine == -1)

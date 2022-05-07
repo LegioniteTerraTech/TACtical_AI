@@ -49,8 +49,8 @@ namespace TAC_AI.AI.AlliedOperations
                         thisInst.MTMimicHostAvail = false;
                         return;
                     }
-                    thisInst.LastCloseAlly = hostTech;
-                    vis = thisInst.LastCloseAlly;
+                    thisInst.lastCloseAlly = hostTech;
+                    vis = thisInst.lastCloseAlly;
                     dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
                 else
@@ -64,8 +64,8 @@ namespace TAC_AI.AI.AlliedOperations
                         thisInst.MTMimicHostAvail = false;
                         return;
                     }
-                    thisInst.LastCloseAlly = hostTech;
-                    vis = thisInst.LastCloseAlly;
+                    thisInst.lastCloseAlly = hostTech;
+                    vis = thisInst.lastCloseAlly;
                     dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
@@ -122,8 +122,8 @@ namespace TAC_AI.AI.AlliedOperations
                         thisInst.MTLockedToTechBeam = false;
                         return;
                     }
-                    thisInst.LastCloseAlly = hostTech;
-                    vis = thisInst.LastCloseAlly;
+                    thisInst.lastCloseAlly = hostTech;
+                    vis = thisInst.lastCloseAlly;
                     dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
                 else
@@ -134,8 +134,8 @@ namespace TAC_AI.AI.AlliedOperations
                         thisInst.MTLockedToTechBeam = false;
                         return;
                     }
-                    thisInst.LastCloseAlly = hostTech;
-                    vis = thisInst.LastCloseAlly;
+                    thisInst.lastCloseAlly = hostTech;
+                    vis = thisInst.lastCloseAlly;
                     dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
                 }
 
@@ -163,9 +163,9 @@ namespace TAC_AI.AI.AlliedOperations
         {
             // Determines the weapons actions and aiming of the AI, this one is for MTs that have a host
             thisInst.DANGER = false;
-            if (thisInst.LastCloseAlly.IsNotNull())
+            if (thisInst.lastCloseAlly.IsNotNull())
             {   //Get the tech the player is aiming at
-                thisInst.lastEnemy = thisInst.LastCloseAlly.Weapons.GetManualTarget();
+                thisInst.lastEnemy = thisInst.lastCloseAlly.Weapons.GetManualTarget();
                 if (thisInst.lastEnemy.IsNull())
                     thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
             }

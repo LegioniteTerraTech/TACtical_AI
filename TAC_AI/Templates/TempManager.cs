@@ -38,7 +38,7 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    Debug.Log("TACtical_AI: Could not load " + pair.Value.techName + " as it contained missing blocks");
+                    DebugTAC_AI.Log("TACtical_AI: Could not load " + pair.Value.techName + " as it contained missing blocks");
                 }
             }
             CommunityCluster.Organize(ref techBases);
@@ -64,10 +64,10 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        Debug.Log("TACtical_AI: Could not load local RawTech " + raw.techName + " as it contained missing blocks");
+                        DebugTAC_AI.Log("TACtical_AI: Could not load local RawTech " + raw.techName + " as it contained missing blocks");
                     }
                 }
-                Debug.Log("TACtical_AI: Pushed " + ExternalEnemyTechsLocal.Count + " RawTechs from the Local pool");
+                DebugTAC_AI.Log("TACtical_AI: Pushed " + ExternalEnemyTechsLocal.Count + " RawTechs from the Local pool");
                 lastExtLocalCount = tCount;
 
 
@@ -82,17 +82,17 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        Debug.Log("TACtical_AI: Could not load ModBundle RawTech " + raw.techName + " as it contained missing blocks");
+                        DebugTAC_AI.Log("TACtical_AI: Could not load ModBundle RawTech " + raw.techName + " as it contained missing blocks");
                     }
                 }
-                Debug.Log("TACtical_AI: Pushed " + ExternalEnemyTechsMods.Count + " RawTechs from the Mod pool");
+                DebugTAC_AI.Log("TACtical_AI: Pushed " + ExternalEnemyTechsMods.Count + " RawTechs from the Mod pool");
                 lastExtModCount = tMCount;
 
 
                 ExternalEnemyTechsAll = new List<BaseTemplate>();
                 ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsLocal);
                 ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsMods);
-                Debug.Log("TACtical_AI: Pushed a total of " + ExternalEnemyTechsAll.Count + " to the external tech pool.");
+                DebugTAC_AI.Log("TACtical_AI: Pushed a total of " + ExternalEnemyTechsAll.Count + " to the external tech pool.");
             }
         }
 
@@ -137,6 +137,30 @@ namespace TAC_AI.Templates
             // Rebuild in workable format
             toLoad = AIERepair.DesignMemory.MemoryToJSONExternal(mem);
 
+            return valid;
+        }
+
+        /// <summary>
+        /// returns true if ALL blocks in tech are valid
+        /// </summary>
+        /// <param name="toScreen"></param>
+        /// <param name="basePrice"></param>
+        /// <returns></returns>
+        public static bool ValidateBlocksInTech(ref List<BlockMemory> toScreen)
+        {
+            List<BlockMemory> validated = new List<BlockMemory>();
+            bool valid = true;
+            foreach (BlockMemory bloc in toScreen)
+            {
+                BlockTypes type = AIERepair.StringToBlockType(bloc.t);
+                if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
+                {
+                    valid = false;
+                    continue;
+                }
+                bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
+                validated.Add(bloc);
+            }
             return valid;
         }
         public static bool ValidateBlocksInTechStrict(ref string toLoad)

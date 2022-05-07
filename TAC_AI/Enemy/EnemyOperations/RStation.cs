@@ -36,7 +36,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.lastDestination = mind.sceneStationaryPos;
                 if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.6f)
                 {   //Move
-                    thisInst.forceDrive = true;
+                    thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = -1;
                 }
                 else

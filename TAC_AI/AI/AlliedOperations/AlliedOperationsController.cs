@@ -48,8 +48,8 @@ namespace TAC_AI.AI.AlliedOperations
                             break;
 
                         default:
-                            Debug.Log("TACtical_AI: AIDriver is set to an invalid state - " + this.helper.DriverType);
-                            Debug.Log("TACtical_AI: RESETTING TO DEFAULTS");
+                            DebugTAC_AI.Log("TACtical_AI: AIDriver is set to an invalid state - " + this.helper.DriverType);
+                            DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
                             this.helper.DriverType = AIDriverType.Tank;
                             break;
                     }
@@ -105,8 +105,8 @@ namespace TAC_AI.AI.AlliedOperations
                     break;
 
                 default:
-                    Debug.Log("TACtical_AI: AIType is set to an invalid state - " + this.helper.DediAI);
-                    Debug.Log("TACtical_AI: RESETTING TO DEFAULTS");
+                    DebugTAC_AI.Log("TACtical_AI: AIType is set to an invalid state - " + this.helper.DediAI);
+                    DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
                     this.helper.DediAI = AIType.Escort;
                     break;
             }

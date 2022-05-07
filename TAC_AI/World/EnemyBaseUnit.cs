@@ -30,11 +30,11 @@ namespace TAC_AI.World
             RBases.EnemyBaseFunder EBF = RBases.EnemyBases.Find(delegate (RBases.EnemyBaseFunder cand) { return cand.Team == teamInst.Team && Name == cand.name; });
             if (EBF)
             {
-                Debug.Log("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " pushed funds to loaded tech of ID " + EBF.name);
+                DebugTAC_AI.Log("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " pushed funds to loaded tech of ID " + EBF.name);
             }
             else
             {
-                Debug.LogError("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " failed to update funds");
+                DebugTAC_AI.LogError("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " failed to update funds");
             }
         }
 

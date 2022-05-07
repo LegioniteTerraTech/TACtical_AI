@@ -24,12 +24,12 @@ namespace TAC_AI.AI.AlliedOperations
 
 
             EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
-            if (thisInst.areWeFull)
+            if (thisInst.CollectedTarget)
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.4f)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ": Falling back to base! Charge " + (state.storageTotal - state.spareCapacity).ToString());
-                    thisInst.areWeFull = false;
+                    thisInst.CollectedTarget = false;
                 }
             }
             else
@@ -37,12 +37,12 @@ namespace TAC_AI.AI.AlliedOperations
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.95f)
                 {
                     //Debug.Log("TACtical_AI: AI " + tank.name + ": Charged up and ready to attack!");
-                    thisInst.areWeFull = true;
-                    thisInst.ActionPause = 20;
+                    thisInst.CollectedTarget = true;
+                    thisInst.ActionPause = AIGlobals.ReverseDelay;
                 }
             }
 
-            if (!thisInst.areWeFull)
+            if (!thisInst.CollectedTarget || thisInst.Retreat)
             {
                 thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
@@ -53,7 +53,7 @@ namespace TAC_AI.AI.AlliedOperations
                         return; // There's no base!
                     thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                 }
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
@@ -94,7 +94,6 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
                         thisInst.AvoidStuff = false;
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
@@ -127,7 +126,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (thisInst.ActionPause > 0)
             {
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
             }
             else
@@ -146,8 +145,16 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     return; // There's no enemies left!
                 }
+                else if (!thisInst.theResource?.tank?.visible || !thisInst.theResource.tank.visible.isActive || !thisInst.theResource.tank.IsEnemy(tank.Team))
+                {
+                    thisInst.foundGoal = false;
+                    thisInst.CollectedTarget = false;
+                    thisInst.theResource = null;
+                    thisInst.SettleDown();
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Target destroyed or disbanded.");
+                    return; // Enemy destroyed
+                }
                 thisInst.lastDestination = thisInst.theResource.tank.boundsCentreWorldNoCheck;
-                thisInst.ProceedToObjective = true;
 
                 if (dist < thisInst.lastTechExtents + thisInst.MinimumRad)
                 {
@@ -173,7 +180,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                 }*/
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to fight at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.ProceedToMine = false;
+                thisInst.ProceedToMine = true;
                 thisInst.foundBase = false;
             }
         }

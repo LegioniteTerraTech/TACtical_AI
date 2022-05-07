@@ -79,26 +79,50 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.Retreat = false;
                     thisInst.MinimumRad = range;
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6) || 10 < thisInst.FrustrationMeter)
-                        thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                    else
-                    {
-                        thisInst.SettleDown();
-                        thisInst.ProceedToObjective = true;
-                        /*
-                        if (dist < spacer + 2)
-                        {
-                            thisInst.MoveFromObjective = true;
-                        }
-                        else if (mind.Range < spacer + range)
-                        {
-                            thisInst.ProceedToObjective = true;
-                        }
+                    if (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent)
+                    {   // Continuous circle
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6) || 10 < thisInst.FrustrationMeter)
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                         {
-                            thisInst.BOOST = true;
+                            thisInst.SettleDown();
                             thisInst.ProceedToObjective = true;
-                        }*/
+                            /*
+                            if (dist < spacer + 2)
+                            {
+                                thisInst.MoveFromObjective = true;
+                            }
+                            else if (mind.Range < spacer + range)
+                            {
+                                thisInst.ProceedToObjective = true;
+                            }
+                            else
+                            {
+                                thisInst.BOOST = true;
+                                thisInst.ProceedToObjective = true;
+                            }*/
+                        }
+                    }
+                    else
+                    {   // Stop every now and then to allow some shots
+                        if (thisInst.ActionPause > 120)
+                        {
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6) || 10 < thisInst.FrustrationMeter)
+                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                            else
+                            {
+                                thisInst.SettleDown();
+                                thisInst.ProceedToObjective = true;
+                            }
+                        }
+                        if (thisInst.ActionPause > 0)
+                        {   // Stop moving and get some shots in
+                            thisInst.SideToThreat = false;
+                        }
+                        else if (mind.Hurt)
+                        {
+                            thisInst.ActionPause = UnityEngine.Random.Range(160, 420);
+                        }
                     }
                     break;
                 case EnemyAttack.Spyper:
@@ -109,7 +133,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (dist < spacer + (range * 0.65f))
                     {
                         thisInst.MoveFromObjective = true;
-                        thisInst.forceDrive = true;
+                        thisInst.ForceSetDrive = true;
                         thisInst.DriveVar = -1;
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
@@ -131,7 +155,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else if (dist < spacer + (range * 1.5f))
                     {
                         thisInst.PivotOnly = true;
-                        thisInst.forceDrive = true;
+                        thisInst.ForceSetDrive = true;
                         thisInst.DriveVar = 1;
                         thisInst.ProceedToObjective = true; // point at the objective
                         thisInst.SettleDown();

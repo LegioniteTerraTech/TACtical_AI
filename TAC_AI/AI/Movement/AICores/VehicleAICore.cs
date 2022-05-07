@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using TAC_AI.AI.Enemy;
+using TAC_AI.World;
 using UnityEngine;
 
 namespace TAC_AI.AI.Movement.AICores
@@ -162,21 +163,21 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 try
                 {
-                    Debug.Log("TACtical_AI: ERROR IN VehicleAICore");
-                    Debug.Log("TACtical_AI: Tank - " + tank.name);
-                    Debug.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
-                    Debug.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
+                    DebugTAC_AI.Log("TACtical_AI: ERROR IN VehicleAICore");
+                    DebugTAC_AI.Log("TACtical_AI: Tank - " + tank.name);
+                    DebugTAC_AI.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
+                    DebugTAC_AI.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
-                        Debug.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
-                    Debug.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
-                    Debug.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
+                        DebugTAC_AI.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
                     if ((bool)help.lastEnemy)
-                        Debug.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
-                    Debug.Log("TACtical_AI: " + e);
+                        DebugTAC_AI.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
+                    DebugTAC_AI.Log("TACtical_AI: " + e);
                 }
                 catch
                 {
-                    Debug.Log("TACtical_AI: Missing variable(s)");
+                    DebugTAC_AI.Log("TACtical_AI: Missing variable(s)");
                 }
             }
             if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
@@ -238,17 +239,26 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         if (help.recentSpeed < 10 && help.lastRange < 32)
                         {
-                            help.PivotOnly = true;
-                            if (help.lastEnemy != null)
+                            if (ManPlayerRTS.HasMovementQueue(help))
                             {
-                                controller.ProcessedDest = help.lastEnemy.tank.boundsCentreWorldNoCheck;
+                                help.ForceSetDrive = true;
+                                help.DriveVar = 1;
+                                help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
                             }
                             else
-                                controller.ProcessedDest = help.AvoidAssistPrecise(help.RTSDestination);
+                            {
+                                help.PivotOnly = true;
+                                if (help.lastEnemy != null)
+                                {
+                                    help.lastDestination = help.lastEnemy.tank.boundsCentreWorldNoCheck;
+                                }
+                                else
+                                    help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
+                            }
                         }
                         else
-                            controller.ProcessedDest = help.AvoidAssistPrecise(help.RTSDestination);
-
+                            help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
+                        controller.ProcessedDest = help.lastDestination;
                     }
                 }
             }
@@ -256,21 +266,21 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 try
                 {
-                    Debug.Log("TACtical_AI: ERROR IN VehicleAICore (RTS)");
-                    Debug.Log("TACtical_AI: Tank - " + tank.name);
-                    Debug.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
-                    Debug.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
+                    DebugTAC_AI.Log("TACtical_AI: ERROR IN VehicleAICore (RTS)");
+                    DebugTAC_AI.Log("TACtical_AI: Tank - " + tank.name);
+                    DebugTAC_AI.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
+                    DebugTAC_AI.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
-                        Debug.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
-                    Debug.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
-                    Debug.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
+                        DebugTAC_AI.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
                     if ((bool)help.lastEnemy)
-                        Debug.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
-                    Debug.Log("TACtical_AI: " + e);
+                        DebugTAC_AI.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
+                    DebugTAC_AI.Log("TACtical_AI: " + e);
                 }
                 catch
                 {
-                    Debug.Log("TACtical_AI: Missing variable(s)");
+                    DebugTAC_AI.Log("TACtical_AI: Missing variable(s)");
                 }
             }
             if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
@@ -519,7 +529,7 @@ namespace TAC_AI.AI.Movement.AICores
                             thisControl.DriveControl = 1f;
                     }
                 }
-                else if (thisInst.forceDrive)
+                else if (thisInst.ForceSetDrive)
                 {
                     thisControl.DriveControl = thisInst.DriveVar;
                     if (thisInst.BOOST)
@@ -528,15 +538,15 @@ namespace TAC_AI.AI.Movement.AICores
                         if (Vector3.Dot(destDirect.SetY(0).normalized, tank.rootBlockTrans.forward.SetY(0).normalized) > 0.8f)
                             controller.TryBoost(thisControl);
                     }
-                    else if (thisInst.featherBoost)
+                    else if (thisInst.FeatherBoost)
                     {
-                        if (thisInst.featherBoostersClock >= 25)
+                        if (thisInst.FeatherBoostersClock >= 25)
                         {
                             if (Vector3.Dot(destDirect.SetY(0).normalized, tank.rootBlockTrans.forward.SetY(0).normalized) > 0.8f)
                                 controller.TryBoost(thisControl);
-                            thisInst.featherBoostersClock = 0;
+                            thisInst.FeatherBoostersClock = 0;
                         }
-                        thisInst.featherBoostersClock++;
+                        thisInst.FeatherBoostersClock++;
                     }
                 }
                 else if (thisInst.BOOST)
@@ -545,15 +555,15 @@ namespace TAC_AI.AI.Movement.AICores
                     if (Vector3.Dot(destDirect.SetY(0).normalized, tank.rootBlockTrans.forward.SetY(0).normalized) > 0.8f)
                         controller.TryBoost(thisControl);
                 }
-                else if (thisInst.featherBoost)
+                else if (thisInst.FeatherBoost)
                 {
-                    if (thisInst.featherBoostersClock >= 25)
+                    if (thisInst.FeatherBoostersClock >= 25)
                     {
                         if (Vector3.Dot(destDirect.normalized, tank.rootBlockTrans.forward) > 0.8f)
                             controller.TryBoost(thisControl);
-                        thisInst.featherBoostersClock = 0;
+                        thisInst.FeatherBoostersClock = 0;
                     }
-                    thisInst.featherBoostersClock++;
+                    thisInst.FeatherBoostersClock++;
                 }
 
                 // DEBUG FOR DRIVE ERRORS
@@ -684,7 +694,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {   //Move from target
                     if (thisInst.DriveDir == EDriveType.Perpendicular)
                     {   //Broadside the enemy
-                        control3D.m_State.m_InputRotation = turnVal;//* Mathf.Clamp(1 - Vector3.Dot(turnFVal, tank.trans.forward), 0, 1)
+                        control3D.m_State.m_InputRotation = turnVal.Clamp01Box();//* Mathf.Clamp(1 - Vector3.Dot(turnFVal, tank.trans.forward), 0, 1)
                         if (thisInst.lastEnemy.IsNotNull())
                         {
                             thisInst.Navi3DDirect = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
@@ -693,7 +703,7 @@ namespace TAC_AI.AI.Movement.AICores
                             thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
                         // Disabled for now as most spaceships in the pop do not have broadsides.
                         /*
-                        control3D.m_State.m_InputRotation = turnVal;
+                        control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
                         if (thisInst.lastEnemy.IsNotNull())
                         {
                             if (Vector3.Dot(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.right) < 0)
@@ -717,7 +727,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (thisInst.DriveDir == EDriveType.Forwards)
                     {
-                        control3D.m_State.m_InputRotation = turnVal;//* Mathf.Clamp(1 - Vector3.Dot(turnFVal, tank.trans.forward), 0, 1)
+                        control3D.m_State.m_InputRotation = turnVal.Clamp01Box();//* Mathf.Clamp(1 - Vector3.Dot(turnFVal, tank.trans.forward), 0, 1)
                         if (thisInst.lastEnemy.IsNotNull())
                         {
                             thisInst.Navi3DDirect = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
@@ -727,7 +737,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (thisInst.DriveDir == EDriveType.Backwards)
                     {
-                        control3D.m_State.m_InputRotation = turnVal;
+                        control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
                         thisControl.m_Movement.FaceDirection(tank, tank.boundsCentreWorldNoCheck - controller.ProcessedDest, 1);
                     }
                     else
@@ -739,7 +749,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (thisInst.DriveDir == EDriveType.Perpendicular)
                     {   //Broadside the enemy
-                        control3D.m_State.m_InputRotation = turnVal;
+                        control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
                         if (thisInst.lastEnemy.IsNotNull())
                         {
                             if (Vector3.Dot(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.right) < 0)
@@ -763,12 +773,12 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (thisInst.DriveDir == EDriveType.Backwards)
                     {
-                        control3D.m_State.m_InputRotation = turnVal;
+                        control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
                         thisControl.m_Movement.FaceDirection(tank, tank.boundsCentreWorldNoCheck - controller.ProcessedDest, 1);
                     }
                     else if (thisInst.DriveDir == EDriveType.Forwards)
                     {
-                        control3D.m_State.m_InputRotation = turnVal;
+                        control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
                         if (thisInst.lastEnemy.IsNotNull())
                         {
                             thisInst.Navi3DDirect = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
@@ -781,7 +791,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {   //Forwards follow but no pitch controls
-                        control3D.m_State.m_InputRotation = turnVal * Mathf.Clamp(1 - Vector3.Dot(turnVal, tank.rootBlockTrans.forward), 0, 1);
+                        control3D.m_State.m_InputRotation = (turnVal * Mathf.Clamp(1 - Vector3.Dot(turnVal, tank.rootBlockTrans.forward), 0, 1)).Clamp01Box();
                         thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
                     }
                 }
@@ -901,19 +911,19 @@ namespace TAC_AI.AI.Movement.AICores
                 if (Vector3.Dot(driveVal, tank.rootBlockTrans.forward) > 0.75f)
                     thisControl.m_Movement.FireBoosters(tank);
             }
-            else if (thisInst.featherBoost)
+            else if (thisInst.FeatherBoost)
             {
-                if (thisInst.forceDrive)
+                if (thisInst.ForceSetDrive)
                     driveMultiplier = thisInst.DriveVar;
-                if (thisInst.featherBoostersClock >= 25)
+                if (thisInst.FeatherBoostersClock >= 25)
                 {
                     if (Vector3.Dot(driveVal, tank.rootBlockTrans.forward) > 0.75f)
                         thisControl.m_Movement.FireBoosters(tank);
-                    thisInst.featherBoostersClock = 0;
+                    thisInst.FeatherBoostersClock = 0;
                 }
-                thisInst.featherBoostersClock++;
+                thisInst.FeatherBoostersClock++;
             }
-            else if (thisInst.forceDrive)
+            else if (thisInst.ForceSetDrive)
             {
                 driveMultiplier = thisInst.DriveVar;
             }
@@ -921,7 +931,7 @@ namespace TAC_AI.AI.Movement.AICores
             // PREVENT GROUND CRASHING
             if (EmergencyUp)
             {
-                control3D.m_State.m_InputMovement = tank.rootBlockTrans.InverseTransformVector(Vector3.up);
+                control3D.m_State.m_InputMovement = (tank.rootBlockTrans.InverseTransformVector(Vector3.up) * 2).Clamp01Box();
 
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
@@ -942,7 +952,7 @@ namespace TAC_AI.AI.Movement.AICores
                 if (final.z.Approximately(0, 0.15f))
                     final.z = 0;
             }
-            control3D.m_State.m_InputMovement = final;
+            control3D.m_State.m_InputMovement = final.Clamp01Box();
 
             // DEBUG FOR DRIVE ERRORS
             if (tank.IsAnchored)

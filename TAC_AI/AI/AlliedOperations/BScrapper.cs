@@ -40,7 +40,7 @@ namespace TAC_AI.AI.AlliedOperations
                     return;
                 }
 
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
@@ -59,12 +59,12 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             }
 
-            if (thisInst.areWeFull)
+            if (thisInst.CollectedTarget)
             {   // Unload all contents
-                thisInst.areWeFull = false;
+                thisInst.CollectedTarget = false;
                 if (thisInst.HeldBlock)
                 {
-                    thisInst.areWeFull = true;
+                    thisInst.CollectedTarget = true;
                 }
                 else
                 {
@@ -72,26 +72,26 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         if (hold.BlockLoaded())
                         {
-                            thisInst.areWeFull = true;
+                            thisInst.CollectedTarget = true;
                             break;//Checking if tech is empty when unloading at base
                         }
                     }
                 }
-                thisInst.ActionPause = 20;
+                thisInst.ActionPause = KickStart.AIClockPeriod;
             }
             else
             {   // Gather materials
-                thisInst.areWeFull = true;
+                thisInst.CollectedTarget = true;
                 if (!thisInst.HeldBlock)
                 {
-                    thisInst.areWeFull = false;
+                    thisInst.CollectedTarget = false;
                 }
                 /*
                 foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
                 {
                     if (hold.BlockNotFullAndAvail())
                     {
-                        thisInst.areWeFull = false;
+                        thisInst.CollectedTarget = false;
                         break;//Checking if tech is full after destroying a node
                     }
                 }
@@ -99,7 +99,7 @@ namespace TAC_AI.AI.AlliedOperations
             }
 
             //Debug.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
-            if (thisInst.areWeFull || thisInst.ActionPause > 10)
+            if (!ManNetwork.IsNetworked && (thisInst.CollectedTarget || thisInst.ActionPause > 10))
             {   // BRANCH - Return to base
                 thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
@@ -112,7 +112,7 @@ namespace TAC_AI.AI.AlliedOperations
                     dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
                 }
                 thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 float spacing = thisInst.lastBaseExtremes + AIGlobals.MaxBlockGrabRangeAlt + thisInst.lastTechExtents;
@@ -151,7 +151,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else
                 {
-                    if (dist < spacing)
+                    if (dist < spacing + 4)
                     {
                         thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                         if (thisInst.recentSpeed == 1)
@@ -230,7 +230,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (thisInst.ActionPause > 0)
             {   // BRANCH - Reverse from Base
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
             }
             else
@@ -238,7 +238,7 @@ namespace TAC_AI.AI.AlliedOperations
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, tank.Radar.Range, out thisInst.theResource);
+                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindItemExtension, out thisInst.theResource);
                     if (!thisInst.foundGoal)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for loose blocks...");
@@ -266,11 +266,11 @@ namespace TAC_AI.AI.AlliedOperations
                         thisInst.theResource = null;
                         thisInst.DropBlock(Vector3.up);
                         thisInst.foundGoal = false;
-                        Debug.Log("TACtical_AI: Block was removed from targeting");
+                        DebugTAC_AI.Log("TACtical_AI: Block was removed from targeting");
                         return;
                     }
                 }
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 float spacing = AIGlobals.MaxBlockGrabRange + thisInst.lastTechExtents;
@@ -316,7 +316,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
                 thisInst.AvoidStuff = false;
                 thisInst.AdviseAway = true;
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
                 thisInst.SettleDown();
             }

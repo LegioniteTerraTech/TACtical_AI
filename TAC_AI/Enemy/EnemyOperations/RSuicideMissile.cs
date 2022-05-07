@@ -46,7 +46,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 runPlane.y = height;
             */
             thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-            thisInst.forceDrive = true;
+            thisInst.ForceSetDrive = true;
             thisInst.DriveVar = 1;
             if (dist < spacer + (range / 4))
             {

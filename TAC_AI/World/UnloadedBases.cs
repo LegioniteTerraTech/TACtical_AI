@@ -97,24 +97,24 @@ namespace TAC_AI.World
             {
                 thisIsTrue = Count >= RBases.MaxDefenses;
                 if (thisIsTrue)
-                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many defenses and cannot make more");
+                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many defenses and cannot make more");
             }
             else if (purpose == BasePurpose.Autominer)
             {
                 thisIsTrue = Count >= RBases.MaxAutominers;
                 if (thisIsTrue)
-                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
+                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
             }
             else if (purpose == BasePurpose.HasReceivers && RBases.FetchNearbyResourceCounts(Team) < AIGlobals.MinResourcesReqToCollect)
             {
                 thisIsTrue = false;
-                Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " Does not have enough mineables in range to build Reciever bases.");
+                DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " Does not have enough mineables in range to build Reciever bases.");
             }
             else
             {
                 thisIsTrue = Count >= RBases.MaxSingleBaseType;
                 if (thisIsTrue)
-                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many of type " + purpose.ToString() + " and cannot make more");
+                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many of type " + purpose.ToString() + " and cannot make more");
             }
 
             return thisIsTrue;
@@ -219,7 +219,7 @@ namespace TAC_AI.World
                 if (TileHasEnemy(EP, IV2))
                 {
                     tilePosEnemy = IV2;
-                    Debug.Log("TACtical_AI: SearchPattern - Enemy found at " + tilePosEnemy);
+                    DebugTAC_AI.Log("TACtical_AI: SearchPattern - Enemy found at " + tilePosEnemy);
                     return true;
                 }
                 //Debug.Log("TACtical_AI: SearchPattern - Scanned " + IV2);
@@ -310,7 +310,7 @@ namespace TAC_AI.World
                 if (KickStart.CullFarEnemyBases)
                 {
                     // Note: GetBackwardsCompatiblePosition gets the SCENEposition (Position relative to the WorldTreadmillOrigin)!
-                    if ((EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(ManEnemyWorld.EnemyBaseCullingExtents))
+                    if (!(EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(ManEnemyWorld.EnemyBaseCullingExtents))
                     {
                         int count = EP.EBUs.Count;
                         for (int step = 0; step < count; count--)
@@ -350,7 +350,7 @@ namespace TAC_AI.World
                             int spawnIndex = valid.GetRandomEntry();
                             if (spawnIndex == -1)
                             {
-                                Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                                DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                             }
                             else
                             {
@@ -382,7 +382,7 @@ namespace TAC_AI.World
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
-                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion - UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion - UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                         }
                         else
                         {
@@ -412,7 +412,7 @@ namespace TAC_AI.World
                             int spawnIndex = valid.GetRandomEntry();
                             if (spawnIndex == -1)
                             {
-                                Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                                DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                             }
                             else
                             {
@@ -432,7 +432,7 @@ namespace TAC_AI.World
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn: " + e);
+                DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn: " + e);
             }
         }
         public static void TryFreeUpBaseSlots(EnemyPresence EP)
@@ -487,7 +487,7 @@ namespace TAC_AI.World
             }
             catch
             {
-                Debug.Log("TACtical_AI: TryFreeUpBaseSlots - game is being stubborn");
+                DebugTAC_AI.Log("TACtical_AI: TryFreeUpBaseSlots - game is being stubborn");
             }
         }
         public static BasePurpose PickBuildBasedOnPriorities(EnemyPresence EP)

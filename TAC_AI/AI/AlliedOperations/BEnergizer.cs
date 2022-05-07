@@ -24,23 +24,23 @@ namespace TAC_AI.AI.AlliedOperations
             // No running here - this is a combat case!
 
             EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
-            if (thisInst.areWeFull)
+            if (thisInst.CollectedTarget)
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.2f)
                 {
-                    thisInst.areWeFull = false;
+                    thisInst.CollectedTarget = false;
                 }
             }
             else
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.9f)
                 {
-                    thisInst.areWeFull = true;
-                    thisInst.ActionPause = 20;
+                    thisInst.CollectedTarget = true;
+                    thisInst.ActionPause = AIGlobals.ReverseDelay;
                 }
             }
 
-            if (!thisInst.areWeFull)
+            if (!thisInst.CollectedTarget)
             {   // BRANCH - Not Charged: Recharge!
                 thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
@@ -51,7 +51,7 @@ namespace TAC_AI.AI.AlliedOperations
                         return; // There's no base!
                     thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                 }
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
@@ -61,7 +61,7 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
                         thisInst.AvoidStuff = false; 
-                        thisInst.forceDrive = true;
+                        thisInst.ForceSetDrive = true;
                         thisInst.DriveVar = -1;
                         //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
                     }
@@ -126,7 +126,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (thisInst.ActionPause > 0)
             {
                 hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
             }
             else
@@ -146,7 +146,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.ProceedToBase = true;
                     return; // There's no resources left!
                 }
-                thisInst.forceDrive = true;
+                thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
 
                 if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)

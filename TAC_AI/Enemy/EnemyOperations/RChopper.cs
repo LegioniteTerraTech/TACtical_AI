@@ -146,7 +146,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         }
                         else
                         {
-                            thisInst.featherBoost = true;
+                            thisInst.FeatherBoost = true;
                             if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else

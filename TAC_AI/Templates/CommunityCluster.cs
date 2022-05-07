@@ -37,7 +37,7 @@ namespace TAC_AI.Templates
                     return File.ReadAllText(clusterHold2);
                 }
                 else
-                    Debug.LogError("TACtical_AI: LoadFromDeployed(CommunityCluster) - Files missing or compromized.");
+                    DebugTAC_AI.LogError("TACtical_AI: LoadFromDeployed(CommunityCluster) - Files missing or compromized.");
             }
             return "{}";
         }

@@ -43,7 +43,7 @@ namespace TAC_AI.World
             }
             if (GlobalMakerBaseCount() == 0)
             {
-                Debug.Log("TACtical_AI: UpdateGrandCommand - Team " + Team + " has no production bases");
+                DebugTAC_AI.Log("TACtical_AI: UpdateGrandCommand - Team " + Team + " has no production bases");
                 return false; // NO SUCH TEAM EXISTS (no base!!!)
             }
             PresenceDebug("TACtical_AI: UpdateGrandCommand - Turn for Team " + Team);
@@ -149,57 +149,16 @@ namespace TAC_AI.World
                     }
                 }
                 PresenceDebugDEV("Main Base is " + mainBase.Name + " at " + mainBase.tilePos + (eventHappening ? ", EventTile is " + eventTile : ""));
-                bool techsMoving = false;
-                int count = ETUs.Count;
-                for (int step = 0; step < count; step++)
+                if (AIECore.RetreatingTeams.Contains(team))
                 {
-                    EnemyTechUnit ETU = ETUs[step];
-                    //if (Singleton.Manager<ManWorld>.inst.TileManager.LookupTile(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileCentreScene(ETU.tilePos)).m_LoadStep < WorldTile.LoadStep.Populated)
-                    //{
-                    if (!ETU.isMoving)
-                    {
-                        if (ETU.isFounder)
-                        {
-                            if (eventHappening)
-                            {   // Base is under attack
-                                if (ManEnemyWorld.StrategicMoveQueue(ETU, eventTile, out bool fail))
-                                {
-                                    //techsMoving = true;
-                                }
-                                if (fail)
-                                {
-                                    ETUs.RemoveAt(step);
-                                    step--;
-                                    count--;
-                                }
-                                techsMoving = true;
-                            }
-                            else
-                            {   // Do random things
-                                //HandleFounderActions();
-                            }
-                        }
-                        else
-                        {
-                            if (ManEnemyWorld.StrategicMoveQueue(ETU, eventTile, out bool fail))
-                                techsMoving = true;
-                            if (fail)
-                            {
-                                ETUs.RemoveAt(step);
-                                step--;
-                                count--;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        PresenceDebug("Unit " + ETU.Name + " is moving!");
-                        techsMoving = true;
-                    }
-                    //}
+                    if (MoveAllETUsToDest(mainBase.tilePos))
+                        eventHappening = false;
                 }
-                if (!techsMoving)
-                    eventHappening = false;
+                else
+                {
+                    if (MoveAllETUsToDest(eventTile))
+                        eventHappening = false;
+                }
             }
         }
         private void HandleCombat()
@@ -341,9 +300,14 @@ namespace TAC_AI.World
                 }
             }
             EnemyBaseUnit mainBase = UnloadedBases.GetTeamFunder(this);
+
             if (mainBase != null)
             {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
-                mainBase.BuildBucks += ManEnemyWorld.PassiveHQBonusIncome;
+                mainBase.BuildBucks += ManEnemyWorld.PassiveHQBonusIncome * ManEnemyWorld.UpdateDelay;
+                if (AIGlobals.TurboAICheat)
+                {
+                    mainBase.BuildBucks += 25000 * ManEnemyWorld.UpdateDelay;
+                }
             }
         }
 
@@ -385,6 +349,67 @@ namespace TAC_AI.World
             }
         }
 
+        // Movement
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="eventTile"></param>
+        /// <returns>True if a tech is moving</returns>
+        private bool MoveAllETUsToDest(IntVector2 eventTile)
+        {
+            bool techsMoving = false;
+            int count = ETUs.Count;
+            for (int step = 0; step < count; step++)
+            {
+                EnemyTechUnit ETU = ETUs[step];
+                if (ETU.tilePos == eventTile)
+                    continue;
+                if (!ETU.isMoving)
+                {
+                    if (ETU.isFounder)
+                    {
+                        if (eventHappening)
+                        {   // Base is under attack
+                            if (ManEnemyWorld.StrategicMoveQueue(ETU, eventTile, out bool fail))
+                            {
+                                //techsMoving = true;
+                            }
+                            if (fail)
+                            {
+                                ETUs.RemoveAt(step);
+                                step--;
+                                count--;
+                            }
+                            techsMoving = true;
+                        }
+                        else
+                        {   // Do random things
+                            //HandleFounderActions();
+                        }
+                    }
+                    else
+                    {
+                        if (ManEnemyWorld.StrategicMoveQueue(ETU, eventTile, out bool fail))
+                            techsMoving = true;
+                        if (fail)
+                        {
+                            ETUs.RemoveAt(step);
+                            step--;
+                            count--;
+                        }
+                    }
+                }
+                else
+                {
+                    PresenceDebug("Unit " + ETU.Name + " is moving!");
+                    techsMoving = true;
+                }
+            }
+            return techsMoving;
+        }
+
+
+
         /*
         // TEAMS
         /// <summary>
@@ -401,19 +426,19 @@ namespace TAC_AI.World
         // MISC
         public void PresenceDebug(string thing)
         {
-#if DEBUG
+//#if DEBUG
             Debug.Log(thing);
-#endif
+//#endif
         }
         public void PresenceDebugDEV(string thing)
         {
-#if DEBUG
+//#if DEBUG
             Debug.Log(thing);
-#endif
+//#endif
         }
         public static void ReportCombat(string thing)
         {
-            Debug.Log("TACtical_AI: EnemyPresence - " + thing);
+            DebugTAC_AI.Log("TACtical_AI: EnemyPresence - " + thing);
         }
         public bool WasInCombat()
         {
@@ -498,7 +523,7 @@ namespace TAC_AI.World
         }
         public int GlobalMakerBaseCount()
         {
-            return EBUs.Count + RBases.TeamActiveAnyBaseCount(Team);
+            return EBUs.Count + RBases.TeamActiveMakerBaseCount(Team);
         }
         public int GlobalMobileTechCount()
         {

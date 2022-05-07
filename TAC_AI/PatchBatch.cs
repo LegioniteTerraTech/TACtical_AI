@@ -42,7 +42,7 @@ namespace TAC_AI
                 {
                     //ManSafeSaves.Init();
                 }
-                catch (Exception e) { Debug.LogError(e.ToString()); }
+                catch (Exception e) { DebugTAC_AI.LogError(e.ToString()); }
                 if (!KickStart.hasPatched)
                 {
                     try
@@ -52,8 +52,8 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        Debug.Log("TACtical_AI: Error on patch");
-                        Debug.Log(e);
+                        DebugTAC_AI.Log("TACtical_AI: Error on patch");
+                        DebugTAC_AI.Log(e);
                     }
                 }
             }
@@ -73,7 +73,7 @@ namespace TAC_AI
                 {
                     //ManSafeSaves.Init();
                 }
-                catch (Exception e) { Debug.LogError(e.ToString()); }
+                catch (Exception e) { DebugTAC_AI.LogError(e.ToString()); }
                 isInit = true;
             }
             else
@@ -113,6 +113,48 @@ namespace TAC_AI
 
     internal static class Patches
     {
+        /// <summary>
+        /// For CursorChanger
+        /// </summary>
+        [HarmonyPatch(typeof(GameCursor))]
+        [HarmonyPatch("GetCursorState")]//On very late update
+        private static class GetCursorChange
+        {
+            /*
+            // NEW
+            AIOrderAttack
+            AIOrderEmpty
+            AIOrderMove
+            AIOrderSelect
+            */
+
+            /// <summary>
+            /// See CursorChanger for more information
+            /// </summary>
+            /// <param name="__result"></param>
+            private static void Postfix(ref GameCursor.CursorState __result)
+            {
+                if (!CursorChanger.AddedNewCursors || !ManPlayerRTS.PlayerIsInRTS)
+                    return;
+                switch (ManPlayerRTS.cursorState)
+                {
+                    case RTSCursorState.Empty:
+                        //__result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[1];
+                        break;
+                    case RTSCursorState.Moving:
+                        __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[2];
+                        break;
+                    case RTSCursorState.Attack:
+                        __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[0];
+                        break;
+                    case RTSCursorState.Select:
+                        __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[3];
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
 
 #if DEBUG
         // Leg testing
@@ -162,7 +204,7 @@ namespace TAC_AI
 #else
         [HarmonyPatch(typeof(Tank))]
         [HarmonyPatch("IsEnemy", typeof(int), typeof(int))]//On player base bomb landing
-        private static class LetMeObserveAIForTestingPurposes
+        private static class Expand_AI_Alignments
         {
             private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
@@ -181,6 +223,28 @@ namespace TAC_AI
         }
 #endif
 
+        [HarmonyPatch(typeof(UIMiniMap))]
+        [HarmonyPatch("TryGetIconForTrackedVisible")]//On player base bomb landing
+        private static class AddInNewUIElements
+        {
+            private static void Postfix(ref TrackedVisible trackedVisible, ref Color iconColour)
+            {
+                switch (trackedVisible.RadarType)
+                {
+                    case RadarTypes.Base:
+                    case RadarTypes.Vehicle:
+                        if (AIGlobals.IsFriendlyBaseTeam(trackedVisible.RadarTeamID))
+                        {
+                            iconColour = AIGlobals.FriendlyColor;
+                        }
+                        else if (AIGlobals.IsNeutralBaseTeam(trackedVisible.RadarTeamID))
+                        {
+                            iconColour = AIGlobals.NeutralColor;
+                        }
+                        break;
+                }
+            }
+        }
 
 
         // Where it all happens
@@ -211,8 +275,8 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        Debug.Log("TACtical_AI: Failure on handling AI addition!");
-                        Debug.Log(e);
+                        DebugTAC_AI.Log("TACtical_AI: Failure on handling AI addition!");
+                        DebugTAC_AI.Log(e);
                     }
                 }
                 return true;
@@ -274,7 +338,7 @@ namespace TAC_AI
                                 }
                                 else if (lastTech.AIState == AIAlignment.Player)
                                 {   // Allied AI
-                                    if (lastTech.lastAIType == AITreeType.AITypes.Escort)
+                                    if (lastTech.SetToActive)
                                     {
                                         if (RawTechExporter.aiIcons.TryGetValue(KickStart.GetLegacy(lastTech.DediAI, lastTech.DriverType), out Sprite sprite))
                                         {
@@ -396,7 +460,7 @@ namespace TAC_AI
                     }
                     catch
                     {
-                        Debug.Log("TACtical_AI: SendUpdateAIDisp - Player not close enough");
+                        DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp - Player not close enough");
                     }
                 }
             }
@@ -496,7 +560,7 @@ namespace TAC_AI
         {
             private static void Postfix(ManSpawn __instance)
             {
-                PlayerRTSControl.DelayedInitiate();
+                ManPlayerRTS.DelayedInitiate();
             }
         }
 
@@ -530,11 +594,11 @@ namespace TAC_AI
                     bool attached;
                     if (NetT == null)
                     {
-                        Debug.Log("TACtical_AI: BlockAttachNetworkOverrideServer - NetTech is NULL!");
+                        DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverrideServer - NetTech is NULL!");
                     }
                     else if (canidate == null)
                     {
-                        Debug.Log("TACtical_AI: BlockAttachNetworkOverrideServer - BLOCK IS NULL!");
+                        DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverrideServer - BLOCK IS NULL!");
                     }
                     else
                     {
@@ -542,7 +606,7 @@ namespace TAC_AI
                         NetBlock netBlock = canidate.netBlock;
                         if (netBlock.IsNull())
                         {
-                            Debug.Log("TACtical_AI: BlockAttachNetworkOverrideServer - NetBlock could not be found on AI block attach attempt!");
+                            DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverrideServer - NetBlock could not be found on AI block attach attempt!");
                         }
                         else
                         {
@@ -649,7 +713,7 @@ namespace TAC_AI
                 if (__instance.IsActive && !ManNetwork.IsNetworked && !ManGameMode.inst.IsCurrent<ModeSumo>())
                 {
                     var helper = __instance.GetComponent<AIECore.TankAIHelper>();
-                    if (helper != null && (!helper.tank.PlayerFocused || (PlayerRTSControl.autopilotPlayer && PlayerRTSControl.PlayerIsInRTS)))
+                    if (helper != null && (!helper.tank.PlayerFocused || (ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS)))
                     {
                         if (helper.AIState != AIAlignment.Static)
                         {
@@ -669,7 +733,6 @@ namespace TAC_AI
         }
         
 
-        // Enemy AI's ability to "Lock On"
         [HarmonyPatch(typeof(ModuleAIBot))]
         [HarmonyPatch("OnAttach")]//On Creation
         private static class ImproveAI
@@ -706,7 +769,7 @@ namespace TAC_AI
                         }
                         else if (name == "GC_AI_Module_Guard_222")
                         {
-                            //ModuleAdd.AutoAnchor = true; // temp testing
+                            ModuleAdd.AutoAnchor = true; // temp testing
                             ModuleAdd.Prospector = true;
                             ModuleAdd.Energizer = true;
                             ModuleAdd.Scrapper = true;  // Temp Testing
@@ -806,49 +869,31 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        Debug.Log("TACtical_AI: CRASH ON HANDLING EXISTING AIS");
-                        Debug.Log(e);
+                        DebugTAC_AI.Log("TACtical_AI: CRASH ON HANDLING EXISTING AIS");
+                        DebugTAC_AI.Log(e);
                     }
                 }
             }
         }
 
-        /* // Can't make this work - there's too many random checks prohibiting this
-        [HarmonyPatch(typeof(TargetAimer))]//
-        [HarmonyPatch("UpdateTarget")]//On targeting
-        private static class PatchAimingToHelpPlasmaCutter_Auto
+
+        [HarmonyPatch(typeof(TankCamera))]//
+        [HarmonyPatch("TryKeepManualTargetInView")]//On targeting
+        private static class MakeCameraIgnoreAutopilotLockOn
         {
-            static FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
-            static FieldInfo targ = typeof(TargetAimer).GetField("Target", BindingFlags.NonPublic | BindingFlags.Instance);
-            private static bool Prefix(TargetAimer __instance)
+            //static readonly FieldInfo targPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static void Postfix(ref Tank tankToFollow, ref bool __result)
             {
-                if (__instance.gameObject.name == "GC_PlasmaCutter_Auto_434")
-                {
-                    var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
-                    if (AICommand.IsNotNull() && !KickStart.isWeaponAimModPresent)
-                    {
-                        var tank = __instance.transform.root.GetComponent<Tank>();
-                        if (tank.IsNotNull())
-                        {// give that gimbal cutter the ability to mine resources!
-                            if (AIECore.FetchClosestResource(__instance.GetComponent<TankBlock>().centreOfMassWorld, 75, out Visible theResource))
-                            {
-                                //Debug.Log("TACtical_AI: Overriding PlasmaCutter_Auto to aim at resources");
-                                try
-                                {
-                                    targ.SetValue(__instance, theResource);
-                                }
-                                catch { }
-                                targPos.SetValue(__instance, theResource.centrePosition);
-                                return false;
-                            }
-                        }
-                    }
-                }
-                return true;
+                if (!KickStart.EnableBetterAI || !tankToFollow)
+                    return;
+                var AICommand = tankToFollow.GetComponent<AIECore.TankAIHelper>();
+                if (AICommand.lastLockedTarget)
+                    __result = false;
             }
-        }*/
+        }
 
 
+        // Enemy AI's ability to "Lock On"
         [HarmonyPatch(typeof(TechWeapon))]//
         [HarmonyPatch("GetManualTarget")]//On targeting
         private static class PatchManualAimingToHelpAI
@@ -858,11 +903,20 @@ namespace TAC_AI
             {
                 if (!KickStart.EnableBetterAI)
                     return;
+
                 var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
                 if (AICommand.IsNotNull())
                 {
-                    if (AICommand.lastLockedTarget)
-                        __result = AICommand.lastLockedTarget;
+                    if (__result == null)
+                    {
+                        if (AICommand.lastLockedTarget)
+                            __result = AICommand.lastLockedTarget;
+                    }
+                    else
+                    {
+                        if (AICommand.lastLockedTarget)
+                            AICommand.lastLockedTarget = null;
+                    }
                 }
             }
         }
@@ -881,7 +935,7 @@ namespace TAC_AI
                     var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
                     if (AICommand)
                     {
-                        if (AICommand.OverrideAim == 2 && AICommand.Obst.IsNotNull())
+                        if (AICommand.OverrideAim == AIWeaponState.Obsticle && AICommand.Obst.IsNotNull())
                         {
                             Visible obstVis = AICommand.Obst.GetComponent<Visible>();
                             if (obstVis)
@@ -998,7 +1052,7 @@ namespace TAC_AI
                         AI.AIECore.Minables.Remove(__instance.visible);
                     }
                     else
-                        Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Die)");
+                        DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Die)");
                 }
                 catch { } // null call
             }
@@ -1253,12 +1307,12 @@ namespace TAC_AI
                 TankBlock thisBlock = nabData.m_TargetTankBlock;
                 if (thisBlock.tank.IsNotNull())
                 {
-                    Debug.Log("TACtical_AI: grabbed tank data = " + thisBlock.tank.name.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: grabbed tank data = " + thisBlock.tank.name.ToString());
                     GUIAIManager.GetTank(thisBlock.tank);
                 }
                 else
                 {
-                    Debug.Log("TACtical_AI: TANK IS NULL!");
+                    DebugTAC_AI.Log("TACtical_AI: TANK IS NULL!");
                 }
             }
         }
@@ -1279,7 +1333,7 @@ namespace TAC_AI
                         GUIAIManager.GetTank(tonk);
                         if (GUIAIManager.IsTankNull())
                         {
-                            Debug.Log("TACtical_AI: TANK IS NULL AFTER SEVERAL ATTEMPTS!!!");
+                            DebugTAC_AI.Log("TACtical_AI: TANK IS NULL AFTER SEVERAL ATTEMPTS!!!");
                         }
                     }
                     GUIAIManager.LaunchSubMenuClickable();
@@ -1306,6 +1360,23 @@ namespace TAC_AI
         }
 
 
+        [HarmonyPatch(typeof(UIScreenPauseMenu))]
+        [HarmonyPatch("Show")]// Let teh player use RTS mode in Campaign
+        private static class AllowRTSInCampaign
+        {
+            static readonly FieldInfo rtsCam = typeof(UIScreenPauseMenu).GetField("m_FreeCam", BindingFlags.NonPublic | BindingFlags.Instance);
+            private static void Postfix(UIScreenPauseMenu __instance)
+            {
+                Toggle cam = (Toggle)rtsCam.GetValue(__instance);
+                if (ManGameMode.inst.IsCurrent<ModeMain>() || ManGameMode.inst.IsCurrent<ModeCoOpCampaign>())
+                {
+                    cam.gameObject.SetActive(true);
+                    cam.SetValue(ManPauseGame.inst.PhotoCamToggle);
+                }
+            }
+        }
+
+
         // CampaignAutohandling
         [HarmonyPatch(typeof(ModeMain))]
         [HarmonyPatch("PlayerRespawned")]//On player base bomb landing
@@ -1313,13 +1384,13 @@ namespace TAC_AI
         {
             private static void Postfix()
             {
-                Debug.Log("TACtical_AI: Player respawned");
+                DebugTAC_AI.Log("TACtical_AI: Player respawned");
                 if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent)
                 {
-                    Debug.Log("TACtical_AI: Precheck validated");
+                    DebugTAC_AI.Log("TACtical_AI: Precheck validated");
                     if (AI.Movement.AIEPathing.AboveTheSea(Singleton.playerTank.boundsCentreWorld))
                     {
-                        Debug.Log("TACtical_AI: Attempting retrofit");
+                        DebugTAC_AI.Log("TACtical_AI: Attempting retrofit");
                         PlayerSpawnAid.TryBotePlayerSpawn();
                     }
                 }
@@ -1363,7 +1434,7 @@ namespace TAC_AI
                                         {
                                             int randSelect = valid.GetRandomEntry();
                                             newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
-                                            Debug.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
+                                            DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
                                             TSP.m_TechToSpawn = newTech;
                                         }
                                         else
@@ -1372,7 +1443,7 @@ namespace TAC_AI
                                             if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                             {
                                                 newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
-                                                Debug.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
+                                                DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
                                                 TSP.m_TechToSpawn = newTech;
                                             }
                                             // Else we don't do anything.
@@ -1380,7 +1451,7 @@ namespace TAC_AI
                                     }
                                     catch
                                     {
-                                        Debug.Log("TACtical_AI:  Attempt to swap tech failed!");
+                                        DebugTAC_AI.Log("TACtical_AI:  Attempt to swap tech failed!");
                                     }
                                 }
                                 else if (UnityEngine.Random.Range(0, 100) < KickStart.LandEnemyOverrideChance) // Override for normal Tech spawns
@@ -1399,7 +1470,7 @@ namespace TAC_AI
                                         {
                                             int randSelect = valid.GetRandomEntry();
                                             newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
-                                            Debug.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
+                                            DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
                                             TSP.m_TechToSpawn = newTech;
                                         }
                                         else
@@ -1408,7 +1479,7 @@ namespace TAC_AI
                                             if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                             {
                                                 newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
-                                                Debug.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
+                                                DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
                                                 TSP.m_TechToSpawn = newTech;
                                             }
                                             // Else we don't do anything.
@@ -1416,7 +1487,7 @@ namespace TAC_AI
                                     }
                                     catch
                                     {
-                                        Debug.Log("TACtical_AI: Attempt to swap Land tech failed!");
+                                        DebugTAC_AI.Log("TACtical_AI: Attempt to swap Land tech failed!");
                                     }
                                 }
 
@@ -1428,185 +1499,6 @@ namespace TAC_AI
             }
         }
 
-        /*
-        [HarmonyPatch(typeof(ManPop))]
-        [HarmonyPatch("OnSpawned")]//On enemy base bomb landing
-        private static class EmergencyOverrideOnTechLanding
-        {
-            private static bool TankExists(TrackedVisible tv)
-            {
-                if (tv != null)
-                {
-                    if (tv.visible != null)
-                    {
-                        if (ManWorld.inst.CheckIsTileAtPositionLoaded(tv.Position))
-                        {
-                            if (tv.visible.tank != null)
-                            {
-                                return true;
-                            }
-                        }
-                    }
-                }
-                return false;
-            }
-
-            private static void Prefix(ref TrackedVisible tv)
-            {
-                if (!KickStart.isPopInjectorPresent && KickStart.EnableBetterAI && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
-                {
-                    if (!TankExists(tv))
-                        return;
-                    if (tv.visible.tank.IsPopulation)
-                    {
-                        RawTechLoader.UseFactionSubTypes = true;
-                        if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(tv.visible.tank.boundsCentreWorld) && RCore.EnemyHandlingDetermine(tv.visible.tank) != EnemyHandling.Naval)
-                        {
-                            // OVERRIDE TO SHIP
-                            try
-                            {
-                                int grade = 99;
-                                try
-                                {
-                                    if (!SpecialAISpawner.CreativeMode)
-                                        grade = ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp());
-                                }
-                                catch { }
-
-
-                                if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
-                                {
-                                    RadarTypes inherit = tv.RadarType;
-                                    string previousTechName = tv.visible.tank.name;
-                                    Vector3 pos = tv.Position;
-                                    Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
-                                    int team = tv.TeamID;
-                                    bool wasPop = tv.visible.tank.IsPopulation;
-
-                                    RawTechLoader.TryRemoveFromPop(tv.visible.tank);
-                                    SpecialAISpawner.Purge(tv.visible.tank);
-                                    pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
-
-                                    int newTech = valid.GetRandomEntry();
-                                    Tank replacementBote = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[newTech], AutoTerrain: false);
-                                    replacementBote.SetTeam(tv.TeamID, wasPop);
-
-                                    Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
-                                    tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
-                                    if (tv == null)
-                                        tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
-                                }
-                                else
-                                {
-                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
-                                    if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
-                                    {
-                                        RadarTypes inherit = tv.RadarType;
-                                        string previousTechName = tv.visible.tank.name;
-                                        Vector3 pos = tv.Position;
-                                        Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
-                                        int team = tv.TeamID;
-                                        bool wasPop = tv.visible.tank.IsPopulation;
-
-                                        RawTechLoader.TryRemoveFromPop(tv.visible.tank);
-                                        SpecialAISpawner.Purge(tv.visible.tank);
-                                        pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
-
-                                        Tank replacementBote = RawTechLoader.SpawnMobileTech(pos, posF, team, type, AutoTerrain: false);
-                                        replacementBote.SetTeam(tv.TeamID, wasPop);
-
-                                        Debug.Log("TACtical_AI:  Tech " + previousTechName + " landed in water and was likely not water-capable, naval Tech " + replacementBote.name + " was substituted for the spawn instead");
-                                        tv = ManVisible.inst.GetTrackedVisible(replacementBote.visible.ID);
-                                        if (tv == null)
-                                            tv = new TrackedVisible(replacementBote.visible.ID, replacementBote.visible, ObjectTypes.Vehicle, inherit);
-                                    }
-                                    // Else we don't do anything.
-                                }
-                            }
-                            catch
-                            {
-                                Debug.Log("TACtical_AI:  attempt to swap tech failed, blowing up tech due to water landing");
-
-                                try
-                                {
-                                    SpecialAISpawner.Eradicate(tv.visible.tank);
-                                }
-                                catch { }
-                            }
-                        }
-                        else if (UnityEngine.Random.Range(0, 100) < KickStart.LandEnemyOverrideChance) // Override for normal Tech spawns
-                        {
-                            // OVERRIDE TECH SPAWN
-                            try
-                            {
-                                int grade = 99;
-                                try
-                                {
-                                    if (!SpecialAISpawner.CreativeMode)
-                                        grade = ManLicenses.inst.GetCurrentLevel(tv.visible.tank.GetMainCorp());
-                                }
-                                catch { }
-                                if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
-                                {
-                                    RadarTypes inherit = tv.RadarType;
-                                    string previousTechName = tv.visible.tank.name;
-                                    Vector3 pos = tv.Position;
-                                    Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
-                                    int team = tv.TeamID;
-                                    bool wasPop = tv.visible.tank.IsPopulation;
-
-                                    RawTechLoader.TryRemoveFromPop(tv.visible.tank);
-                                    SpecialAISpawner.Purge(tv.visible.tank);
-                                    pos = AI.Movement.AIEPathing.ForceOffsetToSea(pos);
-
-                                    int newType = valid.GetRandomEntry();
-                                    Tank replacementTech = RawTechLoader.SpawnEnemyTechExt(pos, team, posF, TempManager.ExternalEnemyTechs[newType], AutoTerrain: false);
-                                    replacementTech.SetTeam(tv.TeamID, wasPop);
-
-                                    Debug.Log("TACtical_AI:  Tech " + previousTechName + " has been swapped out for land tech " + replacementTech.name + " instead");
-                                    tv = ManVisible.inst.GetTrackedVisible(replacementTech.visible.ID);
-                                    if (tv == null)
-                                        tv = new TrackedVisible(replacementTech.visible.ID, replacementTech.visible, ObjectTypes.Vehicle, inherit);
-                                }
-                                else
-                                {
-                                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(tv.visible.tank.GetMainCorpExt(), BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
-                                    if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
-                                    {
-                                        RadarTypes inherit = tv.RadarType;
-                                        string previousTechName = tv.visible.tank.name;
-                                        Vector3 pos = tv.Position;
-                                        Vector3 posF = tv.visible.tank.rootBlockTrans.forward;
-                                        int team = tv.TeamID;
-                                        bool wasPop = tv.visible.tank.IsPopulation;
-
-                                        RawTechLoader.TryRemoveFromPop(tv.visible.tank);
-                                        SpecialAISpawner.Purge(tv.visible.tank);
-                                        pos = AI.Movement.AIEPathing.ForceOffsetFromGroundA(pos);
-
-                                        Tank replacementTank = RawTechLoader.SpawnMobileTech(pos, posF, team, type, AutoTerrain: false);
-                                        replacementTank.SetTeam(tv.TeamID, wasPop);
-
-                                        Debug.Log("TACtical_AI:  Tech " + previousTechName + " has been swapped out for land tech " + replacementTank.name + " instead");
-                                        tv = ManVisible.inst.GetTrackedVisible(replacementTank.visible.ID);
-                                        if (tv == null)
-                                            tv = new TrackedVisible(replacementTank.visible.ID, replacementTank.visible, ObjectTypes.Vehicle, inherit);
-                                    }
-                                    // Else we don't do anything.
-                                }
-                            }
-                            catch
-                            {
-                                Debug.Log("TACtical_AI: Attempt to swap Land tech failed!");
-                            }
-                        }
-
-                        RawTechLoader.UseFactionSubTypes = false;
-                    }
-                }
-            }
-        }
-        */
 #if !STEAM
         [HarmonyPatch(typeof(ManGameMode))]
         [HarmonyPatch("Awake")]//On Game start

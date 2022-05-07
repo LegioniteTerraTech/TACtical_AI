@@ -25,6 +25,7 @@ namespace TAC_AI.AI.Enemy
             List<Tank> Allies = AllyList(tank);
             try
             {
+                bool obst;
                 Tank lastCloseAlly;
                 float lastAllyDist;
                 if (mind.CommanderSmarts >= EnemySmarts.Smrt && Allies.Count() > 1)// MORE processing power
@@ -41,11 +42,19 @@ namespace TAC_AI.AI.Enemy
                                 return (targetIn + ProccessedVal2) / 3;
 
                         }
-                        Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst, true, dodgeLargeStatics);
+                        Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, true, dodgeLargeStatics);
                         if (obst)
                             return (targetIn + ProccessedVal) / 3;
                         else
                             return(targetIn + ProccessedVal) / 2;
+                    }
+                    else
+                    {
+                        Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, dodgeLargeStatics);
+                        if (obst)
+                            return (targetIn + ProccessedVal) / 2;
+                        else
+                            return targetIn;
                     }
 
                 }
@@ -53,7 +62,7 @@ namespace TAC_AI.AI.Enemy
                 if (lastCloseAlly == null)
                 {
                     //Debug.Log("TACtical_AI: ALLY IS NULL");
-                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 2;
                     else
@@ -61,7 +70,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12)
                 {
-                    Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 3;
                     else
@@ -70,12 +79,12 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on Avoid " + e);
+                DebugTAC_AI.Log("TACtical_AI: Crash on Avoid " + e);
                 return targetIn;
             }
             if (targetIn.IsNaN())
             {
-                Debug.Log("TACtical_AI: AvoidAssistEnemy IS NaN!!");
+                DebugTAC_AI.Log("TACtical_AI: AvoidAssistEnemy IS NaN!!");
             }
             return targetIn;
         }
@@ -86,6 +95,7 @@ namespace TAC_AI.AI.Enemy
             List<Tank> Allies = AllyList(tank);
             try
             {
+                bool obst;
                 Tank lastCloseAlly;
                 float lastAllyDist;
                 if (mind.CommanderSmarts >= EnemySmarts.Smrt && Allies.Count() > 1)// MORE processing power
@@ -102,11 +112,19 @@ namespace TAC_AI.AI.Enemy
                                 return (targetIn + ProccessedVal2) / 3;
 
                         }
-                        Vector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, out bool obst, true, dodgeLargeStatics);
+                        Vector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, out obst, true, dodgeLargeStatics);
                         if (obst)
                             return (targetIn + ProccessedVal) / 3;
                         else
                             return (targetIn + ProccessedVal) / 2;
+                    }
+                    else
+                    {
+                        Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, dodgeLargeStatics);
+                        if (obst)
+                            return (targetIn + ProccessedVal) / 2;
+                        else
+                            return targetIn;
                     }
 
                 }
@@ -114,7 +132,7 @@ namespace TAC_AI.AI.Enemy
                 if (lastCloseAlly == null)
                 {
                     //Debug.Log("TACtical_AI: ALLY IS NULL");
-                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 2;
                     else
@@ -122,7 +140,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12)
                 {
-                    Vector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
+                    Vector3 ProccessedVal = thisInst.GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 3;
                     else
@@ -131,12 +149,12 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on Avoid " + e);
+                DebugTAC_AI.Log("TACtical_AI: Crash on Avoid " + e);
                 return targetIn;
             }
             if (targetIn.IsNaN())
             {
-                Debug.Log("TACtical_AI: AvoidAssistEnemy IS NaN!!");
+                DebugTAC_AI.Log("TACtical_AI: AvoidAssistEnemy IS NaN!!");
             }
             return targetIn;
         }
@@ -156,6 +174,7 @@ namespace TAC_AI.AI.Enemy
             List<Tank> Allies = AllyList(tank);
             try
             {
+                bool obst;
                 Tank lastCloseAlly;
                 float lastAllyDist;
                 if (mind.CommanderSmarts >= EnemySmarts.Smrt && Allies.Count() > 1)// MORE processing power
@@ -165,17 +184,25 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (lastAuxVal < thisInst.lastTechExtents + lastCloseAlly2.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                         {
-                            Vector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst2, true, true);
-                            if (obst2)
+                            Vector3 ProccessedVal2 = thisInst.GetOtherDir(lastCloseAlly) + thisInst.GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, true, true);
+                            if (obst)
                                 return (targetIn + ProccessedVal2) / 4;
                             else
                                 return (targetIn + ProccessedVal2) / 3;
                         }
-                        Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst, true, true);
+                        Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, true, true);
                         if (obst)
                             return (targetIn + ProccessedVal) / 3;
                         else
                             return (targetIn + ProccessedVal) / 2;
+                    }
+                    else
+                    {
+                        Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, true, true);
+                        if (obst)
+                            return (targetIn + ProccessedVal) / 2;
+                        else
+                            return targetIn;
                     }
 
                 }
@@ -183,7 +210,7 @@ namespace TAC_AI.AI.Enemy
                 if (lastCloseAlly == null)
                 {
                     //Debug.Log("TACtical_AI: ALLY IS NULL");
-                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
+                    Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
                     if (obst)
                         return (targetIn + ProccessedVal) / 2;
                     else
@@ -191,7 +218,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
-                    Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out bool obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
+                    Vector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
                     if (obst)
                         return (targetIn + ProccessedVal) / 3;
                     else
@@ -200,12 +227,12 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on Avoid " + e);
+                DebugTAC_AI.Log("TACtical_AI: Crash on Avoid " + e);
                 return targetIn;
             }
             if (targetIn.IsNaN())
             {
-                Debug.Log("TACtical_AI: AvoidAssistEnemy(2) IS NaN!!");
+                DebugTAC_AI.Log("TACtical_AI: AvoidAssistEnemy(2) IS NaN!!");
             }
             return targetIn;
         }
@@ -280,7 +307,7 @@ namespace TAC_AI.AI.Enemy
             {
                 //Debug.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
             }
-            Debug.Log("TACtical_AI: SecondClosestAllyE - COULD NOT FETCH TANK");
+            DebugTAC_AI.Log("TACtical_AI: SecondClosestAllyE - COULD NOT FETCH TANK");
             secondTank = null;
             return null;
         }

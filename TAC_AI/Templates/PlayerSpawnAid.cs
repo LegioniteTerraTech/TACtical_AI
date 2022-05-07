@@ -16,7 +16,7 @@ namespace TAC_AI.Templates
         {
             if (Singleton.playerTank.IsNull())
             {
-                Debug.Log("TACtical_AI: Retrofit failed - Player Tech is null");
+                DebugTAC_AI.Log("TACtical_AI: Retrofit failed - Player Tech is null");
                 return;
             }
             Tank tech = Singleton.playerTank;

@@ -31,7 +31,7 @@ namespace TAC_AI.AI.Movement.AICores
         /// <returns></returns>
         public virtual bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            if (pilot.Grounded) //|| thisInst.forceDrive)
+            if (pilot.Grounded) //|| thisInst.ForceSetDrive)
             {   //Become a ground vehicle for now
                 if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
                 {
@@ -119,7 +119,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (pilot.PerformDiveAttack == 2)
                     {
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
-                        if (pilot.Helper.GetSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
+                        if (pilot.Helper.GetSpeed() < AIGlobals.AirStallSpeed + 16 || Heading.y > -0.25f)
                             pilot.AdvisedThrottle = 1;
                         else
                             pilot.AdvisedThrottle = 0;
@@ -150,7 +150,7 @@ namespace TAC_AI.AI.Movement.AICores
                             AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
                     }
-                    else if (dist > AIControllerAir.GroundAttackStagingDist && Heading.z < 0)
+                    else if (dist > AIGlobals.GroundAttackStagingDist && Heading.z < 0)
                     {   // Launch teh attack run
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
                         pilot.PerformDiveAttack = 1;
@@ -172,7 +172,7 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {   // Moving to target
                             //Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
-                            if (pilot.Helper.GetSpeed() < AIControllerAir.Stallspeed + 16 || Heading.y > -0.25f)
+                            if (pilot.Helper.GetSpeed() < AIGlobals.AirStallSpeed + 16 || Heading.y > -0.25f)
                                 pilot.AdvisedThrottle = 1;
                             else
                                 pilot.AdvisedThrottle = 0;
@@ -351,14 +351,14 @@ namespace TAC_AI.AI.Movement.AICores
                         thisControl.DriveControl = 1f;
                 }
             }
-            else if (thisInst.forceDrive)
+            else if (thisInst.ForceSetDrive)
             {
                 thisControl.DriveControl = thisInst.DriveVar;
                 // Downed Aircraft can't boost as their engines are damaged
-                if (thisInst.BOOST || thisInst.featherBoost)
+                if (thisInst.BOOST || thisInst.FeatherBoost)
                     thisControl.DriveControl = 1;
             }
-            else if (thisInst.BOOST || thisInst.featherBoost)
+            else if (thisInst.BOOST || thisInst.FeatherBoost)
                 thisControl.DriveControl = 1;
             return true;
         }
@@ -960,7 +960,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 lastCloseAlly = AIEPathing.ClosestAllyPrecision(predictionOffset, out lastAllyDist, tank);
                 if (lastCloseAlly == null)
-                    Debug.Log("TACtical_AI: ALLY IS NULL");
+                    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
                 if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
                     IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly);
@@ -969,12 +969,12 @@ namespace TAC_AI.AI.Movement.AICores
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: Crash on AvoidAssistAir " + e);
+                DebugTAC_AI.Log("TACtical_AI: Crash on AvoidAssistAir " + e);
                 return targetIn;
             }
             if (targetIn.IsNaN())
             {
-                Debug.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
+                DebugTAC_AI.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
                 //AIECore.TankAIManager.FetchAllAllies();
             }
             return targetIn;

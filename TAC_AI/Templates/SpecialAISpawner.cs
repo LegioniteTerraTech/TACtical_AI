@@ -42,7 +42,7 @@ namespace TAC_AI.Templates
             else if (trackVis != null)
                 ManVisible.inst.ObliterateTrackedVisibleFromWorld(trackVis);
             else
-                Debug.LogError("TACtical_AI: TrackedAirborneAI - Could not remove an aircraft from the world!");
+                DebugTAC_AI.LogError("TACtical_AI: TrackedAirborneAI - Could not remove an aircraft from the world!");
 
         }
     }
@@ -96,7 +96,7 @@ namespace TAC_AI.Templates
             startup.AddComponent<SpecialAISpawner>();
             inst = startup.GetComponent<SpecialAISpawner>();
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(DetermineActiveOnMode);
-            Debug.Log("TACtical_AI: SpecialAISpawner - Initated!");
+            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Initated!");
             startup.SetActive(false);
             RawTechLoader.Initiate();
         }
@@ -106,7 +106,7 @@ namespace TAC_AI.Templates
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Unsubscribe(DetermineActiveOnMode);
             Destroy(inst);
             inst = null;
-            Debug.Log("TACtical_AI: SpecialAISpawner - DeInitated");
+            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - DeInitated");
         }
         
         public static void DetermineActiveOnModeType(ManGameMode.GameType mode)
@@ -181,7 +181,7 @@ namespace TAC_AI.Templates
             Licences = Singleton.Manager<ManLicenses>.inst;
             if (Licences.IsNull() && ManGameMode.inst.IsCurrentModeCampaign())
             {   // The game tried to enable creative spawns whilist no licences were active!?!?
-                Debug.Log("TACtical_AI: TrySpawnAirborneAIInAir - It's campaign mode but no licences were found?!?");
+                DebugTAC_AI.Log("TACtical_AI: TrySpawnAirborneAIInAir - It's campaign mode but no licences were found?!?");
                 return;
             }
 
@@ -334,7 +334,7 @@ namespace TAC_AI.Templates
                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Unidentified flying object spotted!</b>");
                 }
                 catch { }
-                Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
+                DebugTAC_AI.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 if (unProvoked)
                 {
                     RawTechLoader.UseFactionSubTypes = true;
@@ -348,7 +348,7 @@ namespace TAC_AI.Templates
                 return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, finalFaction, BaseTerrain.Air, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
             }
             catch { }
-            Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
+            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionTypesExt.NULL, BaseTerrain.Air, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
         private static Tank SpawnPrefabSpaceship(Vector3 pos, Vector3 forwards, out bool worked)
@@ -427,13 +427,13 @@ namespace TAC_AI.Templates
                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>HUGE unidentified flying object spotted!</b>");
                 }
                 catch { }
-                Debug.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
+                DebugTAC_AI.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 RawTechLoader.UseFactionSubTypes = true;
                 worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, AutoTerrain: false, Licences.GetLicense(KickStart.CorpExtToCorp(finalFaction)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
                 return tech;
             }
             catch { }
-            Debug.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
+            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             worked = true;
             return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), FactionTypesExt.NULL, BaseTerrain.Space, AutoTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
@@ -441,7 +441,7 @@ namespace TAC_AI.Templates
         public static void TrySpawnTraderTroll(Vector3 pos)
         {   // Spawn trader trolls to make bigger techs fight harder
 
-            Debug.Log("TACtical_AI: TrySpawnTraderTroll - Queued request at " + pos + "!");
+            DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Queued request at " + pos + "!");
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return;
 
@@ -477,7 +477,7 @@ namespace TAC_AI.Templates
                 RawTechLoader.UseFactionSubTypes = true;
                 RawTechLoader.SpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, new List<BasePurpose> { BasePurpose.Defense }, faction: factionSelect, maxGrade: Licences.GetLicense(KickStart.CorpExtToCorp(factionSelect)).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching, isPopulation: true);
 
-                Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+                DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
                 try
                 {
                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
@@ -487,14 +487,14 @@ namespace TAC_AI.Templates
                 return;
             }
             catch { }
-            Debug.Log("TACtical_AI: TrySpawnTraderTroll - Could not fetch corps, resorting to random spawns");
+            DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Could not fetch corps, resorting to random spawns");
 
             if (!RBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos2))
                 return;
             RawTechLoader.UseFactionSubTypes = true;
             RawTechLoader.SpawnSpecificTechSafe(pos2, Vector3.forward, trollTeam, new List<BasePurpose> { BasePurpose.Defense }, faction: FactionTypesExt.NULL, isPopulation: true);
 
-            Debug.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+            DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
             try
             {
                 Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
@@ -544,7 +544,7 @@ namespace TAC_AI.Templates
                     if (airborneAI.IsNull() || !airborneAI.visible.isActive)
                     {
                         AirPool.RemoveAt(step);
-                        Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it may have despawned.");
+                        DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it may have despawned.");
                         step--;
                         count--;
                         deadairborneAICount++;
@@ -552,7 +552,7 @@ namespace TAC_AI.Templates
                     else if (airborneAI.trans.position.y > AIGlobals.AirMaxHeightOffset + Singleton.playerPos.y)
                     {
                         AirPool.RemoveAt(step);
-                        Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above player distance.");
+                        DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above player distance.");
                         Purge(airborneAI);
                         step--;
                         count--;
@@ -560,7 +560,7 @@ namespace TAC_AI.Templates
                     else if ((airborneAI.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude > AirDespawnDist * AirDespawnDist)
                     {
                         AirPool.RemoveAt(step);
-                        Debug.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it left AirDespawnDist radius.");
+                        DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it left AirDespawnDist radius.");
                         Purge(airborneAI);
                         step--;
                         count--;
@@ -575,7 +575,7 @@ namespace TAC_AI.Templates
                 }
             }
             if (deadairborneAICount > 0)
-                Debug.Log("TACtical_AI: SpecialAISpawner - Removed " + deadairborneAICount + " dead airborneAI(s) from AirPool");
+                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Removed " + deadairborneAICount + " dead airborneAI(s) from AirPool");
         }
         private static void DestroyAllPooledAirborneAI()
         {   // 
@@ -587,7 +587,7 @@ namespace TAC_AI.Templates
                     Purge(airborneAI.airborneAI);
             }
             AirPool.Clear();
-            Debug.Log("TACtical_AI: SpecialAISpawner - Destroyed all enemy pooled airborneAI");
+            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Destroyed all enemy pooled airborneAI");
         }
         private static void CollectPossibleAirborneAI()
         {   // 
@@ -610,7 +610,7 @@ namespace TAC_AI.Templates
                             }
                             catch
                             {
-                                Debug.Log("TACtical_AI: SpecialAISpawner - Error on handling enemy airborne AI pool");
+                                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Error on handling enemy airborne AI pool");
                             }
                         }
                     }
@@ -626,19 +626,32 @@ namespace TAC_AI.Templates
         /// <param name="player"></param>
         internal static void Purge(Tank tech)
         {   // 
-            Debug.Log("TACtical_AI: Purge - PURGED " + tech.name);
+            DebugTAC_AI.Log("TACtical_AI: Purge - PURGED " + tech.name);
             if (ManNetwork.IsNetworked)
             {
                 try
                 {
                     TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
                     Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
-                    { m_HostID = TV.HostID });
+                    {
+                        m_HostID = TV.HostID,
+                        m_CheatBypassInventory = true,
+                    }
+                    );
                 }
                 catch { }
             }
             else
-                tech.visible.RemoveFromGame();
+            {
+                try
+                {
+                    ManVisible.inst.ObliterateTrackedVisibleFromWorld(tech.visible.ID);
+                }
+                catch
+                {
+                    tech.visible.RemoveFromGame();
+                }
+            }
         }
         /// <summary>
         /// Remove a Tech from existance the cool way
@@ -653,7 +666,11 @@ namespace TAC_AI.Templates
                 {
                     TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
                     Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
-                    { m_HostID = TV.HostID });
+                    { 
+                        m_HostID = TV.HostID,
+                        m_CheatBypassInventory = true,
+                    }
+                    );
                 }
                 catch { }
             }
@@ -683,7 +700,7 @@ namespace TAC_AI.Templates
                 Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Subscribe(UpdatePlayerTank);
                 Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(PlayerTankDeathCheck);
                 inst.gameObject.SetActive(true);
-                Debug.Log("TACtical_AI: SpecialAISpawner - Activated special enemy spawns");
+                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Activated special enemy spawns");
                 thisActive = true;
             }
             CollectPossibleAirborneAI();
@@ -697,7 +714,7 @@ namespace TAC_AI.Templates
                 Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Unsubscribe(PlayerTankDeathCheck);
                 inst.counter = 0;
                 Licences = null;
-                Debug.Log("TACtical_AI: SpecialAISpawner - Deactivated special enemy spawns");
+                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Deactivated special enemy spawns");
                 thisActive = false;
             }
         }

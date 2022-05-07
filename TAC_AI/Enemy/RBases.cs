@@ -189,24 +189,24 @@ namespace TAC_AI.AI.Enemy
             {
                 thisIsTrue = Count >= MaxDefenses;
                 if (thisIsTrue)
-                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many defenses and cannot make more");
+                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many defenses and cannot make more");
             }
             else if (purpose == BasePurpose.Autominer)
             {
                 thisIsTrue = Count >= MaxAutominers;
                 if (thisIsTrue)
-                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
+                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
             }
             else if (purpose == BasePurpose.HasReceivers && FetchNearbyResourceCounts(Team) < AIGlobals.MinResourcesReqToCollect)
             {
                 thisIsTrue = false;
-                Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " Does not have enough mineables in range to build Reciever bases.");
+                DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " Does not have enough mineables in range to build Reciever bases.");
             }
             else
             {
                 thisIsTrue = Count >= MaxSingleBaseType;
                 if (thisIsTrue)
-                    Debug.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many of type " + purpose.ToString() + " and cannot make more");
+                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many of type " + purpose.ToString() + " and cannot make more");
             }
 
             return thisIsTrue;
@@ -215,7 +215,7 @@ namespace TAC_AI.AI.Enemy
         {
             if (!(bool)GetTeamFunder(tank.Team))
             {
-                Debug.Log("TACtical_AI: RecycleTechToTeam - Tech " + tank.name + " invoked but no funder is assigned to team");
+                DebugTAC_AI.Log("TACtical_AI: RecycleTechToTeam - Tech " + tank.name + " invoked but no funder is assigned to team");
                 return;
             }
             WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tank.visible);
@@ -396,7 +396,7 @@ namespace TAC_AI.AI.Enemy
                     funds.SetBuildBucks(0);
                 }
             }
-            Debug.Log("TACtical_AI: PoolTeamMoney - Team " + Team + " Pooled a total of " + moneyPool + " Build Bucks this time.");
+            DebugTAC_AI.Log("TACtical_AI: PoolTeamMoney - Team " + Team + " Pooled a total of " + moneyPool + " Build Bucks this time.");
             funder.AddBuildBucks(moneyPool);
         }
         public static bool EmergencyMoveMoney(EnemyBaseFunder funds)
@@ -462,7 +462,7 @@ namespace TAC_AI.AI.Enemy
                 if (inst)
                     return;
                 inst = new GameObject("BaseFunderManagerMain").AddComponent<BaseFunderManager>();
-                Debug.Log("TACtical_AI: Initiated BaseFunderManager");
+                DebugTAC_AI.Log("TACtical_AI: Initiated BaseFunderManager");
             }
             public static void DeInit()
             {
@@ -470,18 +470,14 @@ namespace TAC_AI.AI.Enemy
                     return;
                 Destroy(inst.gameObject);
                 inst = null;
-                Debug.Log("TACtical_AI: DeInit BaseFunderManager");
-            }
-            internal static bool TurboEnemyExpandCheat
-            {
-                get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace); }
+                DebugTAC_AI.Log("TACtical_AI: DeInit BaseFunderManager");
             }
             public void Update()
             {
                 if (ManPauseGame.inst.IsPaused)
                     return;
 
-                if (TurboEnemyExpandCheat && timeStep > 1)
+                if (AIGlobals.TurboAICheat && timeStep > 1)
                 {
                     timeStep = 1;
                 }
@@ -540,7 +536,7 @@ namespace TAC_AI.AI.Enemy
 
                 foreach (int team in TeamsBuildRequested)
                 {
-                    Debug.Log("TACtical_AI: Team " + team + " has been issued a team-wide build request!");
+                    DebugTAC_AI.Log("TACtical_AI: Team " + team + " has been issued a team-wide build request!");
                 }
                 foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
                 {
@@ -550,12 +546,12 @@ namespace TAC_AI.AI.Enemy
                         if (helper)
                         {
                             helper.PendingSystemsCheck = true;
-                            Debug.Log("TACtical_AI: Tech " + tech.name + " of " + tech.Team + " has acknowleged the request");
+                            DebugTAC_AI.Log("TACtical_AI: Tech " + tech.name + " of " + tech.Team + " has acknowleged the request");
                         }
                         else if (tech.IsAnchored)
                         {
                             if (tech.GetComponent<EnemyBaseFunder>())
-                                Debug.Log("TACtical_AI: Tech " + tech.name + " is a funder base but contains no DesignMemory?!?");
+                                DebugTAC_AI.Log("TACtical_AI: Tech " + tech.name + " is a funder base but contains no DesignMemory?!?");
                         }
                     }
                 }
@@ -592,7 +588,7 @@ namespace TAC_AI.AI.Enemy
                                 {
                                     if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
                                     {
-                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && mind.TechMemor.HasFullHealth())
                                             RBolts.BlowBolts(tech, mind);
                                     }
                                 }
@@ -620,7 +616,7 @@ namespace TAC_AI.AI.Enemy
                                 {
                                     if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
                                     {
-                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && mind.TechMemor.HasFullHealth())
                                             RBolts.BlowBolts(tech, mind);
                                     }
                                 }
@@ -651,7 +647,7 @@ namespace TAC_AI.AI.Enemy
                                 {
                                     if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
                                     {
-                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                        if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && mind.TechMemor.HasFullHealth())
                                             RBolts.BlowBolts(tech, mind);
                                     }
                                 }
@@ -698,7 +694,7 @@ namespace TAC_AI.AI.Enemy
                                     {
                                         if (baseFunds.Purposes.Contains(BasePurpose.TechProduction))
                                         {
-                                            if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && AIERepair.FullHealth(tech, mind.TechMemor))
+                                            if (TeamGlobalMobileTechCount(requestingTeam) < KickStart.EnemyTeamTechLimit && mind.TechMemor.HasFullHealth())
                                                 RBolts.BlowBolts(tech, mind);
                                         }
                                     }
@@ -735,7 +731,7 @@ namespace TAC_AI.AI.Enemy
                         else if (tech.IsAnchored)
                         {
                             if (tech.GetComponent<EnemyBaseFunder>())
-                                Debug.Log("TACtical_AI: Tech " + tech.name + " is a funder base but contains no DesignMemory?!?");
+                                DebugTAC_AI.Log("TACtical_AI: Tech " + tech.name + " is a funder base but contains no DesignMemory?!?");
                         }
                         //Debug.Log("TACtical_AI: Team " + Team + " has been issued a team-wide build request!");
                     }
@@ -766,7 +762,7 @@ namespace TAC_AI.AI.Enemy
                     buildBucks = GetBuildBucksFromName();
                 EnemyBases.Add(this);
                 PoolTeamMoney(tank.Team);
-                Debug.Log("TACtical_AI: Tech " + tank.name + " Initiated EnemyBaseFunder");
+                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " Initiated EnemyBaseFunder");
             }
             public void SetupPurposes(BaseTemplate type)
             {
@@ -777,7 +773,7 @@ namespace TAC_AI.AI.Enemy
             {
                 // Make sure the money is safe
 
-                Debug.Log("TACtical_AI: Base " + tank.name + " scrambling money to next possible base"
+                DebugTAC_AI.Log("TACtical_AI: Base " + tank.name + " scrambling money to next possible base"
                     + " worked? " + EmergencyMoveMoney(this));
 #if !STEAM
                 AnimeAICompat.RespondToLoss(tank, ALossReact.Base);
@@ -830,7 +826,7 @@ namespace TAC_AI.AI.Enemy
                         TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(Tank);
                         overlay.Update();
                     }
-                    catch (Exception e) { Debug.LogError("TACtical_AI: SetBuildBucks - Unhandled error: " + e); }
+                    catch (Exception e) { DebugTAC_AI.LogError("TACtical_AI: SetBuildBucks - Unhandled error: " + e); }
                 }
                 buildBucks = newVal;
             }
@@ -866,7 +862,7 @@ namespace TAC_AI.AI.Enemy
                 bool worked = int.TryParse(Funds, out int Output);
                 if (!worked)
                 {
-                    Debug.Log("TACtical_AI: BuildBucks corrupted for tech " + name + ", returning 0");
+                    DebugTAC_AI.Log("TACtical_AI: BuildBucks corrupted for tech " + name + ", returning 0");
                     return 0;
                 }
                 return Output;
@@ -952,7 +948,7 @@ namespace TAC_AI.AI.Enemy
             bool worked = int.TryParse(Funds, out int Output);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: BuildBucks corrupted for tech " + name + ", returning 0");
+                DebugTAC_AI.Log("TACtical_AI: BuildBucks corrupted for tech " + name + ", returning 0");
                 return 0;
             }
             return Output;
@@ -985,7 +981,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     thisInst.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                     mind.TechMemor.Initiate();
-                    Debug.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - BookmarkBuilder)");
+                    DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - BookmarkBuilder)");
                 }
                 mind.TechMemor.SetupForNewTechConstruction(thisInst, builder.blueprint);
                 tank.MainCorps = new List<FactionSubTypes> { KickStart.CorpExtToCorp(builder.faction) };
@@ -1019,7 +1015,7 @@ namespace TAC_AI.AI.Enemy
                     //It's not a base
                     if (tank.IsAnchored)
                     {   // It's a fragment of the base - prevent unwanted mess from getting in the way
-                        if (!ManNetwork.IsNetworked || ManNetwork.IsHost)
+                        if (ManNetwork.IsHost)
                             RecycleTechToTeam(tank);
                         return true;
                     }
@@ -1047,7 +1043,10 @@ namespace TAC_AI.AI.Enemy
                     RawTechLoader.ChargeAndClean(tank);
                     tank.visible.Teleport(tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward * tank.blockBounds.size.magnitude), tank.rootBlockTrans.rotation, true, false);
                     if (Singleton.Manager<ManVisible>.inst.AllTrackedVisibles.ToList().Exists(delegate (TrackedVisible cand) { return cand.visible == tank.visible; }))
-                        Debug.Assert(true, "TACtical_AI: ASSERT - " + tank.name + " was not properly inserted into the TrackedVisibles list and will not function properly!");
+                    {
+                        DebugTAC_AI.Assert(true, "TACtical_AI: ASSERT - " + tank.name + " was not properly inserted into the TrackedVisibles list and will not function properly!");
+                        RawTechLoader.TrackTank(tank);
+                    }
                 }
                 else
                 {
@@ -1055,7 +1054,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         thisInst.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                         mind.TechMemor.Initiate(false);
-                        Debug.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Base)");
+                        DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Base)");
                     }
 
                     var funds = tank.gameObject.GetComponent<EnemyBaseFunder>(); 
@@ -1079,7 +1078,7 @@ namespace TAC_AI.AI.Enemy
                             {
                                 SetupBaseType(BT, mind);
                                 funds.SetupPurposes(BT);
-                                Debug.Log("TACtical_AI: Registered EXTERNAL base " + baseName);
+                                DebugTAC_AI.Log("TACtical_AI: Registered EXTERNAL base " + baseName);
                                 mind.TechMemor.SetupForNewTechConstruction(thisInst, BT.savedTech);
                                 tank.MainCorps.Add(KickStart.CorpExtToCorp(BT.faction));
                                 activated = true;
@@ -1090,7 +1089,7 @@ namespace TAC_AI.AI.Enemy
                             BT = RawTechLoader.GetBaseTemplate(type);
                             SetupBaseType(BT, mind);
                             funds.SetupPurposes(BT);
-                            Debug.Log("TACtical_AI: Registered base " + baseName + " | type " + type.ToString());
+                            DebugTAC_AI.Log("TACtical_AI: Registered base " + baseName + " | type " + type.ToString());
                             mind.TechMemor.SetupForNewTechConstruction(thisInst, BT.savedTech);
                             tank.MainCorps.Add(RawTechLoader.GetMainCorp(type));
                         }
@@ -1110,7 +1109,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (tank.IsAnchored)
                     {   // It's a fragment of the base - prevent unwanted mess from getting in the way
-                        if (!ManNetwork.IsNetworked || ManNetwork.IsHost)
+                        if (ManNetwork.IsHost)
                             RecycleTechToTeam(tank);
                         return true;
                     }
@@ -1127,7 +1126,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         thisInst.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
                         mind.TechMemor.Initiate();
-                        Debug.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Defense)");
+                        DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (SetupBaseAI - Defense)");
                     }
                     try
                     {
@@ -1234,7 +1233,7 @@ namespace TAC_AI.AI.Enemy
                         int addBucks = 0;
                         foreach (var item in GetTeamBaseFunders(mind.Tank.Team))
                         {
-                            addBucks += AIGlobals.MPEachBaseProfits;
+                            addBucks += AIGlobals.MPEachBaseProfits * (40 / KickStart.AIClockPeriod);
                         }
                         if (addBucks > 0)
                             funder.AddBuildBucks(addBucks);
@@ -1261,7 +1260,7 @@ namespace TAC_AI.AI.Enemy
                                         }
                                         catch { }
                                     }
-                                    Debug.Log("TACtical_AI: Tech " + lastTankGrab.name + " was purchased by " + mind.Tank.name + ".");
+                                    DebugTAC_AI.Log("TACtical_AI: Tech " + lastTankGrab.name + " was purchased by " + mind.Tank.name + ".");
                                 }
                                 catch { }
                                 lastTankGrab.SetTeam(mind.Tank.Team);
@@ -1291,7 +1290,7 @@ namespace TAC_AI.AI.Enemy
                 if (SpecialAISpawner.IsAttract)
                     return; // no branching
 
-                if (BaseFunderManager.TurboEnemyExpandCheat && funds.BuildBucks < AIGlobals.MinimumBBRequired * 25)
+                if (AIGlobals.TurboAICheat && funds.BuildBucks < AIGlobals.MinimumBBRequired * 25)
                     funds.AddBuildBucks(AIGlobals.MinimumBBRequired);
 
                 if (funds.BuildBucks < AIGlobals.MinimumBBRequired)
@@ -1334,13 +1333,13 @@ namespace TAC_AI.AI.Enemy
                     BaseTerrain Terra = RawTechLoader.GetTerrain(pos);
                     BasePurpose reason = PriorityDefense(mind, funds, funders);
 
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
-                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                         }
                         else
                         {
@@ -1355,10 +1354,10 @@ namespace TAC_AI.AI.Enemy
 
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
+                        DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
                     }
                     else
-                        Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
+                        DebugTAC_AI.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                 }
                 else
                 {   // Get new base location to expand
@@ -1375,7 +1374,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch
             {
-                Debug.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn");
+                DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn");
             }
         }
         public static void ExpandBasePeaceful(EnemyMind mind, EnemyBaseFunder funds, int grade, int Cost)
@@ -1390,19 +1389,19 @@ namespace TAC_AI.AI.Enemy
 
                 if (InsureHarvester(mind, funds, funders))
                 {
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Building harvester");
+                    DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Building harvester");
                 }
                 if (TryFindExpansionLocationGrid(tech.boundsCentreWorldNoCheck, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
                     reason = PickBuildBasedOnPriorities(mind, funds, funders);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
-                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                         }
                         else
                         {
@@ -1411,16 +1410,16 @@ namespace TAC_AI.AI.Enemy
                             return;
                         }
                     }
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
+                    DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
+                        DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
                     }
                     else
-                        Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
+                        DebugTAC_AI.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                 }
                 else
                 {   // Get new base location to expand
@@ -1437,7 +1436,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: ExpandBasePeaceful - game is being stubborn " + e);
+                DebugTAC_AI.Log("TACtical_AI: ExpandBasePeaceful - game is being stubborn " + e);
             }
         }
 
@@ -1458,7 +1457,7 @@ namespace TAC_AI.AI.Enemy
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
-                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                         }
                         else
                         {
@@ -1476,7 +1475,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
+                DebugTAC_AI.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
             }
         }
 
@@ -1513,7 +1512,7 @@ namespace TAC_AI.AI.Enemy
                         {
                             if (valid.Count == 0)
                             {
-                                Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                                DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -EnemyBaseWorld) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                             }
                             else
                             {
@@ -1549,7 +1548,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
+                DebugTAC_AI.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
             }
         }
 
@@ -1568,13 +1567,13 @@ namespace TAC_AI.AI.Enemy
                 {   // Try spawning defense
                     Terra = RawTechLoader.GetTerrain(pos);
                     reason = PickBuildBasedOnPriorities(mind, funds, funders);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
-                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                         }
                         else
                         {
@@ -1588,22 +1587,22 @@ namespace TAC_AI.AI.Enemy
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
+                        DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
                     }
                     else
-                        Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
+                        DebugTAC_AI.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                 }
                 else if (TryFindExpansionLocationDirect(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
                     reason = PickBuildNonDefense(mind);
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion(2) - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
+                    DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion(2) - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
-                            Debug.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                         }
                         else
                         {
@@ -1612,16 +1611,16 @@ namespace TAC_AI.AI.Enemy
                             return;
                         }
                     }
-                    Debug.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
+                    DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
                     {
-                        Debug.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
+                        DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Expanded");
                     }
                     else
-                        Debug.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
+                        DebugTAC_AI.Log("TACtical_AI: SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                 }
                 else
                 {   // Get new base location to expand
@@ -1630,7 +1629,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: ExpandBasePeaceful - game is being stubborn " + e);
+                DebugTAC_AI.Log("TACtical_AI: ExpandBasePeaceful - game is being stubborn " + e);
             }
         }
 
@@ -1660,13 +1659,13 @@ namespace TAC_AI.AI.Enemy
                         SpawnBaseTypes SBT = RawTechLoader.GetEnemyBaseType(mind.MainFaction, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
                         if (RawTechLoader.IsFallback(SBT))
                         {
-                            Debug.Log("TACtical_AI: InsureHarvester - There are no harvesters for FactionTypesExt " + mind.MainFaction + ", trying fallbacks");
+                            DebugTAC_AI.Log("TACtical_AI: InsureHarvester - There are no harvesters for FactionTypesExt " + mind.MainFaction + ", trying fallbacks");
 
                             FactionTypesExt FTE = KickStart.CorpExtToVanilla(mind.MainFaction);
                             SBT = RawTechLoader.GetEnemyBaseType(FTE, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
                             if (RawTechLoader.IsFallback(SBT))
                             {
-                                Debug.Log("TACtical_AI: InsureHarvester - There are no harvesters for Vanilla Faction " + FTE + ", using GSO");
+                                DebugTAC_AI.Log("TACtical_AI: InsureHarvester - There are no harvesters for Vanilla Faction " + FTE + ", using GSO");
 
                                 SBT = RawTechLoader.GetEnemyBaseType(FactionTypesExt.GSO, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
                             }
@@ -1678,7 +1677,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.LogError("TACtical_AI: InsureHarvester - Error " + e);
+                DebugTAC_AI.LogError("TACtical_AI: InsureHarvester - Error " + e);
             }
             return false;
         }
@@ -1735,7 +1734,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: TryFreeUpBaseSlots - Error " + e);
+                DebugTAC_AI.Log("TACtical_AI: TryFreeUpBaseSlots - Error " + e);
             }
         }
 
@@ -1754,7 +1753,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                Debug.Log("TACtical_AI: RemoveAllBases - Error " + e);
+                DebugTAC_AI.Log("TACtical_AI: RemoveAllBases - Error " + e);
             }
         }
 

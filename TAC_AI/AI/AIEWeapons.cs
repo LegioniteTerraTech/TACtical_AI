@@ -14,7 +14,7 @@ namespace TAC_AI.AI
                 {
                     if (thisInst.DANGER && thisInst.lastEnemy.IsNotNull())
                     {
-                        thisInst.lastWeaponAction = 1;
+                        thisInst.lastWeaponAction = AIWeaponState.Enemy;
                         if (tank.IsAnchored)
                         {
                             Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
@@ -28,7 +28,7 @@ namespace TAC_AI.AI
                     }
                     else if (thisInst.Obst.IsNotNull())
                     {
-                        thisInst.lastWeaponAction = 2;
+                        thisInst.lastWeaponAction = AIWeaponState.Obsticle;
                     }
                     else
                     {
@@ -38,7 +38,7 @@ namespace TAC_AI.AI
             }
             catch
             {
-                Debug.Log("TACtical_AI: WeaponDirector - Error on handling");
+                DebugTAC_AI.Log("TACtical_AI: WeaponDirector - Error on handling");
             }
         }
 
@@ -49,37 +49,37 @@ namespace TAC_AI.AI
             {
                 if (thisInst.IsMultiTech)
                 {   // sync to host tech
-                    if (thisInst.LastCloseAlly.IsNotNull())
+                    if (thisInst.lastCloseAlly.IsNotNull())
                     {
                         if (thisInst.lastEnemy.IsNotNull())
                         {
-                            thisInst.OverrideAim = 3;
+                            thisInst.OverrideAim = AIWeaponState.Mimic;
                             var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
                             if (thisInst.FIRE_NOW)
                                 thisControl.m_Weapons.FireWeapons(tank);
                         }
-                        else if (thisInst.LastCloseAlly.control.FireControl)
+                        else if (thisInst.lastCloseAlly.control.FireControl)
                         {
                             thisControl.m_Weapons.FireWeapons(tank);
                         }
                     }
                 }
-                else if (thisInst.lastWeaponAction == 2)
+                else if (thisInst.lastWeaponAction == AIWeaponState.Obsticle)
                 {
                     if (thisInst.Obst.IsNotNull())
                     {
                         try
                         {
                             //Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
-                            thisInst.OverrideAim = 2;
+                            thisInst.OverrideAim = AIWeaponState.Obsticle;
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
                             if (thisInst.FIRE_NOW)
                                 thisControl.m_Weapons.FireWeapons(tank);
                         }
                         catch
                         {
-                            Debug.Log("TACtical_AI: WeaponDirector - Crash on targeting scenery");
+                            DebugTAC_AI.Log("TACtical_AI: WeaponDirector - Crash on targeting scenery");
                         }
                         try
                         {
@@ -90,15 +90,15 @@ namespace TAC_AI.AI
                         }
                         catch
                         {
-                            Debug.Log("TACtical_AI: Obst HAS NO DAMAGEABLE");
+                            DebugTAC_AI.Log("TACtical_AI: Obst HAS NO DAMAGEABLE");
                         }
                     }
                 }
-                else if (thisInst.lastWeaponAction == 1)
+                else if (thisInst.lastWeaponAction == AIWeaponState.Enemy)
                 {
                     if (thisInst.lastEnemy != null)
                     {
-                        thisInst.OverrideAim = 1;
+                        thisInst.OverrideAim = AIWeaponState.Enemy;
                         var targetTank = thisInst.lastEnemy.tank;
                         thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
                         if (thisInst.FIRE_NOW)
