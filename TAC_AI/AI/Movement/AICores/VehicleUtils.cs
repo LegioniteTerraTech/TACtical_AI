@@ -20,7 +20,7 @@ namespace TAC_AI.AI.Movement.AICores
                 return false;
             else
             {
-                if (helper.DriveDir == EDriveType.Perpendicular)
+                if (helper.DriveDir == EDriveFacing.Perpendicular)
                 {
                     if (!(bool)helper.lastCloseAlly)
                     {

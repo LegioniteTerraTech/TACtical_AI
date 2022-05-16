@@ -38,7 +38,7 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not load " + pair.Value.techName + " as it contained missing blocks");
+                    DebugTAC_AI.Log("TACtical_AI: Could not load " + pair.Value.techName + " as the load operation encountered an error");
                 }
             }
             CommunityCluster.Organize(ref techBases);
@@ -64,7 +64,7 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Could not load local RawTech " + raw.techName + " as it contained missing blocks");
+                        DebugTAC_AI.Log("TACtical_AI: Could not load local RawTech " + raw.techName + " as the load operation encountered an error");
                     }
                 }
                 DebugTAC_AI.Log("TACtical_AI: Pushed " + ExternalEnemyTechsLocal.Count + " RawTechs from the Local pool");
@@ -82,7 +82,7 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Could not load ModBundle RawTech " + raw.techName + " as it contained missing blocks");
+                        DebugTAC_AI.Log("TACtical_AI: Could not load ModBundle RawTech " + raw.techName + " as the load operation encountered an error");
                     }
                 }
                 DebugTAC_AI.Log("TACtical_AI: Pushed " + ExternalEnemyTechsMods.Count + " RawTechs from the Mod pool");
@@ -109,19 +109,33 @@ namespace TAC_AI.Templates
             List<BlockMemory> mem = new List<BlockMemory>();
             StringBuilder blockCase = new StringBuilder();
             string RAWout = RAW.ToString();
-            foreach (char ch in RAWout)
+            try
             {
-                if (ch == '|')//new block
+                foreach (char ch in RAWout)
                 {
-                    mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
-                    blockCase.Clear();
+                    if (ch == '|')//new block
+                    {
+                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                        blockCase.Clear();
+                    }
+                    else
+                        blockCase.Append(ch);
                 }
-                else
-                    blockCase.Append(ch);
+                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
             }
-            mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+            catch
+            {
+                DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTech - Loading error - File was edited or corrupted!");
+                basePrice = 0;
+                return false;
+            }
             bool valid = true;
             basePrice = 0;
+            if (mem.Count == 0)
+            {
+                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
+                return false;
+            }
             foreach (BlockMemory bloc in mem)
             {
                 BlockTypes type = AIERepair.StringToBlockType(bloc.t);
@@ -148,6 +162,11 @@ namespace TAC_AI.Templates
         /// <returns></returns>
         public static bool ValidateBlocksInTech(ref List<BlockMemory> toScreen)
         {
+            if (toScreen.Count == 0)
+            {
+                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
+                return false;
+            }
             List<BlockMemory> validated = new List<BlockMemory>();
             bool valid = true;
             foreach (BlockMemory bloc in toScreen)
@@ -179,17 +198,25 @@ namespace TAC_AI.Templates
             List<BlockMemory> mem = new List<BlockMemory>();
             StringBuilder blockCase = new StringBuilder();
             string RAWout = RAW.ToString();
-            foreach (char ch in RAWout)
+            try
             {
-                if (ch == '|')//new block
+                foreach (char ch in RAWout)
                 {
-                    mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
-                    blockCase.Clear();
+                    if (ch == '|')//new block
+                    {
+                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                        blockCase.Clear();
+                    }
+                    else
+                        blockCase.Append(ch);
                 }
-                else
-                    blockCase.Append(ch);
+                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
             }
-            mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+            catch
+            {
+                DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTechStrict - Loading error - File was edited or corrupted!");
+                return false;
+            }
             bool valid = true;
             int cabHash = ManSpawn.inst.GetBlockPrefab(BlockTypes.GSOCockpit_111).name.GetHashCode();
             foreach (BlockMemory bloc in mem)

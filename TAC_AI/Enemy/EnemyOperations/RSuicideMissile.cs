@@ -39,7 +39,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             thisInst.SideToThreat = false;
             thisInst.Retreat = true;
-            thisInst.MoveFromObjective = true;
+            thisInst.DriveDest = EDriveDest.FromLastDestination;
             /*
             Vector3 runPlane = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - thisInst.tank.boundsCentreWorldNoCheck).normalized * 100;
             if (ManWorld.inst.GetTerrainHeight(runPlane, out float height))

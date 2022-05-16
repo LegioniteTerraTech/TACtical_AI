@@ -29,29 +29,41 @@ namespace TAC_AI
         public const int MaxBlockLimitAttract = 128;
 
         public const float MinimumBaseSpacing = 450;
-        public const float MinimumMonitorSpacingSqr = 122500;
+        public const float MinimumMonitorSpacingSqr = 30625;//175
 
         // GENERAL AI PARAMETERS
+        public const float RTSAirGroundOffset = 24;
         public const float GeneralAirGroundOffset = 10;
-        public const float AircraftGroundOffset = 18;
-        public const float ChopperGroundOffset = 10;
+        public const float AircraftGroundOffset = 22;
+        public const float ChopperGroundOffset = 12;
         public const float SafeAnchorDist = 50f;     // enemy too close to anchor
         public const int TeamRangeStart = 256;
         public const short NetAIClockPeriod = 30;
 
         // Pathfinding
-        public const float DodgeStrengthMultiplier = 1.75f;  // The motivation in trying to move away from a tech in the way
+        public const int ExtraSpace = 6;  // Extra pathfinding space
+        public const float DefaultDodgeStrengthMultiplier = 1.75f;  // The motivation in trying to move away from a tech in the way
+        public const float AirborneDodgeStrengthMultiplier = 0.4f;  // The motivation in trying to move away from a tech in the way
         public const float FindItemExtension = 50;
         public const float FindBaseExtension = 500;
         public const int ReverseDelay = 60;
 
         // Control the aircrafts and AI
-        public const float AirMaxHeightOffset = 250;
-        public const float AirMaxHeight = 150;
-        public const float AirPromoteHeight = 200;
+        public const float AircraftDestSuccessRadius = 32;
+        public const float AerofoilSluggishnessBaseValue = 30;
+        public const float AircraftMaxDive = 0.6f;
+        public const float AircraftDangerDive = 0.7f;
+        public const float AircraftChillFactorMulti = 4.5f;     // More accuraccy, less responsiveness
+        public const float ChopperOperatingExtraHeight = 0.28f;
+        public const float ChopperChillFactorMulti = 30f;
+        public const float AirNPTMaxHeightOffset = 275;
+        public const float AirWanderMaxHeight = 225;
+        public const float AirPromoteSpaceHeight = 200;
+        public const float AirMaxYaw = 0.2f; // 0 - 1 (float)
+        public const float AirMaxYawBankOnly = 0.5f; // 0 - 1 (float)
 
         /// <summary> IN m/s !!!</summary>
-        public const float AirStallSpeed = 25;             // The speed of which most wings begin to stall at
+        public const float AirStallSpeed = 42;//25          // The speed of which most wings begin to stall at
         public const float GroundAttackStagingDist = 250;   // Distance to fly (in meters!) before turning back
 
 
@@ -89,9 +101,11 @@ namespace TAC_AI
         public const float SpacingRange = 12;
         public const float SpacingRangeSpyper = 64;
         public const float SpacingRangeAircraft = 24;
+        public const float SpacingRangeChopper = 12;
         public const float SpacingRangeHoverer = 18;
 
         // Enemy Base Checks
+        public static bool AllowInfAutominers = true;
         public const int MinimumBBRequired = 10000; // Before expanding
         public const int MinimumStoredBeforeTryBribe = 100000;
         public const float BribePenalty = 1.5f;
@@ -102,6 +116,7 @@ namespace TAC_AI
 
         public const int MPEachBaseProfits = 250;
         public const float RaidCooldownTimeSecs = 1200;
+        public const int IgnoreBaseCullingTilesFromOrigin = 8388607;
 
 
         internal static Color PlayerColor = new Color(0.5f, 0.75f, 0.95f, 1);
@@ -125,6 +140,7 @@ namespace TAC_AI
         public const int BaseTeamsStart = 256;
         public const int BaseTeamsEnd = 506;
 
+        internal static bool IsAttract => ManGameMode.inst.IsCurrent<ModeAttract>();
         public static float BaseChanceGoodMulti => 1 - ((KickStart.difficulty + 50) / 200f); // 25%
         public static float NonHostileBaseChance => 0.5f * BaseChanceGoodMulti; // 50% at easiest
         public static float FriendlyBaseChance => 0.25f * BaseChanceGoodMulti;  // 12.5% at easiest

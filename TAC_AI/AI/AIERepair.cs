@@ -119,7 +119,7 @@ namespace TAC_AI.AI
                 tank.DetachEvent.Subscribe(Compromised);
                 thisInst.FinishedRepairEvent.Subscribe(OnFinishedBuilding);
                 thisInst.TechMemor = this;
-                thisInst.PendingSystemsCheck = true;
+                thisInst.PendingDamageCheck = true;
                 blockIntegrityDirty = true;
                 rejectSaveAttempts = false;
                 purchaseOp = EnemyPurchase;
@@ -628,7 +628,7 @@ namespace TAC_AI.AI
             {
                 JSONToTech(JSON);
                 CheckGameTamperedWith(tank, this);
-                thisInst.PendingSystemsCheck = true;
+                thisInst.PendingDamageCheck = true;
             }
 
             // Load operation
@@ -652,6 +652,27 @@ namespace TAC_AI.AI
             {
                 int hash = blockGOName.GetHashCode();
                 return SavedTech.FindAll(delegate (BlockMemory cand) { return cand.t.GetHashCode() == hash; });
+            }
+
+            /// <summary>
+            /// SUPER SLOW
+            /// Can be a source of Hash Collisions.  
+            /// No Hash Collisions have occurred yet however.
+            /// </summary>
+            /// <param name="blockGOName"></param>
+            /// <returns></returns>
+            public List<BlockMemory> ReturnAllPositionsOfMultipleTypes(List<BlockTypes> types)
+            {
+                List<int> hashes = new List<int>();
+                foreach (var item in types)
+                {
+                    try
+                    {
+                        hashes.Add(ManSpawn.inst.GetBlockPrefab(item).name.GetHashCode());
+                    }
+                    catch { }
+                }
+                return SavedTech.FindAll(delegate (BlockMemory cand) { return hashes.Contains(cand.t.GetHashCode()); });
             }
 
             public List<BlockMemory> ReturnAllPositionsOfType(BlockTypes blocktype)
@@ -1235,7 +1256,7 @@ namespace TAC_AI.AI
                     else if (purchase && !HandlePurchase())
                     {
                         ranOutOfParts = true;
-                        thisInst.PendingSystemsCheck = false;
+                        thisInst.PendingDamageCheck = false;
                         return false;
                     }
                     ranOutOfParts = false;
@@ -1302,7 +1323,7 @@ namespace TAC_AI.AI
                         BlockTypes bType = typesMissing.ElementAt(step);
                         if (IterateAndTryAttachBlockMP(bType, ref typesMissing, blockSpawnPos))
                             return true;
-                        if (!thisInst.PendingSystemsCheck)
+                        if (!thisInst.PendingDamageCheck)
                             return false;
                     }
                     return false;
@@ -1318,7 +1339,7 @@ namespace TAC_AI.AI
                     else if (purchase && !HandlePurchase())
                     {
                         ranOutOfParts = true;
-                        thisInst.PendingSystemsCheck = false;
+                        thisInst.PendingDamageCheck = false;
                         return false;
                     }
                     ranOutOfParts = false;
@@ -1384,7 +1405,7 @@ namespace TAC_AI.AI
                     else if (purchase && !HandlePurchase())
                     {
                         ranOutOfParts = true;
-                        thisInst.PendingSystemsCheck = false;
+                        thisInst.PendingDamageCheck = false;
                         return false;
                     }
                     ranOutOfParts = false;
@@ -1460,7 +1481,7 @@ namespace TAC_AI.AI
                         BlockTypes bType = typesMissing.ElementAt(step);
                         if (IterateAndTryAttachBlockSkinMP(bType, ref typesMissing, blockSpawnPos))
                             return true;
-                        if (!thisInst.PendingSystemsCheck)
+                        if (!thisInst.PendingDamageCheck)
                             return false;
                     }
                     return false;
@@ -1476,7 +1497,7 @@ namespace TAC_AI.AI
                     else if (purchase && !HandlePurchase())
                     {
                         ranOutOfParts = true;
-                        thisInst.PendingSystemsCheck = false;
+                        thisInst.PendingDamageCheck = false;
                         return false;
                     }
                     ranOutOfParts = false;
@@ -1538,7 +1559,7 @@ namespace TAC_AI.AI
                 else if (purchase && !HandlePurchase())
                 {
                     ranOutOfParts = true;
-                    thisInst.PendingSystemsCheck = false;
+                    thisInst.PendingDamageCheck = false;
                     return false;
                 }
                 ranOutOfParts = false;
@@ -1592,7 +1613,7 @@ namespace TAC_AI.AI
                 else if (purchase && !HandlePurchase())
                 {
                     ranOutOfParts = true;
-                    thisInst.PendingSystemsCheck = false;
+                    thisInst.PendingDamageCheck = false;
                     return false;
                 }
                 ranOutOfParts = false;
@@ -2063,7 +2084,7 @@ namespace TAC_AI.AI
                     else
                         thisInst.RepairStepperClock = delaySafe;
                 }
-                if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs == 0)
+                if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs == 0)
                 {
                     if (thisInst.RepairStepperClock < 1)
                         thisInst.RepairStepperClock = 1;
@@ -2072,7 +2093,7 @@ namespace TAC_AI.AI
                     if (OverdueTime >= 2)
                     {
                         int blocksToAdd = Mathf.CeilToInt(OverdueTime);
-                        thisInst.PendingSystemsCheck = !InstaRepair(tank, TechMemor, blocksToAdd);
+                        thisInst.PendingDamageCheck = !InstaRepair(tank, TechMemor, blocksToAdd);
                         thisInst.RepairStepperClock -= (OverdueTime - blocksToAdd) * thisInst.RepairStepperClock;
                     }
                     else if (TechMemor.SystemsCheck() && PreRepairPrep(tank, TechMemor))
@@ -2084,13 +2105,13 @@ namespace TAC_AI.AI
 
                         RepairLerp(tank, TechMemor, thisInst, ref fBlocks, ref typesMissing);
                         TechMemor.UpdateMissingBlockTypes(typesMissing);
-                        thisInst.PendingSystemsCheck = TechMemor.SystemsCheck();
+                        thisInst.PendingDamageCheck = TechMemor.SystemsCheck();
                         //thisInst.AttemptedRepairs = 1;
                     }
                     else
-                        thisInst.PendingSystemsCheck = false;
+                        thisInst.PendingDamageCheck = false;
 
-                    if (!thisInst.PendingSystemsCheck && initialBlockCount != tank.blockman.blockCount)
+                    if (!thisInst.PendingDamageCheck && initialBlockCount != tank.blockman.blockCount)
                     {
                         DebugTAC_AI.Log("TACtical_AI: AlliedRepairStepper - Done for " + tank.name);
                         thisInst.FinishedRepairEvent.Send();
@@ -2100,7 +2121,7 @@ namespace TAC_AI.AI
             }
             else
                 thisInst.RepairStepperClock -= KickStart.AIClockPeriod;
-            return thisInst.PendingSystemsCheck;
+            return thisInst.PendingDamageCheck;
         }
         
         /*// Abandoned - Too Technical!

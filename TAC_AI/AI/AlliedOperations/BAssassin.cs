@@ -120,7 +120,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
-                thisInst.ProceedToBase = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
@@ -180,7 +180,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                 }*/
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to fight at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.ProceedToMine = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 thisInst.foundBase = false;
             }
         }
@@ -189,7 +189,7 @@ namespace TAC_AI.AI.AlliedOperations
         public static void ShootToDestroy(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
             //thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
 
             if (thisInst.theResource)
@@ -205,7 +205,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.WeaponDelayClock >= 30)
                     {
-                        thisInst.DANGER = true;
+                        thisInst.AttackEnemy = true;
                         thisInst.WeaponDelayClock = 30;
                     }
                 }
@@ -213,7 +213,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.WeaponDelayClock >= 30)
                     {
-                        thisInst.DANGER = true;
+                        thisInst.AttackEnemy = true;
                         thisInst.WeaponDelayClock = 30;
                     }
                 }
@@ -221,7 +221,7 @@ namespace TAC_AI.AI.AlliedOperations
             else
             {
                 thisInst.WeaponDelayClock = 0;
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
             }
         }
     }

@@ -16,6 +16,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             base.Initiate(tank, pilot);
             this.pilot.FlyStyle = AIControllerAir.FlightType.VTOL;
+            pilot.Helper.GroundOffsetHeight = pilot.Helper.lastTechExtents + AIGlobals.AircraftGroundOffset;
         }
         public override bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {

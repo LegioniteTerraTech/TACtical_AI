@@ -92,7 +92,7 @@ namespace TAC_AI.AI.AlliedOperations
                     BMultiTech.MimicDefend(this.helper, this.helper.tank);
                     break;
 
-                case AIType.MTSlave:
+                case AIType.MTStatic:
                     // Defend and sit like good guard dog
                     BMultiTech.MTStatic(this.helper, this.helper.tank);
                     BMultiTech.BeamLockWithinBounds(this.helper, this.helper.tank); //lock rigidbody with closest non-MT Tech on build beam

@@ -30,7 +30,7 @@ namespace TAC_AI.World
         internal const int UpdateDelay = 4;             // How many seconds the AI will perform base actions
         internal const int UnitSightRadius = 2;         // How far an enemy Tech Unit can see other enemies. IN TILES
         internal const int BaseSightRadius = 4;         // How far an enemy Tech Unit can see other enemies. IN TILES
-        internal const int EnemyBaseCullingExtents = 8; // How far from the player should enemy bases be removed 
+        internal const int EnemyBaseCullingExtents = 16; // How far from the player should enemy bases be removed 
         // from the world? IN TILES
         internal static int EnemyRaidProvokeExtents = 4;// How far the can the enemy bases issue raids on the player. IN TILES
 

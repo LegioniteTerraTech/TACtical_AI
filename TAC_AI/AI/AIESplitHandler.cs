@@ -44,7 +44,7 @@ namespace TAC_AI.AI
                         if (BM.IterateBlockComponents<ModuleWeapon>().Count() > 0)
                             help.DediAI = AIType.MTTurret;
                         else
-                            help.DediAI = AIType.MTSlave;
+                            help.DediAI = AIType.MTStatic;
                     }
                 }
                 else

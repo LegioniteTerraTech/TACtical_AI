@@ -18,7 +18,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             BGeneral.ResetValues(thisInst);
 
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
             thisInst.PivotOnly = true;
         }
 
@@ -162,7 +162,7 @@ namespace TAC_AI.AI.AlliedOperations
         public static void MimicDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI, this one is for MTs that have a host
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
             if (thisInst.lastCloseAlly.IsNotNull())
             {   //Get the tech the player is aiming at
                 thisInst.lastEnemy = thisInst.lastCloseAlly.Weapons.GetManualTarget();
@@ -177,14 +177,14 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.Urgency++;
                 if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.Urgency >= 30)
                 {
-                    thisInst.DANGER = true;
+                    thisInst.AttackEnemy = true;
                     thisInst.Urgency = 30;
                 }
             }
             else
             {
                 thisInst.Urgency = 0;
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
             }
         }
     }

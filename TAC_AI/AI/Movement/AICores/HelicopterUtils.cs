@@ -76,7 +76,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             // DRIVE
             float xOffset = 0;
-            if (thisInst.DriveDir == EDriveType.Perpendicular && thisInst.lastEnemy != null)
+            if (thisInst.DriveDir == EDriveFacing.Perpendicular && thisInst.lastEnemy != null)
             {
                 if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x > 0)
                     xOffset = 0.4f;
@@ -95,12 +95,12 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     // Do nothing and let the inertia dampener kick in
                 }
-                else if (thisInst.MoveFromObjective)
+                else if (thisInst.IsMovingFromDest)
                 {
                     DriveVar.x = -nudge.x;
                     DriveVar.z = -nudge.z;
                 }
-                else if (thisInst.ProceedToObjective || thisInst.ProceedToBase || thisInst.ProceedToMine)
+                else if (thisInst.IsMovingToDest)
                 {
                     DriveVar.x = nudge.x;
                     DriveVar.z = nudge.z;
@@ -143,9 +143,9 @@ namespace TAC_AI.AI.Movement.AICores
                 // Rotors on some chopper designs were acting funky and cutting out due to pitch so I disabled pitching
                 if (pilot.LowerEngines || avoidCrash)
                     fFlat.y = 0;
-                else if (thisInst.MoveFromObjective || thisInst.AdviseAway)
+                else if (thisInst.IsMovingFromDest)
                     fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed)) + 0.15f, -0.25f, 0.25f);
-                else if (thisInst.ProceedToObjective || thisInst.ProceedToBase || thisInst.ProceedToMine)
+                else if (thisInst.IsMovingToDest)
                     fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed)) - 0.15f, -0.25f, 0.25f);
                 else
                     fFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed), -0.25f, 0.25f);
@@ -161,7 +161,7 @@ namespace TAC_AI.AI.Movement.AICores
                 rFlat = tank.rootBlockTrans.right;
             else
                 rFlat = -tank.rootBlockTrans.right.SetY(0).normalized;
-            if (thisInst.DriveDir == EDriveType.Perpendicular)
+            if (thisInst.DriveDir == EDriveFacing.Perpendicular)
             {   // orbit while firing
                 if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x >= 0)
                     rFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x / (pitchDampening / pilot.SlowestPropLerpSpeed)) - 0.15f, -0.25f, 0.25f);
@@ -180,7 +180,7 @@ namespace TAC_AI.AI.Movement.AICores
         public static float ModerateUpwardsThrust(Tank tank, AIECore.TankAIHelper thisInst, AIControllerAir pilot, Vector3 targetHeight, bool ForceUp = false)
         {
             pilot.LowerEngines = false;
-            float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + 1f;
+            float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + AIGlobals.ChopperOperatingExtraHeight;
             //Debug.Log("TACtical_AI: " + tank.name + " thrust = " + final + " | velocity " + tank.rbody.velocity);
             if (ForceUp)
             {
@@ -222,7 +222,7 @@ namespace TAC_AI.AI.Movement.AICores
             control.BoostControlProps = false;
             if (pilot.NoProps)
             {
-                if (pilot.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck, pilot.Helper.lastTechExtents * 2) && !pilot.Tank.beam.IsActive)
+                if (pilot.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck, pilot.Helper.GroundOffsetHeight) && !pilot.Tank.beam.IsActive)
                     control.BoostControlJets = true;
                 else
                     control.BoostControlJets = false;

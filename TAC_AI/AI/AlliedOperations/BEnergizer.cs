@@ -120,7 +120,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
                 hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Heading back to base!");
-                thisInst.ProceedToBase = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
@@ -143,7 +143,7 @@ namespace TAC_AI.AI.AlliedOperations
                             return; // There's no base!
                         thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     }
-                    thisInst.ProceedToBase = true;
+                    thisInst.DriveDest = EDriveDest.ToBase;
                     return; // There's no resources left!
                 }
                 thisInst.ForceSetDrive = true;
@@ -169,7 +169,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                 }
                 hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Moving out to charge ally at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.ProceedToMine = true;
+                thisInst.DriveDest = EDriveDest.ToMine;
                 thisInst.foundBase = false;
             }
         }

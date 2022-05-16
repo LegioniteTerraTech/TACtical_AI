@@ -25,7 +25,7 @@ namespace TAC_AI
             trans = transform;
             holder = gameObject.GetComponent<ModuleItemHolder>();
             TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
-            if (TankBlock.IsAttached)
+            if (TankBlock.tank)
                 OnAttach();
         }
         public void DelayedSub()

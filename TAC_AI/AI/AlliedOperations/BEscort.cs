@@ -48,7 +48,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 thisInst.DelayedAnchorClock = 0;
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
-                thisInst.MoveFromObjective = true;
+                thisInst.DriveDest = EDriveDest.FromLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
                 //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
@@ -67,7 +67,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Departing!");
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
@@ -85,7 +85,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist >= range + playerExt)
             {
                 thisInst.DelayedAnchorClock = 0;
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
                 //thisInst.ForceSetDrive = true;
                 //thisInst.DriveVar = 1f;
@@ -160,7 +160,6 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.DriveVar = 0.5f;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
-                thisInst.lastMoveAction = AIDriveState.Driving;
             }
             else if (dist < (range / 2) + playerExt)
             {
@@ -172,13 +171,11 @@ namespace TAC_AI.AI.AlliedOperations
                 if ((bool)thisInst.lastEnemy)
                 {
                     thisInst.PivotOnly = true;
-                    thisInst.lastMoveAction = AIDriveState.Driving;
                 }
-                else
-                    thisInst.lastMoveAction = 0;
+
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
+                if (thisInst.CanAutoAnchor)
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {
@@ -198,14 +195,12 @@ namespace TAC_AI.AI.AlliedOperations
                 if ((bool)thisInst.lastEnemy)
                 {
                     thisInst.PivotOnly = true;
-                    thisInst.lastMoveAction = AIDriveState.Driving;
                 }
-                else
-                    thisInst.lastMoveAction = 0;
+
                 //thisInst.DriveVar = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
+                if (thisInst.CanAutoAnchor)
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {

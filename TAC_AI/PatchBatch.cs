@@ -106,7 +106,7 @@ namespace TAC_AI
         Dogfight,
         SpaceBattle,
         NavalWarfare,
-        HQSiege,
+        BaseSiege,
         BaseVBase,
         Misc,
     }
@@ -134,24 +134,71 @@ namespace TAC_AI
             /// <param name="__result"></param>
             private static void Postfix(ref GameCursor.CursorState __result)
             {
-                if (!CursorChanger.AddedNewCursors || !ManPlayerRTS.PlayerIsInRTS)
+                if (!CursorChanger.AddedNewCursors)
                     return;
-                switch (ManPlayerRTS.cursorState)
+                if (ManPlayerRTS.PlayerIsInRTS)
                 {
-                    case RTSCursorState.Empty:
-                        //__result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[1];
-                        break;
-                    case RTSCursorState.Moving:
-                        __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[2];
-                        break;
-                    case RTSCursorState.Attack:
-                        __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[0];
-                        break;
-                    case RTSCursorState.Select:
-                        __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[3];
-                        break;
-                    default:
-                        break;
+                    switch (ManPlayerRTS.cursorState)
+                    {
+                        case RTSCursorState.Empty:
+                            //__result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[1];
+                            break;
+                        case RTSCursorState.Moving:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[2];
+                            break;
+                        case RTSCursorState.Attack:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[0];
+                            break;
+                        case RTSCursorState.Select:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[3];
+                            break;
+                        case RTSCursorState.Fetch:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[4];
+                            break;
+                        case RTSCursorState.Mine:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[5];
+                            break;
+                        case RTSCursorState.Protect:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[6];
+                            break;
+                        case RTSCursorState.Scout:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[7];
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                else if (ManPlayerRTS.PlayerRTSOverlay && __result == GameCursor.CursorState.Default)
+                {
+                    switch (ManPlayerRTS.cursorState)
+                    {
+                        case RTSCursorState.Empty:
+                            //__result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[1];
+                            break;
+                        case RTSCursorState.Moving:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[2];
+                            break;
+                        case RTSCursorState.Attack:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[0];
+                            break;
+                        case RTSCursorState.Select:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[3];
+                            break;
+                        case RTSCursorState.Fetch:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[4];
+                            break;
+                        case RTSCursorState.Mine:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[5];
+                            break;
+                        case RTSCursorState.Protect:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[6];
+                            break;
+                        case RTSCursorState.Scout:
+                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[7];
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
@@ -637,6 +684,7 @@ namespace TAC_AI
             }
         }
 
+
         [HarmonyPatch(typeof(Mode))]
         [HarmonyPatch("EnterPreMode")]//On very late update
         private static class Startup
@@ -718,11 +766,11 @@ namespace TAC_AI
                         if (helper.AIState != AIAlignment.Static)
                         {
                             Vector2 headingSquare = (helper.lastDestination - helper.tank.boundsCentreWorldNoCheck).ToVector2XZ();
-                            if (helper.ProceedToObjective)
+                            if (helper.DriveDest == EDriveDest.ToLastDestination)
                             {
                                 beamPush.SetValue(__instance, Vector3.ClampMagnitude(helper.tank.rootBlockTrans.InverseTransformVector(headingSquare * helper.DriveVar), 1));
                             }
-                            else if (helper.MoveFromObjective)
+                            else if (helper.DriveDest == EDriveDest.FromLastDestination)
                             {
                                 beamPush.SetValue(__instance, Vector3.ClampMagnitude(helper.tank.rootBlockTrans.InverseTransformVector(-headingSquare * helper.DriveVar), 1));
                             }
@@ -935,7 +983,7 @@ namespace TAC_AI
                     var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
                     if (AICommand)
                     {
-                        if (AICommand.OverrideAim == AIWeaponState.Obsticle && AICommand.Obst.IsNotNull())
+                        if (AICommand.ActiveAimState == AIWeaponState.Obsticle && AICommand.Obst.IsNotNull())
                         {
                             Visible obstVis = AICommand.Obst.GetComponent<Visible>();
                             if (obstVis)
@@ -1434,6 +1482,22 @@ namespace TAC_AI
                                         {
                                             int randSelect = valid.GetRandomEntry();
                                             newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
+
+                                            if (newTech == null)
+                                            {
+                                                DebugTAC_AI.Exception("Water Tech spawning override failed as fetched TechData is null.  Please report this.");
+                                                return;
+                                            }
+                                            if (newTech.m_BlockSpecs == null)
+                                            {
+                                                DebugTAC_AI.Exception("Water Tech spawning override failed as fetched TechData's block info is null.  Please report this.");
+                                                return;
+                                            }
+                                            if (newTech.m_BlockSpecs.Count == 0)
+                                            {
+                                                DebugTAC_AI.Exception("Water Tech spawning override failed as no blocks are present on modified spawning Tech.  Please report this.");
+                                                return;
+                                            }
                                             DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
                                             TSP.m_TechToSpawn = newTech;
                                         }
@@ -1443,7 +1507,23 @@ namespace TAC_AI
                                             if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                             {
                                                 newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
+                                                if (newTech == null)
+                                                {
+                                                    DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as fetched TechData is null.  Please report this.");
+                                                    return;
+                                                }
+                                                if (newTech.m_BlockSpecs == null)
+                                                {
+                                                    DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as fetched TechData's block info is null.  Please report this.");
+                                                    return;
+                                                }
+                                                if (newTech.m_BlockSpecs.Count == 0)
+                                                {
+                                                    DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as no blocks are present on modified spawning Tech.  Please report this.");
+                                                    return;
+                                                }
                                                 DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
+
                                                 TSP.m_TechToSpawn = newTech;
                                             }
                                             // Else we don't do anything.
@@ -1451,7 +1531,7 @@ namespace TAC_AI
                                     }
                                     catch
                                     {
-                                        DebugTAC_AI.Log("TACtical_AI:  Attempt to swap tech failed!");
+                                        DebugTAC_AI.Assert(true, "TACtical_AI:  Attempt to swap sea tech failed!");
                                     }
                                 }
                                 else if (UnityEngine.Random.Range(0, 100) < KickStart.LandEnemyOverrideChance) // Override for normal Tech spawns
@@ -1470,6 +1550,22 @@ namespace TAC_AI
                                         {
                                             int randSelect = valid.GetRandomEntry();
                                             newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
+
+                                            if (newTech == null)
+                                            {
+                                                DebugTAC_AI.Exception("Land Tech spawning override failed as fetched TechData is null.  Please report this.");
+                                                return;
+                                            }
+                                            if (newTech.m_BlockSpecs == null)
+                                            {
+                                                DebugTAC_AI.Exception("Land Tech spawning override failed as fetched TechData's block info is null.  Please report this.");
+                                                return;
+                                            }
+                                            if (newTech.m_BlockSpecs.Count == 0)
+                                            {
+                                                DebugTAC_AI.Exception("Land Tech spawning override failed as no blocks are present on modified spawning Tech.  Please report this.");
+                                                return;
+                                            }
                                             DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
                                             TSP.m_TechToSpawn = newTech;
                                         }
@@ -1479,6 +1575,22 @@ namespace TAC_AI
                                             if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                             {
                                                 newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
+                                                if (newTech == null)
+                                                {
+                                                    DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as fetched TechData is null.  Please report this.");
+                                                    return;
+                                                }
+                                                if (newTech.m_BlockSpecs == null)
+                                                {
+                                                    DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as fetched TechData's block info is null.  Please report this.");
+                                                    return;
+                                                }
+                                                if (newTech.m_BlockSpecs.Count == 0)
+                                                {
+                                                    DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as no blocks are present on modified spawning Tech.  Please report this.");
+                                                    return;
+                                                }
+
                                                 DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
                                                 TSP.m_TechToSpawn = newTech;
                                             }
@@ -1487,7 +1599,7 @@ namespace TAC_AI
                                     }
                                     catch
                                     {
-                                        DebugTAC_AI.Log("TACtical_AI: Attempt to swap Land tech failed!");
+                                        DebugTAC_AI.Assert(true, "TACtical_AI: Attempt to swap Land tech failed!");
                                     }
                                 }
 

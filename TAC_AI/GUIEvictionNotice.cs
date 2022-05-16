@@ -220,7 +220,7 @@ namespace TAC_AI.AI
             {
                 GUI.Label(new Rect(10, 25, 160, 30), AIGlobals.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
                 GUI.Label(new Rect(10, 45, 160, 30), (techCost > 0 ? AIGlobals.UIAlphaText + "<b>Tech bribe cost: " + techCost + "</b></color>" : AIGlobals.UIAlphaText + "<b>Free tech?</b></color>"));
-                GUIContent bribeButton = new GUIContent(randomAllow, "Bribe the Tech");
+                GUIContent bribeButton; ;
                 bool afford = ManPlayer.inst.CanAfford(techCost);
                 if (afford)
                 {

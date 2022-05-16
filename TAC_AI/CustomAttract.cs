@@ -21,7 +21,7 @@ namespace TAC_AI
             { AttractType.BaseVBase,        0.25f },
             { AttractType.Dogfight,         3.25f },
             { AttractType.Harvester,        3.75f },
-            { AttractType.HQSiege,          0.25f },
+            { AttractType.BaseSiege,        0.25f },
             { AttractType.Invader,          0.75f },
             { AttractType.Misc,             0.65f },
             { AttractType.NavalWarfare,     3.25f },
@@ -198,16 +198,19 @@ namespace TAC_AI
 
                     AttractType randNum = KickStart.SpecialAttractNum;
                     DebugTAC_AI.Log("TACtical_AI: Pre-Setup for attract type " + randNum.ToString());
+                    int team1 = AIGlobals.GetRandomEnemyBaseTeam();
+                    int team2 = AIGlobals.GetRandomEnemyBaseTeam();
+
                     switch (randNum)
                     {
                         case AttractType.SpaceInvader: // space invader
 
-                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space);
+                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, team1, BaseTerrain.Space);
                             break;
 
                         case AttractType.Harvester: // Peaceful harvesting
-                            RawTechLoader.SpawnSpecificTech(spawn,  Vector3.forward, 125, new List<BasePurpose> { BasePurpose.HasReceivers }, silentFail: false);
-                            RawTechLoader.SpawnSpecificTech(tanksToConsider[0], Vector3.forward, 125, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting }, silentFail: false);
+                            RawTechLoader.SpawnSpecificTech(spawn,  Vector3.forward, team1, new List<BasePurpose> { BasePurpose.HasReceivers });
+                            RawTechLoader.SpawnSpecificTech(tanksToConsider[0], Vector3.forward, team1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting });
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
                             return false;
@@ -216,7 +219,7 @@ namespace TAC_AI
                             for (int step = 0; numToSpawn > step; step++)
                             {
                                 Vector3 position = tanksToConsider[step] + (Vector3.up * 20);
-                                if (!RawTechLoader.SpawnAttractTech(position,  -(spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Air, silentFail: false))
+                                if (!RawTechLoader.SpawnAttractTech(position,  -(spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Air))
                                     DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
                             }
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
@@ -227,7 +230,7 @@ namespace TAC_AI
                             for (int step = 0; numToSpawn > step; step++)
                             {
                                 Vector3 position = tanksToConsider[step] + (Vector3.up * 14);
-                                if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), BaseTerrain.Space, silentFail: false))
+                                if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space))
                                     DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(SpaceBattle) - error ~ could not find Tech");
                             }
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
@@ -257,8 +260,8 @@ namespace TAC_AI
                                     Vector3 position = posSea;// - (forward * 10);
                                     position = AI.Movement.AIEPathing.ForceOffsetToSea(position);
 
-                                    if (!RawTechLoader.SpawnAttractTech(position, forward, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), BaseTerrain.Sea, silentFail: false))
-                                        RawTechLoader.SpawnAttractTech(position,  forward, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), BaseTerrain.Space, silentFail: false);
+                                    if (!RawTechLoader.SpawnAttractTech(position, forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Sea))
+                                        RawTechLoader.SpawnAttractTech(position,  forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space);
                                 }
                                 //Debug.Log("TACtical_AI: cam is at " + Singleton.Manager<CameraManager>.inst.ca);
                                 Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
@@ -269,19 +272,19 @@ namespace TAC_AI
                                 return false;
                             }
                             else
-                                RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, 749, BaseTerrain.Land);
+                                RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, team1, BaseTerrain.Land);
                             break;
 
-                        case AttractType.HQSiege: // HQ Siege
-                            RawTechLoader.SpawnAttractTech(spawn,  Vector3.forward, 916, BaseTerrain.Land, purpose: BasePurpose.Headquarters);
+                        case AttractType.BaseSiege: // HQ Siege
+                            RawTechLoader.SpawnAttractTech(spawn,  Vector3.forward, team1, BaseTerrain.Land, purpose: BasePurpose.Headquarters);
                             break;
 
                         case AttractType.BaseVBase: // BaseVBase - Broken ATM
 
-                            RawTechLoader.SpawnAttractTech(spawn + (Vector3.forward * 50),-Vector3.forward, 56, BaseTerrain.Land, purpose: BasePurpose.TechProduction);
-                            RawTechLoader.SpawnAttractTech(spawn + (Vector3.forward * 25), -Vector3.forward, 56, BaseTerrain.Land);
-                            RawTechLoader.SpawnAttractTech(spawn - (Vector3.forward * 50),  Vector3.forward, 12, BaseTerrain.Land, purpose: BasePurpose.TechProduction);
-                            RawTechLoader.SpawnAttractTech(spawn - (Vector3.forward * 25),  Vector3.forward, 12, BaseTerrain.Land);
+                            RawTechLoader.SpawnAttractTech(spawn + (Vector3.forward * 50),-Vector3.forward, team1, BaseTerrain.Land, purpose: BasePurpose.TechProduction);
+                            RawTechLoader.SpawnAttractTech(spawn + (Vector3.forward * 25), -Vector3.forward, team1, BaseTerrain.Land);
+                            RawTechLoader.SpawnAttractTech(spawn - (Vector3.forward * 50),  Vector3.forward, team2, BaseTerrain.Land, purpose: BasePurpose.TechProduction);
+                            RawTechLoader.SpawnAttractTech(spawn - (Vector3.forward * 25),  Vector3.forward, team2, BaseTerrain.Land);
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
                             return false;
@@ -291,16 +294,16 @@ namespace TAC_AI
                             {
                                 Vector3 position = tanksToConsider[step] + (Vector3.up * 10);
 
-                                if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, (int)(UnityEngine.Random.Range(1, 999) + 0.5f), BaseTerrain.AnyNonSea))
+                                if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.AnyNonSea))
                                     DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(Misc) - error ~ could not find Tech");
                             }
-                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, 749, BaseTerrain.Air);
+                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, team1, BaseTerrain.Air);
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
                             return false;
 
                         default: //AttractType.Invader: - Land battle invoker
-                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, 749, BaseTerrain.Land);
+                            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, team1, BaseTerrain.Land);
                             break;
                     }
                 }
@@ -330,14 +333,15 @@ namespace TAC_AI
                     else if (randNum == AttractType.NavalWarfare)
                     {   // Naval Brawl
                     }
-                    else if (randNum == AttractType.HQSiege)
+                    else if (randNum == AttractType.BaseSiege)
                     {   // HQ Siege
                         foreach (Tank tech in Singleton.Manager<ManTechs>.inst.CurrentTechs)
                         {
                             tech.SetTeam(4114);
                         }
-                        Singleton.Manager<ManTechs>.inst.CurrentTechs.First().SetTeam(916);
-                        Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAtOrDefault(1).SetTeam(916);
+                        int teamBase = AIGlobals.GetRandomEnemyBaseTeam();
+                        Singleton.Manager<ManTechs>.inst.CurrentTechs.First().SetTeam(teamBase);
+                        Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAtOrDefault(1).SetTeam(teamBase);
                     }
                     else if (randNum == AttractType.Misc)
                     {   // pending

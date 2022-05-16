@@ -55,7 +55,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Aaaah enemy!  Running back to base!");
-                thisInst.ProceedToBase = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 return;
             }
 
@@ -224,7 +224,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
-                thisInst.ProceedToBase = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
@@ -251,11 +251,11 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Found a block...");
                         thisInst.lastDestination = thisInst.theResource.centrePosition;
-                        thisInst.ProceedToBase = true;
+                        thisInst.DriveDest = EDriveDest.ToBase;
                         StopByBase(thisInst, tank, dist, ref hasMessaged);
                         return;
                     }
-                    thisInst.ProceedToBase = true;
+                    thisInst.DriveDest = EDriveDest.ToBase;
                     StopByBase(thisInst, tank, dist, ref hasMessaged);
                     return; // There's no resources left!
                 }
@@ -298,7 +298,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to scavenge at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.ProceedToMine = true;
+                thisInst.DriveDest = EDriveDest.ToMine;
                 thisInst.foundBase = false;
             }
         }

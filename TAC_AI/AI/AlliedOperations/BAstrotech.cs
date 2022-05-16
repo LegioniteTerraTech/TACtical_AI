@@ -45,7 +45,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 thisInst.DelayedAnchorClock = 0;
                 AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
-                thisInst.MoveFromObjective = true;
+                thisInst.DriveDest = EDriveDest.FromLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
                 if (thisInst.unanchorCountdown > 0)
@@ -63,7 +63,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Departing!");
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -80,7 +80,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist >= range + playerExt)
             {
                 thisInst.DelayedAnchorClock = 0;
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1f;
 
@@ -152,18 +152,16 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.AvoidStuff = true;
                     thisInst.SettleDown();
                 }
-                thisInst.lastMoveAction = AIDriveState.Driving;
             }
             else if (dist < (range / 4) + playerExt)
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
                 thisInst.AvoidStuff = true;
-                thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
+                if (thisInst.CanAutoAnchor)
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {
@@ -179,11 +177,10 @@ namespace TAC_AI.AI.AlliedOperations
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
-                thisInst.lastMoveAction = 0;
                 thisInst.DriveVar = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
+                if (thisInst.CanAutoAnchor)
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {
@@ -228,7 +225,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 thisInst.DelayedAnchorClock = 0;
                 AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
-                thisInst.MoveFromObjective = true;
+                thisInst.DriveDest = EDriveDest.FromLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
                 if (thisInst.unanchorCountdown > 0)
@@ -246,7 +243,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Departing!");
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -263,7 +260,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist >= range + playerExt)
             {
                 thisInst.DelayedAnchorClock = 0;
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1f;
 
@@ -335,18 +332,16 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.AvoidStuff = true;
                     thisInst.SettleDown();
                 }
-                thisInst.lastMoveAction = AIDriveState.Driving;
             }
             else if (dist < (range / 2) + playerExt)
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
                 thisInst.AvoidStuff = true;
-                thisInst.lastMoveAction = 0;
                 thisInst.SettleDown();
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
+                if (thisInst.CanAutoAnchor)
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {
@@ -362,11 +357,10 @@ namespace TAC_AI.AI.AlliedOperations
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
-                thisInst.lastMoveAction = 0;
                 thisInst.DriveVar = 0;
                 if (thisInst.DelayedAnchorClock < 15)
                     thisInst.DelayedAnchorClock++;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1 && thisInst.DelayedAnchorClock >= 15 && !thisInst.DANGER)
+                if (thisInst.CanAutoAnchor)
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
                     {

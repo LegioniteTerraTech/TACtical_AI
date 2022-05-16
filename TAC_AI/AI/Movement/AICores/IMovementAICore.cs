@@ -20,10 +20,11 @@ namespace TAC_AI.AI.Movement.AICores
 
         bool DriveDirectorEnemy(Enemy.EnemyMind mind);
 
-        bool TryAdjustForCombat();
+        bool TryAdjustForCombat(bool between); 
 
         bool TryAdjustForCombatEnemy(Enemy.EnemyMind mind);
 
         Vector3 AvoidAssist(Vector3 targetIn, Vector3 predictionOffset);
+
     }
 }

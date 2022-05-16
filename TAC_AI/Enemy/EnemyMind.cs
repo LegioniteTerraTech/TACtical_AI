@@ -146,7 +146,7 @@ namespace TAC_AI.AI.Enemy
                 var mind = tonk.GetComponent<EnemyMind>();
                 mind.AIControl.FIRE_NOW = true;
                 mind.Hurt = true;
-                mind.AIControl.PendingSystemsCheck = true;
+                mind.AIControl.PendingDamageCheck = true;
                 if (mind.BoltsQueued == 0 && ManNetwork.IsHost)
                 {   // do NOT destroy blocks on split Techs!
                     if (!blockLoss.GetComponent<ModuleTechController>())

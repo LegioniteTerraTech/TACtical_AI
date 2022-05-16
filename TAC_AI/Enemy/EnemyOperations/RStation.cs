@@ -31,7 +31,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             if (dist > 6)
             {
                 //Debug.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.Steer = true;
                 thisInst.lastDestination = mind.sceneStationaryPos;
                 if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.6f)
@@ -46,7 +46,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else
             {
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.Steer = true;
                 thisInst.PivotOnly = true;
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;

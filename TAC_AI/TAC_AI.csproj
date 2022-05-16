@@ -211,7 +211,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AIAlignment.cs" />
+    <Compile Include="AIStates.cs" />
     <Compile Include="AIGlobals.cs" />
     <Compile Include="AI\AIESplitHandler.cs" />
     <Compile Include="AI\AlliedOperations\BAssassin.cs" />
@@ -243,7 +243,7 @@
     <Compile Include="DebugTAC_AI.cs" />
     <Compile Include="Enemy\EnemyOperations\RScavenger.cs" />
     <Compile Include="FactionTypesExt.cs" />
-    <Compile Include="EDriveType.cs" />
+    <Compile Include="AIEnums.cs" />
     <Compile Include="AI\AlliedOperations\BAstrotech.cs" />
     <Compile Include="AI\AlliedOperations\BEscort.cs" />
     <Compile Include="AI\BGeneral.cs" />
@@ -314,72 +314,92 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="AI_Icons\AI_Aegis.png">
+    <None Include="AI_Icons\AI_Aegis.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_Assault.png">
+    </None>
+    <None Include="AI_Icons\AI_Assault.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_Harvest.png">
+    </None>
+    <None Include="AI_Icons\AI_Harvest.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_MT.png">
+    </None>
+    <None Include="AI_Icons\AI_MT.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_Pilot.png">
+    </None>
+    <None Include="AI_Icons\AI_Pilot.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_Ship.png">
+    </None>
+    <None Include="AI_Icons\AI_Ship.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_Space.png">
+    </None>
+    <None Include="AI_Icons\AI_Space.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_Tank.png">
+    </None>
+    <None Include="AI_Icons\AI_Tank.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\E_Intel.png">
+    </None>
+    <None Include="AI_Icons\E_Intel.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\E_Meh.png">
+    </None>
+    <None Include="AI_Icons\E_Meh.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\E_Mild.png">
+    </None>
+    <None Include="AI_Icons\E_Mild.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\E_Smrt.png">
+    </None>
+    <None Include="AI_Icons\E_Smrt.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="AI_Icons\AI_Energizer.png">
+    <None Include="AI_Icons\AI_Energizer.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AI_Scrapper.png">
+    </None>
+    <None Include="AI_Icons\AI_Scrapper.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="AI_Icons\AIOrderBox.png">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
+    <None Include="AI_Icons\AIOrderBox.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="AI_Icons\AIOrderAttack1.png">
+    <None Include="AI_Icons\AIOrderAttack1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AIOrderEmpty1.png">
+    </None>
+    <None Include="AI_Icons\AIOrderEmpty1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AIOrderMove1.png">
+    </None>
+    <None Include="AI_Icons\AIOrderMove1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
-    <EmbeddedResource Include="AI_Icons\AIOrderSelect1.png">
+    </None>
+    <None Include="AI_Icons\AIOrderSelect1.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </EmbeddedResource>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="AI_Icons\AIOrderAegis1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="AI_Icons\AIOrderBlock1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="AI_Icons\AIOrderMine1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="AI_Icons\AIOrderScout1.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="AI_Icons\AI_Mimic.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="AI_Icons\AI_Turret.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

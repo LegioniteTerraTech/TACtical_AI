@@ -70,8 +70,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                     thisInst.SideToThreat = false;
                     thisInst.Retreat = true;
-                    thisInst.ProceedToObjective = false;
-                    thisInst.MoveFromObjective = true;
+                    thisInst.DriveDest = EDriveDest.FromLastDestination;
                     break;
                 case EnemyAttack.Circle:
                     range = AIGlobals.SpacingRange;
@@ -86,20 +85,20 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.ProceedToObjective = true;
+                            thisInst.DriveDest = EDriveDest.ToLastDestination;
                             /*
                             if (dist < spacer + 2)
                             {
-                                thisInst.MoveFromObjective = true;
+                                thisInst.DriveDest = EDriveDest.FromLastDestination;
                             }
                             else if (mind.Range < spacer + range)
                             {
-                                thisInst.ProceedToObjective = true;
+                                thisInst.DriveDest = EDriveDest.ToLastDestination;
                             }
                             else
                             {
                                 thisInst.BOOST = true;
-                                thisInst.ProceedToObjective = true;
+                                thisInst.DriveDest = EDriveDest.ToLastDestination;
                             }*/
                         }
                     }
@@ -112,7 +111,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             else
                             {
                                 thisInst.SettleDown();
-                                thisInst.ProceedToObjective = true;
+                                thisInst.DriveDest = EDriveDest.ToLastDestination;
                             }
                         }
                         if (thisInst.ActionPause > 0)
@@ -132,7 +131,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (dist < spacer + (range * 0.65f))
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                         thisInst.ForceSetDrive = true;
                         thisInst.DriveVar = -1;
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
@@ -144,12 +143,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else if (dist < spacer + range)
                     {
                         thisInst.SettleDown();
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                     }
                     else if (dist < spacer + (range * 1.25f))
                     {
                         thisInst.PivotOnly = true;
-                        thisInst.ProceedToObjective = true; // point at the objective
+                        thisInst.DriveDest = EDriveDest.ToLastDestination; // point at the objective
                         thisInst.SettleDown();
                     }
                     else if (dist < spacer + (range * 1.5f))
@@ -157,7 +156,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.PivotOnly = true;
                         thisInst.ForceSetDrive = true;
                         thisInst.DriveVar = 1;
-                        thisInst.ProceedToObjective = true; // point at the objective
+                        thisInst.DriveDest = EDriveDest.ToLastDestination; // point at the objective
                         thisInst.SettleDown();
                     }
                     else if (dist < spacer + (range * 1.75f))
@@ -167,7 +166,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.ProceedToObjective = true;
+                            thisInst.DriveDest = EDriveDest.ToLastDestination;
                         }
                     }
                     else
@@ -178,7 +177,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             thisInst.SettleDown();
                             thisInst.BOOST = true;
-                            thisInst.ProceedToObjective = true;
+                            thisInst.DriveDest = EDriveDest.ToLastDestination;
                         };
                     }
                     break;
@@ -195,15 +194,15 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             thisInst.SettleDown();
                             if (mind.LikelyMelee)
-                                thisInst.ProceedToObjective = true;
+                                thisInst.DriveDest = EDriveDest.ToLastDestination;
                             else
-                                thisInst.MoveFromObjective = true;
+                                thisInst.DriveDest = EDriveDest.FromLastDestination;
                         }
                     }
                     else if (dist < spacer + range)
                     {   // 
                         thisInst.PivotOnly = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                     else if (dist < spacer + (range * 1.25f))
                     {
@@ -212,7 +211,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.ProceedToObjective = true;
+                            thisInst.DriveDest = EDriveDest.ToLastDestination;
                         }
                     }
                     else
@@ -223,7 +222,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             thisInst.SettleDown();
                             thisInst.BOOST = true;
-                            thisInst.ProceedToObjective = true;
+                            thisInst.DriveDest = EDriveDest.ToLastDestination;
                         }
                     }
                     break;

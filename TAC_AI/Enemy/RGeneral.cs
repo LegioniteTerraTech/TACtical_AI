@@ -56,11 +56,11 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (mind.CommanderSmarts == EnemySmarts.Smrt)
                 {
-                    if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 3)
+                    if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs < 3)
                     {
                         bool venPower = false;
                         if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
-                        thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                        thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                         //thisInst.AttemptedRepairs++;
                         DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
@@ -70,19 +70,19 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (mind.CommanderSmarts >= EnemySmarts.IntAIligent)
                 {
-                    if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 4)
+                    if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs < 4)
                     {
                         if (thisInst.GetEnergyPercent() > 0.5f)
                         {
                             //flex yee building speeds on them players
-                            thisInst.PendingSystemsCheck = !RRepair.EnemyInstaRepair(tank, mind);
+                            thisInst.PendingDamageCheck = !RRepair.EnemyInstaRepair(tank, mind);
                             //thisInst.AttemptedRepairs++;
                         }
                         else
                         {
                             bool venPower = false;
                             if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
-                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                            thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                             //thisInst.AttemptedRepairs++;
                         }
                         //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
@@ -150,9 +150,9 @@ namespace TAC_AI.AI.Enemy
             else if (thisInst.ActionPause == 0)
                 thisInst.ActionPause = 60;
             if (thisInst.ActionPause > 15)
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
             else
-                thisInst.ProceedToObjective = false;
+                thisInst.DriveDest = EDriveDest.None;
         }
         public static void HomingIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
@@ -190,7 +190,7 @@ namespace TAC_AI.AI.Enemy
             //if (mind.CommanderAttack == EnemyAttack.Coward)
             //{
                 thisInst.lastEnemy = mind.FindEnemy();
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
             //}
         }
 
@@ -214,7 +214,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.lastEnemy = mind.FindEnemy();
             if (thisInst.lastEnemy)
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
         }
 
 
@@ -230,9 +230,9 @@ namespace TAC_AI.AI.Enemy
             thisInst.lastEnemy = mind.FindEnemy();
             if (thisInst.lastEnemy != null)
             {
-                thisInst.DANGER = true;
+                thisInst.AttackEnemy = true;
             }
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
         }
 
         /// <summary>
@@ -249,11 +249,11 @@ namespace TAC_AI.AI.Enemy
                 //Fire even when retreating - the AI's life depends on this!
                 if (thisInst.lastRange < AIGlobals.MaxRangeFireAll)
                 {
-                    thisInst.DANGER = true;
+                    thisInst.AttackEnemy = true;
                     return;
                 }
             }
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
         }
 
         /// <summary>
@@ -264,7 +264,7 @@ namespace TAC_AI.AI.Enemy
         public static void AimAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
             thisInst.lastEnemy = mind.FindEnemy();
             if (thisInst.lastEnemy != null)
             {
@@ -277,7 +277,7 @@ namespace TAC_AI.AI.Enemy
                         float dot = Vector3.Dot(tank.rootBlockTrans.right, aimTo);
                         if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -285,7 +285,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -297,7 +297,7 @@ namespace TAC_AI.AI.Enemy
                         float dot = Vector2.Dot(tank.rootBlockTrans.right.ToVector2XZ(), aimTo.ToVector2XZ());
                         if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -305,7 +305,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (Vector2.Dot(tank.rootBlockTrans.forward.ToVector2XZ(), aimTo.ToVector2XZ()) > 0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -314,7 +314,7 @@ namespace TAC_AI.AI.Enemy
             else
             {
                 thisInst.WeaponDelayClock = 0;
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
             }
         }
 

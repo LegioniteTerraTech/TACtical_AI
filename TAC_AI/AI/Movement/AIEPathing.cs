@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using TAC_AI.World;
 
 namespace TAC_AI.AI.Movement
 {
@@ -54,7 +55,7 @@ namespace TAC_AI.AI.Movement
         public static Vector3 ObstDodgeOffset(Tank tank, AIECore.TankAIHelper thisInst, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
         {
             worked = false;
-            if (KickStart.AIDodgeCheapness >= 75 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
+            if (KickStart.AIDodgeCheapness >= 75 || thisInst.DriveDest == EDriveDest.ToMine || thisInst.DriveDest == EDriveDest.ToBase)   // are we desperate for performance or going to mine
                 return Vector3.zero;    // don't bother with this
             Vector3 Offset = Vector3.zero;
 
@@ -133,7 +134,7 @@ namespace TAC_AI.AI.Movement
         public static Vector3 ObstDodgeOffsetInv(Tank tank, AIECore.TankAIHelper thisInst, out bool worked, bool useTwo = false, bool useLargeObstAvoid = false)
         {
             worked = false;
-            if (KickStart.AIDodgeCheapness >= 60 || thisInst.ProceedToMine || thisInst.ProceedToBase)   // are we desperate for performance or going to mine
+            if (KickStart.AIDodgeCheapness >= 60 || thisInst.DriveDest == EDriveDest.ToMine || thisInst.DriveDest == EDriveDest.ToBase)   // are we desperate for performance or going to mine
                 return Vector3.zero;    // don't bother with this
             Vector3 Offset = Vector3.zero;
 
@@ -613,7 +614,7 @@ namespace TAC_AI.AI.Movement
             //Anchor handling
             if (AIHelp.AutoAnchor)
             {
-                if (tankToCopy.IsAnchored && tank.Anchors.NumPossibleAnchors >= 1 && !AIHelp.DANGER)
+                if (tankToCopy.IsAnchored && tank.Anchors.NumPossibleAnchors >= 1 && !AIHelp.AttackEnemy)
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && AIHelp.anchorAttempts <= 3)//Half the escort's attempts
                     {
@@ -958,9 +959,9 @@ namespace TAC_AI.AI.Movement
         // Aux
         internal static Vector3 ModerateMaxAlt(Vector3 moderate, AIECore.TankAIHelper thisInst)
         {
-            if ((bool)Singleton.playerTank)
+            if ((bool)Singleton.playerTank && !ManPlayerRTS.PlayerIsInRTS)
             {
-                if (thisInst.tank.boundsCentreWorldNoCheck.y > AIGlobals.AirMaxHeight + Singleton.playerPos.y)
+                if (moderate.y > AIGlobals.AirWanderMaxHeight + Singleton.playerPos.y)
                 {
                     return ForceOffsetFromGroundA(moderate, thisInst);
                 }
@@ -969,7 +970,7 @@ namespace TAC_AI.AI.Movement
             {
                 try
                 {
-                    if (thisInst.tank.boundsCentreWorldNoCheck.y > AIGlobals.AirMaxHeight)
+                    if (moderate.y > AIGlobals.AirWanderMaxHeight + AIECore.TankAIManager.terrainHeight)
                     {
                         return ForceOffsetFromGroundA(moderate, thisInst);
                     }
@@ -980,9 +981,9 @@ namespace TAC_AI.AI.Movement
         }
         internal static bool IsUnderMaxAltPlayer(Vector3 Pos)
         {
-            if ((bool)Singleton.playerTank)
+            if ((bool)Singleton.playerTank && !ManPlayerRTS.PlayerIsInRTS)
             {
-                if (Pos.y > AIGlobals.AirMaxHeight + Singleton.playerPos.y)
+                if (Pos.y > AIGlobals.AirWanderMaxHeight + Singleton.playerPos.y)
                 {
                     return false;
                 }
@@ -991,7 +992,7 @@ namespace TAC_AI.AI.Movement
             {
                 try
                 {
-                    if (Pos.y > AIGlobals.AirMaxHeight)
+                    if (Pos.y > AIGlobals.AirWanderMaxHeight + AIECore.TankAIManager.terrainHeight)
                     {
                         return false;
                     }

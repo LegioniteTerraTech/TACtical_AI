@@ -128,7 +128,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
-                thisInst.ProceedToBase = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
@@ -151,7 +151,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             return; // There's no base!
                         thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     }
-                    thisInst.ProceedToBase = true;
+                    thisInst.DriveDest = EDriveDest.ToBase;
                     StopByBase(thisInst, tank, dist, ref hasMessaged);
                     return; // There's no resources left!
                 }
@@ -197,7 +197,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.DriveVar = 1;
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.trans.position + "|| Current pos " + tank.boundsCentreWorldNoCheck);
-                thisInst.ProceedToMine = true;
+                thisInst.DriveDest = EDriveDest.ToMine;
                 thisInst.foundBase = false;
             }
         }

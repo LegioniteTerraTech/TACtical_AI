@@ -19,10 +19,7 @@ namespace TAC_AI.AI
             thisInst.ForceSetDrive = false;
             thisInst.FeatherBoost = false;
 
-            thisInst.MoveFromObjective = false;
-            thisInst.ProceedToObjective = false;
-            thisInst.ProceedToBase = false;
-            thisInst.ProceedToMine = false;
+            thisInst.DriveDest = EDriveDest.None;
         }
 
         /// <summary>
@@ -37,11 +34,11 @@ namespace TAC_AI.AI
             {
                 thisInst.lastEnemy = GetTarget(thisInst, tank);
                 //Fire even when retreating - the AI's life depends on this!
-                thisInst.DANGER = true;
+                thisInst.AttackEnemy = true;
             }
             else
             {
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
                 thisInst.lastEnemy = GetTarget(thisInst, tank);
             }
         }
@@ -54,7 +51,7 @@ namespace TAC_AI.AI
         public static void AimDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
             thisInst.lastEnemy = GetTarget(thisInst, tank);
             if (thisInst.lastEnemy != null)
             {
@@ -67,7 +64,7 @@ namespace TAC_AI.AI
                         float dot = Vector3.Dot(tank.rootBlockTrans.right, aimTo);
                         if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -75,7 +72,7 @@ namespace TAC_AI.AI
                     {
                         if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -87,7 +84,7 @@ namespace TAC_AI.AI
                         float dot = Vector2.Dot(tank.rootBlockTrans.right.ToVector2XZ(), aimTo.ToVector2XZ());
                         if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -95,7 +92,7 @@ namespace TAC_AI.AI
                     {
                         if (Vector2.Dot(tank.rootBlockTrans.forward.ToVector2XZ(), aimTo.ToVector2XZ()) > 0.45f || thisInst.WeaponDelayClock >= 30)
                         {
-                            thisInst.DANGER = true;
+                            thisInst.AttackEnemy = true;
                             thisInst.WeaponDelayClock = 30;
                         }
                     }
@@ -104,7 +101,7 @@ namespace TAC_AI.AI
             else
             {
                 thisInst.WeaponDelayClock = 0;
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
             }
         }
 
@@ -135,7 +132,7 @@ namespace TAC_AI.AI
             {
                 AidDefend(thisInst, tank);
             }
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
         }
 
         /// <summary>
@@ -148,13 +145,13 @@ namespace TAC_AI.AI
             // Determines the weapons actions and aiming of the AI
             if (thisInst.lastEnemy != null)
             {   // focus fire like Grudge
-                thisInst.DANGER = true;
+                thisInst.AttackEnemy = true;
                 if (!thisInst.lastEnemy.isActive)
                     thisInst.lastEnemy = GetTarget(thisInst, tank);
             }
             else
             {
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
                 thisInst.lastEnemy = GetTarget(thisInst, tank);
             }
         }

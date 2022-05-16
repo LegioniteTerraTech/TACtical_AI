@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.IO;
-using UnityEngine;
 using TAC_AI.AI;
 using TAC_AI.Templates;
+using UnityEngine;
 
 namespace TAC_AI.World
 {
@@ -14,6 +13,10 @@ namespace TAC_AI.World
         Moving,
         Attack,
         Select,
+        Fetch,
+        Mine,
+        Protect,
+        Scout,
     }
     internal class SelectHalo : MonoBehaviour
     {
@@ -22,6 +25,7 @@ namespace TAC_AI.World
         private AIECore.TankAIHelper tech;
         private ParticleSystem ps;
         private GameObject circleInst;
+        private float lastSize = 1;
         private const float sizeMulti = 1.25f;
         private static Color Player = new Color(0f, 0f, 1f, 0.65f);
         private static Color Main = new Color(0f, 0.75f, 1f, 0.45f);
@@ -52,6 +56,12 @@ namespace TAC_AI.World
         {
             try
             {
+                if (lastSize != tech.lastTechExtents)
+                {
+                    var m = ps.main;
+                    m.startSize = tech.lastTechExtents * sizeMulti;
+                    lastSize = tech.lastTechExtents;
+                }
                 if (tech.tank.PlayerFocused)
                 {
                     var m = ps.main;
@@ -89,7 +99,7 @@ namespace TAC_AI.World
         public void OnSizeUpdate(TankBlock tb, Tank techCase)
         {
             try
-            {
+            {/*
                 if (techCase == tech.tank)
                 {
                     if (techCase.blockman.blockCount == 0)
@@ -99,7 +109,7 @@ namespace TAC_AI.World
                     }
                     var m = ps.main;
                     m.startSize = tech.lastTechExtents * sizeMulti;
-                }
+                }*/
             }
             catch { }
         }
@@ -736,32 +746,64 @@ namespace TAC_AI.World
                     {   // Protect/Defend
                         try
                         {
-                            foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
+                            if (grabbedTech.IsAnchored)
                             {
-                                if (help != null)
+                                foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
                                 {
-                                    bool LandAIAssigned = help.DediAI < AIType.MTTurret;
-                                    if (help.isAegisAvail && LandAIAssigned)
+                                    if (help != null)
                                     {
-                                        SetOptionAuto(help, AIType.Aegis);
-                                        help.RTSDestination = Vector3.zero;
-                                        help.SetRTSState(false);
-                                        if (!ManNetwork.IsNetworked)
-                                        { 
-                                            help.lastCloseAlly = grabbedTech;
-                                            help.theResource = grabbedTech.visible;
-                                            help.CollectedTarget = false;
+                                        if (help.isAegisAvail)
+                                        {
+                                            SetOptionAuto(help, AIType.Assault);
+                                            help.RTSDestination = Vector3.zero;
+                                            help.SetRTSState(false);
+                                            if (!ManNetwork.IsNetworked)
+                                            {
+                                                help.foundBase = false;
+                                                help.CollectedTarget = false;
+                                            }
                                         }
+                                        else
+                                        {
+                                            if (help.lastAIType != AITreeType.AITypes.Escort)
+                                                help.ForceAllAIsToEscort(true);
+                                            help.RTSDestination = grabbedTech.boundsCentreWorldNoCheck;
+                                            help.SetRTSState(true);
+                                        }
+                                        responded = true;
+                                        TechMovementQueue.Remove(help);
                                     }
-                                    else
+                                }
+                            }
+                            else
+                            {
+                                foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
+                                {
+                                    if (help != null)
                                     {
-                                        if (help.lastAIType != AITreeType.AITypes.Escort)
-                                            help.ForceAllAIsToEscort(true);
-                                        help.RTSDestination = grabbedTech.boundsCentreWorldNoCheck;
-                                        help.SetRTSState(true);
+                                        //bool LandAIAssigned = help.DediAI < AIType.MTTurret;
+                                        if (help.isAegisAvail)// && LandAIAssigned)
+                                        {
+                                            SetOptionAuto(help, AIType.Aegis);
+                                            help.RTSDestination = Vector3.zero;
+                                            help.SetRTSState(false);
+                                            if (!ManNetwork.IsNetworked)
+                                            {
+                                                help.lastCloseAlly = grabbedTech;
+                                                help.theResource = grabbedTech.visible;
+                                                help.CollectedTarget = false;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            if (help.lastAIType != AITreeType.AITypes.Escort)
+                                                help.ForceAllAIsToEscort(true);
+                                            help.RTSDestination = grabbedTech.boundsCentreWorldNoCheck;
+                                            help.SetRTSState(true);
+                                        }
+                                        responded = true;
+                                        TechMovementQueue.Remove(help);
                                     }
-                                    responded = true;
-                                    TechMovementQueue.Remove(help);
                                 }
                             }
                         }
@@ -1116,7 +1158,7 @@ namespace TAC_AI.World
                 {
                     help.BoltsFired = true;
                     help.tank.control.ServerDetonateExplosiveBolt();
-                    help.PendingSystemsCheck = true;
+                    help.PendingDamageCheck = true;
                 }
             }
             DebugTAC_AI.Log("TACtical_AI: HandleSelectTerrain.");
@@ -1134,6 +1176,8 @@ namespace TAC_AI.World
                     if (TechUnit != null)
                         SetSelectHalo(TechUnit, visibleSelect);
                 }
+                if (!visibleSelect)
+                    ClearRTSVis();
                 visEnabled = visibleSelect;
             }
         }
@@ -1156,8 +1200,8 @@ namespace TAC_AI.World
                     lastTank.DediAI = dediAI;
                     lastTank.TestForFlyingAIRequirement();
 
-                    TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
-                    overlay.Update();
+                    //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
+                    //overlay.Update();
                 }
                 catch (Exception e)
                 {
@@ -1166,6 +1210,8 @@ namespace TAC_AI.World
             }
             else
             {
+                if (lastTank.lastAIType != AITreeType.AITypes.Escort)
+                    lastTank.ForceAllAIsToEscort(true);
                 lastTank.OnSwitchAI();
                 if (lastTank.DediAI != dediAI)
                 {
@@ -1175,8 +1221,8 @@ namespace TAC_AI.World
                 lastTank.DediAI = dediAI;
                 lastTank.TestForFlyingAIRequirement();
 
-                TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
-                overlay.Update();
+                //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
+                //overlay.Update();
             }
         }
         
@@ -1299,12 +1345,10 @@ namespace TAC_AI.World
                 linesUsed = 0;
                 if (isRTSState)
                 {
-                    bool notOverMenus = !GUIAIManager.MouseIsOverSubMenu() && !PlayerRTSUI.MouseIsOverSubMenu()
-                        && !GUIRectAuto.MouseIsOverSubMenu() && !DebugRawTechSpawner.IsOverMenu();
-                    if (PlayerIsInRTS)
-                    {
-                        UpdateTarget();
-                    }
+                    bool notOverMenus = (!GUIAIManager.MouseIsOverSubMenu() && !PlayerRTSUI.MouseIsOverSubMenu()
+                        && !GUIRectAuto.MouseIsOverSubMenu() && !DebugRawTechSpawner.IsOverMenu()) || BoxSelecting;
+
+                    UpdateCursor();
 
 
 
@@ -1347,28 +1391,7 @@ namespace TAC_AI.World
                     }
 
                     // Handle RTS unit guidence lines
-                    foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
-                    {
-                        if (help != null && help.MovingAndOrHasTarget)
-                        {
-                            DrawDirection(help, help.DriveTargetLocation, help == Leading);
-                        }
-                    }
-                    foreach (KeyValuePair<AIECore.TankAIHelper, Queue<WorldPosition>> extended in TechMovementQueue)
-                    {
-                        AIECore.TankAIHelper helper = extended.Key;
-                        if (helper != null && LocalPlayerTechsControlled.Contains(helper))
-                        {
-                            Vector3 lastPoint = helper.RTSDestination;
-                            foreach (var item in extended.Value)
-                            {
-                                Vector3 nextPoint = item.ScenePosition;
-                                nextPoint.y += helper.lastTechExtents;
-                                DrawDirection(helper, lastPoint, nextPoint, helper == Leading);
-                                lastPoint = nextPoint;
-                            }
-                        }
-                    }
+                    UpdateLines();
 
                     DelayedUpdateClock += Time.deltaTime;
                     if (DelayedUpdateClock >= DelayedUpdateClockInterval)
@@ -1377,6 +1400,7 @@ namespace TAC_AI.World
                         DelayedUpdateClock = 0;
                     }
                 }
+
                 RemoveUnusedLines();
             }
             else
@@ -1385,8 +1409,40 @@ namespace TAC_AI.World
             }
         }
 
-        int mask = Globals.inst.layerTank.mask | Globals.inst.layerTerrain.mask;
-        private void UpdateTarget()
+        private void UpdateLines()
+        {
+            if (PlayerHovered && !LocalPlayerTechsControlled.Contains(PlayerHovered))
+            {
+                if (PlayerHovered.MovingAndOrHasTarget)
+                {
+                    DrawDirection(PlayerHovered, PlayerHovered.DriveTargetLocation, PlayerHovered == Leading);
+                }
+            }
+            foreach (AIECore.TankAIHelper help in LocalPlayerTechsControlled)
+            {
+                if (help != null && help.MovingAndOrHasTarget)
+                {
+                    DrawDirection(help, help.DriveTargetLocation, help == Leading);
+                }
+            }
+            foreach (KeyValuePair<AIECore.TankAIHelper, Queue<WorldPosition>> extended in TechMovementQueue)
+            {
+                AIECore.TankAIHelper helper = extended.Key;
+                if (helper != null && (LocalPlayerTechsControlled.Contains(helper) || PlayerHovered == helper))
+                {
+                    Vector3 lastPoint = helper.RTSDestination;
+                    foreach (var item in extended.Value)
+                    {
+                        Vector3 nextPoint = item.ScenePosition;
+                        nextPoint.y += helper.lastTechExtents;
+                        DrawDirection(helper, lastPoint, nextPoint, helper == Leading);
+                        lastPoint = nextPoint;
+                    }
+                }
+            }
+        }
+        int mask = Globals.inst.layerTank.mask | Globals.inst.layerTankIgnoreTerrain.mask | Globals.inst.layerTerrain.mask | Globals.inst.layerScenery.mask;
+        private void UpdateCursor()
         {
             Ray toCast;
             RaycastHit hit;
@@ -1394,87 +1450,176 @@ namespace TAC_AI.World
             if (Physics.Raycast(toCast, out hit, MaxCommandDistance, mask, QueryTriggerInteraction.Ignore))
             {
                 Visible vis = Visible.FindVisibleUpwards(hit.collider);
-                if (vis?.block?.tank)
+                if (vis?.block)
                 {
-                    if (vis.block.tank.Team == ManPlayer.inst.PlayerTeam)
+                    if (vis.block.tank)
                     {
-                        var helper = vis.block.tank.GetComponent<AIECore.TankAIHelper>();
-                        if (helper)
+                        if (vis.block.tank.Team == ManPlayer.inst.PlayerTeam)
                         {
-                            if (PlayerHovered != helper)
+                            var helper = vis.block.tank.GetComponent<AIECore.TankAIHelper>();
+                            if (helper && helper.ActuallyWorks)
+                            {
+                                SetPlayerHovered(helper);
+                                bool isAlreadySelected = LocalPlayerTechsControlled.Contains(helper);
+                                if (LocalPlayerTechsControlled.Count == 0 ||
+                                    (GroupSelecting && !isAlreadySelected))
+                                {
+                                    cursorState = RTSCursorState.Select; // Show Select Cursor
+                                }
+                                else
+                                {
+                                    if (GroupSelecting)
+                                        cursorState = RTSCursorState.Moving; // Show Select Cursor
+                                    else
+                                    {   // Show Protect Cursor
+                                        if (helper.tank.IsAnchored)
+                                            cursorState = RTSCursorState.Scout;
+                                        else
+                                            cursorState = RTSCursorState.Protect;
+                                    }
+                                }
+                            }
+                            else
                             {
                                 if (PlayerHovered)
                                 {
-                                    if (!LocalPlayerTechsControlled.Contains(PlayerHovered))
-                                        SetSelectHalo(PlayerHovered, false);
+                                    SetPlayerHovered(null);
                                 }
-                                PlayerHovered = helper;
-                                SetSelectHalo(PlayerHovered, true);
+                                if (GroupSelecting)
+                                    cursorState = RTSCursorState.Moving; // Show Select Cursor
+                                else
+                                {   // Show Protect Cursor
+                                    if (vis.block.tank.IsAnchored)
+                                        cursorState = RTSCursorState.Scout;
+                                    else
+                                        cursorState = RTSCursorState.Protect;
+                                }
                             }
-                            bool isAlreadySelected = LocalPlayerTechsControlled.Contains(helper);
-                            if (LocalPlayerTechsControlled.Count == 0 || 
-                                (GroupSelecting && !isAlreadySelected))
-                                cursorState = RTSCursorState.Select;
+                            if (EnemyHovered)
+                            {
+                                if (!EnemyTargets.Contains(EnemyHovered))
+                                    SetSelectHalo(EnemyHovered, false);
+                                EnemyHovered = null;
+                            }
                             return;
                         }
-                    }
-                    else if (Tank.IsEnemy(vis.block.tank.Team, ManPlayer.inst.PlayerTeam))
-                    {
-                        cursorState = RTSCursorState.Attack;
-                        var helper = vis.block.tank.GetComponent<AIECore.TankAIHelper>();
-                        if (helper)
-                        {
-                            if (EnemyHovered != helper)
+                        else if (Tank.IsEnemy(vis.block.tank.Team, ManPlayer.inst.PlayerTeam))
+                        {   // Show Attack Cursor
+                            cursorState = RTSCursorState.Attack;
+                            var helper = vis.block.tank.GetComponent<AIECore.TankAIHelper>();
+                            if (helper)
+                            {
+                                if (EnemyHovered != helper)
+                                {
+                                    if (EnemyHovered)
+                                    {
+                                        if (!EnemyTargets.Contains(EnemyHovered))
+                                            SetSelectHalo(EnemyHovered, false);
+                                    }
+                                    EnemyHovered = helper;
+                                    SetSelectHalo(EnemyHovered, true);
+                                }
+                            }
+                            else
                             {
                                 if (EnemyHovered)
                                 {
                                     if (!EnemyTargets.Contains(EnemyHovered))
                                         SetSelectHalo(EnemyHovered, false);
+                                    EnemyHovered = null;
                                 }
-                                EnemyHovered = helper;
-                                SetSelectHalo(EnemyHovered, true);
+                            }
+                            if (PlayerHovered)
+                            {
+                                SetPlayerHovered(null);
                             }
                             return;
                         }
+                        cursorState = RTSCursorState.Empty; // Show Default Cursor
                     }
-                    cursorState = RTSCursorState.Empty;
-                    if (PlayerHovered)
+                    else
                     {
-                        if (!LocalPlayerTechsControlled.Contains(PlayerHovered))
-                            SetSelectHalo(PlayerHovered, false);
-                        PlayerHovered = null;
+                        if (GroupSelecting)
+                            cursorState = RTSCursorState.Moving; // Show Select Cursor
+                        else
+                        {
+                            if (Leading)
+                                cursorState = RTSCursorState.Fetch;
+                            else
+                                cursorState = RTSCursorState.Moving; // Show Default Cursor
+                        }
                     }
-                    if (EnemyHovered)
+                }
+                else if (vis?.resdisp)
+                {
+                    if (GroupSelecting)
+                        cursorState = RTSCursorState.Moving; // Show Select Cursor
+                    else
                     {
-                        if (!EnemyTargets.Contains(EnemyHovered))
-                            SetSelectHalo(EnemyHovered, false);
-                        EnemyHovered = null;
+                        if (Leading && !vis.resdisp.GetComponent<Damageable>().Invulnerable)
+                            cursorState = RTSCursorState.Mine;
+                        else
+                            cursorState = RTSCursorState.Moving; // Show Default Cursor
                     }
                 }
                 else
                 {
                     if (Leading && hit.collider.GetComponent<TerrainCollider>())
-                    {
-                        cursorState = RTSCursorState.Moving;
-                    }
+                        cursorState = RTSCursorState.Moving; // Show Move Cursor
                     else
-                        cursorState = RTSCursorState.Empty;
+                        cursorState = RTSCursorState.Empty; // Show Default Cursor
+                }
+            }
+            else
+                cursorState = RTSCursorState.Empty; // Show Default Cursor
+            if (PlayerHovered)
+            {
+                SetPlayerHovered(null);
+            }
+            if (EnemyHovered)
+            {
+                if (!EnemyTargets.Contains(EnemyHovered))
+                    SetSelectHalo(EnemyHovered, false);
+                EnemyHovered = null;
+            }
+        }
+        private void ClearRTSVis()
+        {
+            if (EnemyHovered)
+            {
+                if (!EnemyTargets.Contains(EnemyHovered))
+                    SetSelectHalo(EnemyHovered, false);
+                EnemyHovered = null;
+            }
+            if (PlayerHovered)
+            {
+                SetPlayerHovered(null);
+            }
+        }
+
+        bool ignoreOneFrame = false;
+        public void SetPlayerHovered(AIECore.TankAIHelper helper)
+        {
+            if (helper)
+            {
+                if (PlayerHovered != helper)
+                {
                     if (PlayerHovered)
                     {
                         if (!LocalPlayerTechsControlled.Contains(PlayerHovered))
                             SetSelectHalo(PlayerHovered, false);
-                        PlayerHovered = null;
                     }
-                    if (EnemyHovered)
-                    {
-                        if (!EnemyTargets.Contains(EnemyHovered))
-                            SetSelectHalo(EnemyHovered, false);
-                        EnemyHovered = null;
-                    }
+                    PlayerHovered = helper;
+                    SetSelectHalo(PlayerHovered, true);
                 }
             }
+            else
+            {
+                if (!LocalPlayerTechsControlled.Contains(PlayerHovered))
+                    SetSelectHalo(PlayerHovered, false);
+                PlayerHovered = null;
+            }
         }
-
 
         private const float DelayedUpdateClockInterval = 1;
         private float DelayedUpdateClock = 0;
@@ -1740,7 +1885,7 @@ namespace TAC_AI.World
                 {
                     return false;
                 }
-                if (PlayerIsInRTS && !ManPauseGame.inst.IsPaused && Singleton.playerTank && !BoxSelecting)
+                if (PlayerIsInRTS && !ManPauseGame.inst.IsPaused && Singleton.playerTank)
                 {
                     Vector3 Mous = Input.mousePosition;
                     Mous.y = Display.main.renderingHeight - Mous.y;

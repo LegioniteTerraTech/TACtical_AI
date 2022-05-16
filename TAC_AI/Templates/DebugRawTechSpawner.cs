@@ -742,7 +742,7 @@ namespace TAC_AI.Templates
 
             if (val.purposes.Contains(BasePurpose.NotStationary))
             {
-                tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, pop: true);
+                tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, pop: true);
             }
             else
             {
@@ -826,7 +826,7 @@ namespace TAC_AI.Templates
                 Tank tank = null;
                 if (val.purposes.Contains(BasePurpose.NotStationary))
                 {
-                    tank = RawTechLoader.SpawnMobileTech(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, pop: true);
+                    tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, pop: true);
                 }
                 else
                 {

@@ -92,10 +92,14 @@ namespace TAC_AI.Templates
 
         // GUI
         private const int RawTechExporterID = 846321;
+        private static Sprite referenceAIIcon;
         public static void Initiate()
         {
             if (inst)
                 return;
+            referenceAIIcon = Resources.FindObjectsOfTypeAll<Sprite>().ToList().Find(delegate 
+                (Sprite cand)
+            { return cand.name == "Icon_AI_Guard"; });
 #if STEAM
             // Steam does not support RawTech loading the same way as Unofficial.
             if (!firstInit)
@@ -106,9 +110,9 @@ namespace TAC_AI.Templates
                 GUIWindow.SetActive(false);
                 aiIcons = new Dictionary<AIType, Sprite> {
                 {AIType.Escort,  LoadSprite("AI_Tank.png") },
-                {AIType.MTMimic,  LoadSprite("AI_MT.png") },
-                {AIType.MTSlave,  LoadSprite("AI_MT.png") },
-                {AIType.MTTurret,  LoadSprite("AI_MT.png") },
+                {AIType.MTMimic,  LoadSprite("AI_Mimic.png") },
+                {AIType.MTStatic,  LoadSprite("AI_MT.png") },
+                {AIType.MTTurret,  LoadSprite("AI_Turret.png") },
                 {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
                 {AIType.Assault,  LoadSprite("AI_Assault.png") },
                 {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
@@ -144,9 +148,9 @@ namespace TAC_AI.Templates
                 SetupWorkingDirectories();
                 aiIcons = new Dictionary<AIType, Sprite> {
                 {AIType.Escort,  LoadSprite("AI_Tank.png") },
-                {AIType.MTMimic,  LoadSprite("AI_MT.png") },
-                {AIType.MTSlave,  LoadSprite("AI_MT.png") },
-                {AIType.MTTurret,  LoadSprite("AI_MT.png") },
+                {AIType.MTMimic,  LoadSprite("AI_Mimic.png") },
+                {AIType.MTStatic,  LoadSprite("AI_MT.png") },
+                {AIType.MTTurret,  LoadSprite("AI_Turret.png") },
                 {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
                 {AIType.Assault,  LoadSprite("AI_Assault.png") },
                 {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
@@ -1760,7 +1764,8 @@ namespace TAC_AI.Templates
             try
             {
                 Texture2D tex = FileUtils.LoadTexture(destination);
-                Sprite output = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero);
+                Sprite refS = referenceAIIcon;
+                Sprite output = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero, refS.pixelsPerUnit, 0, SpriteMeshType.FullRect, refS.border);
                 DebugTAC_AI.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
                 return output;
             }

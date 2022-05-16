@@ -19,7 +19,7 @@ namespace TAC_AI.AI {
 
         // MISC        (MultiTech) - BuildBeam disabled, will fire at any angle.
         MTTurret,   // Only turns to aim at enemy                   
-        MTSlave,    // Does not move on own but does shoot back     
+        MTStatic,    // Does not move on own but does shoot back     
         MTMimic,    // Copies the actions of the closest non-MT Tech in relation     
 
         // LEGACY - These now have their own Enum now!

@@ -25,10 +25,9 @@ namespace TAC_AI.AI.AlliedOperations
                 return;
             }
 
-            float thisExtentsDouble = thisInst.lastTechExtents * 2;
+            float thisExtents = thisInst.lastTechExtents;
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - thisInst.lastPlayer.GetCheapBounds();
-            float range = (thisInst.RangeToStopRush * 4) + thisExtentsDouble;
-            // The range is nearly quadrupled here due to dogfighting conditions
+            float range = thisInst.RangeToStopRush + thisExtents;
             thisInst.lastRange = dist;
 
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
@@ -41,14 +40,14 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
             }
 
-            float spacing = thisExtentsDouble + playerExt;
-            if (dist < ((spacing) * 2) + 5)
+            float spacing = thisExtents + playerExt;
+            if (dist < spacing + (AIGlobals.ExtraSpace * 2))
             {   // TOO CLOSE!!! WE DODGE!!!
                 if (thisInst.lastEnemy != null && !thisInst.Retreat)
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 else
                     thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
-                thisInst.MoveFromObjective = true;
+                thisInst.DriveDest = EDriveDest.FromLastDestination;
             }
             else if (dist > spacing && dist < range)
             {   // Follow the leader
@@ -56,12 +55,26 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 else
                     thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
+            }
+            else if (dist < range * 3)
+            {   // Far behind, must catch up
+                // The range is nearly quadrupled here due to dogfighting conditions
+                if (thisInst.lastEnemy != null && !thisInst.Retreat)
+                {
+                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                }
+                else
+                {
+                    thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
+                    thisInst.DriveDest = EDriveDest.ToLastDestination;
+                    thisInst.BOOST = true; // boost in forwards direction towards objective
+                }
             }
             else
-            {   // Far behind, must catch up
+            {   // SUPER Far behind, must catch up
                 thisInst.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
-                thisInst.ProceedToObjective = true;
+                thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.Retreat = true;
                 thisInst.BOOST = true; // boost in forwards direction towards objective
             }
@@ -71,7 +84,7 @@ namespace TAC_AI.AI.AlliedOperations
         public static void Dogfighting(AIECore.TankAIHelper thisInst, Tank tank)
         {   // Will have to account for the different types of flight methods available
 
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
             thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
             if (thisInst.lastEnemy != null)
             {
@@ -92,7 +105,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {  */ // Normal Dogfighting
                 if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.25f || thisInst.Urgency >= 30)
                     {
-                        thisInst.DANGER = true;
+                        thisInst.AttackEnemy = true;
                         //thisInst.Urgency = 50;
                         thisInst.SettleDown();
                     }
@@ -101,7 +114,7 @@ namespace TAC_AI.AI.AlliedOperations
             else
             {
                 thisInst.Urgency = 0;
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
             }
         }
     }

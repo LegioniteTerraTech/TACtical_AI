@@ -15,9 +15,9 @@ namespace TAC_AI.AI.Movement.AICores
         /// <param name="tank"></param>
         internal static Vector3 HandleMultiTech(AIECore.TankAIHelper help, Tank tank)
         {
-            if (help.DediAI == AIType.MTSlave && help.lastEnemy != null)
+            if (help.DediAI == AIType.MTStatic && help.lastEnemy != null)
             {   // act like a trailer
-                help.DriveDir = EDriveType.Neutral;
+                help.DriveDir = EDriveFacing.Neutral;
                 help.Steer = false;
                 help.lastDestination = tank.boundsCentreWorldNoCheck;
                 help.MinimumRad = 0;
@@ -44,12 +44,12 @@ namespace TAC_AI.AI.Movement.AICores
                             {
                                 //Debug.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
                                 help.Steer = true;
-                                help.DriveDir = EDriveType.Forwards;
+                                help.DriveDir = EDriveFacing.Forwards;
                             }
                             else
                             {
                                 help.Steer = true;
-                                help.DriveDir = EDriveType.Backwards;
+                                help.DriveDir = EDriveFacing.Backwards;
                             }
                         }
                         else

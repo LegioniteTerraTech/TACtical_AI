@@ -59,7 +59,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 case EnemyAttack.Coward:
                     thisInst.SideToThreat = false;
                     thisInst.Retreat = true;
-                    thisInst.MoveFromObjective = true;
+                    thisInst.DriveDest = EDriveDest.FromLastDestination;
                     if (dist < spacing + (range / 4))
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
@@ -96,18 +96,18 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                     if (dist < spacing + 2)
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else if (mind.Range < spacing + range)
                     {
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else
                     {
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     break;
@@ -118,7 +118,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.Retreat = false;
                     if (dist < spacing + (range / 2))
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                         if (tank.wheelGrounded)
                         {
@@ -141,7 +141,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             else
                                 thisInst.SettleDown();
                         }
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else
@@ -154,7 +154,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                                 thisInst.SettleDown();
                         }
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     break;*/
@@ -165,7 +165,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     if (dist < spacing + range)
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                         if (tank.wheelGrounded)
                         {
@@ -177,11 +177,11 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                     else if (dist < spacing + (range * 2 ))
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                     }
                     else if (dist < spacing + (range * 3))
                     {
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         if (tank.wheelGrounded)
                         {
                             if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
@@ -192,7 +192,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                     else
                     {
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         if (tank.wheelGrounded)
                         {
                             if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
@@ -245,11 +245,11 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 if (mind.CommanderSmarts == EnemySmarts.Smrt)
                 {
-                    if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 3)
+                    if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs < 3)
                     {
                         bool venPower = false;
                         if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
-                        thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                        thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                         //thisInst.AttemptedRepairs++;
                         DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
@@ -259,19 +259,19 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 if (mind.CommanderSmarts >= EnemySmarts.IntAIligent)
                 {
-                    if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs < 4)
+                    if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs < 4)
                     {
                         if ((energy.storageTotal - energy.spareCapacity) / energy.storageTotal > 0.5)
                         {
                             //flex yee building speeds on them players
-                            thisInst.PendingSystemsCheck = !RRepair.EnemyInstaRepair(tank, mind);
+                            thisInst.PendingDamageCheck = !RRepair.EnemyInstaRepair(tank, mind);
                             //thisInst.AttemptedRepairs++;
                         }
                         else
                         {
                             bool venPower = false;
                             if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
-                            thisInst.PendingSystemsCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
+                            thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                             //thisInst.AttemptedRepairs++;
                         }
                         //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
@@ -331,13 +331,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else if (thisInst.ActionPause == 0)
                 thisInst.ActionPause = 30;
-            thisInst.ProceedToObjective = true;
+            thisInst.DriveDest = EDriveDest.ToLastDestination;
         }
 
         public static void EnemyDogfighting(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {   // Only accounts for forward weapons
 
-            thisInst.DANGER = false;
+            thisInst.AttackEnemy = false;
             thisInst.lastEnemy = mind.FindEnemyAir();
 
             if (thisInst.lastEnemy != null)
@@ -357,7 +357,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 //{   // Normal Dogfighting
                     if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.4f || thisInst.Urgency >= 30)
                     {
-                        thisInst.DANGER = true;
+                        thisInst.AttackEnemy = true;
                         //thisInst.Urgency = 50;
                         thisInst.SettleDown();
                     }
@@ -366,7 +366,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             else
             {
                 thisInst.Urgency = 0;
-                thisInst.DANGER = false;
+                thisInst.AttackEnemy = false;
             }
         }
 

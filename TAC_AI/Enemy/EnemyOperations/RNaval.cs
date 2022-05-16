@@ -45,7 +45,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 thisInst.SideToThreat = false;
                 thisInst.Retreat = true;
-                thisInst.MoveFromObjective = true;
+                thisInst.DriveDest = EDriveDest.FromLastDestination;
                 if (dist < spacer + (range / 4))
                 {
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
@@ -75,18 +75,18 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.SettleDown();
                     if (dist < thisInst.lastTechExtents + enemyExt + 2)
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else if (mind.Range < spacer + range)
                     {
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                     }
                     else
                     {
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                 }
             }
@@ -101,7 +101,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         thisInst.SettleDown();
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                     }
                 }
                 else if (dist < spacer + range)
@@ -115,7 +115,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         thisInst.SettleDown();
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                 }
                 else
@@ -126,7 +126,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         thisInst.SettleDown();
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                 }
             }
@@ -140,14 +140,14 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                         thisInst.SettleDown();
                     }
                 }
                 else if (dist < spacer + range)
                 {
                     thisInst.PivotOnly = true;
-                    thisInst.ProceedToObjective = true;
+                    thisInst.DriveDest = EDriveDest.ToLastDestination;
                 }
                 else if (dist < spacer + (range * 1.25f))
                 {
@@ -156,7 +156,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         thisInst.SettleDown();
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                 }
                 else
@@ -167,7 +167,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         thisInst.SettleDown();
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                 }
             }

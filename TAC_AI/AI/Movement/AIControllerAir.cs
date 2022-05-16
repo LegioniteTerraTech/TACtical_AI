@@ -81,7 +81,6 @@ namespace TAC_AI.AI
         //Error-Checking
         public int ErrorsInTakeoff = 0;         // If this gets too high, then this tech isn't meant to fly
         public int ErrorsInUTurn = 0;           // If this gets too high, then this tech isn't meant to Immelmann
-        public bool DestroyOnTerrain = false;   // Should the aircraft disintegrate on collision with terrain?
         public bool LargeAircraft = false;      // Restrict turning to 45 and no U-Turns
         public bool BankOnly = false;
         public float BoosterThrustBias = 0.5f;
@@ -326,12 +325,12 @@ namespace TAC_AI.AI
             else
                 LargeAircraft = false;
 
-            AerofoilSluggishness = 30 / aerofoilSpeed;
+            AerofoilSluggishness = AIGlobals.AerofoilSluggishnessBaseValue / aerofoilSpeed;
             if (FlyStyle == FlightType.Helicopter)
-                FlyingChillFactor = Vector3.one * 30;
+                FlyingChillFactor = Vector3.one * AIGlobals.ChopperChillFactorMulti;
             else
             {
-                FlyingChillFactor = Vector3.one * AerofoilSluggishness;
+                FlyingChillFactor = Vector3.one * AerofoilSluggishness * AIGlobals.AircraftChillFactorMulti;
                 if (LargeAircraft)
                     FlyingChillFactor.y = 5;    // need accuraccy for large aircraft bombing runs
                 else
@@ -381,7 +380,8 @@ namespace TAC_AI.AI
                     //Try fighting the controls to land safely
                     return;
                 }
-                thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
+                if (!this.TargetGrounded)
+                    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
                 this.AICore.DriveDirector();
             }
             else if (thisInst.AIState == AIAlignment.NonPlayer) //enemy
@@ -424,8 +424,8 @@ namespace TAC_AI.AI
             }
             else if (thisInst.AIState == AIAlignment.NonPlayer) //enemy
             {
-                if (!this.TargetGrounded)
-                    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
+                //if (!this.TargetGrounded)
+                //    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
 
                 this.AICore.DriveDirectorEnemy(EnemyMind);
             }
@@ -476,7 +476,7 @@ namespace TAC_AI.AI
         /// <param name="pilot"></param>
         private bool TestForMayday(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            if (thisInst.PendingSystemsCheck)
+            if (thisInst.PendingDamageCheck)
             {
                 this.UpdateStatus();
                 bool damaged = false;

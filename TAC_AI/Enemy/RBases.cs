@@ -47,7 +47,7 @@ namespace TAC_AI.AI.Enemy
                 if (item.Team == Team && !item.IsBase())
                 {
                     var help = item.GetComponent<AIECore.TankAIHelper>();
-                    if (help && help.DANGER && help.lastEnemy)
+                    if (help && help.AttackEnemy && help.lastEnemy)
                     {
                         activeCount.Add(item);
                     }
@@ -545,7 +545,7 @@ namespace TAC_AI.AI.Enemy
                         var helper = tech.GetComponent<AIECore.TankAIHelper>();
                         if (helper)
                         {
-                            helper.PendingSystemsCheck = true;
+                            helper.PendingDamageCheck = true;
                             DebugTAC_AI.Log("TACtical_AI: Tech " + tech.name + " of " + tech.Team + " has acknowleged the request");
                         }
                         else if (tech.IsAnchored)
@@ -726,7 +726,7 @@ namespace TAC_AI.AI.Enemy
                         var helper = tech.GetComponent<AIECore.TankAIHelper>();
                         if (helper)
                         {
-                            helper.PendingSystemsCheck = true;
+                            helper.PendingDamageCheck = true;
                         }
                         else if (tech.IsAnchored)
                         {
@@ -1267,7 +1267,7 @@ namespace TAC_AI.AI.Enemy
                             }
                         }
                     }
-                    if (!mind.AIControl.PendingSystemsCheck && UnityEngine.Random.Range(1, 100) <= AIGlobals.BaseExpandChance + (GetTeamFunds(mind.Tank.Team) / 10000))
+                    if (!mind.AIControl.PendingDamageCheck && UnityEngine.Random.Range(1, 100) <= AIGlobals.BaseExpandChance + (GetTeamFunds(mind.Tank.Team) / 10000))
                         ImTakingThatExpansion(mind, mind.GetComponent<EnemyBaseFunder>());
                     //if (UnityEngine.Random.Range(1, 100) < 7)
                     //{
@@ -1287,7 +1287,7 @@ namespace TAC_AI.AI.Enemy
             try
             {
                 //Debug.Log("TACtical_AI: ImTakingThatExpansion - Call for " + mind.name);
-                if (SpecialAISpawner.IsAttract)
+                if (AIGlobals.IsAttract)
                     return; // no branching
 
                 if (AIGlobals.TurboAICheat && funds.BuildBucks < AIGlobals.MinimumBBRequired * 25)
@@ -1489,7 +1489,7 @@ namespace TAC_AI.AI.Enemy
                 foreach (var item in mobileTechs)
                 {
                     var helper = item.GetComponent<AIECore.TankAIHelper>();
-                    if (!helper.PendingSystemsCheck && !helper.lastEnemy && (shouldChangeHarvesters || !RCore.IsHarvester(item.blockman)))
+                    if (!helper.PendingDamageCheck && !helper.lastEnemy && (shouldChangeHarvesters || !RCore.IsHarvester(item.blockman)))
                     {
                         toUpgrade = item;
                         break;
@@ -1719,7 +1719,7 @@ namespace TAC_AI.AI.Enemy
                             if (step >= attempts)
                                 return;
                         }
-                        if (RemoveSpenders && !fund.GetComponent<AIECore.TankAIHelper>().PendingSystemsCheck
+                        if (RemoveSpenders && !fund.GetComponent<AIECore.TankAIHelper>().PendingDamageCheck
                             && fund.Purposes.Contains(BasePurpose.TechProduction) && !fund.Purposes.Contains(BasePurpose.Harvesting))
                         {
                             RecycleTechToTeam(fund.Tank);
@@ -2086,7 +2086,7 @@ namespace TAC_AI.AI.Enemy
                     var helper = vis.tank.GetComponent<AIECore.TankAIHelper>();
                     if (helper.TechMemor)
                     {
-                        if (helper.PendingSystemsCheck)
+                        if (helper.PendingDamageCheck)
                             ChainCancel = true; // A tech is still being built here - we cannot build more until done!
                     }
                     validLocation = false;

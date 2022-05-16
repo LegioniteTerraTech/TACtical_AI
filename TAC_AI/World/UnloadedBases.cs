@@ -304,10 +304,10 @@ namespace TAC_AI.World
         {   // Expand the base!
             try
             {
-                if (SpecialAISpawner.IsAttract)
+                if (AIGlobals.IsAttract)
                     return; // no branching
 
-                if (KickStart.CullFarEnemyBases)
+                if (KickStart.CullFarEnemyBases && (EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(AIGlobals.IgnoreBaseCullingTilesFromOrigin))
                 {
                     // Note: GetBackwardsCompatiblePosition gets the SCENEposition (Position relative to the WorldTreadmillOrigin)!
                     if (!(EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(ManEnemyWorld.EnemyBaseCullingExtents))

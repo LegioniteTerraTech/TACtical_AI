@@ -131,7 +131,7 @@ namespace TAC_AI.AI.Enemy
             }
             if (mind.TechMemor.ReserveSuperGrabs > 0)
             {
-                thisInst.PendingSystemsCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.ReserveSuperGrabs);
+                thisInst.PendingDamageCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.ReserveSuperGrabs);
                 mind.TechMemor.ReserveSuperGrabs = 0;
             }
             else if (thisInst.RepairStepperClock <= 0)
@@ -179,7 +179,7 @@ namespace TAC_AI.AI.Enemy
                             thisInst.RepairStepperClock = (AIERepair.eDelayCombat / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                     }
                 }
-                if (thisInst.PendingSystemsCheck) //&& thisInst.AttemptedRepairs == 0)
+                if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs == 0)
                 {
                     try
                     {
@@ -190,7 +190,7 @@ namespace TAC_AI.AI.Enemy
                         if (OverdueTime >= 2)
                         {
                             int blocksToAdd = Mathf.CeilToInt(OverdueTime);
-                            thisInst.PendingSystemsCheck = !EnemyInstaRepair(tank, mind, blocksToAdd);
+                            thisInst.PendingDamageCheck = !EnemyInstaRepair(tank, mind, blocksToAdd);
                             thisInst.RepairStepperClock -= (OverdueTime - blocksToAdd) * thisInst.RepairStepperClock;
                         }
                         else if (mind.TechMemor.SystemsCheck() && PreRepairPrep(tank, mind))
@@ -204,23 +204,23 @@ namespace TAC_AI.AI.Enemy
                             {
                                 if (EnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing))
                                 {
-                                    thisInst.PendingSystemsCheck = mind.TechMemor.SystemsCheck();
+                                    thisInst.PendingDamageCheck = mind.TechMemor.SystemsCheck();
                                 }
                                 else
-                                    thisInst.PendingSystemsCheck = false; // cannot repair as invalid block
+                                    thisInst.PendingDamageCheck = false; // cannot repair as invalid block
                             }
                             else
                             {
                                 QueueEnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing);
-                                thisInst.PendingSystemsCheck = mind.TechMemor.SystemsCheck();
+                                thisInst.PendingDamageCheck = mind.TechMemor.SystemsCheck();
                             }
                             mind.TechMemor.UpdateMissingBlockTypes(typesMissing);
                             //thisInst.AttemptedRepairs = 1;
                         }
                         else
-                            thisInst.PendingSystemsCheck = false;
+                            thisInst.PendingDamageCheck = false;
 
-                        if (!thisInst.PendingSystemsCheck)
+                        if (!thisInst.PendingDamageCheck)
                         {
                             if (mind.StartedAnchored)
                             {
@@ -256,16 +256,16 @@ namespace TAC_AI.AI.Enemy
 
             if (mind.TechMemor.ReserveSuperGrabs < 0)
                 mind.TechMemor.ReserveSuperGrabs = 0;
-            return thisInst.PendingSystemsCheck;
+            return thisInst.PendingDamageCheck;
         }
 
 
         // EXPERIMENTAL - AI-Based new Tech building
         public static bool EnemyNewTechConstruction(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
-            if (thisInst.PendingSystemsCheck)// && thisInst.AttemptedRepairs == 0)
+            if (thisInst.PendingDamageCheck)// && thisInst.AttemptedRepairs == 0)
             {
-                thisInst.PendingSystemsCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.ReturnContents().Count() + 10);
+                thisInst.PendingDamageCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.ReturnContents().Count() + 10);
             }
             else
             {
@@ -279,7 +279,7 @@ namespace TAC_AI.AI.Enemy
                 else
                     thisInst.RepairStepperClock--;
             }
-            return thisInst.PendingSystemsCheck;
+            return thisInst.PendingDamageCheck;
         }
     }
 }

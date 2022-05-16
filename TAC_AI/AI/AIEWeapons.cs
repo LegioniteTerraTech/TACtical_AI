@@ -12,9 +12,9 @@ namespace TAC_AI.AI
             {
                 if (!tank.beam.IsActive)
                 {
-                    if (thisInst.DANGER && thisInst.lastEnemy.IsNotNull())
+                    if (thisInst.AttackEnemy && thisInst.lastEnemy.IsNotNull())
                     {
-                        thisInst.lastWeaponAction = AIWeaponState.Enemy;
+                        thisInst.WeaponState = AIWeaponState.Enemy;
                         if (tank.IsAnchored)
                         {
                             Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
@@ -28,11 +28,11 @@ namespace TAC_AI.AI
                     }
                     else if (thisInst.Obst.IsNotNull())
                     {
-                        thisInst.lastWeaponAction = AIWeaponState.Obsticle;
+                        thisInst.WeaponState = AIWeaponState.Obsticle;
                     }
                     else
                     {
-                        thisInst.lastWeaponAction = 0;
+                        thisInst.WeaponState = 0;
                     }
                 }
             }
@@ -44,7 +44,7 @@ namespace TAC_AI.AI
 
         public static void WeaponMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            thisInst.OverrideAim = 0;
+            thisInst.ActiveAimState = 0;
             if (!tank.beam.IsActive)
             {
                 if (thisInst.IsMultiTech)
@@ -53,7 +53,7 @@ namespace TAC_AI.AI
                     {
                         if (thisInst.lastEnemy.IsNotNull())
                         {
-                            thisInst.OverrideAim = AIWeaponState.Mimic;
+                            thisInst.ActiveAimState = AIWeaponState.Mimic;
                             var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
                             if (thisInst.FIRE_NOW)
@@ -65,14 +65,14 @@ namespace TAC_AI.AI
                         }
                     }
                 }
-                else if (thisInst.lastWeaponAction == AIWeaponState.Obsticle)
+                else if (thisInst.WeaponState == AIWeaponState.Obsticle)
                 {
                     if (thisInst.Obst.IsNotNull())
                     {
                         try
                         {
                             //Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
-                            thisInst.OverrideAim = AIWeaponState.Obsticle;
+                            thisInst.ActiveAimState = AIWeaponState.Obsticle;
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
                             if (thisInst.FIRE_NOW)
                                 thisControl.m_Weapons.FireWeapons(tank);
@@ -94,11 +94,11 @@ namespace TAC_AI.AI
                         }
                     }
                 }
-                else if (thisInst.lastWeaponAction == AIWeaponState.Enemy)
+                else if (thisInst.WeaponState == AIWeaponState.Enemy)
                 {
                     if (thisInst.lastEnemy != null)
                     {
-                        thisInst.OverrideAim = AIWeaponState.Enemy;
+                        thisInst.ActiveAimState = AIWeaponState.Enemy;
                         var targetTank = thisInst.lastEnemy.tank;
                         thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
                         if (thisInst.FIRE_NOW)

@@ -52,7 +52,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     range = AIGlobals.SpacingRangeHoverer;
                     thisInst.SideToThreat = false;
                     thisInst.Retreat = true;
-                    thisInst.MoveFromObjective = true;
+                    thisInst.DriveDest = EDriveDest.FromLastDestination;
                     if (dist < spacing + range)
                     {
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
@@ -82,16 +82,16 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     // Melee makes the AI ignore the avoid, making the AI ram into the enemy
                     if (!mind.LikelyMelee && dist < spacing + 2)
                     {
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                     }
                     else if (mind.Range < spacing + range)
                     {
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                     else
                     {
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                     break;
                 case EnemyAttack.Spyper:// Spyper does not support melee
@@ -104,7 +104,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                     }
                     else if (dist < spacing + (range * 1.5f))
                     {
@@ -117,7 +117,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         
                     }
                     else
@@ -127,7 +127,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                             thisInst.SettleDown();
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         
                     }
                     break;
@@ -141,13 +141,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
-                        thisInst.MoveFromObjective = true;
+                        thisInst.DriveDest = EDriveDest.FromLastDestination;
                         
                     }
                     else if (!mind.LikelyMelee && dist < spacing + range)
                     {
                         thisInst.PivotOnly = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         
                     }
                     else if (dist < spacing + (range * 1.25f))
@@ -156,8 +156,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
-                        thisInst.ProceedToObjective = true;
-                        
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                     else
                     {
@@ -166,8 +165,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                             thisInst.SettleDown();
                         thisInst.BOOST = true;
-                        thisInst.ProceedToObjective = true;
-                        
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                     }
                     break;
             }

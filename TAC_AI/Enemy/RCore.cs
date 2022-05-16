@@ -47,7 +47,7 @@ namespace TAC_AI.AI.Enemy
             //Debug.Log("TACtical_AI: enemy AI active!");
             try
             {
-                if (thisInst.DANGER)
+                if (thisInst.AttackEnemy)
                 {
                     var tonk = thisInst.lastEnemy;
                     if (tonk?.tank)
@@ -302,7 +302,7 @@ namespace TAC_AI.AI.Enemy
         public static void BeNeutral(AIECore.TankAIHelper thisInst, Tank tank)
         {
             var Mind = thisInst.MovementController.EnemyMind;
-            if (Mind.Hurt && thisInst.PendingSystemsCheck && Mind.Provoked > 0)
+            if (Mind.Hurt && thisInst.PendingDamageCheck && Mind.Provoked > 0)
             {   // If we were hit & lost blocks, then we fight back the attacker
                 if (thisInst.lastEnemy?.tank)
                 {
@@ -394,7 +394,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         BGeneral.ResetValues(thisInst);
                         thisInst.Steer = true;
-                        thisInst.ProceedToObjective = true;
+                        thisInst.DriveDest = EDriveDest.ToLastDestination;
                         thisInst.lastDestination = EBU.PosScene;
                         // yes we will drive off-scene to retreat home
                         return true;
@@ -530,7 +530,7 @@ namespace TAC_AI.AI.Enemy
             var BM = tank.blockman;
 
             // CHECK before burning processing
-            if (SpecialAISpawner.IsAttract)
+            if (AIGlobals.IsAttract)
             {
                 return false;
             }
@@ -823,7 +823,8 @@ namespace TAC_AI.AI.Enemy
                         break;
                     case 4:
                     case 5:
-                    //toSet.CommanderMind = EnemyAttitude.Junker;
+                        toSet.CommanderMind = EnemyAttitude.Junker;
+                        break;
                     case 6:
                     case 7:
                         toSet.CommanderMind = EnemyAttitude.Homing;
@@ -910,7 +911,7 @@ namespace TAC_AI.AI.Enemy
                 toSet.FindEnemy();
 
             // now handle base spawning
-            if (SpecialAISpawner.IsAttract)
+            if (AIGlobals.IsAttract)
             {
                 if (KickStart.SpecialAttractNum == AttractType.Harvester)
                 {

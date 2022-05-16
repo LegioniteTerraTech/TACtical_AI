@@ -61,7 +61,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Aaaah enemy!  Running back to base!");
-                thisInst.ProceedToBase = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 return;
             }
 
@@ -125,7 +125,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. | Tech is at " + tank.boundsCentreWorldNoCheck);
                     StopByBase(thisInst, tank, dist, ref hasMessaged);
-                    thisInst.ProceedToBase = true;
+                    thisInst.DriveDest = EDriveDest.ToBase;
                     return;
                 }
                 if (thisInst.DriverType == AIDriverType.Pilot)
@@ -251,7 +251,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
-                thisInst.ProceedToBase = true;
+                thisInst.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
@@ -278,11 +278,11 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Found a Resource Node...");
                         thisInst.lastDestination = thisInst.theResource.centrePosition;
-                        thisInst.ProceedToBase = true;
+                        thisInst.DriveDest = EDriveDest.ToBase;
                         StopByBase(thisInst, tank, dist, ref hasMessaged);
                         return;
                     }
-                    thisInst.ProceedToBase = true;
+                    thisInst.DriveDest = EDriveDest.ToBase;
                     StopByBase(thisInst, tank, dist, ref hasMessaged);
                     return; // There's no resources left!
                 }
@@ -323,7 +323,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.RemoveObstruction(48);
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.ProceedToMine = true;
+                thisInst.DriveDest = EDriveDest.ToMine;
                 thisInst.foundBase = false;
             }
         }
