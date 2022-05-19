@@ -474,9 +474,14 @@ namespace TAC_AI.AI
             return false;
         }
 
-        public static AIDriverType HandlingDetermine(Tank tank)
+        public static AIDriverType HandlingDetermine(Tank tank, TankAIHelper helper)
         {
             var BM = tank.blockman;
+
+            if (tank.IsAnchored && !helper.PlayerAllowAnchoring)
+            {
+                return AIDriverType.Stationary;
+            }
 
             if (KickStart.IsRandomAdditionsPresent)
             {
@@ -972,7 +977,7 @@ namespace TAC_AI.AI
             /// <summary>
             /// The type of vehicle the AI controls
             /// </summary>
-            public AIDriverType DriverType = AIDriverType.Unset;
+            public AIDriverType DriverType = AIDriverType.AutoSet;
             /// <summary>
             /// The task the AI will perform
             /// </summary>
@@ -1002,7 +1007,8 @@ namespace TAC_AI.AI
 
             public bool SetToActive => lastAIType == AITreeType.AITypes.Escort || lastAIType == AITreeType.AITypes.Guard;
 
-            public bool CanMoveAndShoot => BeamTimeoutClock == 0;
+
+            public bool NotInBeam => BeamTimeoutClock == 0;
             public bool CanCopyControls => !IsMultiTech;
             public bool CanUseBuildBeam => !(tank.IsAnchored && !PlayerAllowAnchoring);
             public bool CanAutoAnchor => AutoAnchor && PlayerAllowAnchoring && !AttackEnemy && tank.Anchors.NumPossibleAnchors >= 1 && DelayedAnchorClock >= 15 && CanAnchorSafely;
@@ -1260,8 +1266,13 @@ namespace TAC_AI.AI
                     {
                         if (ManNetwork.IsNetworked)
                             NetworkHandler.TryBroadcastRTSControl(tank.netTech.netId.Value, value);
+                        //DebugTAC_AI.Assert(true, "RTSControlled set to " + value);
+                        isRTSControlled = value;
+                        foreach (ModuleAIExtension AIEx in AIList)
+                        {
+                            AIEx.WasRTS = isRTSControlled;
+                        }
                     }
-                    isRTSControlled = value;
                 }
             } // force the tech to be controlled by RTS
             public bool IsGoingToRTSDest => RTSDestInternal != Vector3.zero;
@@ -1299,6 +1310,11 @@ namespace TAC_AI.AI
                         RTSDestInternal = AIEPathing.OffsetFromGroundA(value, this, AIGlobals.RTSAirGroundOffset);
                     else
                         RTSDestInternal = value;
+                    foreach (ModuleAIExtension AIEx in AIList)
+                    {
+                        AIEx.WasRTS = isRTSControlled;
+                        AIEx.RTSPos = RTSDestInternal;
+                    }
                 }
             }
             private Vector3 RTSDestInternal = Vector3.zero;
@@ -1334,6 +1350,7 @@ namespace TAC_AI.AI
                 foreach (ModuleAIExtension AIEx in AIList)
                 {
                     AIEx.WasRTS = isRTSControlled;
+                    AIEx.RTSPos = RTSDestInternal;
                 }
             }
 
@@ -1451,12 +1468,27 @@ namespace TAC_AI.AI
                     }
                     if (sender.CurTech?.Team == tank.Team)
                     {
-                        OnSwitchAI();
-                        if (type != (AIType)(-1))
+                        if (type != AIType.Null)
+                        {
+                            OnSwitchAI(true);
                             DediAI = type;
-                        if (driver != AIDriverType.Unset)
+                        }
+                        if (driver != AIDriverType.Null)
+                        {
+                            OnSwitchAI(false);
+                            if (DriverType == AIDriverType.Stationary && driver != AIDriverType.Stationary)
+                            {
+                                UnAnchor();
+                                PlayerAllowAnchoring = true;
+                            }
+                            else
+                            {
+                                TryAnchor();
+                                PlayerAllowAnchoring = false;
+                            }
                             DriverType = driver;
-                        TestForFlyingAIRequirement();
+                        }
+                        SetupMovementAIController();
 
                         //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(tank);
                         //overlay.Update();
@@ -1488,22 +1520,6 @@ namespace TAC_AI.AI
                 MovementController.OnMoveWorldOrigin(move);
             }
 
-
-            public void ResetToDefaultAIController()
-            {
-                if (!(MovementController is AIControllerDefault))
-                {
-                    //Debug.Log("TACtical_AI: Resetting Back to Default AI for " + tank.name);
-                    IMovementAIController controller = MovementController;
-                    MovementController = null;
-                    if (controller != null)
-                    {
-                        controller.Recycle();
-                    }
-                    MovementController = gameObject.AddComponent<AIControllerDefault>();
-                    MovementController.Initiate(tank, this);
-                }
-            }
 
             public void ResetAll(Tank tank)
             {
@@ -1576,11 +1592,47 @@ namespace TAC_AI.AI
                 //overlay.Update();
             }
 
-            public bool TestForFlyingAIRequirement()
+            public void ResetToDefaultAIController()
+            {
+                if (!(MovementController is AIControllerDefault))
+                {
+                    //Debug.Log("TACtical_AI: Resetting Back to Default AI for " + tank.name);
+                    IMovementAIController controller = MovementController;
+                    MovementController = null;
+                    if (controller != null)
+                    {
+                        controller.Recycle();
+                    }
+                    MovementController = gameObject.AddComponent<AIControllerDefault>();
+                    MovementController.Initiate(tank, this);
+                }
+            }
+
+            /// <summary>
+            /// Was previously: TestForFlyingAIRequirement
+            /// </summary>
+            /// <returns>True if the AI can fly</returns>
+            public bool SetupMovementAIController()
             {
                 UsingAirControls = false;
                 var enemy = gameObject.GetComponent<EnemyMind>();
-                if (AIState == AIAlignment.Player && DriverType == AIDriverType.Pilot)
+                if (tank.IsAnchored && !CanAutoAnchor && !enemy)
+                {
+                    if (!(MovementController is AIControllerStatic))
+                    {
+                        IMovementAIController controller = MovementController;
+                        MovementController = null;
+                        if (controller != null)
+                        {
+                            controller.Recycle();
+                        }
+                    }
+                    MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
+                    MovementController.Initiate(tank, this, null);
+                    UsingAirControls = false;
+                    return false;
+                }
+                else if (AIState == AIAlignment.Player && DriverType == AIDriverType.Pilot)
                 {
                     if (!(MovementController is AIControllerAir))
                     {
@@ -1627,6 +1679,7 @@ namespace TAC_AI.AI
                     return false;
                 }
             }
+
 
             /// <summary>
             /// Does not remove EnemyMind
@@ -1800,7 +1853,7 @@ namespace TAC_AI.AI
                 {
                     if (enemy.EvilCommander == EnemyHandling.Airplane || enemy.EvilCommander == EnemyHandling.Chopper)
                     {
-                        TestForFlyingAIRequirement();
+                        SetupMovementAIController();
                     }
                     else
                     {
@@ -1830,7 +1883,7 @@ namespace TAC_AI.AI
                     }
                     else if (DriverType == AIDriverType.Pilot)
                     {
-                        TestForFlyingAIRequirement();
+                        SetupMovementAIController();
                     }
                 }
 
@@ -1872,6 +1925,7 @@ namespace TAC_AI.AI
                 }
                 catch { }
 
+                /*
                 if (hasAnchorableAI)
                 {
                     DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is considered an Anchored Tech with the given conditions and will auto-anchor.");
@@ -1880,10 +1934,10 @@ namespace TAC_AI.AI
                         TryAnchor();
                         ForceAllAIsToEscort();
                     }
-                }
-                if (DriverType == AIDriverType.Unset)
+                }*/
+                if (DriverType == AIDriverType.AutoSet)
                 {
-                    DriverType = HandlingDetermine(tank);
+                    DriverType = HandlingDetermine(tank, this);
                     switch (DriverType)
                     {
                         case AIDriverType.Astronaut:
@@ -1898,21 +1952,22 @@ namespace TAC_AI.AI
                             if (!isBuccaneerAvail)
                                 DriverType = AIDriverType.Tank;
                             break;
-                        case AIDriverType.Unset:
+                        case AIDriverType.AutoSet:
                             DriverType = AIDriverType.Tank;
                             break;
                         case AIDriverType.Tank:
+                        case AIDriverType.Stationary:
                             break;
                         default:
                             DebugTAC_AI.LogError("TACtical_AI: Encountered illegal AIDriverType on Allied AI Driver HandlingDetermine!");
                             break;
                     }
                     if (DriverType == AIDriverType.Pilot)
-                        TestForFlyingAIRequirement();
+                        SetupMovementAIController();
                 }
             }
 
-            public void OnSwitchAI(bool resetRTSstate = true)
+            public void OnSwitchAI(bool resetRTSstate)
             {
                 AvoidStuff = true;
                 EstTopSped = 1;
@@ -1929,6 +1984,10 @@ namespace TAC_AI.AI
                 if (resetRTSstate)
                 {
                     isRTSControlled = false;
+                    foreach (ModuleAIExtension AIEx in AIList)
+                    {
+                        AIEx.WasRTS = isRTSControlled;
+                    }
                     tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
                 }
                 //World.PlayerRTSControl.ReleaseControl(this);
@@ -3130,7 +3189,8 @@ namespace TAC_AI.AI
 
             // Allow allies to approach mobile base techs
             internal bool techIsApproaching = false;
-            public void AllowApproach()
+            internal TankAIHelper ApproachingTech;
+            public void AllowApproach(TankAIHelper Approaching)
             {
                 if (AvoidStuff)
                 {
@@ -3140,6 +3200,8 @@ namespace TAC_AI.AI
                     //Debug.Log("TACtical_AI: AI " + tank.name + ":  Allowing approach");
                     Invoke("StopAllowApproach", 2);
                 }
+                if (!techIsApproaching)
+                    ApproachingTech = Approaching;
                 techIsApproaching = true;
             }
             private void StopAllowApproach()
@@ -3148,7 +3210,9 @@ namespace TAC_AI.AI
                 {
                     AvoidStuff = true;
                 }
+
                 techIsApproaching = false;
+                ApproachingTech = null;
             }
 
             // Drop all items in collectors (Aircraft resource payload drop)
@@ -3414,6 +3478,9 @@ namespace TAC_AI.AI
                     TryReallyAnchor();
                 }
             }
+
+            private static MethodInfo MI = typeof(TechAnchors).GetMethod("ConfigureJoint", BindingFlags.NonPublic | BindingFlags.Instance);
+
             /// <summary>
             /// IGNORES CHECKS
             /// </summary>
@@ -3421,16 +3488,51 @@ namespace TAC_AI.AI
             {
                 if (!tank.IsAnchored)
                 {
-                    tank.FixupAnchors(true);
-                    if (!tank.IsAnchored)
+                    bool worked = false;
+                    Vector3 startPosTrans = tank.trans.position;
+                    tank.FixupAnchors(false);
+                    Vector3 startPos = tank.visible.centrePosition;
+                    Quaternion tankFore = Quaternion.LookRotation(tank.trans.forward.SetY(0).normalized, Vector3.up);
+                    //Quaternion tankStartRot = tank.trans.rotation;
+                    for (int step = 0; step < 16; step++)
                     {
-                        tank.Anchors.RetryAnchorOnBeam = true;
-                        tank.Anchors.TryAnchorAll(true);
+                        if (!tank.IsAnchored)
+                        {
+                            Vector3 newPos = startPos + new Vector3(0, -4, 0);
+                            newPos.y += step / 2f;
+                            tank.visible.Teleport(newPos, tankFore, false);
+                            tank.Anchors.TryAnchorAll();
+                        }
+                        if (tank.IsAnchored)
+                        {
+                            worked = true;
+                            break;
+                        }
+                        tank.FixupAnchors(true);
                     }
-                    if (tank.IsAnchored && AIState == AIAlignment.Player)
-                        ForceAllAIsToEscort(true);
-                    else
-                        ExpectAITampering = true;
+                    var anchors = tank.blockman.IterateBlockComponents<ModuleAnchor>();
+                    if (!worked && anchors.Count() > 0)
+                    {
+                        if (AIGlobals.IsAttract || true)
+                        {
+                            DebugTAC_AI.Assert(true, "screw you i'm anchoring anyways, I don't give a f*bron about your anchor checks!");
+                            foreach (var item in anchors)
+                            {
+                                item.AnchorToGround();
+                                if (item.AnchorGeometryActive)
+                                {
+                                    tank.Anchors.AddAnchor(item);
+                                }
+                            }
+                            tank.grounded = true;
+                            MI.Invoke(tank.Anchors, new object[0]);
+                        }
+                        else
+                        {
+                            tank.trans.position = startPosTrans - (Vector3.down * 0.1f);
+                        }
+                    }
+                    ExpectAITampering = true;
                 }
             }
             internal void AdjustAnchors()
@@ -3638,7 +3740,7 @@ namespace TAC_AI.AI
                 }
                 try
                 {
-                    if (CanMoveAndShoot)
+                    if (NotInBeam)
                     {
                         AIEWeapons.WeaponMaintainer(thisControl, this, tank);
                         MovementController.DriveMaintainer(thisControl);
@@ -3679,6 +3781,7 @@ namespace TAC_AI.AI
                             if (dirty)
                             {
                                 dirty = false;
+                                tank.blockman.CheckRecalcBlockBounds();
                                 lastTechExtents = tank.blockBounds.size.magnitude + 1;
                                 if (!PendingDamageCheck)
                                     cachedBlockCount = tank.blockman.blockCount;
@@ -3689,6 +3792,7 @@ namespace TAC_AI.AI
                         else if (dirty)
                         {
                             dirty = false;
+                            tank.blockman.CheckRecalcBlockBounds();
                             lastTechExtents = tank.blockBounds.size.magnitude + 1;
                             tank.netTech.SaveTechData();
                             if (!PendingDamageCheck)
@@ -3701,6 +3805,7 @@ namespace TAC_AI.AI
                         if (dirty)
                         {
                             dirty = false;
+                            tank.blockman.CheckRecalcBlockBounds();
                             lastTechExtents = tank.blockBounds.size.magnitude + 1;
                             if (!PendingDamageCheck)
                                 cachedBlockCount = tank.blockman.blockCount;
@@ -4144,7 +4249,7 @@ namespace TAC_AI.AI
                     if (KickStart.AllowStrategicAI)
                     {
 #if DEBUG
-                        if (World.PlayerRTSControl.PlayerIsInRTS && World.PlayerRTSControl.DevLockToCam)
+                        if (ManPlayerRTS.PlayerIsInRTS && ManPlayerRTS.DevLockToCam)
                         {
                             if (tank.rbody)
                             {

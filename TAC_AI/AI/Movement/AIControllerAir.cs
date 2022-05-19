@@ -311,7 +311,7 @@ namespace TAC_AI.AI
                 List<ModuleWing.Aerofoil> foils = module.m_Aerofoils.ToList();
                 foreach (ModuleWing.Aerofoil foil in foils)
                 {
-                    if (foil.flapTurnSpeed > 0.01)
+                    if (foil.flapTurnSpeed > 0.01f)
                     {
                         if (foil.flapTurnSpeed < aerofoilSpeed)
                         {
@@ -320,21 +320,36 @@ namespace TAC_AI.AI
                     }
                 }
             }
-            if (Helper.lastTechExtents > 18)
+            if (Helper.lastTechExtents >= AIGlobals.LargeAircraftSize)
+            {
+                DebugTAC_AI.Log("LARGE AIRCRAFT " + Helper.lastTechExtents + " ramming: " + Helper.FullMelee);
                 LargeAircraft = true;
+            }
             else
+            {
+                DebugTAC_AI.Log("Normal aircraft " + Helper.lastTechExtents + " ramming: " + Helper.FullMelee);
                 LargeAircraft = false;
+            }
 
             AerofoilSluggishness = AIGlobals.AerofoilSluggishnessBaseValue / aerofoilSpeed;
             if (FlyStyle == FlightType.Helicopter)
-                FlyingChillFactor = Vector3.one * AIGlobals.ChopperChillFactorMulti;
-            else
             {
-                FlyingChillFactor = Vector3.one * AerofoilSluggishness * AIGlobals.AircraftChillFactorMulti;
+                FlyingChillFactor = Vector3.one * AIGlobals.ChopperChillFactorMulti;
                 if (LargeAircraft)
                     FlyingChillFactor.y = 5;    // need accuraccy for large aircraft bombing runs
+            }
+            else
+            {
+                if (LargeAircraft)
+                {
+                    FlyingChillFactor = Vector3.one * AerofoilSluggishness * AIGlobals.LargeAircraftChillFactorMulti;
+                    FlyingChillFactor.y = 5;    // need accuraccy for large aircraft bombing runs
+                }
                 else
+                {
+                    FlyingChillFactor = Vector3.one * AerofoilSluggishness * AIGlobals.AircraftChillFactorMulti;
                     FlyingChillFactor.y = 10;  // Yaw isn't normally too strong on aircraft so we give it a boost.
+                }
             }
 
             RollStrength = Mathf.Clamp(aerofoilSpeed * 2, 0.5f, 2);
@@ -365,7 +380,7 @@ namespace TAC_AI.AI
                 return;
             }
 
-            deltaMovementClock = Tank.rbody.velocity * Time.deltaTime * KickStart.AIDodgeCheapness;
+            deltaMovementClock = Tank.rbody.velocity * Time.deltaTime * KickStart.AIDodgeCheapness * AIGlobals.AircraftPreCrashDetection;
             this.TestForMayday(thisInst, tank);
 
             if (thisInst.AIState == AIAlignment.Player)
@@ -404,7 +419,7 @@ namespace TAC_AI.AI
                 return;
             }
 
-            deltaMovementClock = Tank.rbody.velocity * Time.deltaTime * KickStart.AIDodgeCheapness;
+            deltaMovementClock = Tank.rbody.velocity * Time.deltaTime * KickStart.AIDodgeCheapness * AIGlobals.AircraftPreCrashDetection;
             TestForMayday(thisInst, tank);
 
             if (thisInst.AIState == AIAlignment.Player)
@@ -547,7 +562,7 @@ namespace TAC_AI.AI
         }
         public void UpdateThrottle(AIECore.TankAIHelper thisInst, TankControl control)
         {
-            TankControl.ControlState control3D = (TankControl.ControlState)AircraftUtils.controlGet.GetValue(control);
+            TankControl.ControlState control3D = (TankControl.ControlState)AirplaneUtils.controlGet.GetValue(control);
 
             if (this.NoProps)
             {
@@ -609,13 +624,13 @@ namespace TAC_AI.AI
                 }
             }
             this.CurrentThrottle = Mathf.Clamp(this.CurrentThrottle, -1, 1);
-            AircraftUtils.controlGet.SetValue(control, control3D);
+            AirplaneUtils.controlGet.SetValue(control, control3D);
         }
         public void KillAllControl(TankControl control)
         {
-            TankControl.ControlState control3D = (TankControl.ControlState)AircraftUtils.controlGet.GetValue(control);
+            TankControl.ControlState control3D = (TankControl.ControlState)AirplaneUtils.controlGet.GetValue(control);
             control3D.Reset();
-            AircraftUtils.controlGet.SetValue(control, control3D);
+            AirplaneUtils.controlGet.SetValue(control, control3D);
         }
     }
 }

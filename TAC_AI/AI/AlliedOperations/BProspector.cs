@@ -135,7 +135,7 @@ namespace TAC_AI.AI.AlliedOperations
                         float distFlat = (tank.boundsCentreWorldNoCheck - thisInst.theBase.boundsCentreWorldNoCheck).ToVector2XZ().magnitude;
                         if (distFlat < thisInst.lastBaseExtremes)
                         {   // Final approach - turn off avoidence
-                            thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                            thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                             thisInst.AvoidStuff = false;
                             if (thisInst.recentSpeed == 1)
                             {
@@ -162,7 +162,7 @@ namespace TAC_AI.AI.AlliedOperations
                     {   // Fly aircraft
                         if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + AIGlobals.AircraftHailMaryRange)
                         {   // Final approach - turn off avoidence
-                            thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                            thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                             thisInst.AvoidStuff = false;
                             if (thisInst.recentSpeed == 1)
                             {
@@ -190,7 +190,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents)
                     {   // Final approach - turn off avoidence
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                         thisInst.AvoidStuff = false;
                         if (thisInst.recentSpeed == 1)
                         {
@@ -208,7 +208,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 4)
                     {   // almost at the the base receiver - fine-tune and yield if nesseary for approach
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                         thisInst.AvoidStuff = false;
                         if (thisInst.recentSpeed < 3)
                         {
@@ -230,7 +230,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
                     {   // Near the base, but not quite at the receiver 
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                         if (thisInst.recentSpeed < 3)
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
@@ -336,7 +336,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (dist < girth + 3)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving room to base... |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
                 thisInst.AdviseAway = true;
                 thisInst.ForceSetDrive = true;
@@ -346,7 +346,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist < girth + 7)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
                 thisInst.Yield = true;
                 thisInst.PivotOnly = true;

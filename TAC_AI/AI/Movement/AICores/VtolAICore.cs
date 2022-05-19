@@ -55,19 +55,19 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     if (pilot.PerformUTurn == 1)
                     {
-                        AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
+                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
                         if (pilot.CurrentThrottle > 0.95)
                             pilot.PerformUTurn = 2;
                     }
                     else if (pilot.PerformUTurn == 2)
                     {
-                        AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
+                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
                         if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
                             pilot.PerformUTurn = 3;
                     }
                     else if (pilot.PerformUTurn == 3)
                     {
-                        AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                         if (Vector3.Dot((pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6f)
                             pilot.PerformUTurn = 0;
                     }
@@ -77,7 +77,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     pilot.MainThrottle = 1;
                     this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                     if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
                         pilot.PerformUTurn = 0;
                     return true;
@@ -85,7 +85,7 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                 {
                     this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AircraftUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
                 }
             }
 

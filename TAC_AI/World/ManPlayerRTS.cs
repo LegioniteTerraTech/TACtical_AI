@@ -454,9 +454,11 @@ namespace TAC_AI.World
                     {
                         SetSelectHalo(GrabbedThisFrame, true);
                         GrabbedThisFrame.SetRTSState(true);
+                        SelectUnitSFX();
                     }
                 }
             }
+            bool unselect = false;
             foreach (Tank Tech in ManTechs.inst.CurrentTechs)
             {
                 if (!(bool)Tech)
@@ -486,7 +488,7 @@ namespace TAC_AI.World
                                     if (UnselectTank(TechUnit))
                                     {
                                         SetSelectHalo(TechUnit, false);
-                                        UnSelectUnitSFX();
+                                        unselect = true;
                                     }
                                 }
                             }
@@ -504,7 +506,7 @@ namespace TAC_AI.World
                                     if (UnselectTank(TechUnit))
                                     {
                                         SetSelectHalo(TechUnit, false);
-                                        UnSelectUnitSFX();
+                                        unselect = true;
                                     }
                                 }
                             }
@@ -515,12 +517,19 @@ namespace TAC_AI.World
             DebugTAC_AI.Log("TACtical_AI: GROUP Selected " + Selects);
             if (Selects > 0)
             {
-                foreach (var tech in LocalPlayerTechsControlled)
+                if (Leading)
                 {
-                    GUIAIManager.GetInfo(tech);
+                    GUIAIManager.GetInfo(Leading);
+                    SelectUnitSFX();
+                    if (Selects > 1)
+                        Invoke("SelectUnitSFXDelayed", 0.1f);
                 }
-                SelectUnitSFX();
             }
+            else if (unselect)
+                UnSelectUnitSFX();
+            else
+                Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.DropDown);
+
         }
         public void HandleGroups()
         {
@@ -683,6 +692,10 @@ namespace TAC_AI.World
                             }
                         }
                     }
+                }
+                else if (AIGlobals.IsBaseTeam(grabbedTech.Team))
+                {
+                    GUIEvictionNotice.GetTank(grabbedTech);
                 }
             }
         }
@@ -1190,15 +1203,15 @@ namespace TAC_AI.World
                 {
                     if (lastTank.lastAIType != AITreeType.AITypes.Escort)
                         lastTank.ForceAllAIsToEscort(true);
-                    NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, dediAI, AIDriverType.Unset);
-                    lastTank.OnSwitchAI();
+                    NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, dediAI, AIDriverType.AutoSet);
+                    lastTank.OnSwitchAI(false);
                     if (lastTank.DediAI != dediAI)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     lastTank.DediAI = dediAI;
-                    lastTank.TestForFlyingAIRequirement();
+                    lastTank.SetupMovementAIController();
 
                     //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
                     //overlay.Update();
@@ -1212,14 +1225,14 @@ namespace TAC_AI.World
             {
                 if (lastTank.lastAIType != AITreeType.AITypes.Escort)
                     lastTank.ForceAllAIsToEscort(true);
-                lastTank.OnSwitchAI();
+                lastTank.OnSwitchAI(false);
                 if (lastTank.DediAI != dediAI)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 lastTank.DediAI = dediAI;
-                lastTank.TestForFlyingAIRequirement();
+                lastTank.SetupMovementAIController();
 
                 //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
                 //overlay.Update();
@@ -1674,18 +1687,45 @@ namespace TAC_AI.World
             {
                 if (Leading.tank.IsAnchored)
                 {
-                    Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.RadialMove);
+                    ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                 }
                 else
                 {
-                    Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
+                    Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIIdle);
+                    //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.DropDown);
+                }
+            }
+            else if (GrabbedThisFrame)
+            {
+                if (GrabbedThisFrame.tank.IsAnchored)
+                {
+                    ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+                }
+                else
+                {
+                    Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIIdle);
                     //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.DropDown);
                 }
             }
         }
         public void SelectUnitSFXDelayed()
         {
-            Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.DropDown);
+            if (LocalPlayerTechsControlled.Count > 1)
+            {
+                AIECore.TankAIHelper second = LocalPlayerTechsControlled.ElementAt(1);
+                if (second)
+                {
+                    if (second.tank.IsAnchored)
+                    {
+                        ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+                    }
+                    else
+                    {
+                        Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIIdle);
+                        //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.DropDown);
+                    }
+                }
+            }
         }
         public static void UnSelectUnitSFX()
         {
@@ -1824,7 +1864,6 @@ namespace TAC_AI.World
                             HotWindow = GUI.Window(AIBoxSelectID, HotWindow, GUIHandler, "");//"<b>BoxSelect</b>"
                         else
                             HotWindow = GUI.Window(AIBoxSelectID, HotWindow, GUIHandler, "", modifStyle);
-                        KickStart.ReleaseControl(AIBoxSelectID); // we aren't supposed to be able to select this
                     }
                 }
                 else
@@ -1903,7 +1942,6 @@ namespace TAC_AI.World
                         AIGlobals.StartUI();
                         autopilotMenu = GUI.Window(PlayerAutopilotID, autopilotMenu, GUIHandlerPlayerAutopilot, "", AIGlobals.MenuLeft);
                         AIGlobals.EndUI();
-                        KickStart.ReleaseControl(PlayerAutopilotID); // we aren't supposed to be able to select this
                     } 
                 }
                 else
@@ -1932,7 +1970,7 @@ namespace TAC_AI.World
                     if (tankInst)
                     {
                         tankInst.ForceAllAIsToEscort();
-                        tankInst.TestForFlyingAIRequirement();
+                        tankInst.SetupMovementAIController();
                     }
                 }
             }

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 namespace TAC_AI.AI {
     public enum AIType
     {   //like the old plans, we make the AI do stuff
+        Null = -1,
+
         // COMBAT
         Escort,     // Good ol' player defender                     (Classic player defense numbnut)
         Assault,    // Run off and attack the enemies on your radar (Runs off (beyond radar range!) to attack enemies)
@@ -32,11 +34,16 @@ namespace TAC_AI.AI {
 
     public enum AIDriverType
     {   //like the old plans, we make the AI do stuff
-        Unset,      // Requested auto-set
+        Null = -1,
+        AutoSet,      // Requested auto-set
+
         // COMBAT
         Tank,       // Classic wheeled
         Pilot,      // Flies aircraft, death from above, nuff said  (Flies above ground, by the player and keeps distance) [unload distance will break!]
         Sailor,     // Sails ships amongst ye seas~                 (Avoids terrain above water level)
         Astronaut,  // Flies hoverships and kicks Tech              (Follows player a certain distance above ground level and can follow into the sky)
+
+        // STATIC (bases) - forces AI to stay in "Guard"
+        Stationary,
     }
 }

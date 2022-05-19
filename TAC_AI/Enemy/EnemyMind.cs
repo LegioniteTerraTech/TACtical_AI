@@ -506,7 +506,7 @@ namespace TAC_AI.AI.Enemy
 
             // We begin the search
             if (CommanderAttack == EnemyAttack.Spyper) inRange = AIGlobals.SpyperMaxRange;
-            else if (inRange <= 0) inRange = 500;
+            else if (inRange <= 0) inRange = 350;
             float TargetRange = inRange * inRange;
             Vector3 scanCenter = Tank.boundsCentreWorldNoCheck;
 
@@ -532,7 +532,7 @@ namespace TAC_AI.AI.Enemy
             List<Tank> techs = AIECore.TankAIManager.GetTargetTanks(Tank.Team);
             if (CommanderAttack == EnemyAttack.Pesterer)
             {
-                scanCenter = AircraftUtils.ForeAiming(Tank.visible);
+                scanCenter = AirplaneUtils.ForeAiming(Tank.visible);
                 int launchCount = techs.Count();
                 for (int step = 0; step < launchCount; step++)
                 {

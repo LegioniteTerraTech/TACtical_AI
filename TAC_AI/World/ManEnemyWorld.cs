@@ -246,7 +246,8 @@ namespace TAC_AI.World
                 {
                     if (Vis is ManSaveGame.StoredTech tech)
                     {
-                        RegisterTechUnloaded(tech, WT.Coord);
+                        if (tech.m_TechData.IsBase() || GetTeam(tech.m_TeamID) != null)
+                            RegisterTechUnloaded(tech, WT.Coord);
                     }
                 }
             }
@@ -1148,7 +1149,7 @@ namespace TAC_AI.World
                             continue;
                         }
 
-                        DebugTAC_AI.Log("TACtical_AI: UpdateGrandCommand - Team " + EP.Team + " has been unregistered");
+                        DebugTAC_AI.Info("TACtical_AI: UpdateGrandCommand - Team " + EP.Team + " has been unregistered");
                         TeamDestroyedEvent.Send(EP.Team);
                         EnemyTeams.Remove(EP.Team);
                         EPScrambled.RemoveAt(step);

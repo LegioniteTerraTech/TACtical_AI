@@ -51,7 +51,7 @@ namespace TAC_AI.AI
                 {   // We assume flares or a drone/infantry to launch
                     help.DediAI = AIType.Escort;
                 }
-                help.DriverType = AIECore.HandlingDetermine(tank);
+                help.DriverType = AIECore.HandlingDetermine(tank, help);
                 help.lastCloseAlly = mother;
                 DebugTAC_AI.Log("TACtical_AI: AIESplitHandler - Set to " + help.DediAI + " for " + tank.name);
             }

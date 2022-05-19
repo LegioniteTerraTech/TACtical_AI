@@ -43,7 +43,7 @@ namespace TAC_AI.World
             }
             if (GlobalMakerBaseCount() == 0)
             {
-                DebugTAC_AI.Log("TACtical_AI: UpdateGrandCommand - Team " + Team + " has no production bases");
+                DebugTAC_AI.Info("TACtical_AI: UpdateGrandCommand - Team " + Team + " has no production bases");
                 return false; // NO SUCH TEAM EXISTS (no base!!!)
             }
             PresenceDebug("TACtical_AI: UpdateGrandCommand - Turn for Team " + Team);
@@ -528,6 +528,39 @@ namespace TAC_AI.World
         public int GlobalMobileTechCount()
         {
             return ETUs.Count + RBases.TeamActiveMobileTechCount(Team);
+        }
+
+        public int GlobalTeamCost()
+        {
+            int teamValue = 0;
+            foreach (var item in ETUs)
+            {
+                try
+                {
+                    teamValue += item.tech.m_TechData.GetValue();
+                }
+                catch { }
+            }
+            foreach (var item in EBUs)
+            {
+                try
+                {
+                    teamValue += item.tech.m_TechData.GetValue();
+                }
+                catch { }
+            }
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item.Team == Team)
+                {
+                    try
+                    {
+                        teamValue += item.GetValue();
+                    }
+                    catch { }
+                }
+            }
+            return teamValue;
         }
     }
 }

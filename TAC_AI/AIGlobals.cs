@@ -36,6 +36,7 @@ namespace TAC_AI
         public const float GeneralAirGroundOffset = 10;
         public const float AircraftGroundOffset = 22;
         public const float ChopperGroundOffset = 12;
+        public const float StationaryMoveDampening = 6;
         public const float SafeAnchorDist = 50f;     // enemy too close to anchor
         public const int TeamRangeStart = 256;
         public const short NetAIClockPeriod = 30;
@@ -49,22 +50,28 @@ namespace TAC_AI
         public const int ReverseDelay = 60;
 
         // Control the aircrafts and AI
+        public const float AircraftPreCrashDetection = 1.6f;
         public const float AircraftDestSuccessRadius = 32;
         public const float AerofoilSluggishnessBaseValue = 30;
         public const float AircraftMaxDive = 0.6f;
         public const float AircraftDangerDive = 0.7f;
-        public const float AircraftChillFactorMulti = 4.5f;     // More accuraccy, less responsiveness
-        public const float ChopperOperatingExtraHeight = 0.28f;
-        public const float ChopperChillFactorMulti = 30f;
+        public const float AircraftChillFactorMulti = 4.5f;         // More accuraccy, less responsiveness
+        public const float LargeAircraftChillFactorMulti = 1.25f;   // More responsiveness, less accuraccy
+
         public const float AirNPTMaxHeightOffset = 275;
         public const float AirWanderMaxHeight = 225;
         public const float AirPromoteSpaceHeight = 200;
         public const float AirMaxYaw = 0.2f; // 0 - 1 (float)
-        public const float AirMaxYawBankOnly = 0.5f; // 0 - 1 (float)
+        public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
+
+        public const float ChopperOperatingExtraHeight = 0.38f;
+        public const float ChopperChillFactorMulti = 30f;
+
 
         /// <summary> IN m/s !!!</summary>
+        public const int LargeAircraftSize = 15;            // The size of which we count an aircraft as large
         public const float AirStallSpeed = 42;//25          // The speed of which most wings begin to stall at
-        public const float GroundAttackStagingDist = 250;   // Distance to fly (in meters!) before turning back
+        public const float GroundAttackStagingDist = 225;   // Distance to fly (in meters!) before turning back
 
 
         // Item Handling

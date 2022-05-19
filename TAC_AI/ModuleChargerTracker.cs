@@ -56,7 +56,7 @@ namespace TAC_AI
 
             return (energyThis.storageTotal - energyThis.spareCapacity) > minEnergyAmount && (energyThis.storageTotal - energyThis.spareCapacity) / energyThis.storageTotal > chargeFraction;
         }
-        public void RequestDocking()
+        public void RequestDocking(AIECore.TankAIHelper Approaching)
         {
             if (!DockingRequested)
             {
@@ -67,7 +67,7 @@ namespace TAC_AI
                 }
                 DockingRequested = true;
                 Invoke("StopDocking", 2);
-                tank.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                tank.GetComponent<AIECore.TankAIHelper>().AllowApproach(Approaching);
             }
         }
         private void StopDocking()

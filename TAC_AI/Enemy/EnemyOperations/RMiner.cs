@@ -209,7 +209,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             if (dist < girth + 3)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving room to base... |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
                 thisInst.AdviseAway = true;
                 thisInst.ForceSetDrive = true;
@@ -219,7 +219,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             else if (dist < girth + 7)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
                 thisInst.Yield = true;
                 thisInst.PivotOnly = true;

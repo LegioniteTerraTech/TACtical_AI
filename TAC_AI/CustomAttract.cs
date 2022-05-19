@@ -18,15 +18,15 @@ namespace TAC_AI
             rTime = typeof(ModeAttract).GetField("resetAtTime", BindingFlags.NonPublic | BindingFlags.Instance);
 
         private static readonly Dictionary<AttractType, float> weightedAttracts = new Dictionary<AttractType, float> {
-            { AttractType.BaseVBase,        0.25f },
-            { AttractType.Dogfight,         3.25f },
+            { AttractType.BaseVBase,        1.25f },
+            { AttractType.Dogfight,         5.25f },
             { AttractType.Harvester,        3.75f },
-            { AttractType.BaseSiege,        0.25f },
+            { AttractType.BaseSiege,        2.25f },
             { AttractType.Invader,          0.75f },
             { AttractType.Misc,             0.65f },
             { AttractType.NavalWarfare,     3.25f },
             { AttractType.SpaceBattle,      3.25f },
-            { AttractType.SpaceInvader,     1.6f },
+            { AttractType.SpaceInvader,     1.2f },
         };
 
         internal static AttractType WeightedDetermineRAND()
@@ -105,11 +105,66 @@ namespace TAC_AI
                     }
                 }
             }
+            if (UseFollowCam)
+            {
+                if (FollowTech)
+                {
+                    if (!FollowTech.visible.isActive)
+                    {
+                        TankCamera instCam = CameraManager.inst.GetCamera<TankCamera>();
+                        Tank nextTech = null;
+                        foreach (var item in ManTechs.inst.IterateTechs())
+                        {
+                            if (item.blockman.blockCount > 5)
+                            {
+                                nextTech = item;
+                                break;
+                            }
+                        }
+                        if (nextTech)
+                        {
+                            FollowTech = nextTech;
+                            instCam.ManualZoom(FollowTech.GetCheapBounds() * 1.5f);
+                            instCam.SetFollowTech(FollowTech);
+                        }
+                    }
+                    else
+                    {
+                        if (FollowTech.blockman.blockCount < 6)
+                            FollowTech = null;
+                        //var help = FollowTech.GetComponent<AI.AIECore.TankAIHelper>();
+                        //if (help && help.gr)
+                    }
+                }
+                else
+                {
+                    TankCamera instCam = CameraManager.inst.GetCamera<TankCamera>();
+                    Tank nextTech = null;
+                    foreach (var item in ManTechs.inst.IterateTechs())
+                    {
+                        if (!nextTech && item.blockman.blockCount > 5)
+                        {
+                            nextTech = item;
+                            break;
+                        }
+                    }
+                    if (nextTech)
+                    {
+                        FollowTech = nextTech;
+                        instCam.ManualZoom(FollowTech.GetCheapBounds() * 1.5f);
+                        instCam.SetFollowTech(FollowTech);
+                    }
+                }
+            }
         }
+        private static bool UseFollowCam = false;
+        private static Tank FollowTech;
 
         internal static bool SetupTerrain(ModeAttract __instance)
         {
             // Testing
+            UseFollowCam = false;
+            CameraManager.inst.Switch(CameraManager.inst.GetCamera<FramingCamera>());
             bool caseOverride = true;
             AttractType outNum = AttractType.Harvester;
 
@@ -172,6 +227,39 @@ namespace TAC_AI
             Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(8, 18), 0, 0);//11
             return false;
         }
+        private static void SetupTechCam(ModeAttract __instance, Tank target = null)
+        {
+            UseFollowCam = true;
+            //Vector3 frameCamPos = CameraManager.inst.GetCamera<FramingCamera>().transform.position;
+            //Quaternion frameCamRot = CameraManager.inst.GetCamera<FramingCamera>().transform.rotation;
+            TankCamera instCam = CameraManager.inst.GetCamera<TankCamera>();
+            CameraManager.inst.Switch(instCam);
+            if (target)
+            {
+                FollowTech = target;
+            }
+            else
+            {
+                FollowTech = null;
+                foreach (var item in ManTechs.inst.IterateTechs())
+                {
+                    if (!FollowTech)
+                        FollowTech = item;
+                    if (item.rbody)
+                    {
+                        item.rbody.velocity += item.rootBlockTrans.forward * 45;
+                    }
+                }
+            }
+            if (FollowTech)
+            {
+                instCam.ManualZoom(FollowTech.GetCheapBounds() * 1.5f);
+                //instCam.SetFollowSpringStrength(0.05f);
+                instCam.SetFollowTech(FollowTech);
+                Quaternion look = Quaternion.LookRotation(FollowTech.trans.forward);
+                CameraManager.inst.ResetCamera(FollowTech.trans.position + (look * new Vector3(-12, 5, 0)), look);
+            }
+        }
 
         // TECH COMBAT
         internal static bool SetupTechsStart(ModeAttract __instance)
@@ -209,21 +297,24 @@ namespace TAC_AI
                             break;
 
                         case AttractType.Harvester: // Peaceful harvesting
-                            RawTechLoader.SpawnSpecificTech(spawn,  Vector3.forward, team1, new List<BasePurpose> { BasePurpose.HasReceivers });
                             RawTechLoader.SpawnSpecificTech(tanksToConsider[0], Vector3.forward, team1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting });
+                            Tank first = ManTechs.inst.IterateTechs().FirstOrDefault();
+                            RawTechLoader.SpawnSpecificTech(spawn, Vector3.forward, team1, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.HasReceivers });
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
+                            //SetupTechCam(__instance, first);
                             return false;
 
                         case AttractType.Dogfight: // Aircraft fight
                             for (int step = 0; numToSpawn > step; step++)
                             {
-                                Vector3 position = tanksToConsider[step] + (Vector3.up * 20);
+                                Vector3 position = tanksToConsider[step] + (Vector3.up * 48);
                                 if (!RawTechLoader.SpawnAttractTech(position,  -(spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Air))
                                     DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
                             }
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
+                            SetupTechCam(__instance);
                             return false;
 
                         case AttractType.SpaceBattle: // Airship assault

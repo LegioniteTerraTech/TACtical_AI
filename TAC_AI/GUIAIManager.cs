@@ -26,7 +26,7 @@ namespace TAC_AI
 
         // Mode - Setting
         private static GameObject GUIWindow;
-        private static Rect HotWindow = new Rect(0, 0, 200, 320);   // the "window"
+        private static Rect HotWindow = new Rect(0, 0, 200, 350);   // the "window"
         private static float xMenu = 0;
         private static float yMenu = 0;
 
@@ -125,14 +125,10 @@ namespace TAC_AI
                 // Drivers
                 if (stuckAnchored)
                 {
-                    string textAnchor = "Mobilize";
-                    if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Detach from ground"), AIGlobals.ButtonGreen))
+                    string textAnchor = "Base";
+                    if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Stationary builder"), AIGlobals.ButtonGreen))
                     {
-                        ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
-                        lastTank.UnAnchor();
-                        lastTank.PlayerAllowAnchoring = true;
-                        AIDriver = AIDriverType.Unset;
-                        clickedDriver = true;
+                        ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                 }
                 else if (!lastTank.ActuallyWorks)
@@ -372,8 +368,40 @@ namespace TAC_AI
                     {
                     }
                 }
+                if (lastTank.PlayerAllowAnchoring)
+                {
+                    if (lastTank.tank.Anchors.NumPossibleAnchors > 0 && lastTank.CanAnchorSafely)
+                    {
+                        if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AIGlobals.ButtonGreen))
+                        {
+                            ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
+                            if (ManNetwork.IsHost)
+                            {
+                                lastTank.PlayerAllowAnchoring = false;
+                                lastTank.TryAnchor();
+                            }
+                            AIDriver = AIDriverType.Stationary;
+                            clickedDriver = true;
+                        }
+                    }
+                    else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AIGlobals.ButtonGrey))
+                    {
+                    }
+                }
+                else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Mobilize", "Detach from ground"), AIGlobals.ButtonGreen))
+                {
+                    ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
+                    if (ManNetwork.IsHost)
+                    {
+                        lastTank.UnAnchor();
+                        lastTank.PlayerAllowAnchoring = true;
+                    }
+                    AIDriver = AIDriverType.AutoSet;
+                    clickedDriver = true;
+                }
+                
 
-                GUI.Label(new Rect(20, 265, 160, 50), AIGlobals.UIAlphaText + GUI.tooltip + "</color>");
+                GUI.Label(new Rect(20, 295, 160, 50), AIGlobals.UIAlphaText + GUI.tooltip + "</color>");
                 if (clickedDriver)
                 {
                     SetOptionDriver(AIDriver);
@@ -409,7 +437,7 @@ namespace TAC_AI
                 {
                     try
                     {
-                        NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, (AIType)(-1), driver);
+                        NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, AIType.Null, driver);
 
                         lastTank.OnSwitchAI(false);
                         if (lastTank.DriverType != driver)
@@ -419,7 +447,7 @@ namespace TAC_AI
                         }
                         lastTank.DriverType = driver;
                         lastTank.ForceAllAIsToEscort();
-                        lastTank.TestForFlyingAIRequirement();
+                        lastTank.SetupMovementAIController();
 
                     }
                     catch (Exception e)
@@ -437,10 +465,9 @@ namespace TAC_AI
                     }
                     lastTank.DriverType = driver;
                     lastTank.ForceAllAIsToEscort();
-                    lastTank.TestForFlyingAIRequirement();
+                    lastTank.SetupMovementAIController();
 
                 }
-                windowTimer = 4;
                 inst.TrySetOptionDriverRTS(driver);
                 Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
                 //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
@@ -489,7 +516,11 @@ namespace TAC_AI
                     if (tankInst.isBuccaneerAvail)
                         locDediAI = driver;
                     break;
-                case AIDriverType.Unset:
+                case AIDriverType.Stationary:
+                    if (tankInst.tank.Anchors.NumPossibleAnchors < 1 || !tankInst.CanAnchorSafely)
+                        return;
+                    break;
+                case AIDriverType.AutoSet:
                     break;
                 default:
                     DebugTAC_AI.LogError("TACtical_AI: Encountered illegal AIDriverType on AI Driver switch!");
@@ -499,7 +530,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    NetworkHandler.TryBroadcastNewAIState(tankInst.tank.netTech.netId.Value, (AIType)(-1), locDediAI);
+                    NetworkHandler.TryBroadcastNewAIState(tankInst.tank.netTech.netId.Value, AIType.Null, locDediAI);
                     tankInst.OnSwitchAI(false);
                     if (tankInst.DriverType != driver)
                     {
@@ -508,7 +539,7 @@ namespace TAC_AI
                     }
                     tankInst.ForceAllAIsToEscort();
                     tankInst.DriverType = locDediAI;
-                    tankInst.TestForFlyingAIRequirement();
+                    tankInst.SetupMovementAIController();
 
                 }
                 catch (Exception e)
@@ -526,7 +557,7 @@ namespace TAC_AI
                 }
                 tankInst.ForceAllAIsToEscort();
                 tankInst.DriverType = locDediAI;
-                tankInst.TestForFlyingAIRequirement();
+                tankInst.SetupMovementAIController();
 
             }
         }
@@ -539,9 +570,9 @@ namespace TAC_AI
             {
                 try
                 {
-                    NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, dediAI, AIDriverType.Unset);
+                    NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, dediAI, AIDriverType.Null);
 
-                    lastTank.OnSwitchAI(!ManPlayerRTS.GroupSelecting);
+                    lastTank.OnSwitchAI(true);
                     if (lastTank.DediAI != dediAI)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
@@ -550,7 +581,7 @@ namespace TAC_AI
                     lastTank.DediAI = dediAI;
                     lastTank.ForceAllAIsToEscort();
                     fetchAI = dediAI;
-                    lastTank.TestForFlyingAIRequirement();
+                    lastTank.SetupMovementAIController();
 
                 }
                 catch (Exception e)
@@ -560,7 +591,7 @@ namespace TAC_AI
             }
             else
             {
-                lastTank.OnSwitchAI(!ManPlayerRTS.GroupSelecting);
+                lastTank.OnSwitchAI(true);
                 if (lastTank.DediAI != dediAI)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
@@ -569,7 +600,7 @@ namespace TAC_AI
                 lastTank.DediAI = dediAI;
                 lastTank.ForceAllAIsToEscort();
                 fetchAI = dediAI;
-                lastTank.TestForFlyingAIRequirement();
+                lastTank.SetupMovementAIController();
 
             }
             inst.TrySetOptionRTS(dediAI);
@@ -650,8 +681,8 @@ namespace TAC_AI
             {
                 try
                 {
-                    NetworkHandler.TryBroadcastNewAIState(tankInst.tank.netTech.netId.Value, locDediAI, AIDriverType.Unset);
-                    tankInst.OnSwitchAI(!ManPlayerRTS.GroupSelecting);
+                    NetworkHandler.TryBroadcastNewAIState(tankInst.tank.netTech.netId.Value, locDediAI, AIDriverType.Null);
+                    tankInst.OnSwitchAI(true);
                     tankInst.ForceAllAIsToEscort();
                     if (tankInst.DediAI != dediAI)
                     {
@@ -659,7 +690,7 @@ namespace TAC_AI
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     tankInst.DediAI = locDediAI;
-                    tankInst.TestForFlyingAIRequirement();
+                    tankInst.SetupMovementAIController();
 
                 }
                 catch (Exception e)
@@ -669,7 +700,7 @@ namespace TAC_AI
             }
             else
             {
-                tankInst.OnSwitchAI(!ManPlayerRTS.GroupSelecting);
+                tankInst.OnSwitchAI(false);
                 tankInst.ForceAllAIsToEscort();
                 if (tankInst.DediAI != dediAI)
                 {
@@ -677,7 +708,7 @@ namespace TAC_AI
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 tankInst.DediAI = locDediAI;
-                tankInst.TestForFlyingAIRequirement();
+                tankInst.SetupMovementAIController();
 
             }
         }
@@ -819,7 +850,7 @@ namespace TAC_AI
                 ResetInfo();
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
-                KickStart.ReleaseControl(AIManagerID);
+                KickStart.ReleaseControl();
                 DebugTAC_AI.Log("TACtical_AI: Closed AI menu!");
             }
         }

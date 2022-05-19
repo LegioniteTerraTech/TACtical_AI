@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using UnityEngine;
 
@@ -33,27 +34,18 @@ namespace TAC_AI
                 try
                 {
                     Tank tank = transform.root.GetComponent<Tank>();
-                    tank.FixupAnchors();
+                    AIECore.TankAIHelper help = transform.root.GetComponent<AIECore.TankAIHelper>();
+                    tank.FixupAnchors(true);
                     if (tank.IsAnchored)
                         tank.Anchors.UnanchorAll(true);
                     if (!tank.IsAnchored)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Anchor is being stubborn");
-                        tank.TryToggleTechAnchor();
+                        help.TryReallyAnchor();
                         if (!tank.IsAnchored)
                         {
-                            DebugTAC_AI.Log("TACtical_AI: Anchor is being stubborn 2");
-                            tank.TryToggleTechAnchor();
+                            DebugTAC_AI.Log("TACtical_AI: Anchor is being stubborn");
+                            help.TryReallyAnchor();
                         }
-                    }
-                    if (!tank.IsAnchored)
-                        tank.Anchors.TryAnchorAll(true);
-                    if (!tank.IsAnchored)
-                        tank.TryToggleTechAnchor();
-                    if (!tank.IsAnchored)
-                    {
-                        tank.Anchors.RetryAnchorOnBeam = true;
-                        tank.TryToggleTechAnchor();
                     }
                     GetComponent<TankBlock>().AttachEvent.Subscribe(LoadNow);
                 }

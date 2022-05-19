@@ -1001,7 +1001,7 @@ namespace TAC_AI.Templates
             {
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
-                KickStart.ReleaseControl(RawTechSpawnerID);
+                KickStart.ReleaseControl();
                 DebugTAC_AI.Log("TACtical_AI: Closed Raw Techs Debug menu!");
             }
         }

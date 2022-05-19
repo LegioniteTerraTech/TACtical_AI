@@ -9,7 +9,7 @@ using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Movement.AICores
 {
-    internal class AircraftUtils
+    internal class AirplaneUtils
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -37,16 +37,14 @@ namespace TAC_AI.AI.Movement.AICores
             if (pilot.PerformUTurn == 1)
             {   // Accelerate
                 //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " Executing U-Turn...");
-                DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck),
-                    "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
+               // DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
                 AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
                 if (pilot.CurrentThrottle > 0.95)
                     pilot.PerformUTurn = 2;
             }
             else if (pilot.PerformUTurn == 2)
             {   // Pitch Up
-                DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck),
-                    "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
+                //DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
                 AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
                 if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
                     pilot.PerformUTurn = 3;
@@ -63,12 +61,12 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
         }
-        public static Vector3 DetermineRoll(Tank tank, AIControllerAir pilot, Vector3 Navi3DDirect)
+        public static Vector3 DetermineRoll(Tank tank, AIControllerAir pilot, Vector3 Navi3DDirect, bool forceUp)
         {
             //Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
 
 
-            if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, pilot.Helper.GroundOffsetHeight))
+            if (forceUp)
                 return Vector3.up;
             Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(Navi3DDirect);
             float fwdHeading = Heading.ToVector2XZ().normalized.y;
@@ -151,27 +149,37 @@ namespace TAC_AI.AI.Movement.AICores
 
             Transform root = tank.rootBlockTrans;
 
-            Vector3 insureUpright = (position - tank.boundsCentreWorldNoCheck).normalized; 
-            if (root.forward.y < -AIGlobals.AircraftDangerDive)
+            bool EmergencyUp = false;
+            if (pilot.LargeAircraft)
+            {
+                if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock, AIGlobals.AircraftGroundOffset))
+                {
+                    EmergencyUp = true;
+                }
+            }
+            else if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock, thisInst.lastTechExtents + 2))
+            {
+                EmergencyUp = true;
+            }
+            Vector3 insureUpright = (position - tank.boundsCentreWorldNoCheck).normalized;
+            if (root.forward.y < -AIGlobals.AircraftDangerDive || EmergencyUp)
             {   // CRASH LIKELY, PULL UP! 
                 //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is trying to break from a crash-dive " + root.forward.y);
-                insureUpright = Vector3.up + root.forward;
+                insureUpright = new Vector3(0, 1.45f, 0) + root.forward.SetY(0).normalized;
             }
             else if (insureUpright.y < -AIGlobals.AircraftMaxDive)
-            {   // CRASH LIKELY, PULL UP! 
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is trying to break from a crash-dive " + root.forward.y);
-                insureUpright = root.forward.SetY(0).normalized;
-                insureUpright.y = -0.75f;
+            {   
+                insureUpright = insureUpright.SetY(0).normalized;
+                insureUpright.y = -AIGlobals.AircraftMaxDive;
             }
             else if (Vector3.Dot(insureUpright, root.forward) < 0 && !pilot.ForcePitchUp)
-            {   // CRASH LIKELY, PULL UP! 
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is trying to break from a crash-dive " + root.forward.y);
+            {   // Level when turning far
                 insureUpright = insureUpright.SetY(0).normalized;
-                insureUpright.y = 0.35f;
+                insureUpright.y = 0.1f;
             }
             thisInst.Navi3DDirect = insureUpright.normalized;
           
-            thisInst.Navi3DUp = DetermineRoll(tank, pilot, thisInst.Navi3DDirect);
+            thisInst.Navi3DUp = DetermineRoll(tank, pilot, thisInst.Navi3DDirect, EmergencyUp);
 
             // We must make the controls local to the cab to insure predictable performance
             Vector3 ForwardsLocal = root.InverseTransformDirection(thisInst.Navi3DDirect);

@@ -804,25 +804,24 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.lastEnemy.IsNotNull() && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
-                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformPoint(controller.ProcessedDest).normalized);
+                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
                     if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                     {
                         if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
                             driveVal.y = -1;
                     }
-                    else if (enemyOffsetH + (thisInst.GroundOffsetHeight / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
+                    else 
                     {
                         //Debug.Log("TACtical_AI: leveling");
-                        driveVal.y = Mathf.Clamp((enemyOffsetH + (thisInst.GroundOffsetHeight / 3) - tank.boundsCentreWorldNoCheck.y) / 10, -1, 1);
-                    }
-                    else
-                    {
-                        //Debug.Log("TACtical_AI: Going DOWN");;
-                        driveVal.y = -1;
+                        float leveler = Mathf.Clamp((enemyOffsetH + (thisInst.GroundOffsetHeight / 3) - tank.boundsCentreWorldNoCheck.y) / 10, -1, 1);
+                        if (leveler > -0.25f && enemyOffsetH + (thisInst.GroundOffsetHeight / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
+                            driveVal.y = leveler;
+                        else
+                            driveVal.y = -1f;
                     }
                 }
                 else
-                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformPoint(controller.ProcessedDest).normalized);
+                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
                 driveMultiplier = 1f;
             }
             else
@@ -830,19 +829,19 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.lastEnemy.IsNotNull() && !thisInst.IsMultiTech && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {   //level alt with enemy
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
-                    driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(controller.ProcessedDest).normalized);
+                    driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
                     if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                     {
                         if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
                             driveVal.y = -1;
                     }
-                    else if (enemyOffsetH + (thisInst.GroundOffsetHeight / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
-                    {
-                        driveVal.y = Mathf.Clamp((enemyOffsetH + (thisInst.GroundOffsetHeight / 3) - tank.boundsCentreWorldNoCheck.y) / 10, -1, 1);
-                    }
                     else
                     {
-                        driveVal.y = -1;
+                        float leveler = Mathf.Clamp((enemyOffsetH + (thisInst.GroundOffsetHeight / 3) - tank.boundsCentreWorldNoCheck.y) / 10, -1, 1);
+                        if (leveler > -0.25f && enemyOffsetH + (thisInst.GroundOffsetHeight / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
+                            driveVal.y = leveler;
+                        else
+                            driveVal.y = -1f;
                     }
                 }
                 else
@@ -851,20 +850,21 @@ namespace TAC_AI.AI.Movement.AICores
                     if (range < thisInst.MinimumRad - 1)
                     {
                         driveMultiplier = 1f;
-                        driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformPoint(controller.ProcessedDest).normalized * 0.3f);
+                        driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized * 0.3f);
                     }
                     else if (range > thisInst.MinimumRad + 1)
                     {
-                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(controller.ProcessedDest).normalized);
+                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
                         if (thisInst.DriveDir == EDriveFacing.Forwards || thisInst.DriveDir == EDriveFacing.Backwards)
                             driveMultiplier = 1f;
                         else
                             driveMultiplier = 0.4f;
                     }
                     else
-                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformPoint(controller.ProcessedDest).normalized);
+                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
                 }
             }
+
             bool EmergencyUp = false;
             bool CloseToGroundWarning = false;
             if (ManWorld.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float height))
@@ -879,13 +879,14 @@ namespace TAC_AI.AI.Movement.AICores
                     CloseToGroundWarning = true;
                 }
             }
+
             if (!thisInst.IsMultiTech && CloseToGroundWarning)
             {
-                if (driveVal.y >= -0.5f && driveVal.y < 0f)
+                if (driveVal.y >= -0.3f && driveVal.y < 0f)
                     driveVal.y = 0; // prevent airships from slam-dunk
                 else if (driveVal.y != -1)
                 {
-                    driveVal.y += 0.5f;
+                    driveVal.y += 0.3f;
                 }
             }
 
@@ -898,7 +899,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (thisInst.Yield)
             {
                 // Supports all directions
-                if (thisInst.recentSpeed > 15)
+                if (thisInst.recentSpeed > 20)
                     driveMultiplier = -0.3f;
                 else
                     driveMultiplier = 0.3f;

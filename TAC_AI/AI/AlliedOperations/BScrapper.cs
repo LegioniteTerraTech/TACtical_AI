@@ -120,7 +120,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + AIGlobals.AircraftHailMaryRange)
                     {   // Final approach - turn off avoidence
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                         thisInst.AvoidStuff = false;
                         if (thisInst.recentSpeed == 1)
                         {
@@ -153,7 +153,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (dist < spacing + 4)
                     {
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                         if (thisInst.recentSpeed == 1)
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -179,7 +179,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     else if (dist < spacing + 8)
                     {
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                         if (thisInst.recentSpeed < 3)
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -203,7 +203,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     else if (dist < spacing + 12)
                     {
-                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                        thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                         if (thisInst.recentSpeed < 3)
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
@@ -313,7 +313,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (dist < girth + 3)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving room to base... |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
                 thisInst.AdviseAway = true;
                 thisInst.ForceSetDrive = true;
@@ -323,7 +323,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist < girth + 7)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
                 thisInst.Yield = true;
                 thisInst.PivotOnly = true;

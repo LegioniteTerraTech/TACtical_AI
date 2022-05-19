@@ -137,7 +137,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
                 if (dist < spacing)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                     if (thisInst.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -163,7 +163,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (dist < spacing + 8)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -187,7 +187,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (dist < spacing + 12)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach();
+                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");

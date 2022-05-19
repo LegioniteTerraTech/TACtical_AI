@@ -79,7 +79,7 @@ namespace TAC_AI
                 return ManNetwork.IsNetworked ? AIGlobals.NetAIClockPeriod : AIClockPeriodSet;
             }
         }
-        public static short AIClockPeriodSet = 15;        // How frequently we update
+        public static short AIClockPeriodSet = 10;        // How frequently we update
 
 #if STEAM
         public static bool EnableBetterAI = false;  // This is toggled based on if the mod is "enabled" by official
@@ -195,14 +195,25 @@ namespace TAC_AI
 
         public static bool IsIngame { get { return !ManPauseGame.inst.IsPaused && !ManPointer.inst.IsInteractionBlocked; } }
 
-        public static void ReleaseControl(int ID)
+        public static void ReleaseControl(string Name = null)
         {
-            if (GUIUtility.hotControl == ID)
+            string focused = GUI.GetNameOfFocusedControl();
+            if (Name == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: GUI - Releasing control");
+                DebugTAC_AI.Log("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
                 GUI.FocusControl(null);
                 GUI.UnfocusWindow();
                 GUIUtility.hotControl = 0;
+            }
+            else
+            {
+                if (focused == Name)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
+                    GUI.FocusControl(null);
+                    GUI.UnfocusWindow();
+                    GUIUtility.hotControl = 0;
+                }
             }
         }
 

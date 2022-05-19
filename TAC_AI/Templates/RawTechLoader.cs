@@ -1016,7 +1016,7 @@ namespace TAC_AI.Templates
             BaseTemplate baseTemplate;
             if (ShouldUseCustomTechs(faction, purposes, terrainType, true))
             {
-                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
+                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
             }
             else
             {
@@ -1109,7 +1109,7 @@ namespace TAC_AI.Templates
             BaseTemplate baseTemplate;
             if (ShouldUseCustomTechs(faction, purposes, terrainType, true))
             {
-                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, BasePurpose.NotStationary, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
+                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
             }
             else
             {
@@ -1185,13 +1185,13 @@ namespace TAC_AI.Templates
                     {   // no inf mining
                         return false;
                     }
+                    bool mobile = techPurposes.Contains(BasePurpose.NotStationary);
                     if (purpose == BasePurpose.HarvestingNoHQ)
                     {
                         if (techPurposes.Contains(BasePurpose.Headquarters))
                             return false;
-                        if (techPurposes.Contains(BasePurpose.Harvesting) && !techPurposes.Contains(BasePurpose.NotStationary))
-                            return true;
-                        return false;
+                        if (!(techPurposes.Contains(BasePurpose.Harvesting) && !mobile))
+                            return false;
                     }
                     if (purpose == BasePurpose.AnyNonHQ)
                     {
@@ -1199,8 +1199,7 @@ namespace TAC_AI.Templates
                             return false;
                         return true;
                     }
-                    bool notStationary = techPurposes.Contains(BasePurpose.NotStationary);
-                    if (purpose != BasePurpose.NotStationary && notStationary)
+                    if ((purpose == BasePurpose.NotStationary) != mobile)
                         return false;
                     if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
                         return false;
@@ -1212,7 +1211,7 @@ namespace TAC_AI.Templates
                     if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
                         return false;
 
-                    if (purpose == BasePurpose.Harvesting && notStationary)
+                    if (purpose == BasePurpose.Harvesting && mobile)
                         return false;
 
                     if (techPurposes.Count == 0)
@@ -1290,56 +1289,11 @@ namespace TAC_AI.Templates
                     }
                 }
 
-                bool cantSpawnErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs;
+                bool cantErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs;
                 canidates = canidates.FindAll(delegate (BaseTemplate cand)
                 {
                     List<BasePurpose> techPurposes = cand.purposes;
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
-                    {   // no illegal base in MP
-                        return false;
-                    }
-                    if (!AIGlobals.AllowInfAutominers && techPurposes.Contains(BasePurpose.Autominer))
-                    {   // no inf mining
-                        return false;
-                    }
-                    if (purposes.Contains(BasePurpose.HarvestingNoHQ))
-                    {
-                        if (techPurposes.Contains(BasePurpose.Headquarters))
-                            return false;
-                        if (techPurposes.Contains(BasePurpose.Harvesting) && !techPurposes.Contains(BasePurpose.NotStationary))
-                            return true;
-                        return false;
-                    }
-                    if (purposes.Contains(BasePurpose.AnyNonHQ) && !techPurposes.Contains(BasePurpose.NotStationary))
-                    {
-                        if (techPurposes.Contains(BasePurpose.Headquarters))
-                            return false;
-                        return true;
-                    }
-                    if (!purposes.Contains(BasePurpose.NotStationary) && techPurposes.Contains(BasePurpose.NotStationary))
-                        return false;
-                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
-                        return false;
-                    if (searchAttract && techPurposes.Contains(BasePurpose.NoWeapons))
-                        return false;
-                    if (subNeutral && techPurposes.Contains(BasePurpose.NoWeapons))
-                        return true;
-                    if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
-                        return false;
-
-                    if (purposes.Contains(BasePurpose.Harvesting) && techPurposes.Contains(BasePurpose.NotStationary) && !purposes.Contains(BasePurpose.NotStationary))
-                        return false;
-
-                    if (techPurposes.Count == 0)
-                        return false;
-
-                    bool valid = true;
-                    foreach (BasePurpose purpose in purposes)
-                    {
-                        if (!techPurposes.Contains(purpose))
-                            valid = false;
-                    }
-                    return valid;
+                    return ComparePurposes(purposes, techPurposes, cantErad, subNeutral, searchAttract);
                 });
 
                 if (terra == BaseTerrain.AnyNonSea)
@@ -1980,29 +1934,15 @@ namespace TAC_AI.Templates
             }
             else
                 TryForceIntoPop(theTech);
-            if (ForceAnchor)
-            {
-                if (!theTech.IsAnchored)
-                {
-                    theTech.FixupAnchors(true);
-                }
-                if (!theTech.IsAnchored)
-                    theTech.TryToggleTechAnchor();
-                if (!theTech.IsAnchored)
-                    theTech.Anchors.TryAnchorAll(true);
-                if (!theTech.IsAnchored)
-                {
-                    theTech.Anchors.RetryAnchorOnBeam = true;
-                    theTech.Anchors.TryAnchorAll(true);
-                }
-                if (!theTech.IsAnchored)
-                    DebugTAC_AI.Log("TACtical_AI: InstantTech - Game is being stubborn - repeated attempts to anchor failed");
-            }
 
             ForceAllBubblesUp(theTech);
             ReconstructConveyorSequencing(theTech);
             if (ForceAnchor)
+            {
                 theTech.gameObject.AddComponent<RequestAnchored>();
+                theTech.trans.position = theTech.trans.position + new Vector3(0, -0.5f, 0);
+                //theTech.visible.MoveAboveGround();
+            }
 
             DebugTAC_AI.Log("TACtical_AI: InstantTech - Built " + name);
 
@@ -2371,6 +2311,62 @@ namespace TAC_AI.Templates
             return TempManager.techBases.ElementAtOrDefault(0).Value;
         }
 
+
+        internal static bool ComparePurposes(List<BasePurpose> purposes, List<BasePurpose> techPurposes, bool cantErad, bool subNeutral, bool searchAttract)
+        {
+            if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
+            {   // no illegal base in MP
+                return false;
+            }
+            if (!AIGlobals.AllowInfAutominers && techPurposes.Contains(BasePurpose.Autominer))
+            {   // no inf mining
+                return false;
+            }
+
+            if (techPurposes.Count == 0)
+                return false;
+
+            bool mobile = techPurposes.Contains(BasePurpose.NotStationary);
+
+            if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
+                return false;
+            if (searchAttract && techPurposes.Contains(BasePurpose.NoWeapons))
+                return false;
+            if (subNeutral && techPurposes.Contains(BasePurpose.NoWeapons))
+                return true;
+            if (cantErad && techPurposes.Contains(BasePurpose.NANI))
+                return false;
+
+            if (mobile != purposes.Contains(BasePurpose.NotStationary))
+                return false;
+
+            bool valid = true;
+            foreach (BasePurpose purpose in purposes)
+            {
+                switch (purpose)
+                {
+                    case BasePurpose.AnyNonHQ:
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
+                            return false;
+                        break;
+                    case BasePurpose.HarvestingNoHQ:
+                        if (techPurposes.Contains(BasePurpose.Headquarters))
+                            return false;
+                        if (!techPurposes.Contains(BasePurpose.Harvesting))
+                            return false;
+                        break;
+                    case BasePurpose.AttractTech:
+                    case BasePurpose.NotStationary:
+                        break;
+                    default:
+                        if (!techPurposes.Contains(purpose))
+                            valid = false;
+                        break;
+                }
+            }
+            return valid;
+        }
+        
         internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             try
@@ -2409,13 +2405,13 @@ namespace TAC_AI.Templates
                     {   // no inf mining
                         return false;
                     }
+                    bool mobile = techPurposes.Contains(BasePurpose.NotStationary);
                     if (purpose == BasePurpose.HarvestingNoHQ)
                     {
                         if (techPurposes.Contains(BasePurpose.Headquarters))
                             return false;
-                        if (techPurposes.Contains(BasePurpose.Harvesting) && !techPurposes.Contains(BasePurpose.NotStationary))
-                            return true;
-                        return false;
+                        if (!(techPurposes.Contains(BasePurpose.Harvesting) && !mobile))
+                            return false;
                     }
                     if (purpose == BasePurpose.AnyNonHQ)
                     {
@@ -2423,8 +2419,7 @@ namespace TAC_AI.Templates
                             return false;
                         return true;
                     }
-                    bool notStationary = techPurposes.Contains(BasePurpose.NotStationary);
-                    if (purpose != BasePurpose.NotStationary && notStationary)
+                    if ((purpose == BasePurpose.NotStationary) != mobile)
                         return false;
                     if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
                         return false;
@@ -2436,7 +2431,7 @@ namespace TAC_AI.Templates
                     if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
                         return false;
 
-                    if (purpose == BasePurpose.Harvesting && notStationary)
+                    if (purpose == BasePurpose.Harvesting && mobile)
                         return false;
 
                     if (techPurposes.Count == 0)
@@ -2521,55 +2516,11 @@ namespace TAC_AI.Templates
                     }
                 }
 
+                bool cantErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs;
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
                     List<BasePurpose> techPurposes = cand.Value.purposes;
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
-                    {   // no illegal base in MP
-                        return false;
-                    }
-                    if (!AIGlobals.AllowInfAutominers && techPurposes.Contains(BasePurpose.Autominer))
-                    {   // no inf mining
-                        return false;
-                    }
-                    if (purposes.Contains(BasePurpose.HarvestingNoHQ))
-                    {
-                        if (techPurposes.Contains(BasePurpose.Headquarters))
-                            return false;
-                        if (techPurposes.Contains(BasePurpose.Harvesting) && !techPurposes.Contains(BasePurpose.NotStationary))
-                            return true;
-                        return false;
-                    }
-                    if (purposes.Contains(BasePurpose.AnyNonHQ))
-                    {
-                        if (techPurposes.Contains(BasePurpose.Headquarters) && !techPurposes.Contains(BasePurpose.NotStationary))
-                            return false;
-                        return true;
-                    }
-                    if (!purposes.Contains(BasePurpose.NotStationary) && techPurposes.Contains(BasePurpose.NotStationary))
-                        return false;
-                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
-                        return false;
-                    if (searchAttract && techPurposes.Contains(BasePurpose.NoWeapons))
-                        return false;
-                    if (subNeutral && techPurposes.Contains(BasePurpose.NoWeapons))
-                        return true;
-                    if ((!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs) && techPurposes.Contains(BasePurpose.NANI))
-                        return false;
-
-                    if (purposes.Contains(BasePurpose.Harvesting) && techPurposes.Contains(BasePurpose.NotStationary) && !purposes.Contains(BasePurpose.NotStationary))
-                        return false;
-
-                    if (techPurposes.Count == 0)
-                        return false;
-
-                    bool valid = true;
-                    foreach (BasePurpose purpose in purposes)
-                    {
-                        if (!techPurposes.Contains(purpose))
-                            valid = false;
-                    }
-                    return valid;
+                    return ComparePurposes(purposes, techPurposes, cantErad, subNeutral, searchAttract);
                 });
 
 
@@ -2942,63 +2893,10 @@ namespace TAC_AI.Templates
                     if (types.Count() == 0)
                         return;
                     mems = memory.ReturnAllPositionsOfMultipleTypes(types);
-                    if (mems.Count() == 0)
-                        return;
-
-                    foreach (TankBlock block in blocs)
-                    {   // detach
-                        try
-                        {
-                            if (block.IsAttached)
-                                tank.blockman.Detach(block, false, false, false);
-                        }
-                        catch
-                        {
-                            DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 1");
-                        }
-                    }
-
-                    AIERepair.BulkAdding = true;
-                    bool added = false;
-                    do {
-                        added = false;
-
-                        for (int step = 0; step < mems.Count; step++)
-                        {   // reconstruct
-                            try
-                            {
-                                TankBlock block = null;
-                                for (int step2 = 0; step2 < blocs.Count; step2++)
-                                {
-                                    if (blocs[step2].name == mems[step].t)
-                                    {
-                                        block = blocs[step2];
-                                        break;
-                                    }
-                                }
-                                if (block == null)
-                                    continue;
-
-                                if (!AIERepair.AIBlockAttachRequest(tank, mems[step], block))
-                                {
-                                    //DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 3");
-                                    added = true;
-                                }
-                                else
-                                {
-                                    blocs[step].damage.AbortSelfDestruct();
-                                    break;
-                                }
-                            }
-                            catch
-                            {
-                                DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 2");
-                            }
-                        }
-                    }
-                    while (added);
-                    AIERepair.BulkAdding = false;
+                    ReconstructConveyorSequencingInternal(tank, mems, types);
                 }
+                else
+                    ReconstructConveyorSequencingNoMem(tank);
                 // can't fix - any previous design data was not saved!
             }
             catch
@@ -3006,7 +2904,119 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
             }
         }
-        
+        private static void ReconstructConveyorSequencingNoMem(Tank tank)
+        {
+            try
+            {
+                if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
+                    return;
+
+                List<BlockMemory> mems = new List<BlockMemory>();
+                List<TankBlock> blocs = new List<TankBlock>();
+                List<BlockTypes> types = new List<BlockTypes>();
+                foreach (TankBlock chain in tank.blockman.IterateBlocks())
+                {   // intel
+                    if (chain.GetComponent<ModuleItemConveyor>())
+                    {
+                        BlockMemory BM = new BlockMemory
+                        {
+                            t = chain.name,
+                            p = chain.cachedLocalPosition,
+                            r = chain.cachedLocalRotation.rot,
+                        };
+                        mems.Add(BM);
+                        blocs.Add(chain);
+                        if (!types.Contains(chain.BlockType))
+                            types.Add(chain.BlockType);
+                    }
+                }
+                if (types.Count() == 0)
+                    return;
+                ReconstructConveyorSequencingInternal(tank, mems, types);
+                // can't fix - any previous design data was not saved!
+            }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
+            }
+        }
+        private static void ReconstructConveyorSequencingInternal(Tank tank, List<BlockMemory> memsConvey, List<BlockTypes> types)
+        {
+            try
+            {
+                if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
+                    return;
+
+                List<TankBlock> blocs = new List<TankBlock>();
+                foreach (TankBlock chain in tank.blockman.IterateBlocks())
+                {   // intel
+                    if (chain.GetComponent<ModuleItemConveyor>())
+                    {
+                        blocs.Add(chain);
+                        if (!types.Contains(chain.BlockType))
+                            types.Add(chain.BlockType);
+                    }
+                }
+                if (memsConvey.Count() == 0)
+                    return;
+
+                foreach (TankBlock block in blocs)
+                {   // detach
+                    try
+                    {
+                        if (block.IsAttached)
+                            tank.blockman.Detach(block, false, false, false);
+                    }
+                    catch
+                    {
+                        DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 1");
+                    }
+                }
+
+                AIERepair.BulkAdding = true;
+
+                int count = memsConvey.Count;
+                for (int stepBloc = 0; stepBloc < blocs.Count; stepBloc++)
+                {
+                    for (int step = 0; step < count; step++)
+                    {   // reconstruct
+                        try
+                        {
+                            if (blocs[stepBloc].name == memsConvey[step].t)
+                            {
+                                TankBlock block = blocs[stepBloc];
+                                if (block == null)
+                                    continue;
+
+                                if (!AIERepair.AIBlockAttachRequest(tank, memsConvey[step], block))
+                                {
+                                    //DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 3");
+                                }
+                                else
+                                {
+                                    blocs[step].damage.AbortSelfDestruct();
+                                    memsConvey.RemoveAt(step);
+                                    count--;
+                                    step--;
+                                    break;
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 2");
+                        }
+                    }
+                }
+                AIERepair.BulkAdding = false;
+                // can't fix - any previous design data was not saved!
+            }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
+            }
+        }
+
 
         internal static FieldInfo charge = typeof(ModuleShieldGenerator).GetField("m_EnergyDeficit", BindingFlags.NonPublic | BindingFlags.Instance);
         internal static FieldInfo charge2 = typeof(ModuleShieldGenerator).GetField("m_State", BindingFlags.NonPublic | BindingFlags.Instance);

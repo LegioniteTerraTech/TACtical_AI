@@ -580,6 +580,7 @@ namespace TAC_AI.AI.Movement
 
 
             Vector3 InputLineVal = controlOverload.m_State.m_InputMovement;
+            // Copy LME Here
             if (tankToCopy.GetComponent<AIECore.TankAIHelper>().CanCopyControls || tankToCopy.PlayerFocused)
             {
                 if (tankToCopy.control.GetThrottle(0, out float throttleX))

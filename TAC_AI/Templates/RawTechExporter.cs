@@ -320,7 +320,7 @@ namespace TAC_AI.Templates
             {
                 isOpen = false;
                 GUIWindow.SetActive(false);
-                KickStart.ReleaseControl(RawTechExporterID);
+                KickStart.ReleaseControl();
                 //Debug.Log("TACtical_AI: Closed RawJSON menu");
             }
         }

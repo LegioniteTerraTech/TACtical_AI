@@ -196,7 +196,7 @@ namespace TAC_AI
                         DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
                         thisInst.RefreshAI();
                         if (SavedAIDriver == AIDriverType.Pilot)
-                            thisInst.TestForFlyingAIRequirement();
+                            thisInst.SetupMovementAIController();
                         if (WasMobileAnchor)
                         { 
                         }
@@ -275,7 +275,7 @@ namespace TAC_AI
                                     thisInst.DediAI = serialData2.savedMode;
                                     thisInst.RefreshAI();
                                     if (serialData2.savedMode == AIType.Aviator)
-                                        thisInst.TestForFlyingAIRequirement();
+                                        thisInst.SetupMovementAIController();
                                 }
                                 SavedAI = serialData2.savedMode;
                                 if (serialData2.wasRTS)

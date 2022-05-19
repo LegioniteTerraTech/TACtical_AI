@@ -10,11 +10,11 @@ namespace TAC_AI.AI.Movement.AICores
     {
         private const float ignoreTurning = 0.875f;
         private const float MinThrottleToTurnFull = 0.75f;
-        private const float MaxThrottleToTurnAccurate = 0.25f;
+        private const float MaxThrottleToTurnAccurate = 0.5f;
         public static bool Turner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, out float turnVal)
         {
             turnVal = 1;
-            float forwards = Vector2.Dot(destinationVec.normalized.ToVector2XZ(), helper.tank.rootBlockTrans.forward.ToVector2XZ());
+            float forwards = Vector2.Dot(destinationVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
 
             if (forwards > ignoreTurning && thisControl.DriveControl >= MinThrottleToTurnFull)
                 return false;
