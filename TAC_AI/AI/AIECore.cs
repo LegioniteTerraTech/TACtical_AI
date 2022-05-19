@@ -920,7 +920,10 @@ namespace TAC_AI.AI
                     if (Singleton.playerTank)
                     {
                         if (CustomAttract.UseFollowCam)
+                        {
                             CameraManager.inst.GetCamera<TankCamera>().SetFollowTech(null);
+                            CustomAttract.UseFollowCam = false;
+                        }
                         var helper = Singleton.playerTank.GetComponent<TankAIHelper>();
                         if (Input.GetMouseButton(0) && Singleton.playerTank.control.FireControl && ManPointer.inst.targetVisible)
                         {
