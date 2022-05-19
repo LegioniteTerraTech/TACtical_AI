@@ -919,6 +919,8 @@ namespace TAC_AI.AI
                         ToggleTeamRetreat(Singleton.Manager<ManPlayer>.inst.PlayerTeam);
                     if (Singleton.playerTank)
                     {
+                        if (CustomAttract.UseFollowCam)
+                            CameraManager.inst.GetCamera<TankCamera>().SetFollowTech(null);
                         var helper = Singleton.playerTank.GetComponent<TankAIHelper>();
                         if (Input.GetMouseButton(0) && Singleton.playerTank.control.FireControl && ManPointer.inst.targetVisible)
                         {

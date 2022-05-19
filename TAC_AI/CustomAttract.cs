@@ -157,7 +157,7 @@ namespace TAC_AI
                 }
             }
         }
-        private static bool UseFollowCam = false;
+        internal static bool UseFollowCam = false;
         private static Tank FollowTech;
 
         internal static bool SetupTerrain(ModeAttract __instance)
