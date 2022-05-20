@@ -1731,9 +1731,13 @@ namespace TAC_AI.AI
                         }
                     }
                 }
+#if !STEAM
+                if (KickStart.isBlockInjectorPresent)
+#endif
+                    ConstructModdedIDList();
             }
             catch { };
-            ConstructModdedIDList();
+
             DebugTAC_AI.Log("TACtical_AI: ConstructErrorBlocksList - There are " + errorNames.Count + " blocks with names not equal to their type");
         }
         public static bool TryGetMismatchNames(string name, ref BlockTypes type)
@@ -1785,8 +1789,6 @@ namespace TAC_AI.AI
             catch { DebugTAC_AI.Log("TACtical_AI: ConstructModdedIDList - Error on compile"); };
             DebugTAC_AI.Log("TACtical_AI: ConstructModdedIDList - compiled " + UnOf_Offi.Count());
 #else
-            if (!KickStart.isBlockInjectorPresent)
-                return;
             try
             {
                 foreach (KeyValuePair<int, CustomBlock> pair in BlockLoader.CustomBlocks)
