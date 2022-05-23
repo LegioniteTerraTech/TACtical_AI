@@ -274,6 +274,7 @@
     <Compile Include="Enemy\RWeapSetup.cs" />
     <Compile Include="GUIAIManager.cs" />
     <Compile Include="GUIEvictionNotice.cs" />
+    <Compile Include="ModuleWorldRadar.cs" />
     <Compile Include="ReverseCache.cs" />
     <Compile Include="ModuleAIExtension.cs" />
     <Compile Include="ModuleChargerTracker.cs" />

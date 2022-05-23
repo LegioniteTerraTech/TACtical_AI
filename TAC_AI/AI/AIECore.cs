@@ -9,7 +9,7 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.AI.AlliedOperations;
 using TAC_AI.Templates;
 using TAC_AI.World;
-//using RandomAdditions;
+using RandomAdditions;
 
 namespace TAC_AI.AI
 {
@@ -474,6 +474,11 @@ namespace TAC_AI.AI
             return false;
         }
 
+        public static bool HasOmniCore(TankBlock block)
+        {
+            return block.GetComponent<ModuleOmniCore>() && !block.GetComponent<ModuleWheels>();
+        }
+
         public static AIDriverType HandlingDetermine(Tank tank, TankAIHelper helper)
         {
             var BM = tank.blockman;
@@ -485,13 +490,15 @@ namespace TAC_AI.AI
 
             if (KickStart.IsRandomAdditionsPresent)
             {
-                foreach (var item in BM.IterateBlocks())
+                try
                 {
-                    if (item.GetComponent<ModuleOmniCore>() && !item.GetComponent<ModuleWheels>())
+                    foreach (var item in BM.IterateBlocks())
                     {
-                        return AIDriverType.Astronaut;
+                        if (HasOmniCore(item))
+                            return AIDriverType.Astronaut;
                     }
                 }
+                catch { };
             }
 
             bool isFlying = false;
