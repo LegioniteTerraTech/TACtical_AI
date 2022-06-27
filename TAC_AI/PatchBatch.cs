@@ -1464,6 +1464,7 @@ namespace TAC_AI
                                 TechData newTech;
                                 FactionTypesExt FTE = TSP.m_TechToSpawn.GetMainCorpExt();
                                 FactionSubTypes FST = KickStart.CorpExtToCorp(FTE);
+                                FactionLevel lvl = RawTechLoader.TryGetPlayerLicenceLevel(); 
                                 if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(freeSpaceParams.m_CenterPos) && RawTechExporter.GetBaseTerrain(TSP.m_TechToSpawn, TSP.m_TechToSpawn.CheckIsAnchored()) == BaseTerrain.Land)
                                 {
                                     // OVERRIDE TO SHIP
@@ -1478,7 +1479,7 @@ namespace TAC_AI
                                         catch { }
 
 
-                                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
+                                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
                                         {
                                             int randSelect = valid.GetRandomEntry();
                                             newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
@@ -1503,7 +1504,7 @@ namespace TAC_AI
                                         }
                                         else
                                         {
-                                            SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
+                                            SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
                                             if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                             {
                                                 newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
@@ -1546,7 +1547,7 @@ namespace TAC_AI
                                                 grade = ManLicenses.inst.GetCurrentLevel(FST);
                                         }
                                         catch { }
-                                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
+                                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
                                         {
                                             int randSelect = valid.GetRandomEntry();
                                             newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
@@ -1571,7 +1572,7 @@ namespace TAC_AI
                                         }
                                         else
                                         {
-                                            SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
+                                            SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
                                             if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                                             {
                                                 newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);

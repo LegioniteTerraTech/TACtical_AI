@@ -1827,9 +1827,12 @@ namespace TAC_AI.AI
                 {
                     searchEnd = indexFind + searchBase.Length;
                     searchLength = text.Substring(searchEnd).IndexOf(",");
-                    output = text.Substring(searchEnd, searchLength);
-                    intCase = (int)float.Parse(output);
-                    return true;
+                    if (searchLength != -1)
+                    {
+                        output = text.Substring(searchEnd, searchLength);
+                        intCase = (int)float.Parse(output);
+                        return true;
+                    }
                     //Debug.Log(searchEnd + " | " + searchLength + " | " + output + " | ");
                 }
                 catch (Exception e) { DebugTAC_AI.LogError(searchEnd + " | " + searchLength + " | " + output + " | " + e); }

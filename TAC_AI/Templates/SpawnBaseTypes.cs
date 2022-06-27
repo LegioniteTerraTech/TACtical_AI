@@ -39,7 +39,8 @@ namespace TAC_AI.Templates
         GCMiningRig,
         GCTerraBore,
         GCProspectorHub,// To-Do [Heavy Mining drone spawner]
-        GCMiningLaser,// To-Do
+        GCMiningLaser,
+        GCDefTurret,
         //-HQs
         GCHeadquarters,
 
@@ -60,6 +61,7 @@ namespace TAC_AI.Templates
         HEMunitionsDepot,// To-Do [Bike factory]
         HETankFactory,// To-Do [Light tank spawner]
         HEAAFactory, // To-Do [AA spawner]
+        HEArtyFactory,
         HEXLTankFactory,
         HEAircraftGarrison,
         //-HQs
@@ -68,7 +70,8 @@ namespace TAC_AI.Templates
         // Better Future
         BFGains,
         BFExtractor,
-        BFShampoo,// To-Do [small ground Tech spawner]
+        BFDrifter,
+        BFShampoo,// To-Do [medium ground Tech spawner]
         BFHoverFactory,
         BFSporkFabricator,// To-Do [medium spaceship spawner]
         //-HQs
@@ -87,6 +90,7 @@ namespace TAC_AI.Templates
         GSOTowerDefense,
         GSOMegaDefense,
         GCMiningLaserLite,
+        GCDefenseTurret,
         VENDeputyTurret,
         HEPerimeterDefense,
         HECapitalDefense,
@@ -98,9 +102,10 @@ namespace TAC_AI.Templates
         GSOTonyTeam,
         GSOHarvesterTech,
         GCHarvesterTech,
+
         // Hybridz - will spawn if player is at every max grade corp and they are PAIN
         AttractServo,
-        // TAC lol
+        // TAC lol (WILL BECOME OBSOLETE)
         TACInvaderAttract,
         TACInvaderAttract2,
         TACOutpostMissions,
@@ -135,6 +140,12 @@ namespace TAC_AI.Templates
         // Choppers
         GSOQuadGale,
         GSOQuadGaleM,
+
+        GCDigginFlyDual,
+        GCDiggersBee,
+        GCHelicross,
+        GCMadMiner,
+
         HESheertail,
         HEPocketApache,
         HESmashApache,
@@ -326,13 +337,6 @@ namespace TAC_AI.Templates
         ComLEAD,
         ComLaserBattleship,
 
-        // Other
-        HEArtyFactory,
-        BFDrifter, 
-        GCDigginFlyDual,
-        GCDiggersBee,
-        GCHelicross,
-        GCMadMiner,
     }
 
 }

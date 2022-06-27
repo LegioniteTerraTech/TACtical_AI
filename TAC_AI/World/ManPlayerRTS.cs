@@ -18,6 +18,13 @@ namespace TAC_AI.World
         Protect,
         Scout,
     }
+    public enum RTSHaloState
+    {
+        Default,
+        Hover,
+        Select,
+        Attack,
+    }
     internal class SelectHalo : MonoBehaviour
     {
         public static GameObject SelectCirclePrefab;
@@ -26,12 +33,14 @@ namespace TAC_AI.World
         private ParticleSystem ps;
         private GameObject circleInst;
         private float lastSize = 1;
+        private RTSHaloState lastHalo = RTSHaloState.Default;
         private const float sizeMulti = 1.25f;
-        private static Color Player = new Color(0f, 0f, 1f, 0.65f);
+        private static Color Player = new Color(0f, 0f, 1f, 0.95f);
         private static Color Main = new Color(0f, 0.75f, 1f, 0.45f);
-        private static Color NonMain = new Color(0f, 0.25f, 0.1f, 0.45f);
-        private static Color Target = new Color(1f, 0.1f, 0.1f, 0.45f);
-        private static Color Hovered = new Color(1f, 4f, 0.1f, 0.45f);
+        private static Color NonMain = new Color(0f, 0.5f, 0.5f, 0.45f);
+        private static Color Target = new Color(1f, 0.25f, 0.25f, 0.45f);
+        private static Color Hovered = new Color(1f, 1f, 0.1f, 0.45f);
+        internal static Dictionary<RTSHaloState, Material> halos = new Dictionary<RTSHaloState, Material>();
 
         public void Initiate(AIECore.TankAIHelper TechUnit)
         {
@@ -43,6 +52,7 @@ namespace TAC_AI.World
             circleInst = Instantiate(SelectCirclePrefab, TechUnit.transform, false);
             circleInst.transform.position = TechUnit.tank.boundsCentreWorldNoCheck;
             circleInst.name = "SelectCircle";
+            lastHalo = RTSHaloState.Default;
             tech = TechUnit;
             tech.tank.AttachEvent.Subscribe(OnSizeUpdate);
             tech.tank.DetachEvent.Subscribe(OnSizeUpdate);
@@ -52,45 +62,83 @@ namespace TAC_AI.World
             ps.Play(false);
             circleInst.SetActive(true);
         }
+        private void UpdateVisual(RTSHaloState halo)
+        {
+            if (lastHalo != halo)
+            {
+                var psr = ps.GetComponent<ParticleSystemRenderer>();
+                if (halos.TryGetValue(halo, out Material vis))
+                {
+                    psr.material = vis;
+                }
+                else
+                    psr.material = halos.First().Value;
+                lastHalo = halo;
+            }
+        }
         private void Update()
         {
             try
             {
+                var m = ps.main;
                 if (lastSize != tech.lastTechExtents)
                 {
-                    var m = ps.main;
                     m.startSize = tech.lastTechExtents * sizeMulti;
                     lastSize = tech.lastTechExtents;
                 }
                 if (tech.tank.PlayerFocused)
                 {
-                    var m = ps.main;
                     m.startColor = Player;
+                    if (ManPlayerRTS.inst.PlayerHovered == tech)
+                        UpdateVisual(RTSHaloState.Hover);
+                    else
+                    {
+                        if (ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS)
+                            UpdateVisual(RTSHaloState.Select);
+                        else
+                            UpdateVisual(RTSHaloState.Default);
+                    }
                 }
                 else if (ManPlayerRTS.inst.Leading == tech)
                 {
-                    var m = ps.main;
                     m.startColor = Main;
+                    if (ManPlayerRTS.inst.PlayerHovered == tech)
+                        UpdateVisual(RTSHaloState.Hover);
+                    else
+                        UpdateVisual(RTSHaloState.Select);
                 }
                 else
                 {
-                    if (tech.AIState == AIAlignment.NonPlayer)
+                    switch (tech.AIState)
                     {
-                        if (tech == ManPlayerRTS.inst.EnemyHovered)
-                        {
-                            var m = ps.main;
+                        case AIAlignment.Player:
+                            m.startColor = NonMain;
+                            if (ManPlayerRTS.inst.PlayerHovered == tech)
+                                UpdateVisual(RTSHaloState.Hover);
+                            else
+                                UpdateVisual(RTSHaloState.Select);
+                            break;
+                        case AIAlignment.NonPlayer:
+                            if (tech == ManPlayerRTS.inst.EnemyHovered)
+                            {
+                                m.startColor = Hovered;
+                                UpdateVisual(RTSHaloState.Attack);
+                            }
+                            else
+                            {
+                                m.startColor = Target;
+                                UpdateVisual(RTSHaloState.Attack);
+                            }
+                            break;
+                        case AIAlignment.Static:
                             m.startColor = Hovered;
-                        }
-                        else
-                        {
-                            var m = ps.main;
-                            m.startColor = Target;
-                        }
-                    }
-                    else
-                    {
-                        var m = ps.main;
-                        m.startColor = NonMain;
+                            UpdateVisual(RTSHaloState.Hover);
+                            break;
+                        case AIAlignment.Neutral:
+                        default:
+                            m.startColor = Hovered;
+                            UpdateVisual(RTSHaloState.Default);
+                            break;
                     }
                 }
             }
@@ -154,6 +202,7 @@ namespace TAC_AI.World
         private static float SuccessBoxDiv = 16;
 
         public static RTSCursorState cursorState = RTSCursorState.Empty;
+        private static bool ControlState = false;
 
 
         private bool dirty = false;
@@ -227,6 +276,15 @@ namespace TAC_AI.World
                     DebugTAC_AI.Log("TACtical_AI: Getting " + matcase.name + "...");
                 }
                 Material mat = mats.ElementAt(0);
+                SelectHalo.halos.Add(RTSHaloState.Default, mat);
+                try
+                {
+                    SelectHalo.halos.Add(RTSHaloState.Attack, RawTechExporter.CreateMaterial("O_AttackTarg.png", mat));
+                    SelectHalo.halos.Add(RTSHaloState.Hover, RawTechExporter.CreateMaterial("O_HoverSelect.png", mat));
+                    SelectHalo.halos.Add(RTSHaloState.Select, RawTechExporter.CreateMaterial("O_AllySelect.png", mat));
+                }
+                catch { }
+
                 //SelectHalo.SelectCirclePrefab.AddComponent<MeshRenderer>().material = mat;
                 var ps = SelectHalo.SelectCirclePrefab.AddComponent<ParticleSystem>();
                 var s = ps.shape;
@@ -237,12 +295,22 @@ namespace TAC_AI.World
                 s.sphericalDirectionAmount = 0;
                 var m = ps.main;
                 m.startColor = new Color(1f, 0.35f, 0.25f, 0.125f);
-                m.startLifetime = 3;
+                m.startLifetime = 60;
                 m.maxParticles = 1;
                 m.startSpeed = 0;
                 m.startSize = 1;
+                m.startRotation = 0;
                 var e = ps.emission;
                 e.rateOverTime = 10;
+                var r = ps.rotationOverLifetime;
+                r.enabled = true;
+                //r.separateAxes = false;
+                r.z = new ParticleSystem.MinMaxCurve
+                {
+                    mode = ParticleSystemCurveMode.Constant,
+                    constant = 24f,
+                };
+                r.zMultiplier = 1;
                 var psr = SelectHalo.SelectCirclePrefab.GetComponent<ParticleSystemRenderer>();
                 psr.renderMode = ParticleSystemRenderMode.Billboard;
                 psr.material = mat;
@@ -319,7 +387,7 @@ namespace TAC_AI.World
         {
             if ((bool)inst)
             {
-                if (TechUnit != null)
+                if (TechUnit != null && !ControlState)
                 {
                     try
                     {
@@ -400,13 +468,14 @@ namespace TAC_AI.World
                         }
                     }
                     else
-                    {
-                        //Debug.Log("TACtical_AI: FAILED TO HIT ANYTHING");
+                    {   // We hit NOTHING
+                        inst.ClearList();
                         return;
                     }
                 }
                 else if (click == ManPointer.Event.RMB)
                 {
+                    ControlState = true;
                     Vector3 pos = Camera.main.transform.position;
                     Vector3 posD = Singleton.camera.ScreenPointToRay(Input.mousePosition).direction.normalized;
 
@@ -431,6 +500,7 @@ namespace TAC_AI.World
                             inst.HandleSelectTargetTank(rayman);
                         }
                     }
+                    ControlState = false;
                 }
             }
         }
@@ -1732,11 +1802,12 @@ namespace TAC_AI.World
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Back);
         }
 
-        private Color color = new Color(1f, 0.75f, 0.25f, 0.65f);//Color(0.25f, 1f, 0.25f, 0.75f);
+        private Color color = new Color(1f, 0.75f, 0.25f, 0.8f);//Color(0.25f, 1f, 0.25f, 0.75f);
         private Color colorLeading = new Color(1f, 0.4f, 0.75f, 0.65f);//Color(0.25f, 1f, 0.25f, 0.75f);
         private int linesUsed = 0;
         private int linesLastUsed = 0;
         private List<GameObject> linesQueue = new List<GameObject>();
+        private Material lineMat = null;
 
         private GameObject MakeNewLine()
         {
@@ -1745,15 +1816,27 @@ namespace TAC_AI.World
             var lr = gO.GetComponent<LineRenderer>();
             if (!(bool)lr)
             {
+                if (lineMat == null)
+                {
+                    try
+                    {
+                        lineMat = RawTechExporter.CreateMaterial("M_MoveLine.png", new Material(Shader.Find("Sprites/Default")));
+                    }
+                    catch
+                    {
+                        lineMat = new Material(Shader.Find("Sprites/Default"));
+                    }
+                }
                 lr = gO.AddComponent<LineRenderer>();
-                lr.material = new Material(Shader.Find("Sprites/Default"));
+                lr.material = lineMat;
                 lr.positionCount = 2;
-                lr.startWidth = 0.75f;
-                lr.endWidth = 0.25f;
-                lr.numCapVertices = 4;
+                lr.startWidth = 4.4f;
+                lr.endWidth = 4.4f;
+                lr.numCapVertices = 0;
             }
             lr.startColor = color;
             lr.endColor = color;
+            lr.textureMode = LineTextureMode.Tile;
             Vector3[] vecs = new Vector3[2] { Vector3.zero, Vector3.one };
             lr.SetPositions(vecs);
             linesQueue.Add(gO);
@@ -1771,7 +1854,7 @@ namespace TAC_AI.World
             gO.SetActive(true);
             Vector3 pos = help.tank.boundsCentreWorldNoCheck;
             Vector3 vertoffset = help.lastTechExtents * Vector3.up;
-            Vector3[] vecs = new Vector3[2] { pos + vertoffset, endPosScene };
+            Vector3[] vecs = new Vector3[2] { endPosScene, pos + vertoffset };
             var lr = gO.GetComponent<LineRenderer>();
             lr.SetPositions(vecs);
             if (isLeading)
@@ -1796,7 +1879,7 @@ namespace TAC_AI.World
             else
                 gO = linesQueue[linesUsed];
             gO.SetActive(true);
-            Vector3[] vecs = new Vector3[2] { startPosScene, endPosScene };
+            Vector3[] vecs = new Vector3[2] { endPosScene, startPosScene };
             var lr = gO.GetComponent<LineRenderer>();
             lr.SetPositions(vecs);
             if (isLeading)

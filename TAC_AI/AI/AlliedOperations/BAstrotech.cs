@@ -24,8 +24,8 @@ namespace TAC_AI.AI.AlliedOperations
             if (thisInst.lastPlayer == null)
                 return;
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - thisInst.lastPlayer.GetCheapBounds();
-            float range = (thisInst.RangeToStopRush * 3) + thisInst.lastTechExtents;
-            // The range is tripled here due to flight conditions
+            float range = thisInst.RangeToStopRush + thisInst.lastTechExtents;
+
             bool hasMessaged = false;
             thisInst.lastRange = dist;
 

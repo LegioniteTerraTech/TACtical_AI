@@ -1299,6 +1299,7 @@ namespace TAC_AI.AI.Enemy
                 Tank tech = mind.AIControl.tank;
 
 
+                FactionLevel lvl = RawTechLoader.TryGetPlayerLicenceLevel();
                 int grade = 99;
                 try
                 {
@@ -1310,20 +1311,20 @@ namespace TAC_AI.AI.Enemy
                 int Cost = GetTeamFunds(tech.Team);
                 if (TeamGlobalMakerBaseCount(tech.Team) >= KickStart.MaxBasesPerTeam)
                 {
-                    TryFreeUpBaseSlots(mind, funds);
+                    TryFreeUpBaseSlots(mind, lvl, funds);
                     if (TeamGlobalMobileTechCount(tech.Team) < KickStart.EnemyTeamTechLimit)
                     {
-                        BaseConstructTech(mind, tech, funds, grade, Cost);
+                        BaseConstructTech(mind, tech, lvl, funds, grade, Cost);
                     }
                     else
-                        BaseUpgradeTechs(mind, tech, funds, GetTeamBaseFunders(tech.Team), grade, Cost);
+                        BaseUpgradeTechs(mind, tech, lvl, funds, GetTeamBaseFunders(tech.Team), grade, Cost);
                     return;
                 }
 
                 Visible lastEnemy = mind.AIControl.lastEnemy;
                 if (!lastEnemy)
                 {
-                    ExpandBasePeaceful(mind, funds, grade, Cost);
+                    ExpandBasePeaceful(mind, lvl, funds, grade, Cost);
                     return;
                 }
 
@@ -1331,10 +1332,10 @@ namespace TAC_AI.AI.Enemy
                 {   // Try spawning defense
                     List<EnemyBaseFunder> funders = GetTeamBaseFunders(tech.Team);
                     BaseTerrain Terra = RawTechLoader.GetTerrain(pos);
-                    BasePurpose reason = PriorityDefense(mind, funds, funders);
+                    BasePurpose reason = PriorityDefense(mind, lvl, funds, funders);
 
                     DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
-                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, lvl, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
@@ -1348,7 +1349,7 @@ namespace TAC_AI.AI.Enemy
                             return;
                         }
                     }
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, lvl, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
 
@@ -1365,10 +1366,10 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (TeamGlobalMobileTechCount(tech.Team) < KickStart.EnemyTeamTechLimit)
                         {
-                            BaseConstructTech(mind, tech, funds, grade, Cost);
+                            BaseConstructTech(mind, tech, lvl, funds, grade, Cost);
                         }
                         else
-                            BaseUpgradeTechs(mind, tech, funds, GetTeamBaseFunders(tech.Team), grade, Cost);
+                            BaseUpgradeTechs(mind, tech, lvl, funds, GetTeamBaseFunders(tech.Team), grade, Cost);
                     }
                 }
             }
@@ -1377,7 +1378,7 @@ namespace TAC_AI.AI.Enemy
                 DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn");
             }
         }
-        public static void ExpandBasePeaceful(EnemyMind mind, EnemyBaseFunder funds, int grade, int Cost)
+        public static void ExpandBasePeaceful(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds, int grade, int Cost)
         {   // Expand the base!
             try
             {
@@ -1387,16 +1388,16 @@ namespace TAC_AI.AI.Enemy
 
                 List<EnemyBaseFunder> funders = GetTeamBaseFunders(tech.Team);
 
-                if (InsureHarvester(mind, funds, funders))
+                if (InsureHarvester(mind, lvl, funds, funders))
                 {
                     DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Building harvester");
                 }
                 if (TryFindExpansionLocationGrid(tech.boundsCentreWorldNoCheck, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
-                    reason = PickBuildBasedOnPriorities(mind, funds, funders);
+                    reason = PickBuildBasedOnPriorities(mind, lvl, funds, funders);
                     DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
-                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, lvl, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
@@ -1411,7 +1412,7 @@ namespace TAC_AI.AI.Enemy
                         }
                     }
                     DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, lvl, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
@@ -1427,10 +1428,10 @@ namespace TAC_AI.AI.Enemy
                     {
                         if (TeamGlobalMobileTechCount(tech.Team) < KickStart.EnemyTeamTechLimit)
                         {
-                            BaseConstructTech(mind, tech, funds, grade, Cost);
+                            BaseConstructTech(mind, tech, lvl, funds, grade, Cost);
                         }
                         else
-                            BaseUpgradeTechs(mind, tech, funds, funders, grade, Cost);
+                            BaseUpgradeTechs(mind, tech, lvl, funds, funders, grade, Cost);
                     }
                 }
             }
@@ -1440,7 +1441,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public static void BaseConstructTech(EnemyMind mind, Tank tech, EnemyBaseFunder funds, int grade, int Cost)
+        public static void BaseConstructTech(EnemyMind mind, Tank tech, FactionLevel lvl, EnemyBaseFunder funds, int grade, int Cost)
         {   // Expand the base!
             try
             {
@@ -1452,7 +1453,7 @@ namespace TAC_AI.AI.Enemy
                     else
                         terra = BaseTerrain.AnyNonSea;
 
-                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, BasePurpose.NotStationary, terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, lvl, BasePurpose.NotStationary, terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
@@ -1467,7 +1468,7 @@ namespace TAC_AI.AI.Enemy
                             return;
                         }
                     }
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, BasePurpose.NotStationary, terra, maxGrade: grade, maxPrice: Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, lvl, BasePurpose.NotStationary, terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     RawTechLoader.SpawnTechFragment(pos, funds.Team, RawTechLoader.GetBaseTemplate(type));
@@ -1479,7 +1480,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public static void BaseUpgradeTechs(EnemyMind mind, Tank tech, EnemyBaseFunder funds, List<EnemyBaseFunder> funders, int grade, int Cost)
+        public static void BaseUpgradeTechs(EnemyMind mind, Tank tech, FactionLevel lvl, EnemyBaseFunder funds, List<EnemyBaseFunder> funders, int grade, int Cost)
         {   // Upgrade the Techs!
             try
             {
@@ -1508,7 +1509,7 @@ namespace TAC_AI.AI.Enemy
                         Vector3 posTech = toUpgrade.WorldCenterOfMass;
                         BaseTemplate BT;
                         List<BaseTemplate> BTs = new List<BaseTemplate>();
-                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, BasePurpose.NotStationary, terra, false, grade, maxPrice: Cost))
+                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, lvl, BasePurpose.NotStationary, terra, false, grade, maxPrice: Cost))
                         {
                             if (valid.Count == 0)
                             {
@@ -1529,7 +1530,7 @@ namespace TAC_AI.AI.Enemy
                                 }
                             }
                         }
-                        List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(mind.MainFaction, BasePurpose.NotStationary, terra, maxGrade: grade, maxPrice: Cost);
+                        List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(mind.MainFaction, lvl, BasePurpose.NotStationary, terra, maxGrade: grade, maxPrice: Cost);
 
                         foreach (var item in types)
                         {
@@ -1553,7 +1554,7 @@ namespace TAC_AI.AI.Enemy
         }
 
 
-        public static void ExpandBaseLegacy(EnemyMind mind, EnemyBaseFunder funds, int grade, int Cost)
+        public static void ExpandBaseLegacy(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds, int grade, int Cost)
         {   // Expand the base!
             try
             {
@@ -1566,9 +1567,9 @@ namespace TAC_AI.AI.Enemy
                 if (TryFindExpansionLocationCorner(tech, tech.boundsCentreWorldNoCheck, out Vector3 pos))
                 {   // Try spawning defense
                     Terra = RawTechLoader.GetTerrain(pos);
-                    reason = PickBuildBasedOnPriorities(mind, funds, funders);
+                    reason = PickBuildBasedOnPriorities(mind, lvl, funds, funders);
                     DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
-                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, lvl, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
@@ -1582,7 +1583,7 @@ namespace TAC_AI.AI.Enemy
                             return;
                         }
                     }
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, lvl, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, type))
@@ -1597,7 +1598,7 @@ namespace TAC_AI.AI.Enemy
                     Terra = RawTechLoader.GetTerrain(pos2);
                     reason = PickBuildNonDefense(mind);
                     DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion(2) - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
-                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, reason, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, mind.MainFaction, lvl, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
@@ -1612,7 +1613,7 @@ namespace TAC_AI.AI.Enemy
                         }
                     }
                     DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(mind.MainFaction, lvl, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, type))
@@ -1634,7 +1635,7 @@ namespace TAC_AI.AI.Enemy
         }
 
 
-        public static bool InsureHarvester(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
+        public static bool InsureHarvester(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
         {   // Make sure at least one harvester is on scene
             try
             {
@@ -1656,18 +1657,18 @@ namespace TAC_AI.AI.Enemy
                     }
                     if (TryFindExpansionLocationGrid(mind.Tank.boundsCentreWorld, mind.Tank.trans.forward * 128, out Vector3 pos))
                     {
-                        SpawnBaseTypes SBT = RawTechLoader.GetEnemyBaseType(mind.MainFaction, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
+                        SpawnBaseTypes SBT = RawTechLoader.GetEnemyBaseType(mind.MainFaction, lvl, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
                         if (RawTechLoader.IsFallback(SBT))
                         {
                             DebugTAC_AI.Log("TACtical_AI: InsureHarvester - There are no harvesters for FactionTypesExt " + mind.MainFaction + ", trying fallbacks");
 
                             FactionTypesExt FTE = KickStart.CorpExtToVanilla(mind.MainFaction);
-                            SBT = RawTechLoader.GetEnemyBaseType(FTE, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
+                            SBT = RawTechLoader.GetEnemyBaseType(FTE, lvl, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
                             if (RawTechLoader.IsFallback(SBT))
                             {
                                 DebugTAC_AI.Log("TACtical_AI: InsureHarvester - There are no harvesters for Vanilla Faction " + FTE + ", using GSO");
 
-                                SBT = RawTechLoader.GetEnemyBaseType(FactionTypesExt.GSO, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
+                                SBT = RawTechLoader.GetEnemyBaseType(FactionTypesExt.GSO, lvl, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
                             }
                         }
                         RawTechLoader.SpawnTechFragment(pos, funds.Team, RawTechLoader.GetBaseTemplate(SBT));
@@ -1681,14 +1682,14 @@ namespace TAC_AI.AI.Enemy
             }
             return false;
         }
-        public static void TryFreeUpBaseSlots(EnemyMind mind, EnemyBaseFunder funds)
+        public static void TryFreeUpBaseSlots(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds)
         {   // Remove uneeeded garbage
             try
             {
                 Tank tech = mind.AIControl.tank;
                 int TeamBaseCount = TeamGlobalMakerBaseCount(tech.Team);
                 bool RemoveReceivers = FetchNearbyResourceCounts(tech.Team) == 0;
-                bool RemoveSpenders = GetTeamFunds(tech.Team) < CheapestAutominerPrice(mind) / 2;
+                bool RemoveSpenders = GetTeamFunds(tech.Team) < CheapestAutominerPrice(mind, lvl) / 2;
                 bool ForceRemove = TeamBaseCount > KickStart.MaxBasesPerTeam;
 
                 int attempts = 1;
@@ -1758,7 +1759,7 @@ namespace TAC_AI.AI.Enemy
         }
 
         // AI Base building
-        public static BasePurpose PickBuildBasedOnPriorities(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
+        public static BasePurpose PickBuildBasedOnPriorities(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
         {   // Expand the base!
             /*
              * BUILD ORDER:
@@ -1776,15 +1777,15 @@ namespace TAC_AI.AI.Enemy
                 return PickHarvestBase(mind, funds, funders);
 
             // Fallback
-            return PickBuildBasedOnPrioritiesLegacy(mind, funds);
+            return PickBuildBasedOnPrioritiesLegacy(mind, lvl, funds);
         }
-        public static BasePurpose PriorityDefense(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
+        public static BasePurpose PriorityDefense(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
         {   // Expand the base!
             int team = funds.Team;
             if (GetCountOfPurpose(BasePurpose.Harvesting, funders) == 0)
                 return PickHarvestBase(mind, funds, funders);
             if (GetActiveTeamDefenseCount(team) >= MaxDefenses)
-                return PickBuildBasedOnPriorities(mind, funds, funders);
+                return PickBuildBasedOnPriorities(mind, lvl, funds, funders);
             return BasePurpose.TechProduction;
         }
         public static BasePurpose PickHarvestBase(EnemyMind mind, EnemyBaseFunder funds, List<EnemyBaseFunder> funders)
@@ -1799,11 +1800,11 @@ namespace TAC_AI.AI.Enemy
         }
 
 
-        public static BasePurpose PickBuildBasedOnPrioritiesLegacy(EnemyMind mind, EnemyBaseFunder funds)
+        public static BasePurpose PickBuildBasedOnPrioritiesLegacy(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds)
         {   // Expand the base!
             int team = mind.Tank.Team;
             List<EnemyBaseFunder> funders = GetTeamBaseFunders(team);
-            if (GetTeamFunds(team) <= CheapestAutominerPrice(mind) && !HasTooMuchOfType(team, BasePurpose.Autominer, funders))
+            if (GetTeamFunds(team) <= CheapestAutominerPrice(mind, lvl) && !HasTooMuchOfType(team, BasePurpose.Autominer, funders))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
                 return BasePurpose.Autominer;
             }
@@ -2094,9 +2095,9 @@ namespace TAC_AI.AI.Enemy
             }
             return validLocation;
         }
-        private static int CheapestAutominerPrice(EnemyMind mind)
+        private static int CheapestAutominerPrice(EnemyMind mind, FactionLevel lvl)
         {
-            List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(mind.MainFaction, BasePurpose.Autominer, BaseTerrain.Land);
+            List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(mind.MainFaction, lvl, BasePurpose.Autominer, BaseTerrain.Land);
             int lowest = 150000;
             BaseTemplate BT;
             foreach (SpawnBaseTypes type in types)

@@ -622,6 +622,25 @@ namespace TAC_AI
             }
             return type;
         }
+
+        public static FactionLevel GetFactionLevel(FactionSubTypes FST)
+        {
+            switch (FST)
+            {
+                case FactionSubTypes.GC:
+                    return FactionLevel.GC;
+                case FactionSubTypes.EXP:
+                    return FactionLevel.EXP;
+                case FactionSubTypes.VEN:
+                    return FactionLevel.VEN;
+                case FactionSubTypes.HE:
+                    return FactionLevel.HE;
+                case FactionSubTypes.BF:
+                    return FactionLevel.BF;
+                default:
+                    return FactionLevel.GSO;
+            }
+        }
     }
 
     public class KickStartOptions
@@ -859,8 +878,9 @@ namespace TAC_AI
             NativeOptionsMod.onOptionsSaved.AddListener(() => { thisModConfig.WriteConfigJsonFile(); });
 
         }
+
     }
-    
+
     public static class TankExtentions
     {
         public static bool IsTeamFounder(this TechData tank)

@@ -287,12 +287,14 @@ namespace TAC_AI.Templates
                         break;
                 }
             }
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
             try
             {
                 float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel;
                 extraBB = (int)(extraBB / divider);
             }
             catch { }
+
 
 
             // Are we a defended HQ?
@@ -321,7 +323,7 @@ namespace TAC_AI.Templates
             }
 
             BaseTemplate BTemp = null;
-            if (ShouldUseCustomTechs(out List<int> valid, spawnerTank.GetMainCorpExt(), purpose, BT, false, grade))
+            if (ShouldUseCustomTechs(out List<int> valid, spawnerTank.GetMainCorpExt(), lvl, purpose, BT, false, grade))
             {
                 int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex == -1)
@@ -337,7 +339,7 @@ namespace TAC_AI.Templates
             }
             if (BTemp == null)
             {
-                BTemp = GetBaseTemplate(GetEnemyBaseType(FTE, purpose, BT, maxGrade: grade));
+                BTemp = GetBaseTemplate(GetEnemyBaseType(FTE, lvl, purpose, BT, maxGrade: grade));
             }
 
             switch (BT)
@@ -778,7 +780,8 @@ namespace TAC_AI.Templates
         {   // This will try to spawn player-made enemy techs as well
             if (subNeutral)
                 Team = AIGlobals.GetRandomSubNeutralBaseTeam();
-            if (ShouldUseCustomTechs(out List<int> valid, factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, maxPrice: maxPrice, subNeutral: subNeutral))
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
+            if (ShouldUseCustomTechs(out List<int> valid, factionType, lvl, BasePurpose.NotStationary, terrainType, false, maxGrade, maxPrice: maxPrice, subNeutral: subNeutral))
             {
                 int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex != -1)
@@ -787,7 +790,7 @@ namespace TAC_AI.Templates
                 }
                 DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Critical error on call - Expected a Custom Local Tech to exist but found none!");
             }
-            return SpawnMobileTechPrefab(pos, forwards, Team, GetBaseTemplate(GetEnemyBaseType(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, subNeutral: subNeutral, maxPrice: maxPrice)), subNeutral, snapTerrain);
+            return SpawnMobileTechPrefab(pos, forwards, Team, GetBaseTemplate(GetEnemyBaseType(factionType, lvl, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, subNeutral: subNeutral, maxPrice: maxPrice)), subNeutral, snapTerrain);
         }
 
         /// <summary>
@@ -810,7 +813,8 @@ namespace TAC_AI.Templates
             if (subNeutral)
                 Team = AIGlobals.GetRandomSubNeutralBaseTeam();
 
-            if (ShouldUseCustomTechs(out List<int> valid, factionType, BasePurpose.NotStationary, terrainType, false, maxGrade, subNeutral: subNeutral, maxPrice: maxPrice))
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
+            if (ShouldUseCustomTechs(out List<int> valid, factionType, lvl, BasePurpose.NotStationary, terrainType, false, maxGrade, subNeutral: subNeutral, maxPrice: maxPrice))
             {
                 int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex != -1)
@@ -820,7 +824,7 @@ namespace TAC_AI.Templates
                 }
                 DebugTAC_AI.Log("TACtical_AI: SpawnRandomTechAtPosHead - Critical error on call - Expected a Custom Local Tech to exist but found none!");
             }
-            SpawnBaseTypes type = GetEnemyBaseType(factionType, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, subNeutral: subNeutral, maxPrice: maxPrice);
+            SpawnBaseTypes type = GetEnemyBaseType(factionType, lvl, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, subNeutral: subNeutral, maxPrice: maxPrice);
             if (type == SpawnBaseTypes.NotAvail)
             {
                 outTank = null;
@@ -884,7 +888,8 @@ namespace TAC_AI.Templates
         internal static bool SpawnAttractTech(Vector3 pos, Vector3 forwards, int Team, BaseTerrain terrainType = BaseTerrain.Land, FactionTypesExt faction = FactionTypesExt.NULL, BasePurpose purpose = BasePurpose.NotStationary)
         {
             BaseTemplate baseTemplate;
-            if (ShouldUseCustomTechs(out List<int> valid, faction, BasePurpose.NotStationary, terrainType, true))
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
+            if (ShouldUseCustomTechs(out List<int> valid, faction, lvl, BasePurpose.NotStationary, terrainType, true))
             {
                 int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex != -1)
@@ -899,7 +904,7 @@ namespace TAC_AI.Templates
             }
             else
             {
-                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, purpose, terrainType, true);
+                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, lvl, purpose, terrainType, true);
                 baseTemplate = GetBaseTemplate(toSpawn);
             }
 
@@ -1014,13 +1019,14 @@ namespace TAC_AI.Templates
         internal static bool SpawnSpecificTech(Vector3 pos, Vector3 forwards, int Team, List<BasePurpose> purposes, BaseTerrain terrainType = BaseTerrain.Land, FactionTypesExt faction = FactionTypesExt.NULL, bool subNeutral = false, bool snapTerrain = true, int maxGrade = 99, int maxPrice = 0, bool isPopulation = false)
         {
             BaseTemplate baseTemplate;
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
             if (ShouldUseCustomTechs(faction, purposes, terrainType, true))
             {
-                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
+                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, lvl, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
             }
             else
             {
-                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral);
+                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, lvl, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral);
                 baseTemplate = GetBaseTemplate(toSpawn);
             }
             bool MustBeAnchored = !baseTemplate.purposes.Contains(BasePurpose.NotStationary);
@@ -1107,13 +1113,14 @@ namespace TAC_AI.Templates
         internal static void SpawnSpecificTechSafe(Vector3 pos, Vector3 forwards, int Team, List<BasePurpose> purposes, BaseTerrain terrainType = BaseTerrain.Land, FactionTypesExt faction = FactionTypesExt.NULL, bool subNeutral = false, bool snapTerrain = true, int maxGrade = 99, int maxPrice = 0, bool isPopulation = false, Action<Tank> fallbackOp = null)
         {
             BaseTemplate baseTemplate;
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
             if (ShouldUseCustomTechs(faction, purposes, terrainType, true))
             {
-                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
+                baseTemplate = TempManager.ExternalEnemyTechsAll[GetExternalIndex(faction, lvl, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral)];
             }
             else
             {
-                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral);
+                SpawnBaseTypes toSpawn = GetEnemyBaseType(faction, lvl, purposes, terrainType, AIGlobals.IsAttract, maxGrade, maxPrice, subNeutral);
                 baseTemplate = GetBaseTemplate(toSpawn);
             }
             if (subNeutral && isPopulation)
@@ -1149,7 +1156,7 @@ namespace TAC_AI.Templates
 
 
         // imported ENEMY cases
-        internal static List<int> GetExternalIndexes(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static List<int> GetExternalIndexes(FactionTypesExt faction, FactionLevel bestPlayerFaction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             try
             {   // Filters
@@ -1163,13 +1170,15 @@ namespace TAC_AI.Templates
                     if (UseFactionSubTypes)
                     {
                         canidates = TempManager.ExternalEnemyTechsAll.FindAll
-                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == KickStart.CorpExtToCorp(faction); });
+                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == KickStart.CorpExtToCorp(faction); }).FindAll
+                            (delegate (BaseTemplate cand) { return cand.factionLim <= bestPlayerFaction; });
                         UseFactionSubTypes = false;
                     }
                     else
                     {
                         canidates = TempManager.ExternalEnemyTechsAll.FindAll
-                            (delegate (BaseTemplate cand) { return cand.faction == faction; });
+                            (delegate (BaseTemplate cand) { return cand.faction == faction; }).FindAll
+                            (delegate (BaseTemplate cand) { return cand.factionLim <= bestPlayerFaction; });
                     }
                 }
 
@@ -1264,7 +1273,7 @@ namespace TAC_AI.Templates
 
             return new List<int> { -1 };
         }
-        internal static List<int> GetExternalIndexes(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static List<int> GetExternalIndexes(FactionTypesExt faction, FactionLevel bestPlayerFaction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             try
             {
@@ -1341,21 +1350,21 @@ namespace TAC_AI.Templates
             return new List<int> { -1 };
         }
         
-        internal static int GetExternalIndex(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static int GetExternalIndex(FactionTypesExt faction, FactionLevel bestPlayerFaction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             try
             {
-                return GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
+                return GetExternalIndexes(faction, bestPlayerFaction, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
             }
             catch { }
 
             return -1;
         }
-        internal static int GetExternalIndex(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static int GetExternalIndex(FactionTypesExt faction, FactionLevel bestPlayerFaction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             try
             {
-                return GetExternalIndexes(faction, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
+                return GetExternalIndexes(faction, bestPlayerFaction, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
             }
             catch { }
 
@@ -1381,15 +1390,35 @@ namespace TAC_AI.Templates
             return GetBaseTemplate(SpawnBaseTypes.NotAvail) != nextBest;
         }
 
+        internal static FactionLevel TryGetPlayerLicenceLevel()
+        {
+            FactionLevel lvl = FactionLevel.ALL;
+            try
+            {
+                foreach (var item in (FactionLevel[])Enum.GetValues(typeof(FactionLevel)))
+                {
+                    FactionSubTypes lvlC = (FactionSubTypes)item;
+                    if (Singleton.Manager<ManLicenses>.inst.IsLicenseDiscovered(lvlC))
+                    {
+                        lvl = item;
+                    }
+                    else
+                        break;
+                }
+            }
+            catch { }
+            return lvl;
+        }
 
 
-        internal static bool ShouldUseCustomTechs(out List<int> validIndexes, FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static bool ShouldUseCustomTechs(out List<int> validIndexes, FactionTypesExt faction, FactionLevel bestPlayerFaction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             bool cacheSubTypes = UseFactionSubTypes;
-            validIndexes = GetExternalIndexes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral);
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
+            validIndexes = GetExternalIndexes(faction, lvl, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral);
             int CustomTechs = validIndexes.Count;
             UseFactionSubTypes = cacheSubTypes;
-            List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral);
+            List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(faction, lvl, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral);
             UseFactionSubTypes = cacheSubTypes;
             int PrefabTechs = SBT.Count;
              
@@ -1448,8 +1477,9 @@ namespace TAC_AI.Templates
         }
         internal static bool ShouldUseCustomTechs(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
-            int CustomTechs = GetExternalIndexes(faction, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).Count;
-            int PrefabTechs = GetEnemyBaseTypes(faction, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).Count;
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
+            int CustomTechs = GetExternalIndexes(faction, lvl, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).Count;
+            int PrefabTechs = GetEnemyBaseTypes(faction, lvl, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).Count;
 
             int CombinedVal = CustomTechs + PrefabTechs;
 
@@ -2367,7 +2397,7 @@ namespace TAC_AI.Templates
             return valid;
         }
         
-        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionTypesExt faction, FactionLevel bestPlayerFaction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             try
             {
@@ -2383,13 +2413,15 @@ namespace TAC_AI.Templates
                     if (UseFactionSubTypes)
                     {
                         canidates = TempManager.techBases.ToList().FindAll
-                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == KickStart.CorpExtToCorp(faction); });
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == KickStart.CorpExtToCorp(faction); }).FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.factionLim <= bestPlayerFaction; });
                         UseFactionSubTypes = false;
                     }
                     else
                     {
                         canidates = TempManager.techBases.ToList().FindAll
-                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; }).FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.factionLim <= bestPlayerFaction; });
                     }
                 }
 
@@ -2490,7 +2522,7 @@ namespace TAC_AI.Templates
             catch { }
             return FallbackHandler(faction);
         }
-        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionTypesExt faction, FactionLevel bestPlayerFaction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             try
             {
@@ -2628,14 +2660,14 @@ namespace TAC_AI.Templates
             return new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
         }
 
-        internal static SpawnBaseTypes GetEnemyBaseType(FactionTypesExt faction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static SpawnBaseTypes GetEnemyBaseType(FactionTypesExt faction, FactionLevel lvl, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             if (ForceSpawn && !searchAttract)
                 return forcedBaseSpawn;
 
             try
             {
-                SpawnBaseTypes toSpawn = GetEnemyBaseTypes(faction, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
+                SpawnBaseTypes toSpawn = GetEnemyBaseTypes(faction, lvl, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
 
                 if (!IsBaseTemplateAvailable(toSpawn))
                     DebugTAC_AI.Exception("TACtical_AI: GetEnemyBaseType - population entry " + toSpawn + " has a null BaseTemplate.  How?");
@@ -2669,14 +2701,14 @@ namespace TAC_AI.Templates
 
             return (SpawnBaseTypes)UnityEngine.Random.Range(lowerRANDRange, higherRANDRange);
         }
-        internal static SpawnBaseTypes GetEnemyBaseType(FactionTypesExt faction, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        internal static SpawnBaseTypes GetEnemyBaseType(FactionTypesExt faction, FactionLevel lvl, List<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
             if (ForceSpawn && !searchAttract)
                 return forcedBaseSpawn;
 
             try
             {
-                SpawnBaseTypes toSpawn = GetEnemyBaseTypes(faction, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
+                SpawnBaseTypes toSpawn = GetEnemyBaseTypes(faction, lvl, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
                 if (!IsBaseTemplateAvailable(toSpawn))
                     DebugTAC_AI.Exception("TACtical_AI: GetEnemyBaseType - population entry " + toSpawn + " has a null BaseTemplate.  How?");
                 return toSpawn;

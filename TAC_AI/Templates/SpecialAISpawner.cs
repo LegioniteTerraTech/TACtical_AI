@@ -264,7 +264,7 @@ namespace TAC_AI.Templates
                 if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GSO)).CurrentLevel >= 0)// flight grade is 2 but random spawns start at 0
                     factionsAvail.Add(FactionTypesExt.GSO);
                 // GC literally can't fly an airborneAI
-                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).CurrentLevel >= 2)
+                if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.GC)).CurrentLevel >= 1)
                     factionsAvail.Add(FactionTypesExt.GC);
                 if (Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).IsDiscovered && Licences.GetLicense(KickStart.CorpExtToCorp(FactionTypesExt.VEN)).CurrentLevel >= 0)// flight grade is 1 but random spawns start at 0
                     factionsAvail.Add(FactionTypesExt.VEN);

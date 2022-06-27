@@ -1775,6 +1775,23 @@ namespace TAC_AI.Templates
                 return null;
             }
         }
+        internal static Material CreateMaterial(string pngName, Material prefab)
+        {
+            string destination = DLLDirectory + up + "AI_Icons" + up + pngName;
+            try
+            {
+                Texture2D tex = FileUtils.LoadTexture(destination);
+                Material mat = new Material(prefab);
+                mat.mainTexture = tex;
+                DebugTAC_AI.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
+                return mat;
+            }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   File is missing!");
+                return null;
+            }
+        }
         private static string GetNameDirectory(string FolderDirectory)
         {
             StringBuilder final = new StringBuilder();

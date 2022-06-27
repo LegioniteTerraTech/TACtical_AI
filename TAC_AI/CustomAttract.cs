@@ -157,7 +157,7 @@ namespace TAC_AI
                 }
             }
         }
-        internal static bool UseFollowCam = false;
+        internal static bool UseFollowCam = true;
         private static Tank FollowTech;
 
         internal static bool SetupTerrain(ModeAttract __instance)
@@ -227,7 +227,7 @@ namespace TAC_AI
             Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(8, 18), 0, 0);//11
             return false;
         }
-        private static void SetupTechCam(ModeAttract __instance, Tank target = null)
+        private static void SetupTechCam(Tank target = null)
         {
             UseFollowCam = true;
             //Vector3 frameCamPos = CameraManager.inst.GetCamera<FramingCamera>().transform.position;
@@ -314,7 +314,7 @@ namespace TAC_AI
                             }
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
-                            SetupTechCam(__instance);
+                            SetupTechCam();
                             return false;
 
                         case AttractType.SpaceBattle: // Airship assault

@@ -622,6 +622,38 @@ namespace TAC_AI.AI
             public static Event<TankAIHelper> TechRemovedEvent = new Event<TankAIHelper>();
             private static float lastCombatTime = 0;
             internal static float terrainHeight = 0;
+            private static float TargetTime = DefaultTime;
+            internal static float LastRealTime = 0;
+            internal static float DeltaRealTime = 0;
+
+            private const float DefaultTime = 1.0f;
+            private const float SlowedTime = 0.25f;
+            private const float ChangeRate = 1.5f;
+
+            public void ManageTimeRunner()
+            {
+                if (Time.timeScale > 0)
+                {
+                    DeltaRealTime = Time.realtimeSinceStartup - LastRealTime;
+                    if (ManPlayerRTS.PlayerIsInRTS && !ManNetwork.IsNetworked)
+                    {
+                        if (Input.GetKey(KeyCode.LeftControl))
+                        {
+                            TargetTime = SlowedTime;
+                        }
+                        else
+                        {
+                            TargetTime = DefaultTime;
+                        }
+                    }
+                    else
+                    {
+                        TargetTime = DefaultTime;
+                    }
+                    Time.timeScale = Mathf.MoveTowards(Time.timeScale, TargetTime, ChangeRate * DeltaRealTime);
+                }
+                LastRealTime = Time.realtimeSinceStartup;
+            }
 
             internal static void Initiate()
             {
@@ -917,20 +949,21 @@ namespace TAC_AI.AI
                 AIERepair.ConstructErrorBlocksList();
             }
 
-
             private void Update()
             {
                 if (!ManPauseGame.inst.IsPaused)
                 {
+                    if (!AIGlobals.IsAttract)
+                    {
+                        //DebugTAC_AI.Log("Resetting Camera...");
+                        CameraManager.inst.GetCamera<TankCamera>().SetFollowTech(null);
+                        CustomAttract.UseFollowCam = false;
+                    }
+
                     if (Input.GetKeyDown(KickStart.RetreatHotkey) && ManHUD.inst.HighlightedOverlay == null)
                         ToggleTeamRetreat(Singleton.Manager<ManPlayer>.inst.PlayerTeam);
                     if (Singleton.playerTank)
                     {
-                        if (CustomAttract.UseFollowCam)
-                        {
-                            CameraManager.inst.GetCamera<TankCamera>().SetFollowTech(null);
-                            CustomAttract.UseFollowCam = false;
-                        }
                         var helper = Singleton.playerTank.GetComponent<TankAIHelper>();
                         if (Input.GetMouseButton(0) && Singleton.playerTank.control.FireControl && ManPointer.inst.targetVisible)
                         {
@@ -969,6 +1002,7 @@ namespace TAC_AI.AI
                     else
                         lastCombatTime += Time.deltaTime;
                 }
+                ManageTimeRunner();
             }
         }
         public class TeamIndex
@@ -2368,14 +2402,20 @@ namespace TAC_AI.AI
                         else
                             ForceSetBeam = true;
                     }
-                    else
+                    else if (45 < FrustrationMeter)
                     {
                         //Shoot the freaking tree
                         FrustrationMeter += KickStart.AIClockPeriod;
                         if (useGun)
                             RemoveObstruction();
                         ForceSetDrive = true;
-                        DriveVar = 0.5f;
+                        DriveVar = -0.5f;
+                    }
+                    else
+                    {   // Gun the throttle
+                        FrustrationMeter += KickStart.AIClockPeriod;
+                        ForceSetDrive = true;
+                        DriveVar = -1f;
                     }
                 }
                 else
@@ -2425,7 +2465,7 @@ namespace TAC_AI.AI
                             ForceSetBeam = true;
                         }
                     }
-                    else
+                    else if (25 < FrustrationMeter)
                     {
                         //Shoot the freaking tree
                         FrustrationMeter += KickStart.AIClockPeriod;
@@ -2433,6 +2473,12 @@ namespace TAC_AI.AI
                             RemoveObstruction();
                         ForceSetDrive = true;
                         DriveVar = 0.5f;
+                    }
+                    else
+                    {   // Gun the throttle
+                        FrustrationMeter += KickStart.AIClockPeriod;
+                        ForceSetDrive = true;
+                        DriveVar = 1f;
                     }
                 }
             }

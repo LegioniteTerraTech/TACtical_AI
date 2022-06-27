@@ -23,6 +23,7 @@ namespace TAC_AI
 		SJ,		// Space Junkers
 		LEG,    // Legion
 
+		// Below is currently mostly unused as Custom Corps already address this.
 		// Community
 		AER = 256,    // Aerion
 		BL = 257,     // Black Labs (EXT OF HE)

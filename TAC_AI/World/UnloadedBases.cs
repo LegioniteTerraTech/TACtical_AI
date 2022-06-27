@@ -174,7 +174,6 @@ namespace TAC_AI.World
                 {
                     EP.SetEvent(posEnemy);
                 }
-                
             }
             catch { }
         }
@@ -329,6 +328,7 @@ namespace TAC_AI.World
                 }
 
 
+                FactionLevel lvl = RawTechLoader.TryGetPlayerLicenceLevel();
                 int grade = 99;
                 try
                 {
@@ -340,12 +340,12 @@ namespace TAC_AI.World
                 int Cost = EP.BuildBucks();
                 if (EP.GlobalMakerBaseCount() >= KickStart.MaxBasesPerTeam)
                 {// Build a mobile Tech 
-                    TryFreeUpBaseSlots(EP);
+                    TryFreeUpBaseSlots(EP, lvl);
                     if (EP.GlobalMobileTechCount() > KickStart.EnemyTeamTechLimit)
                         return;
                     if (!IsActivelySieging(EP))
                     {
-                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost))
+                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, lvl, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost))
                         {
                             int spawnIndex = valid.GetRandomEntry();
                             if (spawnIndex == -1)
@@ -360,7 +360,7 @@ namespace TAC_AI.World
                                 return;
                             }
                         }
-                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, maxGrade: grade, maxPrice: Cost);
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, lvl, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, maxGrade: grade, maxPrice: Cost);
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type);
@@ -375,9 +375,9 @@ namespace TAC_AI.World
                 if (ST != null && ManEnemyWorld.FindFreeSpaceOnTileCircle(EBU, ST, out Vector2 newPosOff))
                 {   // Try spawning defense
                     Vector3 pos = ManWorld.inst.TileManager.CalcTileCentreScene(ST.coord) + newPosOff.ToVector3XZ();
-                    reason = PickBuildBasedOnPriorities(EP);
+                    reason = PickBuildBasedOnPriorities(EP, lvl);
                     Terra = RawTechLoader.GetTerrain(pos);
-                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, reason, Terra, false, grade, maxPrice: Cost))
+                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, lvl, reason, Terra, false, grade, maxPrice: Cost))
                     {
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
@@ -392,7 +392,7 @@ namespace TAC_AI.World
                             return;
                         }
                     }
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, lvl, reason, Terra, maxGrade: grade, maxPrice: Cost);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     ManEnemyWorld.ConstructNewExpansion(pos, EBU, EP, type);
@@ -400,14 +400,14 @@ namespace TAC_AI.World
                 }
                 else
                 {   // Find new home base position
-                    TryFreeUpBaseSlots(EP);
+                    TryFreeUpBaseSlots(EP, lvl);
                     EmergencyMoveMoney(GetTeamFunder(EP));
                     if (EP.GlobalMobileTechCount() > KickStart.EnemyTeamTechLimit)
                         return;
                     if (!IsActivelySieging(EP))
                     {
                         Terra = RawTechLoader.GetTerrain(EBU.tech.GetBackwardsCompatiblePosition());
-                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost))
+                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, lvl, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost))
                         {
                             int spawnIndex = valid.GetRandomEntry();
                             if (spawnIndex == -1)
@@ -422,7 +422,7 @@ namespace TAC_AI.World
                                 return;
                             }
                         }
-                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, BasePurpose.NotStationary, Terra, maxGrade: grade, maxPrice: Cost);
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, lvl, BasePurpose.NotStationary, Terra, maxGrade: grade, maxPrice: Cost);
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type);
@@ -435,14 +435,14 @@ namespace TAC_AI.World
                 DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - game is being stubborn: " + e);
             }
         }
-        public static void TryFreeUpBaseSlots(EnemyPresence EP)
+        public static void TryFreeUpBaseSlots(EnemyPresence EP, FactionLevel lvl)
         {   // Remove uneeeded garbage
             try
             {
                 EnemyBaseUnit Main = GetTeamFunder(EP);
                 int TeamBaseCount = EP.GlobalMakerBaseCount();
                 //bool RemoveReceivers = FetchNearbyResourceCounts(tech.Team) == 0;
-                bool RemoveSpenders = EP.BuildBucks() < CheapestAutominerPrice(Main.Faction) / 2;
+                bool RemoveSpenders = EP.BuildBucks() < CheapestAutominerPrice(Main.Faction, lvl) / 2;
                 bool ForceRemove = TeamBaseCount > KickStart.MaxBasesPerTeam;
 
                 int attempts = 1;
@@ -490,9 +490,9 @@ namespace TAC_AI.World
                 DebugTAC_AI.Log("TACtical_AI: TryFreeUpBaseSlots - game is being stubborn");
             }
         }
-        public static BasePurpose PickBuildBasedOnPriorities(EnemyPresence EP)
+        public static BasePurpose PickBuildBasedOnPriorities(EnemyPresence EP, FactionLevel lvl)
         {   // Expand the base!
-            if (EP.BuildBucks() <= CheapestAutominerPrice(GetTeamFunder(EP).Faction) && !HasTooMuchOfType(EP, BasePurpose.Autominer))
+            if (EP.BuildBucks() <= CheapestAutominerPrice(GetTeamFunder(EP).Faction, lvl) && !HasTooMuchOfType(EP, BasePurpose.Autominer))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
                 return BasePurpose.Autominer;
             }
@@ -770,9 +770,9 @@ namespace TAC_AI.World
             }
             return validLocation;
         }
-        private static int CheapestAutominerPrice(FactionTypesExt FST)
+        private static int CheapestAutominerPrice(FactionTypesExt FST, FactionLevel lvl)
         {
-            List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(FST, BasePurpose.Autominer, BaseTerrain.Land);
+            List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(FST, lvl, BasePurpose.Autominer, BaseTerrain.Land);
             int lowest = 150000;
             foreach (SpawnBaseTypes type in types)
             {
