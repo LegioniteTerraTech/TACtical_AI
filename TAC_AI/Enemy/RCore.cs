@@ -953,57 +953,7 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                switch (toSet.CommanderMind)
-                {
-                    case EnemyAttitude.NPCBaseHost:
-                        toSet.Range = AIGlobals.BaseFounderRange;
-                        if (!tank.name.Contains('Ω'))
-                            tank.SetName(tank.name + " Ω");
-                        toSet.CommanderMind = EnemyAttitude.NPCBaseHost;
-                        if (!AIGlobals.IsBaseTeam(tank.Team))
-                        {
-                            if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
-                                RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
-                            else
-                                RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.TechProduction);
-                        }
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-                        break;
-                    case EnemyAttitude.Boss:
-                        if (!tank.name.Contains('⦲'))
-                            tank.SetName(tank.name + " ⦲");
-                        if (!AIGlobals.IsBaseTeam(tank.Team))
-                            RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.Headquarters);
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-                        break;
-                    case EnemyAttitude.Invader:
-                        RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.AnyNonHQ);
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is an invader looking to take over your world!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-                        break;
-                    case EnemyAttitude.Miner:
-                        if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI in some attack cases
-                        {
-                            switch (toSet.EvilCommander)
-                            {
-                                case EnemyHandling.Naval:
-                                    toSet.CommanderAttack = EnemyAttack.Spyper;
-                                    break;
-                                case EnemyHandling.Starship:
-                                case EnemyHandling.Airplane:
-                                case EnemyHandling.Chopper:
-                                    toSet.CommanderAttack = EnemyAttack.Pesterer;
-                                    break;
-                                default:
-                                    toSet.CommanderAttack = EnemyAttack.Coward;
-                                    break;
-                            }
-                        }
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a harvester!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-                        break;
-                    default:
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
-                        break;
-                }
+                CheckShouldMakeBase(thisInst, toSet, tank);
 
                 int Team = tank.Team;
                 if (AIGlobals.IsEnemyBaseTeam(Team))
@@ -1039,6 +989,60 @@ namespace TAC_AI.AI.Enemy
                     AIGlobals.PopupAllyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
                 else
                     AIGlobals.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
+            }
+        }
+        public static void CheckShouldMakeBase(AIECore.TankAIHelper thisInst, EnemyMind toSet, Tank tank)
+        {
+            switch (toSet.CommanderMind)
+            {
+                case EnemyAttitude.NPCBaseHost:
+                    toSet.Range = AIGlobals.BaseFounderRange;
+                    if (!tank.name.Contains('Ω'))
+                        tank.SetName(tank.name + " Ω");
+                    toSet.CommanderMind = EnemyAttitude.NPCBaseHost;
+                    if (!AIGlobals.IsBaseTeam(tank.Team))
+                    {
+                        if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
+                            RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
+                        else
+                            RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.TechProduction);
+                    }
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+                    break;
+                case EnemyAttitude.Boss:
+                    if (!tank.name.Contains('⦲'))
+                        tank.SetName(tank.name + " ⦲");
+                    if (!AIGlobals.IsBaseTeam(tank.Team))
+                        RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.Headquarters);
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+                    break;
+                case EnemyAttitude.Invader:
+                    RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.AnyNonHQ);
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is an invader looking to take over your world!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+                    break;
+                case EnemyAttitude.Miner:
+                    if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI in some attack cases
+                    {
+                        switch (toSet.EvilCommander)
+                        {
+                            case EnemyHandling.Naval:
+                                toSet.CommanderAttack = EnemyAttack.Spyper;
+                                break;
+                            case EnemyHandling.Starship:
+                            case EnemyHandling.Airplane:
+                            case EnemyHandling.Chopper:
+                                toSet.CommanderAttack = EnemyAttack.Pesterer;
+                                break;
+                            default:
+                                toSet.CommanderAttack = EnemyAttack.Coward;
+                                break;
+                        }
+                    }
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a harvester!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+                    break;
+                default:
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
+                    break;
             }
         }
         public static void SetFromScheme(EnemyMind toSet, Tank tank)

@@ -627,6 +627,10 @@ namespace TAC_AI
         {
             switch (FST)
             {
+                case FactionSubTypes.NULL:
+                case FactionSubTypes.GSO:
+                case FactionSubTypes.SPE:
+                    return FactionLevel.GSO;
                 case FactionSubTypes.GC:
                     return FactionLevel.GC;
                 case FactionSubTypes.EXP:
@@ -638,7 +642,7 @@ namespace TAC_AI
                 case FactionSubTypes.BF:
                     return FactionLevel.BF;
                 default:
-                    return FactionLevel.GSO;
+                    return FactionLevel.MOD;
             }
         }
     }

@@ -649,19 +649,19 @@ namespace TAC_AI.World
         {
             finalPos = Vector3.zero;
             //List<EnemyTechUnit> ETUs = GetTechsInTile(tile.coord);
-            int partitions = (int)ManWorld.inst.TileSize / 111; // rough tech spacing needed
+            int partitions = (int)ManWorld.inst.TileSize / 80; // rough tech spacing needed
             float partitionScale = ManWorld.inst.TileSize / partitions;
-            float halfDist = (ManWorld.inst.TileSize - partitionScale) / 2;
+            float halfDist = ManWorld.inst.TileSize / 2;
             List<Vector3> possibleSpots = new List<Vector3>();
-            Vector3 tilePosScene = WorldPosition.FromGameWorldPosition(ManWorld.inst.TileManager.CalcTileCentre(tilePos)).ScenePosition;
-            int extActionRange = AIGlobals.EnemyExtendActionRange - 82;
+            Vector3 tileInPosScene = WorldPosition.FromGameWorldPosition(ManWorld.inst.TileManager.CalcTileCentre(tilePos)).ScenePosition;
+            int extActionRange = AIGlobals.EnemyExtendActionRange - 48;
             extActionRange *= extActionRange;
 
             for (int stepX = (int)-halfDist; stepX < halfDist; stepX += (int)partitionScale)
             {
                 for (int stepY = (int)-halfDist; stepY < halfDist; stepY += (int)partitionScale)
                 {
-                    Vector3 New = new Vector3(stepX + tilePosScene.x, tilePosScene.y, stepY + tilePosScene.z);
+                    Vector3 New = new Vector3(stepX + tileInPosScene.x, tileInPosScene.y, stepY + tileInPosScene.z);
                     if (ManWorld.inst.GetTerrainHeight(New, out float height))
                     {
                         float hPart = partitionScale / 2;

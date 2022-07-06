@@ -101,7 +101,7 @@ namespace TAC_AI
             {
                 return new List<string>
         {   // must be odd
-            {   "Slayers"
+            {   "Prospectors"
             },{ "Shield"
             },{ "Halberd"
             },{ "Enclave"

@@ -1344,40 +1344,42 @@ namespace TAC_AI.AI
                     }
                     ranOutOfParts = false;
 
-                    TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, blockSpawnPos, Quaternion.identity, out bool worked);
-                    if (!worked)
-                    {
-                        DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");
-                        continue;
-                    }
                     bool attemptW;
 
                     List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
-                        DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - THERE'S NO MORE BLOCK POSITIONS TO ATTACH!");
-                        ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
+                        //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - THERE'S NO MORE BLOCK POSITIONS TO ATTACH!");
                         typesMissing.RemoveAt(step);
                         attachAttempts--;
                         step--;
                         continue;
                     }
-                    for (int step2 = 0; step2 < count; step2++)
+                    else
                     {
-                        BlockMemory template = posBlocks.ElementAt(step2);
-                        attemptW = AttemptBlockAttachImmediate(template, foundBlock, purchase);
-                        if (attemptW)
+                        TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, blockSpawnPos, Quaternion.identity, out bool worked);
+                        if (!worked)
                         {
-                            //foundBlock.InitNew();
-                            if (count == 1)
-                                typesMissing.Remove(bType);
-                            if (playerInventory)
-                                BlockAvailInInventory(tank, bType, true);
-                            return true;
+                            DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block " + bType);
+                            continue;
                         }
+                        for (int step2 = 0; step2 < count; step2++)
+                        {
+                            BlockMemory template = posBlocks.ElementAt(step2);
+                            attemptW = AttemptBlockAttachImmediate(template, foundBlock, purchase);
+                            if (attemptW)
+                            {
+                                //foundBlock.InitNew();
+                                if (count == 1)
+                                    typesMissing.Remove(bType);
+                                if (playerInventory)
+                                    BlockAvailInInventory(tank, bType, true);
+                                return true;
+                            }
+                        }
+                        ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                     }
-                    ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                 }
                 return false;
             }
@@ -1502,43 +1504,45 @@ namespace TAC_AI.AI
                     }
                     ranOutOfParts = false;
 
-                    TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, blockSpawnPos, Quaternion.identity, out bool worked);
-                    if (!worked)
-                    {
-                        DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");
-                        continue;
-                    }
-                    bool attemptW;
-
                     List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
-                        ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                         typesMissing.RemoveAt(step);
                         attachAttempts--;
                         step--;
                         continue;
                     }
-                    //Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
-                    for (int step2 = 0; step2 < count; step2++)
+                    else
                     {
-                        BlockMemory template = posBlocks.ElementAt(step2);
-                        attemptW = AttemptBlockAttachImmediate(template, foundBlock, purchase);
-                        if (attemptW)
+                        TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, blockSpawnPos, Quaternion.identity, out bool worked);
+                        if (!worked)
                         {
-                            foundBlock.SetSkinByUniqueID(RawTechLoader.GetSkinIDSetForTeam(tank.Team, (int)ManSpawn.inst.GetCorporation(bType)));
-                            //foundBlock.InitNew();
-                            if (count == 1)
-                                typesMissing.Remove(bType);
-                            if (playerInventory)
-                                BlockAvailInInventory(tank, bType, true);
-                            return true;
+                            DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block " + bType);
+                            continue;
                         }
-                    }
-                    //Debug.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+                        bool attemptW;
 
-                    ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
+                        //Debug.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
+                        for (int step2 = 0; step2 < count; step2++)
+                        {
+                            BlockMemory template = posBlocks.ElementAt(step2);
+                            attemptW = AttemptBlockAttachImmediate(template, foundBlock, purchase);
+                            if (attemptW)
+                            {
+                                foundBlock.SetSkinByUniqueID(RawTechLoader.GetSkinIDSetForTeam(tank.Team, (int)ManSpawn.inst.GetCorporation(bType)));
+                                //foundBlock.InitNew();
+                                if (count == 1)
+                                    typesMissing.Remove(bType);
+                                if (playerInventory)
+                                    BlockAvailInInventory(tank, bType, true);
+                                return true;
+                            }
+                        }
+                        //Debug.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+
+                        ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
+                    }
                     // if everything fails, resort to timbuktu
                     //foundBlock.damage.SelfDestruct(0.1f);
                     //Vector3 yeet = Vector3.forward * 450000;

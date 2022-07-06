@@ -49,9 +49,9 @@ namespace TAC_AI.World
         {
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return false;
-            if (RaidCooldown <= 0)
+            if (!InProgress && (RaidCooldown <= 0 || AIGlobals.TurboAICheat))
             {
-                if (RaidCooldown <= 0 && enemyTeamInvolved.GlobalMobileTechCount() + 1 > KickStart.EnemyTeamTechLimit)
+                if (enemyTeamInvolved.GlobalMobileTechCount() + 1 > KickStart.EnemyTeamTechLimit)
                 {
                     inst.EP = enemyTeamInvolved;
                     WarnPlayers();
@@ -81,7 +81,15 @@ namespace TAC_AI.World
                     {
                         return;
                     }
-                    inst.EP.SetEvent(Singleton.playerTank.visible.tileCache.tile.Coord);
+                    try
+                    {
+                        inst.EP.SetEvent(Singleton.playerTank.visible.tileCache.tile.Coord);
+                    }
+                    catch 
+                    {
+                        DebugTAC_AI.Assert(true, "Player Tech does not have a valid coord.  Could not update this frame.");
+                        return; 
+                    }
                     inst.techsInvolved.Clear();
                     foreach (Tank tech in ManTechs.inst.CurrentTechs)
                     {

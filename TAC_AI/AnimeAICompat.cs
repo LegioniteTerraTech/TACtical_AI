@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
+
+// Anime AI support is on hold until further notice
 #if !STEAM
 using AnimeAI;
 

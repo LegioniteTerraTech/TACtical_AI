@@ -155,7 +155,7 @@ namespace TAC_AI.AI
                 return;
             }
             if (lastTank.GetComponent<RBases.EnemyBaseFunder>())
-            {
+            {   // Bases that store BB
                 int teamFunds = 0;
                 funder = RBases.GetTeamFunder(lastTank.Team);
                 if (funder != null)
@@ -176,7 +176,7 @@ namespace TAC_AI.AI
                     }
                 }
                 GUI.Label(new Rect(10, 25, 180, 30), AIGlobals.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
-                GUI.Label(new Rect(10, 45, 180, 30), (teamFunds > 0 ? AIGlobals.UIAlphaText + "<b>" + (teamFunds + teamCost) + "</b></color>Bribe: " : AIGlobals.UIAlphaText + "<b>No Bases?</b></color>"));
+                GUI.Label(new Rect(10, 45, 180, 30), (teamFunds > 0 ? AIGlobals.UIAlphaText + "<b>" + (teamFunds + teamCost) + "</b> Bribe: " : AIGlobals.UIAlphaText + "<b>No Bases?</b></color>"));
                 GUIContent bribeButton;
                 bool afford = ManPlayer.inst.CanAfford(teamFunds + teamCost);
                 if (afford)
@@ -265,7 +265,7 @@ namespace TAC_AI.AI
                 }
                 if (Singleton.playerTank)
                 {
-                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Provoke")))
+                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Provoke"), AIGlobals.ButtonRed))
                     {
                         var mind = lastTank.GetComponent<EnemyMind>();
                         if (mind && mind.CommanderSmarts <= EnemySmarts.Meh)

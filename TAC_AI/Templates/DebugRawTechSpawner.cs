@@ -951,9 +951,8 @@ namespace TAC_AI.Templates
                             continue; // TECHS ARE LOADING AND IF WE REMOVE IT NOW IT WILL IGNORE TEAMS
                         }
 
-                        if (remove.TeamID != ManPlayer.inst.PlayerTeam && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
+                        if (AIGlobals.IsBaseTeam(remove.TeamID) && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
                         {
-                            
                             Debug.Log("TACtical_AI: RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | " 
                                 + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | " 
                                 + (remove.visible ? "active" : "inactive"));

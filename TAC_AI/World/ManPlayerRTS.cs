@@ -1075,7 +1075,8 @@ namespace TAC_AI.World
         {
             if (TechUnit.tank.netTech?.NetPlayer)
             {
-                return false;// cannot grab other player tech
+                if (TechUnit.tank.netTech.NetPlayer != ManNetwork.inst.MyPlayer)
+                    return false;// cannot grab other player tech
             }
             if (!TechUnit.ActuallyWorks)
                 return false;

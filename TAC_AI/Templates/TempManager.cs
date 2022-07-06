@@ -100,84 +100,94 @@ namespace TAC_AI.Templates
 
         public static bool ValidateBlocksInTech(ref string toLoad, out int basePrice, out FactionLevel greatestFaction)
         {
-            StringBuilder RAW = new StringBuilder();
-            foreach (char ch in toLoad)
-            {
-                if (ch != RawTechExporter.up.ToCharArray()[0])
-                {
-                    RAW.Append(ch);
-                }
-            }
-            List<BlockMemory> mem = new List<BlockMemory>();
-            StringBuilder blockCase = new StringBuilder();
-            string RAWout = RAW.ToString();
             try
             {
-                foreach (char ch in RAWout)
+                StringBuilder RAW = new StringBuilder();
+                foreach (char ch in toLoad)
                 {
-                    if (ch == '|')//new block
+                    if (ch != RawTechExporter.up.ToCharArray()[0])
                     {
-                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
-                        blockCase.Clear();
+                        RAW.Append(ch);
                     }
-                    else
-                        blockCase.Append(ch);
                 }
-                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                List<BlockMemory> mem = new List<BlockMemory>();
+                StringBuilder blockCase = new StringBuilder();
+                string RAWout = RAW.ToString();
+                try
+                {
+                    foreach (char ch in RAWout)
+                    {
+                        if (ch == '|')//new block
+                        {
+                            mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                            blockCase.Clear();
+                        }
+                        else
+                            blockCase.Append(ch);
+                    }
+                    mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                }
+                catch
+                {
+                    DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTech - Loading error - File was edited or corrupted!");
+                    basePrice = 0;
+                    greatestFaction = FactionLevel.GSO;
+                    return false;
+                }
+                bool valid = true;
+                basePrice = 0;
+                if (mem.Count == 0)
+                {
+                    greatestFaction = FactionLevel.GSO;
+                    DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
+                    return false;
+                }
+                FactionLevel campLice = FactionLevel.GSO;
+                greatestFaction = FactionLevel.GSO;
+                foreach (BlockMemory bloc in mem)
+                {
+                    BlockTypes type = AIERepair.StringToBlockType(bloc.t);
+                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
+                    {
+                        valid = false;
+                        continue;
+                    }
+
+                    FactionSubTypes FST = Singleton.Manager<ManSpawn>.inst.GetCorporation(type);
+                    FactionLevel FL = KickStart.GetFactionLevel(FST);
+                    if (FL >= FactionLevel.ALL)
+                    {
+                        if (ManMods.inst.IsModdedCorp(FST))
+                        {
+                            ModdedCorpDefinition MCD = ManMods.inst.GetCorpDefinition(FST);
+                            if (Enum.TryParse(MCD.m_RewardCorp, out FactionSubTypes FST2))
+                            {
+                                FST = FST2;
+                            }
+                            else
+                                throw new Exception("There's a block given that has an invalid corp \nBlockType: " + type);
+                        }
+                        else
+                            throw new Exception("There's a block given that has an invalid corp \nCorp: " + FL + " \nBlockType: " + type);
+                    }
+                    if (campLice < FL)
+                        greatestFaction = FL;
+                    basePrice += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(type);
+                    bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
+                }
+
+                // Rebuild in workable format
+                toLoad = AIERepair.DesignMemory.MemoryToJSONExternal(mem);
+
+                return valid;
             }
             catch
             {
-                DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTech - Loading error - File was edited or corrupted!");
+                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
                 basePrice = 0;
-                greatestFaction = FactionLevel.GSO;
+                greatestFaction = FactionLevel.NULL;
                 return false;
             }
-            bool valid = true;
-            basePrice = 0;
-            if (mem.Count == 0)
-            {
-                greatestFaction = FactionLevel.GSO;
-                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
-                return false;
-            }
-            FactionLevel campLice = FactionLevel.GSO;
-            greatestFaction = FactionLevel.GSO;
-            foreach (BlockMemory bloc in mem)
-            {
-                BlockTypes type = AIERepair.StringToBlockType(bloc.t);
-                if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
-                {
-                    valid = false;
-                    continue;
-                }
-
-                FactionSubTypes FST = Singleton.Manager<ManSpawn>.inst.GetCorporation(type);
-                FactionLevel FL = KickStart.GetFactionLevel(FST);
-                if (FL >= FactionLevel.ALL)
-                {
-                    if (ManMods.inst.IsModdedCorp(FST))
-                    {
-                        ModdedCorpDefinition MCD = ManMods.inst.GetCorpDefinition(FST);
-                        if (Enum.TryParse(MCD.m_RewardCorp, out FactionSubTypes FST2))
-                        {
-                            FST = FST2;
-                        }
-                        else
-                            throw new Exception("There's a block given that has an invalid corp \nBlockType: " + type);
-                    }
-                    else
-                        throw new Exception("There's a block given that has an invalid corp \nCorp: " + FL + " \nBlockType: " + type);
-                }
-                if (campLice < FL)
-                    greatestFaction = FL;
-                basePrice += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(type);
-                bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
-            }
-
-            // Rebuild in workable format
-            toLoad = AIERepair.DesignMemory.MemoryToJSONExternal(mem);
-
-            return valid;
         }
 
         /// <summary>
@@ -188,25 +198,33 @@ namespace TAC_AI.Templates
         /// <returns></returns>
         public static bool ValidateBlocksInTech(ref List<BlockMemory> toScreen)
         {
-            if (toScreen.Count == 0)
+            try
             {
-                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
-                return false;
-            }
-            List<BlockMemory> validated = new List<BlockMemory>();
-            bool valid = true;
-            foreach (BlockMemory bloc in toScreen)
-            {
-                BlockTypes type = AIERepair.StringToBlockType(bloc.t);
-                if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
+                if (toScreen.Count == 0)
                 {
-                    valid = false;
-                    continue;
+                    DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
+                    return false;
                 }
-                bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
-                validated.Add(bloc);
+                List<BlockMemory> validated = new List<BlockMemory>();
+                bool valid = true;
+                foreach (BlockMemory bloc in toScreen)
+                {
+                    BlockTypes type = AIERepair.StringToBlockType(bloc.t);
+                    if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
+                    {
+                        valid = false;
+                        continue;
+                    }
+                    bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
+                    validated.Add(bloc);
+                }
+                return valid;
             }
-            return valid;
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
+                return false; 
+            }
         }
         public static bool ValidateBlocksInTechStrict(ref string toLoad)
         {

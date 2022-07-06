@@ -34,10 +34,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.Steer = true;
                 thisInst.lastDestination = mind.sceneStationaryPos;
-                if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.6f)
-                {   //Move
+                if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.75f)
+                {   //Move back because we have GONE TOO FAR BACKWARDS
                     thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = -1;
+                    thisInst.DriveVar = 1;
                 }
                 else
                 {   //Aim back

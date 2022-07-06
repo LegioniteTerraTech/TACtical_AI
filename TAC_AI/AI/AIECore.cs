@@ -628,6 +628,7 @@ namespace TAC_AI.AI
 
             private const float DefaultTime = 1.0f;
             private const float SlowedTime = 0.25f;
+            private const float FastTime = 3f; // fooling around
             private const float ChangeRate = 1.5f;
 
             public void ManageTimeRunner()
@@ -640,6 +641,10 @@ namespace TAC_AI.AI
                         if (Input.GetKey(KeyCode.LeftControl))
                         {
                             TargetTime = SlowedTime;
+                        }
+                        else if (Input.GetKey(KeyCode.RightControl))
+                        {
+                            TargetTime = FastTime;
                         }
                         else
                         {

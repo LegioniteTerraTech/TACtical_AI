@@ -220,7 +220,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock, groundOffset))
             {
-                Debug.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
+                //Debug.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;
             }
             return true;
@@ -251,7 +251,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock, groundOffset))
             {
-                Debug.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
+                //Debug.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;
             }
             return true;
@@ -309,7 +309,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock, groundOffset))
             {
-                Debug.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
+                //Debug.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;
             }
             return true;

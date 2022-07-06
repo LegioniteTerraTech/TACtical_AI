@@ -19,5 +19,6 @@ namespace TAC_AI
         BF,
         EXP,
         ALL,
+        MOD,
     }
 }
