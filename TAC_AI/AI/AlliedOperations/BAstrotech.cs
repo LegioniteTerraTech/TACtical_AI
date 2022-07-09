@@ -163,7 +163,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.CanAutoAnchor)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
+                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
                     {
                         DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
                         thisInst.TryAnchor();
@@ -182,7 +182,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.CanAutoAnchor)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
+                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
                     {
                         DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
                         thisInst.TryAnchor();
@@ -343,7 +343,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.CanAutoAnchor)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
+                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
                     {
                         DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
                         thisInst.TryAnchor();
@@ -362,7 +362,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.DelayedAnchorClock++;
                 if (thisInst.CanAutoAnchor)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= 6)
+                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
                     {
                         DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
                         thisInst.TryAnchor();

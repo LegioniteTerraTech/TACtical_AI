@@ -734,7 +734,7 @@ namespace TAC_AI
 
             var TACAI = KickStart.ModName + " - A.I. Settings";
 #if !STEAM  // Because this toggle is reserved for the loading and unloading of the mod in STEAM release
-            betterAI = new OptionToggle("<b>Enable Advanced Player A.I.</b>", TACAI, KickStart.EnableBetterAI);
+            betterAI = new OptionToggle("<b>Enable Mod</b>", TACAI, KickStart.EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { KickStart.EnableBetterAI = betterAI.SavedValue; });
 #endif
             retreatHotkey = new OptionKey("Retreat Button", TACAI, KickStart.RetreatHotkey);

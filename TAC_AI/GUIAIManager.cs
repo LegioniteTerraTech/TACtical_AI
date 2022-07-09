@@ -370,18 +370,24 @@ namespace TAC_AI
                 }
                 if (lastTank.PlayerAllowAnchoring)
                 {
-                    if (lastTank.tank.Anchors.NumPossibleAnchors > 0 && lastTank.CanAnchorSafely)
+                    if (lastTank.tank.Anchors.NumPossibleAnchors > 0)
                     {
-                        if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AIGlobals.ButtonGreen))
+                        if (lastTank.CanAnchorSafely)
                         {
-                            ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
-                            if (ManNetwork.IsHost)
+                            if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AIGlobals.ButtonGreen))
                             {
-                                lastTank.PlayerAllowAnchoring = false;
-                                lastTank.TryAnchor();
+                                ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
+                                if (ManNetwork.IsHost)
+                                {
+                                    lastTank.PlayerAllowAnchoring = false;
+                                    lastTank.TryAnchor();
+                                }
+                                AIDriver = AIDriverType.Stationary;
+                                clickedDriver = true;
                             }
-                            AIDriver = AIDriverType.Stationary;
-                            clickedDriver = true;
+                        }
+                        else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AIGlobals.ButtonRed))
+                        {
                         }
                     }
                     else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AIGlobals.ButtonGrey))

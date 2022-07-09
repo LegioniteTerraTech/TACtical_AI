@@ -89,9 +89,9 @@ namespace TAC_AI.AI.Enemy
             if (Mind.StartedAnchored)
             {
                 Mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
-                if (!tank.IsAnchored)
+                if (!tank.IsAnchored && !Mind.Hurt)
                 {
-                    if (thisInst.anchorAttempts < 32)
+                    if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
                         //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
@@ -118,7 +118,7 @@ namespace TAC_AI.AI.Enemy
                 Mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
                 if (!tank.IsAnchored && !Mind.Hurt)
                 {
-                    if (thisInst.anchorAttempts < 32)
+                    if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
                         //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
@@ -208,7 +208,7 @@ namespace TAC_AI.AI.Enemy
                 Mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
                 if (!tank.IsAnchored && !Mind.Hurt)
                 {
-                    if (thisInst.anchorAttempts < 32)
+                    if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
                         //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
@@ -924,7 +924,7 @@ namespace TAC_AI.AI.Enemy
                         toSet.CommanderBolts = EnemyBolts.MissionTrigger;
                         if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0)
                         {
-                            thisInst.TryAnchor();
+                            thisInst.TryReallyAnchor();
                         }
                         DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base Tech");
                     }

@@ -150,7 +150,7 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
-  <ItemGroup Condition="'$(Configuration)'=='Steam'">
+  <ItemGroup Condition="'$(Configuration)'=='Steam'OR'$(Configuration)'=='SteamDev'">
     <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
     <!--> THE MATTERS BELOW ARE OFFICIAL </!-->
     <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
@@ -225,6 +225,7 @@
     <Compile Include="AIGlobals.cs" />
     <Compile Include="AI\AIESplitHandler.cs" />
     <Compile Include="AI\AlliedOperations\BAssassin.cs" />
+    <Compile Include="AI\AlliedOperations\BBase.cs" />
     <Compile Include="AI\AlliedOperations\BEnergizer.cs" />
     <Compile Include="AI\AlliedOperations\BScrapper.cs" />
     <Compile Include="AI\Movement\AIControllerAir.cs" />
@@ -475,6 +476,11 @@ set modpath4="C:\Program Files (x86)\Steam\steamapps\workshop\content\285920\276
 
 if exist !modpath4! (
 if $(ConfigurationName) == Steam (
+echo Copying to SteamModWorkshopDirect
+set e=$(TargetDir)&gt;nul
+xcopy /S /Y /R "!e:~0,-1!" !modpath4!
+)
+if $(ConfigurationName) == SteamDev (
 echo Copying to SteamModWorkshopDirect
 set e=$(TargetDir)&gt;nul
 xcopy /S /Y /R "!e:~0,-1!" !modpath4!

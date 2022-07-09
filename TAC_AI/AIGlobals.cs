@@ -41,6 +41,10 @@ namespace TAC_AI
         public const int TeamRangeStart = 256;
         public const short NetAIClockPeriod = 30;
 
+        public const short AlliedAnchorAttempts = 12;
+        public const short NPTAnchorAttempts = 12;
+
+
         // Pathfinding
         public const int ExtraSpace = 6;  // Extra pathfinding space
         public const float DefaultDodgeStrengthMultiplier = 1.75f;  // The motivation in trying to move away from a tech in the way

@@ -3538,7 +3538,8 @@ namespace TAC_AI.AI
                 if (CanAnchorSafely)
                 {
                     DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to anchor");
-                    TryReallyAnchor();
+                    tank.FixupAnchors(true);
+                    //TryReallyAnchor();
                 }
             }
 
@@ -3556,6 +3557,7 @@ namespace TAC_AI.AI
                     tank.FixupAnchors(false);
                     Vector3 startPos = tank.visible.centrePosition;
                     Quaternion tankFore = Quaternion.LookRotation(tank.trans.forward.SetY(0).normalized, Vector3.up);
+                    tank.visible.Teleport(startPos, tankFore, true);
                     //Quaternion tankStartRot = tank.trans.rotation;
                     for (int step = 0; step < 16; step++)
                     {
@@ -4436,7 +4438,7 @@ namespace TAC_AI.AI
                         //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": " + AutoAnchor + " | " + PlayerAllowAnchoring + " | " + (tank.Anchors.NumPossibleAnchors >= 1) + " | " + (DelayedAnchorClock >= 15) + " | " + !DANGER);
                         if (CanAutoAnchor)
                         {
-                            if (!tank.IsAnchored && anchorAttempts <= 6)
+                            if (!tank.IsAnchored && anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
                             {
                                 DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
                                 TryAnchor();

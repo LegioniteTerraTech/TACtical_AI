@@ -617,7 +617,7 @@ namespace TAC_AI.AI.Movement
             {
                 if (tankToCopy.IsAnchored && tank.Anchors.NumPossibleAnchors >= 1 && !AIHelp.AttackEnemy)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && AIHelp.anchorAttempts <= 3)//Half the escort's attempts
+                    if (tank.Anchors.NumIsAnchored == 0 && AIHelp.anchorAttempts <= AIGlobals.AlliedAnchorAttempts / 2)//Half the escort's attempts
                     {
                         AIHelp.TryAnchor();
                         AIHelp.anchorAttempts++;

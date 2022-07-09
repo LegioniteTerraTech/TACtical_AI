@@ -47,6 +47,12 @@ namespace TAC_AI.AI.AlliedOperations
                             BAviator.Dogfighting(this.helper, this.helper.tank);
                             break;
 
+                        case AIDriverType.Stationary:
+                            // Fly and doggyfight
+                            BBase.HoldPosition(this.helper, this.helper.tank);
+                            BGeneral.AimDefend(this.helper, this.helper.tank);
+                            break;
+
                         default:
                             DebugTAC_AI.Log("TACtical_AI: AIDriver is set to an invalid state - " + this.helper.DriverType);
                             DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");

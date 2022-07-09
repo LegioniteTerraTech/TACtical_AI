@@ -218,7 +218,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         if (mind.SolarsAvail && tank.Anchors.NumPossibleAnchors > 0 && !tank.IsAnchored)
                         {
-                            if (thisInst.anchorAttempts < 6)
+                            if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                             {
                                 thisInst.TryAnchor();
                                 thisInst.anchorAttempts++;
