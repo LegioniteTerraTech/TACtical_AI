@@ -750,7 +750,7 @@ namespace TAC_AI
 
         
         [HarmonyPatch(typeof(TankBeam))]
-        [HarmonyPatch("Update")]//Give the AI some untangle help
+        [HarmonyPatch("OnUpdate")]//Give the AI some untangle help
         private class PatchTankBeamToHelpAI
         {
             static readonly FieldInfo beamPush = typeof(TankBeam).GetField("m_NudgeStrafe", BindingFlags.NonPublic | BindingFlags.Instance);
