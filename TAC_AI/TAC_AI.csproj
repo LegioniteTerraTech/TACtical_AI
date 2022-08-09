@@ -286,13 +286,15 @@
     <Compile Include="GUIAIManager.cs" />
     <Compile Include="GUIEvictionNotice.cs" />
     <Compile Include="ModuleWorldRadar.cs" />
+    <Compile Include="PatchBatch\GlobalPatches.cs" />
+    <Compile Include="PatchBatch\MassPatcher.cs" />
     <Compile Include="ReverseCache.cs" />
     <Compile Include="ModuleAIExtension.cs" />
     <Compile Include="ModuleChargerTracker.cs" />
     <Compile Include="ModuleHarvestReciever.cs" />
     <Compile Include="KickStart.cs" />
     <Compile Include="NetworkHandler.cs" />
-    <Compile Include="PatchBatch.cs" />
+    <Compile Include="PatchBatch\PatchBatch.cs" />
     <Compile Include="AnimeAICompat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TeamNamer.cs" />

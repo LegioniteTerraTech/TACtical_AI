@@ -44,7 +44,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (!thisInst.CollectedTarget || thisInst.Retreat)
             {
-                thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.DetectionRange * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest charger!");
@@ -138,7 +138,7 @@ namespace TAC_AI.AI.AlliedOperations
                     AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for enemies...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, tank.Radar.Range * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.DetectionRange * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();

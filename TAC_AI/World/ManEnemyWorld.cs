@@ -259,8 +259,11 @@ namespace TAC_AI.World
             EnemyTechUnit ETU = GetETUFromTank(tech);
             if (ETU == null)
                 return;
-            TechDestroyedEvent.Send(tech.Team, tech.visible.ID, true);
-            UnloadedBases.RemoteRemove(ETU);
+            if (poof.Damage != 0)
+            {
+                TechDestroyedEvent.Send(tech.Team, tech.visible.ID, true);
+                UnloadedBases.RemoteRemove(ETU);
+            }
         }
 
 

@@ -244,6 +244,8 @@ namespace TAC_AI
         public static void MainOfficialInit()
         {
             //Where the fun begins
+            Debug.Log("TACtical_AI: MAIN (Steam Workshop Version) startup");
+            CheckIfUnstable();
 
             //Initiate the madness
             if (!hasPatched)
@@ -344,7 +346,7 @@ namespace TAC_AI
 
             //Initiate the madness
             //HarmonyInstance harmonyInstance = HarmonyInstance.Create("legionite.tactical_ai");
-            Debug.Log("TACtical_AI: MAIN startup");
+            Debug.Log("TACtical_AI: MAIN (TTMM Version) startup");
 #if DEBUG
             Debug.Log("-----------------------------------------");
             Debug.Log("-----------------------------------------");
@@ -429,18 +431,28 @@ namespace TAC_AI
 
         public static bool LookForMod(string name)
         {
-#if STEAM
-            return false; // waiting for QModManager
-#else
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            if (name == "RandomAdditions")
             {
-                if (assembly.FullName.StartsWith(name))
+                foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    return true;
+                    if (assembly.FullName.StartsWith(name))
+                    {
+                        if (assembly.GetType("KickStart") != null)
+                            return true;
+                    }
+                }
+            }
+            else
+            {
+                foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    if (assembly.FullName.StartsWith(name))
+                    {
+                        return true;
+                    }
                 }
             }
             return false;
-#endif
         }
         public static void GetActiveMods()
         {

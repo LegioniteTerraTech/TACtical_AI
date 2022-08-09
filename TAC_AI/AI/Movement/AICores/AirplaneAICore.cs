@@ -103,8 +103,8 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
-                            AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
-                            if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
+                            AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
+                            if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
                             {
                                 pilot.PerformUTurn = 0;
                                 if (pilot.PerformDiveAttack == 1)
@@ -117,7 +117,7 @@ namespace TAC_AI.AI.Movement.AICores
                             pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
                             if (pilot.LargeAircraft)    //Aim vaguely at target
-                                AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                                AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
                             else    // Aim nose at target
                                 AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
@@ -140,8 +140,8 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
-                            AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
-                            if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
+                            AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
+                            if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
                             {
                                 pilot.PerformUTurn = 0;
                                 if (pilot.PerformDiveAttack == 1)
@@ -154,7 +154,7 @@ namespace TAC_AI.AI.Movement.AICores
                             pilot.MainThrottle = pilot.AdvisedThrottle;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
                             if (pilot.LargeAircraft)    //Aim vaguely at target
-                                AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                                AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
                             else    // Aim nose at target
                                 AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
@@ -172,7 +172,7 @@ namespace TAC_AI.AI.Movement.AICores
                             //Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
                             pilot.MainThrottle = 1;
                             this.pilot.UpdateThrottle(thisInst, thisControl);
-                            Vector3 AwayFlat = (tank.boundsCentreWorldNoCheck - pilot.AirborneDest).normalized;
+                            Vector3 AwayFlat = (tank.boundsCentreWorldNoCheck - pilot.ProcessedDest).normalized;
                             AwayFlat.y = 0;
                             AwayFlat = AwayFlat.normalized;
                             AwayFlat.y = 0.1f;
@@ -188,7 +188,7 @@ namespace TAC_AI.AI.Movement.AICores
                             pilot.MainThrottle = pilot.AdvisedThrottle;
                             pilot.UpdateThrottle(thisInst, thisControl);
                             if (pilot.LargeAircraft)    //Aim vaguely at target
-                                AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                                AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
                             else    // Aim nose at target
                                 AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
@@ -205,8 +205,8 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     pilot.MainThrottle = 1;
                     this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
-                    if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
+                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
+                    if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
                     {
                         pilot.PerformUTurn = 0;
                         if (pilot.PerformDiveAttack == 1)
@@ -218,7 +218,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     pilot.MainThrottle = pilot.AdvisedThrottle;
                     this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
+                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
                 }
             }
 
@@ -387,7 +387,7 @@ namespace TAC_AI.AI.Movement.AICores
             pilot.Helper.MinimumRad = AIGlobals.AircraftDestSuccessRadius + pilot.Helper.lastTechExtents;
             if (pilot.Helper.IsMultiTech)
             {   //Override and disable most driving abilities
-                pilot.AirborneDest = MultiTechUtils.HandleMultiTech(pilot.Helper, pilot.Tank);
+                pilot.ProcessedDest = MultiTechUtils.HandleMultiTech(pilot.Helper, pilot.Tank);
                 return true;
             }
             else if (pilot.Helper.DriveDest == EDriveDest.ToBase)
@@ -400,13 +400,13 @@ namespace TAC_AI.AI.Movement.AICores
                     pilot.Helper.lastDestination = pilot.Helper.AvoidAssistPrecise(pilot.Helper.lastBasePos.position);
                 }
                 // Orbit last position
-                if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
+                if ((pilot.ProcessedDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                 {   //We are at target
-                    pilot.AirborneDest += (-this.pilot.Tank.rootBlockTrans.right.SetY(0).normalized * 129);
+                    pilot.ProcessedDest += (-this.pilot.Tank.rootBlockTrans.right.SetY(0).normalized * 129);
                 }
                 else
                 {
-                    pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                    pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                 }
                 pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(this.pilot.Helper.lastDestination, pilot.AerofoilSluggishness + groundOffset);
             }
@@ -459,15 +459,15 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                     }
                 }
-                pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                 // Orbit last position
-                if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
+                if ((pilot.ProcessedDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                 {   //We are at target
-                    pilot.AirborneDest += GetOrbitFlight();
+                    pilot.ProcessedDest += GetOrbitFlight();
                 }
                 else
                 {
-                    pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                    pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                 }
                 pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(this.pilot.Helper.lastDestination, pilot.AerofoilSluggishness + groundOffset);
             }
@@ -496,15 +496,15 @@ namespace TAC_AI.AI.Movement.AICores
                         //Debug.Log("TACtical_AI: AI IDLE");
                     }
                 }
-                pilot.AirborneDest = this.pilot.Helper.lastDestination; 
+                pilot.ProcessedDest = this.pilot.Helper.lastDestination; 
                 // Orbit last position
                 if ((pilot.Helper.lastDestination - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                 {   //We are at target
-                    pilot.AirborneDest += GetOrbitFlight();
+                    pilot.ProcessedDest += GetOrbitFlight();
                 }
                 else
                 {
-                    pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                    pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                 }
             }
             else
@@ -513,7 +513,7 @@ namespace TAC_AI.AI.Movement.AICores
                 if (combat)
                 {
                     pilot.LowerEngines = true;
-                    pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                    pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                 }
                 else
                 {
@@ -522,27 +522,27 @@ namespace TAC_AI.AI.Movement.AICores
                         pilot.LowerEngines = true;
                         if ((this.pilot.Helper.lastDestination - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                         {   //We are at target
-                            pilot.AirborneDest = this.pilot.Helper.lastDestination + (this.pilot.Tank.rootBlockTrans.forward * 500);
+                            pilot.ProcessedDest = this.pilot.Helper.lastDestination + (this.pilot.Tank.rootBlockTrans.forward * 500);
                         }
                         else
                         {
-                            pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                            pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                         }
                     }
                     else if (this.pilot.Helper.DriveDest == EDriveDest.FromLastDestination)
                     {   // Fly away from target
                         pilot.LowerEngines = false;
-                        pilot.AirborneDest = ((this.pilot.Tank.trans.position - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
+                        pilot.ProcessedDest = ((this.pilot.Tank.trans.position - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
                     }
                     else
                     {   // Orbit last position
-                        if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
+                        if ((pilot.ProcessedDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                         {   //We are at target
-                            pilot.AirborneDest += GetOrbitFlight();
+                            pilot.ProcessedDest += GetOrbitFlight();
                         }
                         else
                         {
-                            pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                            pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                         }
                     }
                 }
@@ -562,14 +562,14 @@ namespace TAC_AI.AI.Movement.AICores
             bool AvoidCrash = unresponsiveAir || NoRamOrTargetNotInPath;
 
             if (!pilot.Helper.FullMelee)
-                pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
-            pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
-            pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + this.pilot.deltaMovementClock);
+                pilot.ProcessedDest = AIEPathing.OffsetFromGroundA(pilot.ProcessedDest, this.pilot.Helper);
+            pilot.ProcessedDest = AIEPathing.ModerateMaxAlt(pilot.ProcessedDest, pilot.Helper);
+            pilot.ProcessedDest = AvoidAssist(pilot.ProcessedDest, this.pilot.Tank.boundsCentreWorldNoCheck + this.pilot.deltaMovementClock);
 
             if (pilot.Helper.FullMelee && !unresponsiveAir)
                 pilot.AdvisedThrottle = 1;
             else
-                AirplaneUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
+                AirplaneUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.ProcessedDest);
 
             if (AvoidCrash && !pilot.TargetGrounded)
                 AirplaneUtils.PreventCollisionWithGround(pilot, groundOffset, unresponsiveAir);
@@ -597,20 +597,20 @@ namespace TAC_AI.AI.Movement.AICores
             if (combat)
             {
                 pilot.LowerEngines = true;
-                pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                pilot.ProcessedDest = this.pilot.Helper.lastDestination;
             }
             else
             {
                 pilot.LowerEngines = true;
                 pilot.Helper.lastDestination = pilot.Helper.RTSDestination;
-                pilot.AirborneDest = pilot.Helper.lastDestination;
+                pilot.ProcessedDest = pilot.Helper.lastDestination;
                 if ((pilot.Helper.lastDestination - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                 {   //We are at target
-                    pilot.AirborneDest += GetOrbitFlight();
+                    pilot.ProcessedDest += GetOrbitFlight();
                 }
                 else
                 {
-                    pilot.AirborneDest = pilot.Helper.RTSDestination;
+                    pilot.ProcessedDest = pilot.Helper.RTSDestination;
                 }
             }
             bool unresponsiveAir = pilot.LargeAircraft || pilot.BankOnly;
@@ -628,14 +628,14 @@ namespace TAC_AI.AI.Movement.AICores
             bool AvoidCrash = unresponsiveAir || NoRamOrTargetNotInPath;
 
             if (AvoidCrash)
-                pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
-            pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
-            pilot.AirborneDest = AvoidAssist(pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + this.pilot.deltaMovementClock);
+                pilot.ProcessedDest = AIEPathing.OffsetFromGroundA(pilot.ProcessedDest, this.pilot.Helper);
+            pilot.ProcessedDest = AIEPathing.ModerateMaxAlt(pilot.ProcessedDest, pilot.Helper);
+            pilot.ProcessedDest = AvoidAssist(pilot.ProcessedDest, this.pilot.Tank.boundsCentreWorldNoCheck + this.pilot.deltaMovementClock);
 
             if (pilot.Helper.FullMelee && !unresponsiveAir)
                 pilot.AdvisedThrottle = 1;
             else
-                AirplaneUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
+                AirplaneUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.ProcessedDest);
 
             if (AvoidCrash && !pilot.TargetGrounded)
                 AirplaneUtils.PreventCollisionWithGround(pilot, groundOffset, unresponsiveAir);
@@ -667,7 +667,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (combat)
             {
                 pilot.LowerEngines = true;
-                pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                pilot.ProcessedDest = this.pilot.Helper.lastDestination;
             }
             else if (!mind.AttackPlayer)
             {   // Fly straight, above ground in player visual distance
@@ -676,52 +676,52 @@ namespace TAC_AI.AI.Movement.AICores
                     this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper);
                     if ((this.pilot.Helper.lastDestination - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                     {   //We are at target
-                        pilot.AirborneDest = this.pilot.Helper.lastDestination + (this.pilot.Tank.rootBlockTrans.forward * 500);
+                        pilot.ProcessedDest = this.pilot.Helper.lastDestination + (this.pilot.Tank.rootBlockTrans.forward * 500);
                     }
                     else
                     {
-                        pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                        pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                     }
                 }
                 else
-                    pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
+                    pilot.ProcessedDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
             }
             else
             {
                 pilot.LowerEngines = false;
-                if ((pilot.AirborneDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
+                if ((pilot.ProcessedDest - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                 {   //We are at target
                     //Debug.Log("TACtical_AI: Tech " + this.pilot.Tank.name + " Arrived at destination");
 
-                    pilot.AirborneDest += GetOrbitFlight();
+                    pilot.ProcessedDest += GetOrbitFlight();
                 }
                 else if (this.pilot.Helper.DriveDest == EDriveDest.ToLastDestination)
                 {   // Fly to target
                     this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper);
                     if ((this.pilot.Helper.lastDestination - this.pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                     {   //We are at target
-                        pilot.AirborneDest = this.pilot.Helper.lastDestination + (this.pilot.Tank.rootBlockTrans.forward * 500);
+                        pilot.ProcessedDest = this.pilot.Helper.lastDestination + (this.pilot.Tank.rootBlockTrans.forward * 500);
                     }
                     else
                     {
-                        pilot.AirborneDest = this.pilot.Helper.lastDestination;
+                        pilot.ProcessedDest = this.pilot.Helper.lastDestination;
                     }
                 }
                 else if (this.pilot.Helper.DriveDest == EDriveDest.FromLastDestination)
                 {   // Fly away from target
                     this.pilot.Helper.lastDestination = AIEPathing.OffsetFromGroundA(this.pilot.Helper.lastDestination, this.pilot.Helper);
-                    pilot.AirborneDest = ((this.pilot.Tank.boundsCentreWorldNoCheck - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
+                    pilot.ProcessedDest = ((this.pilot.Tank.boundsCentreWorldNoCheck - this.pilot.Helper.lastDestination).normalized * (pilot.DestSuccessRad * 2)) + this.pilot.Tank.boundsCentreWorldNoCheck;
                 }
                 else
                 {   // Orbit above player height to invoke trouble
                     this.pilot.Helper.lastPlayer = this.pilot.Helper.GetPlayerTech();
                     if (this.pilot.Helper.lastPlayer.IsNotNull())
                     {
-                        pilot.AirborneDest.y = (this.pilot.Helper.lastPlayer.tank.boundsCentreWorldNoCheck + (Vector3.up * (this.pilot.Helper.GroundOffsetHeight / 5))).y;
+                        pilot.ProcessedDest.y = (this.pilot.Helper.lastPlayer.tank.boundsCentreWorldNoCheck + (Vector3.up * (this.pilot.Helper.GroundOffsetHeight / 5))).y;
                     }
                     else
                     {   // Fly forwards until target is found
-                        pilot.AirborneDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
+                        pilot.ProcessedDest = AIEPathing.ForceOffsetFromGroundA(pilot.Tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock + pilot.Tank.rootBlockTrans.forward, pilot.Helper);
 
                         /* - Old
                         //Fly off the screen
@@ -746,15 +746,15 @@ namespace TAC_AI.AI.Movement.AICores
             bool AvoidCrash = unresponsiveAir || NoRamOrTargetNotInPath;
 
             if (AvoidCrash)
-                pilot.AirborneDest = AIEPathing.OffsetFromGroundA(pilot.AirborneDest, this.pilot.Helper);
-            pilot.AirborneDest = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.AirborneDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.deltaMovementClock * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
+                pilot.ProcessedDest = AIEPathing.OffsetFromGroundA(pilot.ProcessedDest, this.pilot.Helper);
+            pilot.ProcessedDest = RPathfinding.AvoidAssistEnemy(this.pilot.Tank, pilot.ProcessedDest, this.pilot.Tank.boundsCentreWorldNoCheck + (this.pilot.deltaMovementClock * pilot.AerofoilSluggishness), this.pilot.Helper, mind);
             
             if (pilot.Helper.FullMelee && !unresponsiveAir)
                 pilot.AdvisedThrottle = 1;
             else
-                AirplaneUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.AirborneDest);
+                AirplaneUtils.AdviseThrottle(pilot, this.pilot.Helper, this.pilot.Tank, pilot.ProcessedDest);
 
-            pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
+            pilot.ProcessedDest = AIEPathing.ModerateMaxAlt(pilot.ProcessedDest, pilot.Helper);
 
             if (AvoidCrash && !pilot.TargetGrounded)
                 AirplaneUtils.PreventCollisionWithGround(pilot, groundOffset, unresponsiveAir);

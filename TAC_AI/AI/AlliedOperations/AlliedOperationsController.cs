@@ -48,9 +48,9 @@ namespace TAC_AI.AI.AlliedOperations
                             break;
 
                         case AIDriverType.Stationary:
-                            // Fly and doggyfight
+                            // STAY and guard
                             BBase.HoldPosition(this.helper, this.helper.tank);
-                            BGeneral.AimDefend(this.helper, this.helper.tank);
+                            BGeneral.AidDefend(this.helper, this.helper.tank);
                             break;
 
                         default:

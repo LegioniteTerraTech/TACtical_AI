@@ -416,13 +416,13 @@ namespace TAC_AI
             {
                 foreach (var tech in Singleton.Manager<ManTechs>.inst.IterateTechs())
                 {
-                    if (IsBaseTeam(tech.Team) || tech.Team == -1)
+                    if (IsBaseTeam(tech.Team) || tech.Team == -1 || (tech.Team >= 1 && tech.Team <= 24))
                         Counter++;
                 }
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: AtSceneTechMax - Error on The World");
+                DebugTAC_AI.Log("TACtical_AI: AtSceneTechMax - Error on IterateTechs Fetch");
                 DebugTAC_AI.Log(e);
             }
             return Counter >= KickStart.MaxEnemyWorldCapacity;

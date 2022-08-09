@@ -450,7 +450,7 @@ namespace TAC_AI.AI.Enemy
             toSet.Range = 100;
             try
             {
-                toSet.Range = (int)tank.Radar.Range + 50;
+                toSet.Range = (int)thisInst.DetectionRange + 50;
             }
             catch { }
 

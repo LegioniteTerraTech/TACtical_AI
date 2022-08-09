@@ -43,7 +43,7 @@ namespace TAC_AI.AI
         public float HoldHeight = 0;
 
         public Vector3 MovePosition => SceneStayPos.ToVector3XZ(HoldHeight);
-        public Vector2 IdleLookDirect = Vector2.up;
+        public Vector2 IdleFacingDirect = Vector2.up;
 
         public void Initiate(Tank tank, AIECore.TankAIHelper helper, EnemyMind mind = null)
         {
@@ -58,7 +58,7 @@ namespace TAC_AI.AI
             if (Techs.Count > 0)
             {
                 Vector3 PosWorld = Techs.OrderByDescending(x => x.IsAnchored).ThenBy(x => (x.boundsCentreWorld - tank.boundsCentreWorldNoCheck).sqrMagnitude).First().boundsCentreWorld;
-                IdleLookDirect = (tank.boundsCentreWorldNoCheck - PosWorld).ToVector2XZ().normalized;
+                IdleFacingDirect = (tank.boundsCentreWorldNoCheck - PosWorld).ToVector2XZ().normalized;
             }
             AICore = new StaticAICore();
             AICore.Initiate(tank, this);

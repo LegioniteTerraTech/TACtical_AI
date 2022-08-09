@@ -51,8 +51,8 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (pilot.PerformUTurn == 3)
             {   // Aim back at target
-                AngleTowards(thisControl, thisInst, tank, pilot, pilot.AirborneDest);
-                if (Vector3.Dot((pilot.AirborneDest - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.2f)
+                AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
+                if (Vector3.Dot((pilot.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.2f)
                 {
                     pilot.ErrorsInUTurn = 0;
                     pilot.PerformUTurn = 0;
@@ -371,8 +371,8 @@ namespace TAC_AI.AI.Movement.AICores
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " -  deltaMovementClock = " + pilot.deltaMovementClock + " | slugishness = " + pilot.AerofoilSluggishness + " | deltaAim y " + deltaAim.y + " | vs " + groundOffsetF);
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " - GOING UP (HVY)");
                     pilot.ForcePitchUp = true;
-                    pilot.AirborneDest.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
-                    pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
+                    pilot.ProcessedDest.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
+                    pilot.ProcessedDest += Vector3.up * (pilot.ProcessedDest - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
                 }
             }
             else
@@ -380,13 +380,13 @@ namespace TAC_AI.AI.Movement.AICores
                 if (!AIEPathing.AboveHeightFromGround(deltaAim, groundOffsetF))
                 {
                     DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(deltaAim), "PreventCollisionWithGround called while height is too high");
-                    pilot.AirborneDest = AIEPathing.ModerateMaxAlt(pilot.AirborneDest, pilot.Helper);
+                    pilot.ProcessedDest = AIEPathing.ModerateMaxAlt(pilot.ProcessedDest, pilot.Helper);
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " -  deltaMovementClock = " + pilot.deltaMovementClock.y + " | slugishness = " + pilot.AerofoilSluggishness + " | deltaAim y " + deltaAim.y + " | vs " + groundOffsetF + 
                     //    " | tech: " + pilot.Helper.tank.trans.position);
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " - GOING UP");
                     pilot.ForcePitchUp = true;
-                    pilot.AirborneDest.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
-                    pilot.AirborneDest += Vector3.up * (pilot.AirborneDest - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
+                    pilot.ProcessedDest.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
+                    pilot.ProcessedDest += Vector3.up * (pilot.ProcessedDest - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
                 }
             }
         }

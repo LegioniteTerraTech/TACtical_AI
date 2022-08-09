@@ -1177,6 +1177,7 @@ namespace TAC_AI.AI
             internal float lastRangeEnemy = 0;
 
             //AutoCollection
+            internal float DetectionRange => tank.Vision.SearchRadius > 0 ? tank.Vision.SearchRadius : 100;
             internal bool hasAI = false;    // Has an active AI module
             internal bool dirtyAI = true;  // Update Player AI state if needed
             internal bool dirty = true;    // The Tech has new blocks attached recently
@@ -1374,20 +1375,10 @@ namespace TAC_AI.AI
             {
                 get
                 {
-                    if (MovementController is AIControllerAir)
-                    {
-                        if (RTSControlled && IsGoingToRTSDest)
-                            return RTSDestination;
-                        else
-                            return lastDestination;
-                    }
+                    if (RTSControlled && IsGoingToRTSDest)
+                        return RTSDestination;
                     else
-                    {
-                        if (RTSControlled && IsGoingToRTSDest)
-                            return RTSDestination;
-                        else
-                            return MovementController.GetDestination();
-                    }
+                        return MovementController.GetDestination();
                 }
             }
 
@@ -1645,17 +1636,35 @@ namespace TAC_AI.AI
 
             public void ResetToDefaultAIController()
             {
-                if (!(MovementController is AIControllerDefault))
+                if (tank.IsAnchored && !CanAutoAnchor)
                 {
-                    //Debug.Log("TACtical_AI: Resetting Back to Default AI for " + tank.name);
-                    IMovementAIController controller = MovementController;
-                    MovementController = null;
-                    if (controller != null)
+                    if (!(MovementController is AIControllerStatic))
                     {
-                        controller.Recycle();
+                        IMovementAIController controller = MovementController;
+                        MovementController = null;
+                        if (controller != null)
+                        {
+                            controller.Recycle();
+                        }
                     }
-                    MovementController = gameObject.AddComponent<AIControllerDefault>();
-                    MovementController.Initiate(tank, this);
+                    MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
+                    MovementController.Initiate(tank, this, null);
+                    UsingAirControls = false;
+                }
+                else
+                {
+                    if (!(MovementController is AIControllerDefault))
+                    {
+                        //Debug.Log("TACtical_AI: Resetting Back to Default AI for " + tank.name);
+                        IMovementAIController controller = MovementController;
+                        MovementController = null;
+                        if (controller != null)
+                        {
+                            controller.Recycle();
+                        }
+                        MovementController = gameObject.AddComponent<AIControllerDefault>();
+                        MovementController.Initiate(tank, this);
+                    }
                 }
             }
 
@@ -1720,10 +1729,14 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (MovementController is AIControllerAir pilot)
+                    if (!(MovementController is AIControllerDefault))
                     {
+                        IMovementAIController controller = MovementController;
                         MovementController = null;
-                        pilot.Recycle();
+                        if (controller != null)
+                        {
+                            controller.Recycle();
+                        }
                         MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
                         MovementController.Initiate(tank, this, enemy);
                     }
@@ -1929,13 +1942,11 @@ namespace TAC_AI.AI
                         {
                             airController.Recycle();
                         }
-
-                        MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
                     }
                     else if (DriverType == AIDriverType.Pilot)
                     {
-                        SetupMovementAIController();
                     }
+                    SetupMovementAIController();
                 }
 
                 if (MovementController != null)
@@ -2013,7 +2024,7 @@ namespace TAC_AI.AI
                             DebugTAC_AI.LogError("TACtical_AI: Encountered illegal AIDriverType on Allied AI Driver HandlingDetermine!");
                             break;
                     }
-                    if (DriverType == AIDriverType.Pilot)
+                    if (DriverType == AIDriverType.Pilot || (DriverType == AIDriverType.Stationary && !enemy))
                         SetupMovementAIController();
                 }
             }
@@ -2917,24 +2928,26 @@ namespace TAC_AI.AI
                         {
                             if ((bool)theResource?.resdisp)
                             {
-                                ChunkTypes CT = theResource.resdisp.GetDispenseType();
+                                List<ChunkTypes> CT = theResource.resdisp.AllDispensableItems().ToList();
                                 if (recentSpeed > 8)
                                 {
-                                    if (CT == ChunkTypes.Null)
+                                    if (CT.Count == 0)
                                         output = "Going to remove rocks";
                                     else
-                                        output = "Going to dig " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
+                                        output = "Going to dig " + theResource.name;
+                                    //StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                                 }
                                 else
                                 {
-                                    if (CT == ChunkTypes.Null)
+                                    if (CT.Count == 0)
                                         output = "Clearing rocks";
                                     else
-                                        output = "Mining " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
+                                        output = "Mining " + theResource.name;
+                                    //output = "Mining " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                                 }
                             }
                             else
-                                output = "No resources in " + (tank.Radar.Range + AIGlobals.FindItemExtension) + " meters";
+                                output = "No resources in " + (DetectionRange + AIGlobals.FindItemExtension) + " meters";
                         }
                         break;
                     case AIType.Scrapper:
@@ -2978,7 +2991,7 @@ namespace TAC_AI.AI
                                 }
                             }
                             else
-                                output = "No blocks in " + (tank.Radar.Range + AIGlobals.FindItemExtension) + " meters";
+                                output = "No blocks in " + (DetectionRange + AIGlobals.FindItemExtension) + " meters";
                         }
                         break;
                 }

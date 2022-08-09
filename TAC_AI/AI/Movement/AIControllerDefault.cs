@@ -38,9 +38,12 @@ namespace TAC_AI.AI
             internal set => _mind = value;
         }
 
+        //Manuvering (Post-Pathfinding)
+        public Vector3 ProcessedDest = Vector3.zero;// Where land and spaceships coordinate movement
+
+        //Tech Drive Data Gathering
         public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
         public float BoosterThrustBias = 0.5f;
-        public Vector3 ProcessedDest = Vector3.zero;// Where land and spaceships coordinate movement
 
         public void DriveDirector()
         {

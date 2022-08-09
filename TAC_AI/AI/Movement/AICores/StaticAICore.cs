@@ -41,7 +41,7 @@ namespace TAC_AI.AI.Movement.AICores
                 bool Combat = TryAdjustForCombat(true);
                 if (!Combat)
                 {
-                    controller.AimTarget = tank.boundsCentreWorldNoCheck + (controller.IdleLookDirect * 200).ToVector3XZ(0);
+                    controller.AimTarget = tank.boundsCentreWorldNoCheck + (controller.IdleFacingDirect * 200).ToVector3XZ(0);
                 }
                 help.lastDestination = controller.MovePosition;
 
@@ -96,7 +96,7 @@ namespace TAC_AI.AI.Movement.AICores
             bool Combat = TryAdjustForCombatEnemy(mind);
             if (!Combat)
             {
-                controller.AimTarget = tank.boundsCentreWorldNoCheck + (controller.IdleLookDirect * 200).ToVector3XZ(0);
+                controller.AimTarget = tank.boundsCentreWorldNoCheck + (controller.IdleFacingDirect * 200).ToVector3XZ(0);
             }
             help.lastDestination = controller.MovePosition;
             return true;
@@ -118,6 +118,12 @@ namespace TAC_AI.AI.Movement.AICores
                 TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
 
                 control3D.m_State.m_InputRotation = Vector3.zero;
+
+                Vector3 destDirect = controller.AimTarget - tank.boundsCentreWorldNoCheck;
+                thisControl.DriveControl = 0;
+                if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
+                    thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, destDirect * thisInst.lastTechExtents, new Color(1, 0, 1));
 
                 Vector3 InputLineVal = Vector3.zero;
                 if (!thisInst.techIsApproaching)
@@ -373,7 +379,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             AIECore.TankAIHelper thisInst = controller.Helper;
             bool output = false;
-            if (thisInst.PursueThreat && (!thisInst.IsMovingAnyDest || !thisInst.Retreat) && thisInst.lastEnemy.IsNotNull())
+            if (thisInst.lastEnemy.IsNotNull())
             {
                 Vector3 targPos = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 output = true;
@@ -394,7 +400,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             AIECore.TankAIHelper thisInst = controller.Helper;
             bool output = false;
-            if (!thisInst.Retreat && thisInst.lastEnemy.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)
+            if (thisInst.lastEnemy.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)
             {
                 output = true;
                 thisInst.Steer = true;

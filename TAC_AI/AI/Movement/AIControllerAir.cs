@@ -48,28 +48,33 @@ namespace TAC_AI.AI
         }
 
         public FlightType FlyStyle;             // Dictates the way the AI should fly the Tech
-        public List<ModuleBooster> Engines;     // keep track of aircraft propultion
-        public List<ModuleAirBrake> Brakes;     // keep tracck of airbrakes
-        public List<ModuleWing> Wings;          // keep track of the wings
-        public bool NoProps = false;            // Do we have to rely on fuel only?
-        public bool SkewedFlightCenter = false; // Are we going to struggle when turning?
 
-        public Vector3 PropBias = Vector3.zero; // Center of thrust (RAW) of all forwards props
-        public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
-
-        //Manuvering
-        public Vector3 AirborneDest = Vector3.zero; // Aircraft-specific destination handling
+        //Manuvering (Post-Pathfinding)
+        public Vector3 ProcessedDest = Vector3.zero; // Aircraft-specific destination handling
         public float DestSuccessRad // When we have reached our airborne destination
         {
             get { try { return Helper.MinimumRad; } catch { return 10; } }
         }
+        internal Vector3 deltaMovementClock;
+
 
         // Forward for aircraft, Upwards for helicopters
         public float AdvisedThrottle = 0;               // Throttle to use when chasing or cruising
         public float MainThrottle = 0;                  // Ideal Throttle to chase after
         public float CurrentThrottle = 0;               // Throttle the craft knows it's going at
 
-        //Data Gathering
+
+        // Systems Check
+        public List<ModuleBooster> Engines;     // keep track of aircraft propultion
+        public List<ModuleAirBrake> Brakes;     // keep tracck of airbrakes
+        public List<ModuleWing> Wings;          // keep track of the wings
+        public bool NoProps = false;            // Do we have to rely on fuel only?
+        public bool SkewedFlightCenter = false; // Are we going to struggle when turning?
+
+        //Tech Flight Data Gathering
+        public Vector3 PropBias = Vector3.zero; // Center of thrust (RAW) of all forwards props
+        public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
+
         public float SlowestPropLerpSpeed = 1;  // Slow action demand based on propeller responsiveness
         public float PropLerpValue = 10;        // aux value used for some engine calculations
         public float AerofoilSluggishness = 1;  // Slow action demand based on aerofoil responsiveness
@@ -82,7 +87,7 @@ namespace TAC_AI.AI
         public int ErrorsInTakeoff = 0;         // If this gets too high, then this tech isn't meant to fly
         public int ErrorsInUTurn = 0;           // If this gets too high, then this tech isn't meant to Immelmann
         public bool LargeAircraft = false;      // Restrict turning to 45 and no U-Turns
-        public bool BankOnly = false;
+        public bool BankOnly = false;           // Similar to LargeAircraft but for smaller aircraft
         public float BoosterThrustBias = 0.5f;
         public float NoStallThreshold = 1.5f;
         public bool ForcePitchUp = false;       // Emergency nose up
@@ -90,9 +95,6 @@ namespace TAC_AI.AI
         public bool Grounded = false;           // aircraft deemed too damaged to fly
         public bool TargetGrounded = false;     // Are we dealing with a target that is on the ground?
         public bool LowerEngines = false;       // Choppers: Too high! Too high!  Airplanes: Conserve booster fuel
-
-        internal Vector3 deltaMovementClock;
-
 
 
         public void Initiate(Tank tank, AIECore.TankAIHelper thisInst, Enemy.EnemyMind mind = null)
@@ -474,11 +476,11 @@ namespace TAC_AI.AI
 
         public void OnMoveWorldOrigin(IntVector3 move)
         {
-            AirborneDest += move;
+            ProcessedDest += move;
         }
         public Vector3 GetDestination()
         {
-            return AirborneDest;
+            return Helper.lastDestination;
         }
 
         // Action Updaters

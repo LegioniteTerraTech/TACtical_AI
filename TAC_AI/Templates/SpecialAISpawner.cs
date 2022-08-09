@@ -186,7 +186,7 @@ namespace TAC_AI.Templates
 
             if (playerTank.IsNull())
                 return;
-            if (AirPool.Count >= MaxAirborneAIAllowed)
+            if (AirPool.Count >= MaxAirborneAIAllowed || AIGlobals.AtSceneTechMax())
                 return;
             if (10 / Time.deltaTime < 20) // game is lagging to much
                 return;

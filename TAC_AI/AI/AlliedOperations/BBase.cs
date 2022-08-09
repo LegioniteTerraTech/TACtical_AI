@@ -18,18 +18,17 @@ namespace TAC_AI.AI.AlliedOperations
 
             thisInst.lastRange = 96; //arbitrary
 
+            thisInst.PivotOnly = true;
             if (thisInst.lastEnemy)
             {
                 thisInst.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.Steer = true;
-                thisInst.PivotOnly = true;
                 thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
             }
             else
             {
                 thisInst.DriveDest = EDriveDest.None;
                 thisInst.Steer = false;
-                thisInst.PivotOnly = true;
                 thisInst.lastDestination = tank.boundsCentreWorldNoCheck;
             }
         }

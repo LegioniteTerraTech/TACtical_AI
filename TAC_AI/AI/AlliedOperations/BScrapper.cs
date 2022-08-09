@@ -25,7 +25,7 @@ namespace TAC_AI.AI.AlliedOperations
             {   //RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, thisInst.DetectionRange + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (theBase == null)
@@ -34,7 +34,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (thisInst.theBase == null)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, thisInst.DetectionRange + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                     thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     return;
@@ -101,7 +101,7 @@ namespace TAC_AI.AI.AlliedOperations
             //Debug.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
             if (!ManNetwork.IsNetworked && (thisInst.CollectedTarget || thisInst.ActionPause > 10))
             {   // BRANCH - Return to base
-                thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, thisInst.DetectionRange + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
@@ -238,11 +238,11 @@ namespace TAC_AI.AI.AlliedOperations
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, tank.Radar.Range + AIGlobals.FindItemExtension, out thisInst.theResource);
+                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, thisInst.DetectionRange + AIGlobals.FindItemExtension, out thisInst.theResource);
                     if (!thisInst.foundGoal)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for loose blocks...");
-                        thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, tank.Radar.Range + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, thisInst.DetectionRange + 150, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
