@@ -59,7 +59,7 @@ namespace TAC_AI
                 {   // game lagging too much - hold back
                     return AIPopMaxLimit + MaxEnemyBaseLimit;
                 }
-                return (AIPopMaxLimit * (MaxEnemyBaseLimit + 1)) + (MaxBasesPerTeam * MaxEnemyBaseLimit);
+                return AIPopMaxLimit + (MaxBasesPerTeam * MaxEnemyBaseLimit) + 1;
             }
         }// How many techs that can exist before giving up tech splitting?
         internal static int MaxEnemyBaseLimit = 3;  // How many different enemy team bases are allowed to exist in one instance

@@ -416,6 +416,7 @@ namespace TAC_AI
             {
                 foreach (var tech in Singleton.Manager<ManTechs>.inst.IterateTechs())
                 {
+                    
                     if (IsBaseTeam(tech.Team) || tech.Team == -1 || (tech.Team >= 1 && tech.Team <= 24))
                         Counter++;
                 }
