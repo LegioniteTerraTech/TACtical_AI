@@ -1625,6 +1625,12 @@ namespace TAC_AI.AI
             }
 
 
+            public void SetupDefaultMovementAIController()
+            {
+                UsingAirControls = false;
+                MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                MovementController.Initiate(tank, this, null);
+            }
             /// <summary>
             /// Was previously: TestForFlyingAIRequirement
             /// </summary>
@@ -1873,7 +1879,6 @@ namespace TAC_AI.AI
                 }
 
                 MovementController = null;
-                EnemyMind enemy = gameObject.GetComponent<EnemyMind>();
 
                 RecalibrateMovementAIController();
 
@@ -3770,6 +3775,11 @@ namespace TAC_AI.AI
             {//Handler for the improved AI, gets the job done.
                 try
                 {
+                    if (MovementController == null)
+                    {
+                        DebugTAC_AI.Assert(true, "MOVEMENT CONTROLLER IS NULL");
+                        SetupDefaultMovementAIController();
+                    }
                     RebuildAlignment();
                     UpdateCollectors();
                     UpdateBlockHold();

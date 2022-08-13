@@ -13,7 +13,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
     {
         // ENEMY CONTROLLERS
         /*  
-            Circle,     // Attack like the AC-130 Gunship, broadside while salvoing
+            Circle,     // Attack like the AC-130 Gunship, broadside while salvoing [BROKEN]
             Grudge,     // Chase and dogfight whatever hit this aircraft last
             Coward,     // Avoid danger
             Bully,      // Attack other aircraft over ground structures.  If inverted, prioritize ground structures over aircraft
