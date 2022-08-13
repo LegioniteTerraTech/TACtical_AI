@@ -112,7 +112,7 @@ namespace TAC_AI.AI
 
 
             //Now determine type of craft
-            DebugTAC_AI.Log("TACtical AI: (2) Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
+            DebugTAC_AI.Info("TACtical AI: (2) Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
             if (mind.IsNull())
             {
                 //if (thisInst.isAstrotechAvail && thisInst.DediAI == AIECore.DediAIType.Aviator)

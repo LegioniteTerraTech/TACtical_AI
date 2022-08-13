@@ -63,7 +63,11 @@ namespace TAC_AI.AI
             AICore = new StaticAICore();
             AICore.Initiate(tank, this);
 
-            DebugTAC_AI.Log("TACtical_AI: Added static AI for " + Tank.name);
+            helper.TryAnchor();
+            if (!tank.IsAnchored)
+                helper.TryAnchor();
+
+            DebugTAC_AI.Info("TACtical_AI: Added static AI for " + Tank.name);
         }
         public void UpdateEnemyMind(EnemyMind mind)
         {

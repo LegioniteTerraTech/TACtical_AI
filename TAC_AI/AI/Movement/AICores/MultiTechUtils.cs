@@ -35,7 +35,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     try
                     {
-                        help.lastDestination = AIEPathing.GetDriveApproxAir(help.lastCloseAlly, help, out bool IsMoving);
+                        help.lastDestination = AIEPathing.GetDriveApproxAirDirector(help.lastCloseAlly, help, out bool IsMoving);
                         if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
                         {
                             //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.lastCloseAlly.name + " and idle.");
@@ -45,11 +45,15 @@ namespace TAC_AI.AI.Movement.AICores
                                 //Debug.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
                                 help.Steer = true;
                                 help.DriveDir = EDriveFacing.Forwards;
+                                help.PivotOnly = false;
+                                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 5, help.lastDestination - tank.boundsCentreWorldNoCheck, new Color(1, 1, 0, 1));
                             }
                             else
                             {
                                 help.Steer = true;
                                 help.DriveDir = EDriveFacing.Backwards;
+                                help.PivotOnly = false;
+                                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 5, help.lastDestination - tank.boundsCentreWorldNoCheck, new Color(1, 0, 1, 1));
                             }
                         }
                         else
@@ -70,9 +74,10 @@ namespace TAC_AI.AI.Movement.AICores
                     //Debug.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
                     help.MinimumRad = 0f;
                     help.lastDestination = tank.boundsCentreWorldNoCheck;
-                    help.ForceSetDrive = true;
+                    help.ForceSetDrive = false;
                     help.DriveVar = 0;
                     help.Steer = false;
+                    help.PivotOnly = true;
                 }
             }
             return help.lastDestination;

@@ -90,7 +90,7 @@ namespace TAC_AI
         /// <summary>
         /// For handing Directors
         /// </summary>
-        public static int AIDodgeCheapness = 30;
+        public static int AIDodgeCheapness = 20;
         public static int AIPopMaxLimit = 8;
         public static bool MuteNonPlayerRacket = true;
         public static bool DisplayEnemyEvents = true;
@@ -200,7 +200,7 @@ namespace TAC_AI
             string focused = GUI.GetNameOfFocusedControl();
             if (Name == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
+                DebugTAC_AI.Info("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
                 GUI.FocusControl(null);
                 GUI.UnfocusWindow();
                 GUIUtility.hotControl = 0;
@@ -209,7 +209,7 @@ namespace TAC_AI
             {
                 if (focused == Name)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
+                    DebugTAC_AI.Info("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
                     GUI.FocusControl(null);
                     GUI.UnfocusWindow();
                     GUIUtility.hotControl = 0;
@@ -245,7 +245,6 @@ namespace TAC_AI
         {
             //Where the fun begins
             Debug.Log("TACtical_AI: MAIN (Steam Workshop Version) startup");
-            CheckIfUnstable();
 
             //Initiate the madness
             if (!hasPatched)

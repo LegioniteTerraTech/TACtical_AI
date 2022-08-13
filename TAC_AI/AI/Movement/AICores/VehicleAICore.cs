@@ -564,6 +564,11 @@ namespace TAC_AI.AI.Movement.AICores
                     thisInst.FeatherBoostersClock++;
                 }
 
+                if (thisInst.FirePROPS)
+                {
+                    thisControl.BoostControlProps = true;
+                }
+
                 // DEBUG FOR DRIVE ERRORS
                 if (!tank.IsAnchored)
                 {
@@ -688,6 +693,7 @@ namespace TAC_AI.AI.Movement.AICores
             thisInst.Navi3DUp = Vector3.up;
             if (thisInst.Steer)
             {
+                float turnValF;
                 if (thisInst.AdviseAway)
                 {   //Move from target
                     if (thisInst.DriveDir == EDriveFacing.Perpendicular)
@@ -698,7 +704,10 @@ namespace TAC_AI.AI.Movement.AICores
                             thisInst.Navi3DDirect = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
                         }
                         else
-                            thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
+                        {
+                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
+                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
+                        }
                         // Disabled for now as most spaceships in the pop do not have broadsides.
                         /*
                         control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
@@ -731,12 +740,16 @@ namespace TAC_AI.AI.Movement.AICores
                             thisInst.Navi3DDirect = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
                         }
                         else
-                            thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
+                        {
+                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
+                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
+                        }
                     }
                     else if (thisInst.DriveDir == EDriveFacing.Backwards)
                     {
                         control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
-                        thisControl.m_Movement.FaceDirection(tank, tank.boundsCentreWorldNoCheck - controller.ProcessedDest, 1);
+                        if (VehicleUtils.TurnerHovership(tank.control, thisInst, -distDiff, out turnValF))
+                            thisControl.m_Movement.FaceDirection(tank, tank.boundsCentreWorldNoCheck - controller.ProcessedDest, turnValF);
                     }
                     else
                     {
@@ -766,13 +779,15 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             //thisInst.Navi3DDirect = controller.ProcessedDest - tank.boundsCentreWorldNoCheck;
-                            thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
+                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
+                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
                         }
                     }
                     else if (thisInst.DriveDir == EDriveFacing.Backwards)
                     {
                         control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
-                        thisControl.m_Movement.FaceDirection(tank, tank.boundsCentreWorldNoCheck - controller.ProcessedDest, 1);
+                        if (VehicleUtils.TurnerHovership(tank.control, thisInst, -distDiff, out turnValF))
+                            thisControl.m_Movement.FaceDirection(tank, -distDiff, turnValF);
                     }
                     else if (thisInst.DriveDir == EDriveFacing.Forwards)
                     {
@@ -784,13 +799,15 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             //thisInst.Navi3DDirect = controller.ProcessedDest - tank.boundsCentreWorldNoCheck;
-                            thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
+                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
+                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
                         }
                     }
                     else
                     {   //Forwards follow but no pitch controls
                         control3D.m_State.m_InputRotation = (turnVal * Mathf.Clamp(1 - Vector3.Dot(turnVal, tank.rootBlockTrans.forward), 0, 1)).Clamp01Box();
-                        thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
+                        if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
+                            thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
                     }
                 }
             }
@@ -867,7 +884,8 @@ namespace TAC_AI.AI.Movement.AICores
 
             bool EmergencyUp = false;
             bool CloseToGroundWarning = false;
-            if (ManWorld.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float height))
+            // Multitechs do NOT use ground avoidence
+            if (!thisInst.IsMultiTech && ManWorld.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float height))
             {
                 if (height > tank.boundsCentreWorldNoCheck.y - thisInst.lastTechExtents)
                 {
@@ -880,7 +898,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
 
-            if (!thisInst.IsMultiTech && CloseToGroundWarning)
+            if (CloseToGroundWarning)
             {
                 if (driveVal.y >= -0.3f && driveVal.y < 0f)
                     driveVal.y = 0; // prevent airships from slam-dunk
@@ -907,8 +925,8 @@ namespace TAC_AI.AI.Movement.AICores
             else if (thisInst.BOOST)
             {
                 driveMultiplier = 1;
-                if (Vector3.Dot(driveVal, tank.rootBlockTrans.forward) > 0.75f)
-                    thisControl.m_Movement.FireBoosters(tank);
+                if (thisInst.IsMultiTech || Vector3.Dot(driveVal, tank.rootBlockTrans.forward) > 0.75f)
+                    thisControl.BoostControlJets = true;
             }
             else if (thisInst.FeatherBoost)
             {
@@ -916,8 +934,8 @@ namespace TAC_AI.AI.Movement.AICores
                     driveMultiplier = thisInst.DriveVar;
                 if (thisInst.FeatherBoostersClock >= 25)
                 {
-                    if (Vector3.Dot(driveVal, tank.rootBlockTrans.forward) > 0.75f)
-                        thisControl.m_Movement.FireBoosters(tank);
+                    if (thisInst.IsMultiTech || Vector3.Dot(driveVal, tank.rootBlockTrans.forward) > 0.75f)
+                        thisControl.BoostControlJets = true;
                     thisInst.FeatherBoostersClock = 0;
                 }
                 thisInst.FeatherBoostersClock++;
@@ -925,6 +943,10 @@ namespace TAC_AI.AI.Movement.AICores
             else if (thisInst.ForceSetDrive)
             {
                 driveMultiplier = thisInst.DriveVar;
+            }
+            if (thisInst.FirePROPS)
+            {
+                thisControl.BoostControlProps = true;
             }
 
             // PREVENT GROUND CRASHING
@@ -954,11 +976,11 @@ namespace TAC_AI.AI.Movement.AICores
             control3D.m_State.m_InputMovement = final.Clamp01Box();
 
             // DEBUG FOR DRIVE ERRORS
-            if (tank.IsAnchored)
+            if (!tank.IsAnchored)
             {
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, distDiff, new Color(0, 1, 1));
-                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
-                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, tank.rootBlockTrans.TransformVector(driveVal * thisInst.lastTechExtents * 2), new Color(0, 0, 1)); // blue
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, tank.rootBlockTrans.TransformVector(control3D.m_State.m_InputMovement * thisInst.lastTechExtents * 2), new Color(1, 0, 0));
             }
             else if (thisInst.AttackEnemy && thisInst.lastEnemy)
             {

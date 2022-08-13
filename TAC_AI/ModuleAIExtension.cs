@@ -36,7 +36,7 @@ namespace TAC_AI
 
         // RESOURCES
         Prospector, // Harvest Chunks and return them to base       (Returns chunks when full to nearest receiver)
-        >Scrapper,   // Grab loose blocks but avoid combat           (Return to nearest base when threatened)
+        Scrapper,   // Grab loose blocks but avoid combat           (Return to nearest base when threatened)
         Energizer,  // Charges up and/or heals other techs          (Return to nearest base when out of power)
 
         // MULTECH  // Enabled for all                              (MultiTech) - BuildBeam disabled, will fire at any angle.
@@ -195,8 +195,7 @@ namespace TAC_AI
                         thisInst.DediAI = SavedAI;
                         DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
                         thisInst.RefreshAI();
-                        if (SavedAIDriver == AIDriverType.Pilot)
-                            thisInst.SetupMovementAIController();
+                        thisInst.RecalibrateMovementAIController();
                         if (WasMobileAnchor)
                         { 
                         }
@@ -253,7 +252,7 @@ namespace TAC_AI
                         SavedAI = Helper.DediAI;
                         WasRTS = Helper.RTSControlled;
                         RTSPos = Helper.RTSDestination;
-                        WasMobileAnchor = Helper.PlayerAllowAnchoring;
+                        WasMobileAnchor = Helper.PlayerAllowAutoAnchoring;
                         Serialize(true);
                         // OBSOLETE - CAN CAUSE CRASHES
                         //serialData.Store(blockSpec.saveState);
@@ -275,7 +274,7 @@ namespace TAC_AI
                                     thisInst.DediAI = serialData2.savedMode;
                                     thisInst.RefreshAI();
                                     if (serialData2.savedMode == AIType.Aviator)
-                                        thisInst.SetupMovementAIController();
+                                        thisInst.RecalibrateMovementAIController();
                                 }
                                 SavedAI = serialData2.savedMode;
                                 if (serialData2.wasRTS)
@@ -290,7 +289,7 @@ namespace TAC_AI
                                 }
                                 thisInst.DriverType = SavedAIDriver;
                                 thisInst.DediAI = SavedAI;
-                                thisInst.PlayerAllowAnchoring = WasMobileAnchor;
+                                thisInst.PlayerAllowAutoAnchoring = WasMobileAnchor;
                                 //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                             }
                         }

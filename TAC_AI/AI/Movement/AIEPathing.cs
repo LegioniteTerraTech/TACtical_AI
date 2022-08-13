@@ -9,15 +9,13 @@ namespace TAC_AI.AI.Movement
 {
     public static class AIEPathing
     {
-        public static List<Tank> Allies
+        public static List<Tank> AllyList(Tank tank)
         {
-            get
-            {
-                return AIECore.Allies;
-            }
+            return AIECore.TankAIManager.GetNonEnemyTanks(tank.Team);
         }
 
         public const float ShipDepth = -3;
+
 
         //The default steering handles the ground steering
 
@@ -293,35 +291,21 @@ namespace TAC_AI.AI.Movement
             Tank closestTank = null;
             try
             {
-                if (ManNetwork.IsNetworked)
+                List<Tank> AlliesAlt = AllyList(thisTank);
+                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                 {
-                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
-                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                    var otherTech = AlliesAlt.ElementAt(stepper);
+                    if (thisTank == otherTech)
+                        continue;
+                    float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                    if (bestValue > temp)
                     {
-                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                        if (bestValue > temp && temp != 0)
-                        {
-                            bestValue = temp;
-                            bestStep = stepper;
-                        }
+                        bestValue = temp;
+                        bestStep = stepper;
                     }
-                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    closestTank = AlliesAlt.ElementAt(bestStep);
                 }
-                else
-                {
-                    for (int stepper = 0; Allies.Count > stepper; stepper++)
-                    {
-                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                        if (bestValue > temp && temp != 0)
-                        {
-                            bestValue = temp;
-                            bestStep = stepper;
-                        }
-                    }
-                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    closestTank = Allies.ElementAt(bestStep);
-                }
+                bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                closestTank = AlliesAlt.ElementAt(bestStep);
                 //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
@@ -340,35 +324,21 @@ namespace TAC_AI.AI.Movement
             Tank closestTank = null;
             try
             {
-                if (ManNetwork.IsNetworked)
+                List<Tank> AlliesAlt = AllyList(thisTank);
+                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                 {
-                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
-                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                    var otherTech = AlliesAlt.ElementAt(stepper);
+                    if (thisTank == otherTech)
+                        continue;
+                    float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude - otherTech.GetCheapBounds();
+                    if (bestValue > temp)
                     {
-                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AlliesAlt.ElementAt(stepper).GetCheapBounds();
-                        if (bestValue > temp && temp >= 1)
-                        {
-                            bestValue = temp;
-                            bestStep = stepper;
-                        }
+                        bestValue = temp;
+                        bestStep = stepper;
                     }
-                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    closestTank = AlliesAlt.ElementAt(bestStep);
                 }
-                else
-                {
-                    for (int stepper = 0; Allies.Count > stepper; stepper++)
-                    {
-                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - Allies.ElementAt(stepper).GetCheapBounds();
-                        if (bestValue > temp && temp >= 1)
-                        {
-                            bestValue = temp;
-                            bestStep = stepper;
-                        }
-                    }
-                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    closestTank = Allies.ElementAt(bestStep);
-                }
+                bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                closestTank = AlliesAlt.ElementAt(bestStep);
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
@@ -388,53 +358,30 @@ namespace TAC_AI.AI.Movement
             Tank closestTank;
             try
             {
-                if (ManNetwork.IsNetworked)
+                List<Tank> AlliesAlt = AllyList(thisTank);
+                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                 {
-                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
-                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                    var otherTech = AlliesAlt.ElementAt(stepper);
+                    if (thisTank == otherTech)
+                        continue;
+                    float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                    if (bestValue > temp)
                     {
-                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                        if (bestValue > temp && temp != 0)
-                        {
-                            auxStep = bestStep;
-                            bestStep = stepper;
-                            auxBestValue = bestValue;
-                            bestValue = temp;
-                        }
-                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
-                        {
-                            auxStep = stepper;
-                            auxBestValue = temp;
-                        }
+                        auxStep = bestStep;
+                        bestStep = stepper;
+                        auxBestValue = bestValue;
+                        bestValue = temp;
                     }
-                    secondTank = AlliesAlt.ElementAt(auxStep);
-                    closestTank = AlliesAlt.ElementAt(bestStep);
-                    auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                }
-                else
-                {
-                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    else if (bestValue < temp && auxBestValue > temp)
                     {
-                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                        if (bestValue > temp && temp != 0)
-                        {
-                            auxStep = bestStep;
-                            bestStep = stepper;
-                            auxBestValue = bestValue;
-                            bestValue = temp;
-                        }
-                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
-                        {
-                            auxStep = stepper;
-                            auxBestValue = temp;
-                        }
+                        auxStep = stepper;
+                        auxBestValue = temp;
                     }
-                    secondTank = Allies.ElementAt(auxStep);
-                    closestTank = Allies.ElementAt(bestStep);
-                    auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 }
+                secondTank = AlliesAlt.ElementAt(auxStep);
+                closestTank = AlliesAlt.ElementAt(bestStep);
+                auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
@@ -458,53 +405,30 @@ namespace TAC_AI.AI.Movement
             Tank closestTank;
             try
             {
-                if (ManNetwork.IsNetworked)
+                List<Tank> AlliesAlt = AllyList(thisTank);
+                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                 {
-                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
-                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                    var otherTech = AlliesAlt.ElementAt(stepper);
+                    if (thisTank == otherTech)
+                        continue;
+                    float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude - otherTech.GetCheapBounds();
+                    if (bestValue > temp)
                     {
-                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - AlliesAlt.ElementAt(stepper).GetCheapBounds();
-                        if (bestValue > temp && temp != 0)
-                        {
-                            auxStep = bestStep;
-                            bestStep = stepper;
-                            auxBestValue = bestValue;
-                            bestValue = temp;
-                        }
-                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
-                        {
-                            auxStep = stepper;
-                            auxBestValue = temp;
-                        }
+                        auxStep = bestStep;
+                        bestStep = stepper;
+                        auxBestValue = bestValue;
+                        bestValue = temp;
                     }
-                    secondTank = AlliesAlt.ElementAt(auxStep);
-                    closestTank = AlliesAlt.ElementAt(bestStep);
-                    auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                }
-                else
-                {
-                    for (int stepper = 0; Allies.Count > stepper; stepper++)
+                    else if (bestValue < temp && auxBestValue > temp)
                     {
-                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude - Allies.ElementAt(stepper).GetCheapBounds();
-                        if (bestValue > temp && temp != 0)
-                        {
-                            auxStep = bestStep;
-                            bestStep = stepper;
-                            auxBestValue = bestValue;
-                            bestValue = temp;
-                        }
-                        else if (bestValue < temp && auxBestValue > temp && temp != 0)
-                        {
-                            auxStep = stepper;
-                            auxBestValue = temp;
-                        }
+                        auxStep = stepper;
+                        auxBestValue = temp;
                     }
-                    secondTank = Allies.ElementAt(auxStep);
-                    closestTank = Allies.ElementAt(bestStep);
-                    auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 }
+                secondTank = AlliesAlt.ElementAt(auxStep);
+                closestTank = AlliesAlt.ElementAt(bestStep);
+                auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
@@ -525,35 +449,21 @@ namespace TAC_AI.AI.Movement
             Tank closestTank = null;
             try
             {
-                if (ManNetwork.IsNetworked)
+                List<Tank> AlliesAlt = AllyList(thisTank);
+                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                 {
-                    List<Tank> AlliesAlt = Enemy.RPathfinding.AllyList(thisTank);
-                    for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                    var otherTech = AlliesAlt.ElementAt(stepper);
+                    if (thisTank == otherTech || otherTech.IsAnchored)
+                        continue;
+                    float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                    if (bestValue > temp)
                     {
-                        float temp = (AlliesAlt.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                        if (bestValue > temp && temp >= 10 && !AlliesAlt.ElementAt(stepper).IsAnchored)
-                        {
-                            bestValue = temp;
-                            bestStep = stepper;
-                        }
+                        bestValue = temp;
+                        bestStep = stepper;
                     }
-                    bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    closestTank = AlliesAlt.ElementAt(bestStep);
                 }
-                else
-                {
-                    for (int stepper = 0; Allies.Count > stepper; stepper++)
-                    {
-                        float temp = (Allies.ElementAt(stepper).boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                        if (bestValue > temp && temp >= 10 && !Allies.ElementAt(stepper).IsAnchored)
-                        {
-                            bestValue = temp;
-                            bestStep = stepper;
-                        }
-                    }
-                    bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                    closestTank = Allies.ElementAt(bestStep);
-                }
+                bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
+                closestTank = AlliesAlt.ElementAt(bestStep);
                 //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
@@ -566,8 +476,8 @@ namespace TAC_AI.AI.Movement
 
         // Other navigation utilities
 
-        private static readonly FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
-        public static Vector3 GetDriveApproxAir(Tank tankToCopy, AIECore.TankAIHelper AIHelp, out bool IsMoving)
+        internal static readonly FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static Vector3 GetDriveApproxAirDirector(Tank tankToCopy, AIECore.TankAIHelper AIHelp, out bool IsMoving)
         {
             //Get the position in which to drive inherited from player controls
             //  NOTE THAT THIS ONLY SUPPORTS THE DISTANCE OF PLAYER TECH'S SIZE PLUS THE MT TECH!!!
@@ -576,41 +486,37 @@ namespace TAC_AI.AI.Movement
             //first we get the offset
             Vector3 offsetTo = tankToCopy.trans.InverseTransformPoint(tank.boundsCentreWorldNoCheck) - tankToCopy.blockBounds.center;
 
-            TankControl.ControlState controlOverload = (TankControl.ControlState)controlGet.GetValue(tankToCopy.control);
+            TankControl.ControlState controlCopyTarget = (TankControl.ControlState)controlGet.GetValue(tankToCopy.control);
 
 
-            Vector3 InputLineVal = controlOverload.m_State.m_InputMovement;
+            Vector3 InputLineVal = controlCopyTarget.m_State.m_InputMovement;
             // Copy LME Here
             if (tankToCopy.GetComponent<AIECore.TankAIHelper>().CanCopyControls || tankToCopy.PlayerFocused)
             {
                 if (tankToCopy.control.GetThrottle(0, out float throttleX))
                 {   // X 
-                    InputLineVal.x = throttleX;
+                    InputLineVal.x += throttleX;
                 }
                 if (tankToCopy.control.GetThrottle(1, out float throttleY))
                 {   // Y
-                    InputLineVal.y = throttleY;
+                    InputLineVal.y += throttleY;
                 }
                 if (tankToCopy.control.GetThrottle(2, out float throttleZ))
                 {   // X
-                    InputLineVal.z = throttleZ;
+                    InputLineVal.z += throttleZ;
                 }
             }
+            InputLineVal = InputLineVal.Clamp01Box();
 
             // Grab a vector to-go to set how the other tech should react in accordance to the host
             Vector3 DAdjuster = InputLineVal * 2000;
-            Vector3 RAdjuster = controlOverload.m_State.m_InputRotation * -1;
+            Vector3 RAdjuster = controlCopyTarget.m_State.m_InputRotation * -1;
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
             // Generate a rough tangent
-            Vector3 directed = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (1000 * AIECore.ExtremesAbs(RAdjuster));
+            Vector3 MoveDirectionUnthrottled = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (1000 * AIHelp.lastTechExtents);
 
-            Vector3 posToGo = directed + DAdjuster;
+            Vector3 posToGo = MoveDirectionUnthrottled + DAdjuster;
 
-            //Run ETC copies
-            TankControl.ControlState controlOverloadThis = (TankControl.ControlState)controlGet.GetValue(tank.control);
-            controlOverloadThis.m_State.m_BoostJets = controlOverload.m_State.m_BoostJets;
-            controlOverloadThis.m_State.m_BoostProps = controlOverload.m_State.m_BoostProps;
-            controlGet.SetValue(tank.control, controlOverloadThis);
 
             //Anchor handling
             if (AIHelp.AutoAnchor)
@@ -636,7 +542,87 @@ namespace TAC_AI.AI.Movement
             // Then we pack it all up nicely in the end
             end = tankToCopy.trans.TransformPoint(posToGo + tankToCopy.blockBounds.center);
             //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
-            IsMoving = !(InputLineVal + controlOverload.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
+            IsMoving = !(InputLineVal + controlCopyTarget.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
+            return end;
+        }
+        /// <summary>
+        /// Needs to be setup like a Maintainer
+        /// </summary>
+        /// <param name="tankToCopy"></param>
+        /// <param name="AIHelp"></param>
+        /// <param name="IsMoving"></param>
+        /// <returns></returns>
+        public static Vector3 GetDriveApproxAirMaintainer(Tank tankToCopy, AIECore.TankAIHelper AIHelp, out bool IsMoving)
+        {
+            //Get the position in which to drive inherited from player controls
+            //  NOTE THAT THIS ONLY SUPPORTS THE DISTANCE OF PLAYER TECH'S SIZE PLUS THE MT TECH!!!
+            Tank tank = AIHelp.tank;
+            Vector3 end;
+            //first we get the offset
+            Vector3 offsetTo = tankToCopy.trans.InverseTransformPoint(tank.boundsCentreWorldNoCheck) - tankToCopy.blockBounds.center;
+
+            TankControl.ControlState controlCopyTarget = (TankControl.ControlState)controlGet.GetValue(tankToCopy.control);
+
+
+            Vector3 InputLineVal = controlCopyTarget.m_State.m_InputMovement;
+            // Copy LME Here
+            if (tankToCopy.GetComponent<AIECore.TankAIHelper>().CanCopyControls || tankToCopy.PlayerFocused)
+            {
+                if (tankToCopy.control.GetThrottle(0, out float throttleX))
+                {   // X 
+                    InputLineVal.x += throttleX;
+                }
+                if (tankToCopy.control.GetThrottle(1, out float throttleY))
+                {   // Y
+                    InputLineVal.y += throttleY;
+                }
+                if (tankToCopy.control.GetThrottle(2, out float throttleZ))
+                {   // X
+                    InputLineVal.z += throttleZ;
+                }
+            }
+            InputLineVal = InputLineVal.Clamp01Box();
+
+            // Grab a vector to-go to set how the other tech should react in accordance to the host
+            Vector3 DAdjuster = InputLineVal * 2000;
+            Vector3 RAdjuster = controlCopyTarget.m_State.m_InputRotation * -1;
+            //Debug.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
+            // Generate a rough tangent
+            Vector3 MoveDirectionUnthrottled = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (1000 * AIHelp.lastTechExtents);
+
+            Vector3 posToGo = MoveDirectionUnthrottled + DAdjuster;
+
+            //Run ETC copies
+            TankControl.ControlState controlMTOverride = (TankControl.ControlState)controlGet.GetValue(tank.control);
+            controlMTOverride.m_State.m_BoostJets = controlCopyTarget.m_State.m_BoostJets;
+            controlMTOverride.m_State.m_BoostProps = controlCopyTarget.m_State.m_BoostProps;
+            controlGet.SetValue(tank.control, controlMTOverride);
+
+            //Anchor handling
+            if (AIHelp.AutoAnchor)
+            {
+                if (tankToCopy.IsAnchored && tank.Anchors.NumPossibleAnchors >= 1 && !AIHelp.AttackEnemy)
+                {
+                    if (tank.Anchors.NumIsAnchored == 0 && AIHelp.anchorAttempts <= AIGlobals.AlliedAnchorAttempts / 2)//Half the escort's attempts
+                    {
+                        AIHelp.TryAnchor();
+                        AIHelp.anchorAttempts++;
+                    }
+                }
+                else if (!tankToCopy.IsAnchored && tank.Anchors.NumPossibleAnchors >= 1)
+                {
+                    AIHelp.anchorAttempts = 0;
+                    if (tank.Anchors.NumIsAnchored > 0)
+                    {
+                        AIHelp.UnAnchor();
+                    }
+                }
+            }
+
+            // Then we pack it all up nicely in the end
+            end = tankToCopy.trans.TransformPoint(posToGo + tankToCopy.blockBounds.center);
+            //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
+            IsMoving = !(InputLineVal + controlCopyTarget.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
             return end;
         }
         public static bool AboveHeightFromGround(Vector3 posScene, float groundOffset = 50)

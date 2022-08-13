@@ -156,7 +156,7 @@ namespace TAC_AI.AI
                         {
                             if (removedBlock == ManPointer.inst.targetVisible.block)
                             {
-                                SaveTech();
+                                Invoke("SaveTech", 0.01f);
                                 return;
                             }
                         }
@@ -167,7 +167,7 @@ namespace TAC_AI.AI
                         {
                             if (thisInst.lastEnemy && !thisInst.BoltsFired)// only save when not in combat Or exploding bolts
                             {
-                                SaveTech();
+                                Invoke("SaveTech", 0.01f);
                                 return;
                             }
                         }
@@ -208,7 +208,7 @@ namespace TAC_AI.AI
                 }
                 if (ToSave.Count() == 0)
                 {
-                    DebugTAC_AI.LogError("TACtical_AI: INVALID TECH DATA SAVED FOR TANK " + tank.name);
+                    DebugTAC_AI.Info("TACtical_AI: INVALID TECH DATA SAVED FOR TANK " + tank.name + "\n" +StackTraceUtility.ExtractStackTrace());
                 }
                 DebugTAC_AI.Info("TACtical_AI:  DesignMemory - Saved " + tank.name);
                 //build AROUND the cab pls
@@ -395,7 +395,7 @@ namespace TAC_AI.AI
                 float totalDesignBlocks = (float)SavedTech.Count;
                 if (totalDesignBlocks == 0)
                 {
-                    DebugTAC_AI.Assert(true, "TACtical_AI: Tech " + tank.name + " has 0 saved blocks in TechMemor.  How?");
+                    DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " has 0 saved blocks in TechMemor.  How?");
                     return false;
                 }
                 thisInst.DamageThreshold = (1 - (tank.blockman.blockCount / totalDesignBlocks)) * 100;

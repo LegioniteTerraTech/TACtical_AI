@@ -443,7 +443,7 @@ namespace TAC_AI.AI.Enemy
             }
             thisInst.lastPlayer = null;
 
-            thisInst.ResetToDefaultAIController();
+            thisInst.RecalibrateMovementAIController();
 
             toSet.sceneStationaryPos = tank.boundsCentreWorldNoCheck;
             toSet.Refresh();
@@ -881,7 +881,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 toSet.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
             }
-            thisInst.SetupMovementAIController();
+            thisInst.RecalibrateMovementAIController();
 
             bool isBaseMaker = toSet.CommanderMind == EnemyAttitude.NPCBaseHost || toSet.CommanderMind == EnemyAttitude.Boss;
             if (toSet.CommanderSmarts == EnemySmarts.Default && !isBaseMaker && toSet.EvilCommander == EnemyHandling.Wheeled)

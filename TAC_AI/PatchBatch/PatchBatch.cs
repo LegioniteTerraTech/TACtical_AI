@@ -1355,7 +1355,7 @@ namespace TAC_AI
                 TankBlock thisBlock = nabData.m_TargetTankBlock;
                 if (thisBlock.tank.IsNotNull())
                 {
-                    DebugTAC_AI.Log("TACtical_AI: grabbed tank data = " + thisBlock.tank.name.ToString());
+                    DebugTAC_AI.Info("TACtical_AI: grabbed tank data = " + thisBlock.tank.name.ToString());
                     GUIAIManager.GetTank(thisBlock.tank);
                 }
                 else

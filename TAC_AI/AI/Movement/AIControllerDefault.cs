@@ -116,7 +116,7 @@ namespace TAC_AI.AI
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
             CheckBoosters();
-            DebugTAC_AI.Log("TACtical_AI: Added ground AI for " + Tank.name);
+            DebugTAC_AI.Info("TACtical_AI: Added ground AI for " + Tank.name);
         }
         private void CheckBoosters()
         {
@@ -179,11 +179,11 @@ namespace TAC_AI.AI
                 return; // Prevent thrusting into trees
             if (BoostBias.z > 0.75f && forwardsOnly)
             {
-                TC.m_Movement.FireBoosters(Tank);
+                TC.BoostControlJets = true;
             }
             else
             {
-                TC.m_Movement.FireBoosters(Tank);
+                TC.BoostControlJets = true;
             }
         }
 

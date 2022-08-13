@@ -50,7 +50,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.DriveVar = 1;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
+                if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
                 {
                     if (tank.Anchors.NumIsAnchored > 0)
                     {
@@ -67,7 +67,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
+                if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
                 {
                     if (tank.Anchors.NumIsAnchored > 0)
                     {
@@ -230,7 +230,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.DriveVar = 1;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
+                if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
                 {
                     if (tank.Anchors.NumIsAnchored > 0)
                     {
@@ -247,7 +247,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
+                if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
                 {
                     if (tank.Anchors.NumIsAnchored > 0)
                     {

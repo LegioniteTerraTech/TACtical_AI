@@ -30,7 +30,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             Tank hostTech;
             float dist = 0;
-            Tank vis;
+            Tank copyTargVis;
             BGeneral.ResetValues(thisInst);
             try
             {
@@ -50,8 +50,9 @@ namespace TAC_AI.AI.AlliedOperations
                         return;
                     }
                     thisInst.lastCloseAlly = hostTech;
-                    vis = thisInst.lastCloseAlly;
-                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
+                    copyTargVis = thisInst.lastCloseAlly;
+                    dist = (tank.boundsCentreWorldNoCheck - copyTargVis.boundsCentreWorldNoCheck).magnitude;
+
                 }
                 else
                 {
@@ -65,8 +66,9 @@ namespace TAC_AI.AI.AlliedOperations
                         return;
                     }
                     thisInst.lastCloseAlly = hostTech;
-                    vis = thisInst.lastCloseAlly;
-                    dist = (tank.boundsCentreWorldNoCheck - vis.boundsCentreWorldNoCheck).magnitude;
+                    copyTargVis = thisInst.lastCloseAlly;
+                    dist = (tank.boundsCentreWorldNoCheck - copyTargVis.boundsCentreWorldNoCheck).magnitude;
+
                 }
 
                 //float range = thisInst.lastTechExtents + vis.GetCheapBounds();
@@ -83,17 +85,23 @@ namespace TAC_AI.AI.AlliedOperations
                         if (tank.boundsCentreWorldNoCheck.y < height)
                             tank.visible.MoveAboveGround();
                 }
-                if (!thisInst.MTLockedToTechBeam && vis.beam.IsActive && dist < range)
+                if (!thisInst.MTLockedToTechBeam && copyTargVis.beam.IsActive && dist < range)
                 {
-                    thisInst.MTOffsetPos = vis.trans.InverseTransformPoint(tank.trans.position);
-                    thisInst.MTOffsetRot = vis.trans.InverseTransformDirection(tank.trans.forward);
-                    thisInst.MTOffsetRotUp = vis.trans.InverseTransformDirection(tank.trans.up);
+                    thisInst.MTOffsetPos = copyTargVis.trans.InverseTransformPoint(tank.trans.position);
+                    thisInst.MTOffsetRot = copyTargVis.trans.InverseTransformDirection(tank.trans.forward);
+                    thisInst.MTOffsetRotUp = copyTargVis.trans.InverseTransformDirection(tank.trans.up);
                     //Debug.Log("TACtical_AI:AI " + tank.name + ": Synced position to " + thisInst.MTOffsetPos + " and rot to " + thisInst.MTOffsetRot);
                     thisInst.MTLockedToTechBeam = true;
                 }
-                else if (thisInst.MTLockedToTechBeam && !vis.beam.IsActive)
+                else if (thisInst.MTLockedToTechBeam && !copyTargVis.beam.IsActive)
                 {
                     thisInst.MTLockedToTechBeam = false;
+                }
+                if (!thisInst.MTLockedToTechBeam && thisInst.MTMimicHostAvail)
+                {
+                    TankControl.ControlState controlCopyTarget = (TankControl.ControlState)AIEPathing.controlGet.GetValue(thisInst.lastCloseAlly.control);
+                    thisInst.BOOST = controlCopyTarget.m_State.m_BoostJets;
+                    thisInst.FirePROPS = controlCopyTarget.m_State.m_BoostProps;
                 }
             }
             catch

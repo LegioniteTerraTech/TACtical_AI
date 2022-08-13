@@ -1282,7 +1282,7 @@ namespace TAC_AI.World
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     lastTank.DediAI = dediAI;
-                    lastTank.SetupMovementAIController();
+                    lastTank.RecalibrateMovementAIController();
 
                     //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
                     //overlay.Update();
@@ -1303,7 +1303,7 @@ namespace TAC_AI.World
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 lastTank.DediAI = dediAI;
-                lastTank.SetupMovementAIController();
+                lastTank.RecalibrateMovementAIController();
 
                 //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
                 //overlay.Update();
@@ -2054,7 +2054,7 @@ namespace TAC_AI.World
                     if (tankInst)
                     {
                         tankInst.ForceAllAIsToEscort();
-                        tankInst.SetupMovementAIController();
+                        tankInst.RecalibrateMovementAIController();
                     }
                 }
             }

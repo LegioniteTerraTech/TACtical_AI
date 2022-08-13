@@ -53,6 +53,14 @@ namespace TAC_AI.AI.AlliedOperations
                             BGeneral.AidDefend(this.helper, this.helper.tank);
                             break;
 
+                        case AIDriverType.AutoSet:
+                            // Set ourselves up automatically
+                            DebugTAC_AI.Log("TACtical_AI: AIDriver is set to AutoSet, but this should have been handled beforehand!");
+                            DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
+                            this.helper.DriverType = AIDriverType.Tank;
+                            break;
+
+
                         default:
                             DebugTAC_AI.Log("TACtical_AI: AIDriver is set to an invalid state - " + this.helper.DriverType);
                             DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");

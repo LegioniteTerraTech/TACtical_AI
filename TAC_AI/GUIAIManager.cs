@@ -120,7 +120,7 @@ namespace TAC_AI
                  * <color=#808080ff> - Inactive
                  */
 
-                bool stuckAnchored = lastTank.tank.IsAnchored && !lastTank.PlayerAllowAnchoring;
+                bool stuckAnchored = lastTank.tank.IsAnchored && !lastTank.PlayerAllowAutoAnchoring;
 
                 // Drivers
                 if (stuckAnchored)
@@ -368,7 +368,7 @@ namespace TAC_AI
                     {
                     }
                 }
-                if (lastTank.PlayerAllowAnchoring)
+                if (lastTank.PlayerAllowAutoAnchoring)
                 {
                     if (lastTank.tank.Anchors.NumPossibleAnchors > 0)
                     {
@@ -379,7 +379,7 @@ namespace TAC_AI
                                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
                                 if (ManNetwork.IsHost)
                                 {
-                                    lastTank.PlayerAllowAnchoring = false;
+                                    lastTank.PlayerAllowAutoAnchoring = false;
                                     lastTank.TryAnchor();
                                 }
                                 AIDriver = AIDriverType.Stationary;
@@ -400,7 +400,7 @@ namespace TAC_AI
                     if (ManNetwork.IsHost)
                     {
                         lastTank.UnAnchor();
-                        lastTank.PlayerAllowAnchoring = true;
+                        lastTank.PlayerAllowAutoAnchoring = true;
                     }
                     AIDriver = AIDriverType.AutoSet;
                     clickedDriver = true;
@@ -446,14 +446,17 @@ namespace TAC_AI
                         NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, AIType.Null, driver);
 
                         lastTank.OnSwitchAI(false);
+                        if (driver == AIDriverType.AutoSet)
+                            lastTank.ExecuteAutoSet();
+                        else
+                            lastTank.DriverType = driver;
+                        lastTank.ForceAllAIsToEscort();
+                        lastTank.RecalibrateMovementAIController();
                         if (lastTank.DriverType != driver)
                         {
                             WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                            AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
+                            AIGlobals.PopupPlayerInfo(lastTank.DriverType.ToString(), worPos);
                         }
-                        lastTank.DriverType = driver;
-                        lastTank.ForceAllAIsToEscort();
-                        lastTank.SetupMovementAIController();
 
                     }
                     catch (Exception e)
@@ -464,14 +467,17 @@ namespace TAC_AI
                 else
                 {
                     lastTank.OnSwitchAI(false);
+                    if (driver == AIDriverType.AutoSet)
+                        lastTank.ExecuteAutoSet();
+                    else
+                        lastTank.DriverType = driver;
+                    lastTank.ForceAllAIsToEscort();
+                    lastTank.RecalibrateMovementAIController();
                     if (lastTank.DriverType != driver)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                        AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
+                        AIGlobals.PopupPlayerInfo(lastTank.DriverType.ToString(), worPos);
                     }
-                    lastTank.DriverType = driver;
-                    lastTank.ForceAllAIsToEscort();
-                    lastTank.SetupMovementAIController();
 
                 }
                 inst.TrySetOptionDriverRTS(driver);
@@ -538,14 +544,17 @@ namespace TAC_AI
                 {
                     NetworkHandler.TryBroadcastNewAIState(tankInst.tank.netTech.netId.Value, AIType.Null, locDediAI);
                     tankInst.OnSwitchAI(false);
+                    tankInst.ForceAllAIsToEscort();
+                    if (driver == AIDriverType.AutoSet)
+                        lastTank.ExecuteAutoSet();
+                    else
+                        lastTank.DriverType = driver;
+                    tankInst.RecalibrateMovementAIController();
                     if (tankInst.DriverType != driver)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
                         AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                     }
-                    tankInst.ForceAllAIsToEscort();
-                    tankInst.DriverType = locDediAI;
-                    tankInst.SetupMovementAIController();
 
                 }
                 catch (Exception e)
@@ -556,15 +565,18 @@ namespace TAC_AI
             else
             {
                 tankInst.OnSwitchAI(false);
+                tankInst.ForceAllAIsToEscort();
+                if (driver == AIDriverType.AutoSet)
+                    lastTank.ExecuteAutoSet();
+                else
+                    lastTank.DriverType = driver;
+                tankInst.RecalibrateMovementAIController();
+
                 if (tankInst.DriverType != driver)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
                     AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                 }
-                tankInst.ForceAllAIsToEscort();
-                tankInst.DriverType = locDediAI;
-                tankInst.SetupMovementAIController();
-
             }
         }
 
@@ -587,7 +599,7 @@ namespace TAC_AI
                     lastTank.DediAI = dediAI;
                     lastTank.ForceAllAIsToEscort();
                     fetchAI = dediAI;
-                    lastTank.SetupMovementAIController();
+                    lastTank.RecalibrateMovementAIController();
 
                 }
                 catch (Exception e)
@@ -606,7 +618,7 @@ namespace TAC_AI
                 lastTank.DediAI = dediAI;
                 lastTank.ForceAllAIsToEscort();
                 fetchAI = dediAI;
-                lastTank.SetupMovementAIController();
+                lastTank.RecalibrateMovementAIController();
 
             }
             inst.TrySetOptionRTS(dediAI);
@@ -696,7 +708,7 @@ namespace TAC_AI
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     tankInst.DediAI = locDediAI;
-                    tankInst.SetupMovementAIController();
+                    tankInst.RecalibrateMovementAIController();
 
                 }
                 catch (Exception e)
@@ -714,7 +726,7 @@ namespace TAC_AI
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 tankInst.DediAI = locDediAI;
-                tankInst.SetupMovementAIController();
+                tankInst.RecalibrateMovementAIController();
 
             }
         }

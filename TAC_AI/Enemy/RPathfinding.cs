@@ -22,7 +22,7 @@ namespace TAC_AI.AI.Enemy
         {   //WIP
             if (!thisInst.AvoidStuff || tank.IsAnchored) //Because the enemy AI uses the advanced AI when anchored, unlike the player AI.
                 return targetIn;
-            List<Tank> Allies = AllyList(tank);
+            List<Tank> Allies = AIEPathing.AllyList(tank);
             try
             {
                 bool obst;
@@ -92,7 +92,7 @@ namespace TAC_AI.AI.Enemy
         {   //WIP
             if (!thisInst.AvoidStuff || tank.IsAnchored)
                 return targetIn;
-            List<Tank> Allies = AllyList(tank);
+            List<Tank> Allies = AIEPathing.AllyList(tank);
             try
             {
                 bool obst;
@@ -171,7 +171,7 @@ namespace TAC_AI.AI.Enemy
         {   //WIP
             if (!thisInst.AvoidStuff || tank.IsAnchored)
                 return targetIn;
-            List<Tank> Allies = AllyList(tank);
+            List<Tank> Allies = AIEPathing.AllyList(tank);
             try
             {
                 bool obst;
@@ -238,10 +238,6 @@ namespace TAC_AI.AI.Enemy
         }
 
 
-        public static List<Tank> AllyList(Tank tank)
-        {
-            return AIECore.TankAIManager.GetNonEnemyTanks(tank.Team);
-        }
 
         public static Tank ClosestAllyE(Vector3 tankPos, out float bestValue, List<Tank> Allies)
         {
