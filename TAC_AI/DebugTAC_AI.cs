@@ -67,7 +67,7 @@ namespace TAC_AI
             UnityEngine.Debug.Log("TACtical_AI: ENCOUNTERED CRITICAL ERROR");
             UnityEngine.Debug.Log("TACtical_AI: MAY NOT WORK PROPERLY AFTER THIS ERROR, PLEASE REPORT!");
         }
-        internal static void FatalError(Exception e)
+        internal static void FatalError(string e)
         {
             ManUI.inst.ShowErrorPopup("TACtical_AI: ENCOUNTERED CRITICAL ERROR: " + e);
             UnityEngine.Debug.Log("TACtical_AI: ENCOUNTERED CRITICAL ERROR");

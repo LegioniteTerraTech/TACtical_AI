@@ -123,6 +123,8 @@ namespace TAC_AI
         //public static bool DestroyTreesInWater = false;
 
         // Set on startup
+
+        // MOD SUPPORT
         internal static bool IsRandomAdditionsPresent = false;
         internal static bool isWaterModPresent = false;
         internal static bool isControlBlocksPresent = false;
@@ -240,11 +242,87 @@ namespace TAC_AI
         public static bool hasPatched = false;
         internal static bool HasHookedUpToSafeSaves = false;
 
+        public static bool VALIDATE_MODS()
+        {
+            if (!LookForMod("0Harmony"))
+            {
+                DebugTAC_AI.FatalError("This mod NEEDS Harmony to function!  Please subscribe to it on the Steam Workshop");
+                return false;
+            }
+
+            if (LookForMod("RandomAdditions"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Found RandomAdditions!  Enabling advanced AI for parts!");
+                IsRandomAdditionsPresent = true;
+            }
+            else IsRandomAdditionsPresent = false;
+
+            if (LookForMod("WaterMod"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Found Water Mod!  Enabling water-related features!");
+                isWaterModPresent = true;
+            }
+            else isWaterModPresent = false;
+
+            if (LookForMod("Control Block"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Control Blocks!  Letting RawTech loader override unassigned swivels to auto-target!");
+                isControlBlocksPresent = true;
+            }
+            else isControlBlocksPresent = false;
+
+            if (LookForMod("WeaponAimMod"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
+                isWeaponAimModPresent = true;
+            }
+            else isWeaponAimModPresent = false;
+
+            if (LookForMod("TweakTech"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Found TweakTech!  Applying changes to AI!");
+                isTweakTechPresent = true;
+            }
+            else isTweakTechPresent = false;
+            /*
+            if (LookForMod("TougherEnemies"))
+            {
+                Debug.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
+                isTougherEnemiesPresent = true;
+            }*/
+
+            if (LookForMod("BlockInjector"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
+                isBlockInjectorPresent = true;
+            }
+            else isBlockInjectorPresent = false;
+
+            if (LookForMod("PopulationInjector"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
+                isPopInjectorPresent = true;
+            }
+            else isPopInjectorPresent = false;
+
+            if (LookForMod("AnimeAI"))
+            {
+                DebugTAC_AI.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
+                isAnimeAIPresent = true;
+            }
+            else isAnimeAIPresent = false;
+            return true;
+        }
+
 #if STEAM
         public static void MainOfficialInit()
         {
             //Where the fun begins
             Debug.Log("TACtical_AI: MAIN (Steam Workshop Version) startup");
+            if (!VALIDATE_MODS())
+            {
+                return;
+            }
 
             //Initiate the madness
             if (!hasPatched)
@@ -342,10 +420,11 @@ namespace TAC_AI
         public static void Main()
         {
             //Where the fun begins
+            Debug.Log("TACtical_AI: MAIN (TTMM Version) startup");
+            VALIDATE_MODS();
 
             //Initiate the madness
             //HarmonyInstance harmonyInstance = HarmonyInstance.Create("legionite.tactical_ai");
-            Debug.Log("TACtical_AI: MAIN (TTMM Version) startup");
 #if DEBUG
             Debug.Log("-----------------------------------------");
             Debug.Log("-----------------------------------------");
@@ -378,7 +457,6 @@ namespace TAC_AI
             GUIEvictionNotice.Initiate();
 
 
-            GetActiveMods();
             AIERepair.RefreshDelays();
             try
             {
@@ -453,71 +531,7 @@ namespace TAC_AI
             }
             return false;
         }
-        public static void GetActiveMods()
-        {
-            if (LookForMod("RandomAdditions"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Found RandomAdditions!  Enabling advanced AI for parts!");
-                IsRandomAdditionsPresent = true;
-            }
-            else IsRandomAdditionsPresent = false;
-
-            if (LookForMod("WaterMod"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Found Water Mod!  Enabling water-related features!");
-                isWaterModPresent = true;
-            }
-            else isWaterModPresent = false;
-
-            if (LookForMod("Control Block"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Control Blocks!  Letting RawTech loader override unassigned swivels to auto-target!");
-                isControlBlocksPresent = true;
-            }
-            else isControlBlocksPresent = false;
-
-            if (LookForMod("WeaponAimMod"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
-                isWeaponAimModPresent = true;
-            }
-            else isWeaponAimModPresent = false;
-
-            if (LookForMod("TweakTech"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Found TweakTech!  Applying changes to AI!");
-                isTweakTechPresent = true;
-            }
-            else isTweakTechPresent = false;
-            /*
-            if (LookForMod("TougherEnemies"))
-            {
-                Debug.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
-                isTougherEnemiesPresent = true;
-            }*/
-
-            if (LookForMod("BlockInjector"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
-                isBlockInjectorPresent = true;
-            }
-            else isBlockInjectorPresent = false;
-
-            if (LookForMod("PopulationInjector"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
-                isPopInjectorPresent = true;
-            }
-            else isPopInjectorPresent = false;
-
-            if (LookForMod("AnimeAI"))
-            {
-                DebugTAC_AI.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
-                isAnimeAIPresent = true;
-            }
-            else isAnimeAIPresent = false;
-
-        }
+       
 
         /// <summary>
         /// Only call for cases where we want only vanilla corps!
