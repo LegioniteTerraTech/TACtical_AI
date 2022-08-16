@@ -151,7 +151,7 @@ namespace TAC_AI
         public const int BaseTeamsStart = 256;
         public const int BaseTeamsEnd = 506;
 
-        internal static bool IsAttract => ManGameMode.inst.IsCurrent<ModeAttract>();
+        internal static bool IsAttract => ManGameMode.inst.GetCurrentGameType() == ManGameMode.GameType.Attract;
         public static float BaseChanceGoodMulti => 1 - ((KickStart.difficulty + 50) / 200f); // 25%
         public static float NonHostileBaseChance => 0.5f * BaseChanceGoodMulti; // 50% at easiest
         public static float FriendlyBaseChance => 0.25f * BaseChanceGoodMulti;  // 12.5% at easiest

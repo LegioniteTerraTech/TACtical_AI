@@ -91,30 +91,34 @@ namespace TAC_AI.Templates
 
         public static void Initiate()
         {   // 
-            var startup = new GameObject("AISpawnerAux");
-            startup.AddComponent<SpecialAISpawner>();
-            inst = startup.GetComponent<SpecialAISpawner>();
+            if (inst)
+                return;
+            inst = new GameObject("AISpawnerAux").AddComponent<SpecialAISpawner>();
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(DetermineActiveOnMode);
             DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Initated!");
-            startup.SetActive(false);
+            inst.gameObject.SetActive(false);
             RawTechLoader.Initiate();
         }
         public static void DeInitiate()
         {
+            if (!inst)
+                return;
             RawTechLoader.DeInitiate();
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Unsubscribe(DetermineActiveOnMode);
             Destroy(inst);
             inst = null;
             DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - DeInitated");
         }
-        
-        public static void DetermineActiveOnModeType(ManGameMode.GameType mode)
-        {   // 
+
+        public static void DetermineActiveOnModeType()
+        {
+            ManGameMode.GameType mode = ManGameMode.inst.GetCurrentGameType();
             AirPool.Clear();
             RawTechLoader.inst.ClearQueue();
             RawTechExporter.Reload();
             OverrideManPop.QueuedChangeToRagnarokPop();
             DebugRawTechSpawner.ShouldBeActive();
+            DebugTAC_AI.Log("(DetermineActiveOnModeTypeDelayed) Next mode is " + mode.ToString());
             if ((mode == ManGameMode.GameType.MainGame || mode == ManGameMode.GameType.Misc
                 || mode == ManGameMode.GameType.CoOpCampaign || mode == ManGameMode.GameType.CoOpCreative) 
                 && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
@@ -138,6 +142,7 @@ namespace TAC_AI.Templates
             RawTechExporter.Reload();
             OverrideManPop.QueuedChangeToRagnarokPop();
             DebugRawTechSpawner.ShouldBeActive();
+            DebugTAC_AI.Log("(DetermineActiveOnMode) Next mode is " + mode.GetGameType().ToString());
             if ((mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCampaign || mode is ModeCoOpCreative) && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
             {
                 if (mode is ModeMisc || mode is ModeCoOpCreative)

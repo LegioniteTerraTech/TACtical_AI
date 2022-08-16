@@ -516,7 +516,7 @@ namespace TAC_AI.Templates
                         temp.terrain = terra;
 
                         temps.Add(temp);
-                        DebugTAC_AI.Log("TACtical_AI: Added " + name + " to the RAW Enemy Tech Pool, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
+                        DebugTAC_AI.Info("TACtical_AI: Added " + name + " to the RAW Enemy Tech Pool, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
                     }
                     catch (Exception e)
                     {
@@ -1569,12 +1569,12 @@ namespace TAC_AI.Templates
                     if (File.Exists(destination + up + TechName + ".JSON"))
                     {
                         output = File.ReadAllText(destination + up + TechName + ".JSON");
-                        DebugTAC_AI.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
                     }
                     else
                     {
                         output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
-                        DebugTAC_AI.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                     }
                     return output;
                 }
@@ -1593,12 +1593,12 @@ namespace TAC_AI.Templates
                     if (File.Exists(destination + up + TechName + ".JSON"))
                     {
                         output = File.ReadAllText(destination + up + TechName + ".JSON");
-                        DebugTAC_AI.Log("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
                     }
                     else
                     {
                         output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
-                        DebugTAC_AI.Log("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                     }
                     return output;
                 }

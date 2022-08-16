@@ -362,7 +362,7 @@ namespace TAC_AI
 
             AIERepair.RefreshDelays();
             // Because official fails to init this while switching modes
-            SpecialAISpawner.DetermineActiveOnModeType(ManGameMode.inst.GetCurrentGameType());
+            SpecialAISpawner.DetermineActiveOnModeType();
             AIECore.TankAIManager.inst.CorrectBlocksList();
 
             try

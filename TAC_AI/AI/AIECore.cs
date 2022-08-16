@@ -1407,6 +1407,7 @@ namespace TAC_AI.AI
                 Vector3 _ = tank.boundsCentreWorld;
                 AIList = new List<ModuleAIExtension>();
                 ManWorldTreadmill.inst.AddListener(this);
+                SetupDefaultMovementAIController();
                 Invoke("DelayedSubscribe", 0.1f);
                 return this;
             }
@@ -1472,6 +1473,8 @@ namespace TAC_AI.AI
                 cachedBlockCount = 0;
                 PlayerAllowAutoAnchoring = false;
                 isRTSControlled = false;
+                DriverType = AIDriverType.AutoSet;
+                DediAI = AIType.Escort;
             }
 
 
@@ -1546,13 +1549,15 @@ namespace TAC_AI.AI
                 if (RTSDestInternal != Vector3.zero)
                     RTSDestInternal += move;
                 lastDestination += move;
-                
-                MovementController.OnMoveWorldOrigin(move);
+
+                if (MovementController != null)
+                    MovementController.OnMoveWorldOrigin(move);
             }
 
 
             public void ResetAll(Tank tank)
             {
+                DebugTAC_AI.Assert(MovementController == null, "MovementController is null.  How is this possible?!");
                 //Debug.Log("TACtical_AI: Resetting all for " + tank.name);
                 cachedBlockCount = tank.blockman.blockCount;
                 SuppressFiring(false);
@@ -1627,6 +1632,15 @@ namespace TAC_AI.AI
 
             public void SetupDefaultMovementAIController()
             {
+                if (MovementController != null)
+                {
+                    IMovementAIController controller = MovementController;
+                    MovementController = null;
+                    if (controller != null)
+                    {
+                        controller.Recycle();
+                    }
+                }
                 UsingAirControls = false;
                 MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
                 MovementController.Initiate(tank, this, null);
@@ -1639,7 +1653,7 @@ namespace TAC_AI.AI
             {
                 UsingAirControls = false;
                 var enemy = gameObject.GetComponent<EnemyMind>();
-                if ((DriverType == AIDriverType.Stationary || (tank.IsAnchored && !PlayerAllowAutoAnchoring)) && !enemy)
+                if (DriverType == AIDriverType.Stationary && !enemy)
                 {
                     if (!(MovementController is AIControllerStatic))
                     {
@@ -1652,7 +1666,6 @@ namespace TAC_AI.AI
                     }
                     MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
                     MovementController.Initiate(tank, this, null);
-                    UsingAirControls = false;
                     return false;
                 }
                 else if (DriverType == AIDriverType.Pilot && AIState == AIAlignment.Player)
@@ -3474,7 +3487,7 @@ namespace TAC_AI.AI
             {
                 if (CanAnchorSafely && !tank.IsAnchored)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to anchor");
+                    //DebugTAC_AI.Assert(true,"TACtical_AI: AI " + tank.name + ":  Trying to anchor " + StackTraceUtility.ExtractStackTrace());
                     tank.Anchors.TryAnchorAll(true);
                     //TryReallyAnchor();
                 }
@@ -3517,7 +3530,7 @@ namespace TAC_AI.AI
                     {
                         if (AIGlobals.IsAttract || forced)
                         {
-                            DebugTAC_AI.Assert(true, "(ATTRACT BASE) screw you i'm anchoring anyways, I don't give a f*bron about your anchor checks!");
+                            DebugTAC_AI.Assert(true, (AIGlobals.IsAttract ? "(ATTRACT BASE)":"(FORCED)") + " screw you i'm anchoring anyways, I don't give a f*bron about your anchor checks!");
                             foreach (var item in anchors)
                             {
                                 item.AnchorToGround();

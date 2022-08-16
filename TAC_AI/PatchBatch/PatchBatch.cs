@@ -78,7 +78,7 @@ namespace TAC_AI
             else
             {
                 KickStart.VALIDATE_MODS();
-                SpecialAISpawner.DetermineActiveOnModeType(ManGameMode.inst.GetCurrentGameType());
+                SpecialAISpawner.DetermineActiveOnModeType();
                 AIECore.TankAIManager.inst.CorrectBlocksList();
             }
         }
