@@ -882,7 +882,7 @@ namespace TAC_AI
                 });
                 enemySeaSpawn = new OptionToggle("NPT Ship Spawning", TACAIEnemiesPop, KickStart.AllowSeaEnemiesToSpawn);
                 enemySeaSpawn.onValueSaved.AddListener(() => { KickStart.AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; });
-                playerMadeTechsOnly = new OptionToggle("NPT Spawns From Local RawTech Folder Only", TACAIEnemiesPop, KickStart.TryForceOnlyPlayerSpawns);
+                playerMadeTechsOnly = new OptionToggle("Disable Built-In Spawn Pool (\"Raw Techs\" Folder Only)", TACAIEnemiesPop, KickStart.TryForceOnlyPlayerSpawns);
                 playerMadeTechsOnly.onValueSaved.AddListener(() => { KickStart.TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; });
                 permitEradication = new OptionToggle("<b>Eradicators</b> - Huge NPT Tech Spawns - Requires Beefy Computer", TACAIEnemiesPop, KickStart.EnemyEradicators);
                 permitEradication.onValueSaved.AddListener(() => { KickStart.EnemyEradicators = permitEradication.SavedValue; });
