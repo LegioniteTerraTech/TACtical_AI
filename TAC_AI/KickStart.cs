@@ -51,15 +51,18 @@ namespace TAC_AI
 
         public static float SavedDefaultEnemyFragility;
 
-        internal static int MaxEnemyWorldCapacity
+        public static int MaxEnemyWorldCapacity
         {
             get
             {
+                return AIPopMaxLimit;
+                /*
+                 // Abandoned due to too many issues, instead I have raised the max pop limit
                 if ((1 / Time.deltaTime) <= 20)
                 {   // game lagging too much - hold back
                     return AIPopMaxLimit + MaxEnemyBaseLimit;
                 }
-                return AIPopMaxLimit + (MaxBasesPerTeam * MaxEnemyBaseLimit) + 1;
+                return AIPopMaxLimit + (MaxBasesPerTeam * MaxEnemyBaseLimit) + 1;*/
             }
         }// How many techs that can exist before giving up tech splitting?
         internal static int MaxEnemyBaseLimit = 3;  // How many different enemy team bases are allowed to exist in one instance
@@ -770,9 +773,9 @@ namespace TAC_AI
             });
             aiSelfRepair = new OptionToggle("Allow Mobile A.I.s to Build", TACAI, KickStart.AllowAISelfRepair);
             aiSelfRepair.onValueSaved.AddListener(() => { KickStart.AllowAISelfRepair = aiSelfRepair.SavedValue; });
-            dodgePeriod = new OptionRange("A.I. Dodge Processing Shoddiness", TACAI, KickStart.AIDodgeCheapness, 1, 61, 5);
+            dodgePeriod = new OptionRange("A.I. Dodge Processing Laziness", TACAI, KickStart.AIDodgeCheapness, 1, 61, 5);
             dodgePeriod.onValueSaved.AddListener(() => { KickStart.AIDodgeCheapness = (int)dodgePeriod.SavedValue; });
-            aiUpkeepRefresh = new OptionRange("A.I. Awareness Update Shoddiness", TACAI, KickStart.AIClockPeriodSet, 5, 50, 5);
+            aiUpkeepRefresh = new OptionRange("A.I. Awareness Update Laziness", TACAI, KickStart.AIClockPeriodSet, 5, 50, 5);
             aiUpkeepRefresh.onValueSaved.AddListener(() => { KickStart.AIClockPeriodSet = (short)aiUpkeepRefresh.SavedValue; });
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, KickStart.MuteNonPlayerRacket);
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { KickStart.MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; });
