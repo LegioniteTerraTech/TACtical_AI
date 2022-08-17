@@ -262,6 +262,7 @@ namespace TAC_AI.World
         }
         public static void DelayedInitiate()
         {
+            KickStart.MainOfficialInit();
             if (!KickStart.AllowStrategicAI)
                 return;
             if (SelectHalo.SelectCirclePrefab == null)

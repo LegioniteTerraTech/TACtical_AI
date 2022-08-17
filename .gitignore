@@ -261,3 +261,62 @@ __pycache__
 .pyc
 TAC_AI/bin/Debug/TAC_AI.dll
 TAC_AI/HypeMusicOverride.cs
+GitAccess/TACtical AI/uScriptRuntime.dll
+GitAccess/TACtical AI/uScriptAssembly.dll
+GitAccess/TACtical AI/UnityEngine.XRModule.dll
+GitAccess/TACtical AI/UnityEngine.WindModule.dll
+GitAccess/TACtical AI/UnityEngine.VRModule.dll
+GitAccess/TACtical AI/UnityEngine.VideoModule.dll
+GitAccess/TACtical AI/UnityEngine.VFXModule.dll
+GitAccess/TACtical AI/UnityEngine.VehiclesModule.dll
+GitAccess/TACtical AI/UnityEngine.UnityWebRequestWWWModule.dll
+GitAccess/TACtical AI/UnityEngine.UnityWebRequestTextureModule.dll
+GitAccess/TACtical AI/UnityEngine.UnityWebRequestModule.dll
+GitAccess/TACtical AI/UnityEngine.UnityWebRequestAudioModule.dll
+GitAccess/TACtical AI/UnityEngine.UnityWebRequestAssetBundleModule.dll
+GitAccess/TACtical AI/UnityEngine.UnityConnectModule.dll
+GitAccess/TACtical AI/UnityEngine.UnityAnalyticsModule.dll
+GitAccess/TACtical AI/UnityEngine.UNETModule.dll
+GitAccess/TACtical AI/UnityEngine.Timeline.dll
+GitAccess/TACtical AI/UnityEngine.TilemapModule.dll
+GitAccess/TACtical AI/UnityEngine.StyleSheetsModule.dll
+GitAccess/TACtical AI/UnityEngine.StreamingModule.dll
+GitAccess/TACtical AI/UnityEngine.SpriteShapeModule.dll
+GitAccess/TACtical AI/UnityEngine.SpriteMaskModule.dll
+GitAccess/TACtical AI/UnityEngine.SharedInternalsModule.dll
+GitAccess/TACtical AI/UnityEngine.ScreenCaptureModule.dll
+GitAccess/TACtical AI/UnityEngine.Physics2DModule.dll
+GitAccess/TACtical AI/UnityEngine.PerformanceReportingModule.dll
+GitAccess/TACtical AI/UnityEngine.LocalizationModule.dll
+GitAccess/TACtical AI/UnityEngine.GridModule.dll
+GitAccess/TACtical AI/UnityEngine.GameCenterModule.dll
+GitAccess/TACtical AI/UnityEngine.DirectorModule.dll
+GitAccess/TACtical AI/UnityEngine.CrashReportingModule.dll
+GitAccess/TACtical AI/UnityEngine.ClusterRendererModule.dll
+GitAccess/TACtical AI/UnityEngine.ClusterInputModule.dll
+GitAccess/TACtical AI/UnityEngine.ClothModule.dll
+GitAccess/TACtical AI/UnityEngine.AudioModule.dll
+GitAccess/TACtical AI/UnityEngine.AssetBundleModule.dll
+GitAccess/TACtical AI/UnityEngine.ARModule.dll
+GitAccess/TACtical AI/UnityEngine.AnimationModule.dll
+GitAccess/TACtical AI/UnityEngine.AIModule.dll
+GitAccess/TACtical AI/UnityEngine.AccessibilityModule.dll
+GitAccess/TACtical AI/Unity3dSdk.dll
+GitAccess/TACtical AI/Unity.TextMeshPro.dll
+GitAccess/TACtical AI/Unity.IL2CPP.CompilerServices.dll
+GitAccess/TACtical AI/TimeOfDay.dll
+GitAccess/TACtical AI/TAC_AI.dll
+GitAccess/TACtical AI/Spring.Social.Twitter.dll
+GitAccess/TACtical AI/Spring.Social.Core.dll
+GitAccess/TACtical AI/Spring.Rest.dll
+GitAccess/TACtical AI/SafeSaves.dll
+GitAccess/TACtical AI/Rewired_Core.dll
+GitAccess/TACtical AI/Mystery Squiggle.dll
+GitAccess/TACtical AI/Mystery Node Set.dll
+GitAccess/TACtical AI/LitJson.dll
+GitAccess/TACtical AI/GrabIt.dll
+GitAccess/TACtical AI/DebugWrapper.dll
+GitAccess/TACtical AI/Common.Logging.dll
+GitAccess/TACtical AI/BehaviourDesigner.dll
+GitAccess/TACtical AI/BehaviorDesigner.Runtime.dll
+GitAccess/TACtical AI/3rdParty.dll

@@ -331,14 +331,13 @@ namespace TAC_AI
         {
             //Where the fun begins
 #if STEAM
-            Debug.Log("TACtical_AI: MAIN (Steam Workshop Version) startup");
-                if (!VALIDATE_MODS())
-                {
-                    return;
-                }
+            DebugTAC_AI.Log("TACtical_AI: MAIN (Steam Workshop Version) startup");
+            if (!VALIDATE_MODS())
+            {
+                return;
             }
 #else
-            Debug.Log("TACtical_AI: Startup was invoked by TTSMM!  Set-up to handle LATE initialization.");
+            DebugTAC_AI.Log("TACtical_AI: Startup was invoked by TTSMM!  Set-up to handle LATE initialization.");
 #endif
 
             //Initiate the madness

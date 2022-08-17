@@ -155,7 +155,7 @@
     <!--> THE MATTERS BELOW ARE OFFICIAL </!-->
     <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
     <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2571814511\0Harmony.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2765217410\0Harmony.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RandomAdditions">
@@ -163,7 +163,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="SafeSaves">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2765342436\SafeSaves.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2765217410\SafeSaves.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="0Nuterra.NativeOptions">
@@ -189,7 +189,7 @@
     </Reference>
     <Reference Include="SafeSaves">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\SafeSaves\SafeSaves.dll</HintPath>
-      <Private>False</Private>
+      <Private>True</Private>
     </Reference>
     <Reference Include="AnimeAI">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\AnimeAI\AnimeAI.dll</HintPath>
