@@ -138,6 +138,7 @@ namespace TAC_AI
         internal static bool isPopInjectorPresent = false;
         internal static bool isAnimeAIPresent = false;
 
+
         // Set ingame
         public static int Difficulty
         {
@@ -245,8 +246,17 @@ namespace TAC_AI
         public static bool hasPatched = false;
         internal static bool HasHookedUpToSafeSaves = false;
 
+        internal static bool isSteamManaged = false;
+
         public static bool VALIDATE_MODS()
         {
+            if (!LookForMod("NLogManager"))
+            {
+                isSteamManaged = false;
+            }
+            else
+                isSteamManaged = true;
+
             if (!LookForMod("0Harmony"))
             {
                 DebugTAC_AI.FatalError("This mod NEEDS Harmony to function!  Please subscribe to it on the Steam Workshop");
@@ -317,15 +327,19 @@ namespace TAC_AI
             return true;
         }
 
-#if STEAM
         public static void MainOfficialInit()
         {
             //Where the fun begins
+#if STEAM
             Debug.Log("TACtical_AI: MAIN (Steam Workshop Version) startup");
-            if (!VALIDATE_MODS())
-            {
-                return;
+                if (!VALIDATE_MODS())
+                {
+                    return;
+                }
             }
+#else
+            Debug.Log("TACtical_AI: Startup was invoked by TTSMM!  Set-up to handle LATE initialization.");
+#endif
 
             //Initiate the madness
             if (!hasPatched)
@@ -375,9 +389,12 @@ namespace TAC_AI
                 DebugTAC_AI.Log(e);
             }
 
+#if STEAM
             EnableBetterAI = true;
+#endif
         }
 
+#if STEAM
         public static void DeInitCheck()
         {
             if (AIECore.TankAIManager.inst)
@@ -424,10 +441,9 @@ namespace TAC_AI
         {
             //Where the fun begins
             Debug.Log("TACtical_AI: MAIN (TTMM Version) startup");
-            VALIDATE_MODS();
-
+            if (!VALIDATE_MODS())
+                return;
             //Initiate the madness
-            //HarmonyInstance harmonyInstance = HarmonyInstance.Create("legionite.tactical_ai");
 #if DEBUG
             Debug.Log("-----------------------------------------");
             Debug.Log("-----------------------------------------");
@@ -435,6 +451,11 @@ namespace TAC_AI
             Debug.Log("-----------------------------------------");
             Debug.Log("-----------------------------------------");
 #endif
+            if (isSteamManaged)
+            {   // Since TTSMM launches this instead LATE when +managettmm is active, we need to compensate by initing ALL on init in this case.
+                MainOfficialInit();
+                return;
+            }
             Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
             try
             {
