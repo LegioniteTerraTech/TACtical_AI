@@ -451,45 +451,57 @@ namespace TAC_AI
             Debug.Log("-----------------------------------------");
             Debug.Log("-----------------------------------------");
 #endif
-            if (isSteamManaged)
-            {   // Since TTSMM launches this instead LATE when +managettmm is active, we need to compensate by initing ALL on init in this case.
-                MainOfficialInit();
-                return;
-            }
-            Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
             try
             {
-                harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
-            }
-            catch (Exception e)
-            {
-                Debug.Log("TACtical_AI: Error on patch");
-                Debug.Log(e);
-            }
-            
-            try
-            {
-                ManSafeSaves.RegisterSaveSystem(Assembly.GetExecutingAssembly());
-            }
-            catch { }
+                if (isSteamManaged)
+                {   // Since TTSMM launches this instead LATE when +managettmm is active, we need to compensate by initing ALL on init in this case.
+                    MainOfficialInit();
+                    return;
+                }
+                Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
+                try
+                {
+                    harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
+                }
+                catch (Exception e)
+                {
+                    Debug.Log("TACtical_AI: Error on patch");
+                    Debug.Log(e);
+                }
 
-            AIECore.TankAIManager.Initiate();
-            GUIAIManager.Initiate();
-            RawTechExporter.Initiate();
-            RBases.BaseFunderManager.Initiate();
-            ManEnemyWorld.Initiate();
-            GUIEvictionNotice.Initiate();
+                try
+                {
+                    ManSafeSaves.RegisterSaveSystem(Assembly.GetExecutingAssembly());
+                }
+                catch { }
+
+                AIECore.TankAIManager.Initiate();
+                GUIAIManager.Initiate();
+                RawTechExporter.Initiate();
+                RBases.BaseFunderManager.Initiate();
+                ManEnemyWorld.Initiate();
+                GUIEvictionNotice.Initiate();
 
 
-            AIERepair.RefreshDelays();
-            try
-            {
-                KickStartOptions.PushExtModOptionsHandling();
+                AIERepair.RefreshDelays();
+                try
+                {
+                    KickStartOptions.PushExtModOptionsHandling();
+                }
+                catch (Exception e)
+                {
+                    Debug.Log("TACtical_AI: Error on Option & Config setup");
+                    Debug.Log(e);
+                }
             }
-            catch (Exception e)
+            catch
             {
-                Debug.Log("TACtical_AI: Error on Option & Config setup");
-                Debug.Log(e);
+                try
+                {
+                    Debug.Log("TACtical_AI: Error on TTMM Init setup - there are missing dependancies!");
+                    DebugTAC_AI.FatalError("Make sure you have installed SafeSaves (and RandomAdditions if it crashes again on start) in TTMM.");
+                }
+                catch { };
             }
         }
 
