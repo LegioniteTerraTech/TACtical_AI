@@ -1784,7 +1784,6 @@ namespace TAC_AI.AI
                     }
                 }
                 DebugTAC_AI.Info("TACtical_AI: AI list for Tech " + tank.name + " has " + AIList.Count() + " entries");
-                bool hasAnchorableAI = false;
                 /// Gather the AI stats from all the AI modules on the Tech
                 foreach (ModuleAIExtension AIEx in AIList)
                 {
@@ -1827,12 +1826,6 @@ namespace TAC_AI.AI
                         allowAutoRepair = true;
                     if (AIEx.InventoryUser)
                         useInventory = true;
-                    if (AIEx.GetComponent<ModuleAnchor>())
-                    {
-                        if (ManWorld.inst.GetTerrainHeight(AIEx.transform.position, out float height))
-                            if (AIEx.GetComponent<ModuleAnchor>().HeightOffGroundForMaxAnchor() > height)
-                                hasAnchorableAI = true;
-                    }
 
                     // Engadgement Ranges
                     if (AIEx.MinCombatRange > IdealRangeCombat)
@@ -3021,6 +3014,20 @@ namespace TAC_AI.AI
                         return false;
                     return tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z > minSpeed;
                 }
+            }
+
+            public bool HasAnchorAI()
+            {
+                foreach (var AIEx in AIList)
+                {
+                    if (AIEx.GetComponent<ModuleAnchor>())
+                    {
+                        if (ManWorld.inst.GetTerrainHeight(AIEx.transform.position, out float height))
+                            if (AIEx.GetComponent<ModuleAnchor>().HeightOffGroundForMaxAnchor() > height)
+                                return true;
+                    }
+                }
+                return false;
             }
             public Visible GetPlayerTech()
             {

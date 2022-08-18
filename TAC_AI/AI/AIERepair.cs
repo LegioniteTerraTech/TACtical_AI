@@ -1738,7 +1738,7 @@ namespace TAC_AI.AI
 #if !STEAM
                 if (KickStart.isBlockInjectorPresent)
 #endif
-                    ConstructModdedIDList();
+                   ConstructModdedIDList();
             }
             catch { };
 
@@ -1753,14 +1753,6 @@ namespace TAC_AI.AI
             }
             return false;
         }
-
-
-#if STEAM
-        private static Dictionary<int, BlockTypes> UnOf_Offi = new Dictionary<int, BlockTypes>();
-#else
-        private static readonly Dictionary<int, BlockTypes> Offi_UnOf = new Dictionary<int, BlockTypes>();
-#endif
-        internal static FieldInfo access = typeof(ManMods).GetField("m_CurrentSession", BindingFlags.NonPublic | BindingFlags.Instance);
         /// <summary>
         /// Delayed
         /// </summary>
@@ -1810,6 +1802,15 @@ namespace TAC_AI.AI
             Debug.Log("TACtical_AI: ConstructModdedIDList - compiled " + Offi_UnOf.Count());
 #endif
         }
+
+
+#if STEAM
+        private static Dictionary<int, BlockTypes> UnOf_Offi = new Dictionary<int, BlockTypes>();
+#else
+        private static readonly Dictionary<int, BlockTypes> Offi_UnOf = new Dictionary<int, BlockTypes>();
+#endif
+        internal static FieldInfo access = typeof(ManMods).GetField("m_CurrentSession", BindingFlags.NonPublic | BindingFlags.Instance);
+        
         public static bool TryGetIDSwap(int hash, out BlockTypes blockType)
         {
 #if STEAM

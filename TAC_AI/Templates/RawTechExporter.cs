@@ -206,7 +206,8 @@ namespace TAC_AI.Templates
                 return;
             ManPauseGame.inst.PauseEvent.Subscribe(inst.UpdatePauseStatus);
             DebugTAC_AI.Log("TACtical_AI: RawTechExporter - Subscribing to Pause Screen");
-            AIERepair.ConstructModdedIDList();
+            if (KickStart.isBlockInjectorPresent)
+                AIERepair.ConstructModdedIDList();
             isSubbed = true;
             // Was causing way too many issues with enemies
             //Globals.inst.m_BlockSurvivalChance = KickStart.EnemyBlockDropChance / 100.0f;
