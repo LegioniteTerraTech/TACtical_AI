@@ -820,35 +820,42 @@ namespace TAC_AI.AI
             {
                 if (tonk == null)
                     return;
-                if (teamsIndexed.TryGetValue(tonk.Team, out TeamIndex TIndex))
+                try
                 {
-                    if (!tonk.IsEnemy(tonk.Team))
+                    if (teamsIndexed.TryGetValue(tonk.Team, out TeamIndex TIndex))
                     {
-                        TIndex.NonHostile.Add(tonk);
-                        TIndex.NonHostile.RemoveAll(delegate (Tank cand) { return cand == null; });
-                    }
-                }
-                else
-                {
-                    TeamIndex TI = new TeamIndex();
-                    if (!tonk.IsEnemy(tonk.Team))
-                    {
-                        TI.NonHostile.Add(tonk);
-                    }
-                    teamsIndexed.Add(tonk.Team, TI);
-                }
-                foreach (KeyValuePair<int, TeamIndex> TI in teamsIndexed)
-                {
-                    if (tonk.IsEnemy(TI.Key))
-                    {
-                        TI.Value.Targets.Add(tonk);
-                        TI.Value.Targets.RemoveAll(delegate (Tank cand) { return cand == null || cand.blockman.blockCount == 0; });
+                        if (!tonk.IsEnemy(tonk.Team))
+                        {
+                            TIndex.NonHostile.Add(tonk);
+                            TIndex.NonHostile.RemoveAll(delegate (Tank cand) { return cand == null; });
+                        }
                     }
                     else
                     {
-                        TI.Value.NonHostile.Add(tonk);
-                        TI.Value.NonHostile.RemoveAll(delegate (Tank cand) { return cand == null || cand.blockman.blockCount == 0; });
+                        TeamIndex TI = new TeamIndex();
+                        if (!tonk.IsEnemy(tonk.Team))
+                        {
+                            TI.NonHostile.Add(tonk);
+                        }
+                        teamsIndexed.Add(tonk.Team, TI);
                     }
+                    foreach (KeyValuePair<int, TeamIndex> TI in teamsIndexed)
+                    {
+                        if (tonk.IsEnemy(TI.Key))
+                        {
+                            TI.Value.Targets.Add(tonk);
+                            TI.Value.Targets.RemoveAll(delegate (Tank cand) { return cand == null || cand.blockman.blockCount == 0; });
+                        }
+                        else
+                        {
+                            TI.Value.NonHostile.Add(tonk);
+                            TI.Value.NonHostile.RemoveAll(delegate (Tank cand) { return cand == null || cand.blockman.blockCount == 0; });
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError("Error in IndexTech" + e);
                 }
             }
             private static void RemoveTech(Tank tonk)

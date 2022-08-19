@@ -366,7 +366,7 @@ namespace TAC_AI.AI.Enemy
         }
         public static void RequestFocusFire(Tank tank, Visible Target, RequestSeverity priority)
         {
-            if (Target.IsNull())
+            if (Target.IsNull() || tank.IsNull())
                 return;
             if (Target.tank.IsNull())
                 return;

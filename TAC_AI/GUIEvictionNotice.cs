@@ -228,7 +228,7 @@ namespace TAC_AI.AI
                             ManEnemyWorld.TeamWarEvent.Send(lastTeam, newTeam);
                             CloseSubMenuClickable();
                         }
-                            RBases.RequestFocusFire(lastTank, Singleton.playerTank.visible, RequestSeverity.ThinkMcFly);
+                        RBases.RequestFocusFire(lastTank, Singleton.playerTank.visible, RequestSeverity.ThinkMcFly);
                     }
                 }
                 else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))
