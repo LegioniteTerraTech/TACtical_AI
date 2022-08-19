@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.UI;
 using TAC_AI.AI;
+using TerraTechETCUtil;
 
 namespace TAC_AI.World
 {
@@ -96,11 +97,10 @@ namespace TAC_AI.World
             {
                 if (!ManPauseGame.inst.IsPaused && !ManPlayerRTS.BoxSelecting)
                 {
-                    AIGlobals.FetchResourcesFromGame();
-                    AIGlobals.StartUI();
+                    AltUI.StartUI();
                     if (unitListActive && ManPlayerRTS.inst.Leading)
                     {
-                        HotWindow = GUI.Window(AIRTSDisplayID, HotWindow, GUIHandlerControl, "Tech Select", AIGlobals.MenuLeft);
+                        HotWindow = GUI.Window(AIRTSDisplayID, HotWindow, GUIHandlerControl, "Tech Select", AltUI.MenuLeft);
                     }
                     if (!setHovered && hovered?.tank?.visible && hovered.tank.visible.isActive)
                     {
@@ -108,9 +108,9 @@ namespace TAC_AI.World
                         Mous.y = Display.main.renderingHeight - Mous.y;
                         toolWindow.x = Mathf.Clamp(Mous.x + 16, 0, Display.main.renderingWidth - toolWindow.width);
                         toolWindow.y = Mathf.Clamp(Mous.y + 16, 0, Display.main.renderingHeight - toolWindow.height);
-                        toolWindow = GUI.Window(AIRTSDisplayToolID, toolWindow, GUIHandlerInfo, "A.I. Status", AIGlobals.MenuLeft);
+                        toolWindow = GUI.Window(AIRTSDisplayToolID, toolWindow, GUIHandlerInfo, "A.I. Status", AltUI.MenuLeft);
                     }
-                    AIGlobals.EndUI();
+                    AltUI.EndUI();
                 }
             }
         }
@@ -220,11 +220,11 @@ namespace TAC_AI.World
                     newPos.x = Mathf.Clamp(Mous.x + 16, 0, Display.main.renderingWidth - toolWindow.width);
                     newPos.y = Mathf.Clamp(Mous.y + 16, 0, Display.main.renderingHeight - toolWindow.height);
                     Vector2 hotWindowLocal = newPos - HotWindow.position;
-                    GUI.Box(new Rect(hotWindowLocal.x, hotWindowLocal.y, toolWindow.width, toolWindow.height), "A.I. Status", AIGlobals.MenuLeft);
+                    GUI.Box(new Rect(hotWindowLocal.x, hotWindowLocal.y, toolWindow.width, toolWindow.height), "A.I. Status", AltUI.MenuLeft);
                     if (notAble)
-                        GUI.Label(new Rect(20 + hotWindowLocal.x, 15 + hotWindowLocal.y, 160, 60), AIGlobals.UIAlphaText + action + " (Unable)</color>");
+                        GUI.Label(new Rect(20 + hotWindowLocal.x, 15 + hotWindowLocal.y, 160, 60), AltUI.UIAlphaText + action + " (Unable)</color>");
                     else
-                        GUI.Label(new Rect(20 + hotWindowLocal.x, 15 + hotWindowLocal.y, 160, 60), AIGlobals.UIAlphaText + action + "</color>");
+                        GUI.Label(new Rect(20 + hotWindowLocal.x, 15 + hotWindowLocal.y, 160, 60), AltUI.UIAlphaText + action + "</color>");
                 }
                 else
                     ManPlayerRTS.inst.SetPlayerHovered(null);
@@ -250,9 +250,9 @@ namespace TAC_AI.World
             {
                 string action = hovered.GetActionStatus(out bool notAble);
                 if (notAble)
-                    GUI.Label(new Rect(20, 15, 160, 60), AIGlobals.UIAlphaText + action + " (Unable)</color>");
+                    GUI.Label(new Rect(20, 15, 160, 60), AltUI.UIAlphaText + action + " (Unable)</color>");
                 else
-                    GUI.Label(new Rect(20, 15, 160, 60), AIGlobals.UIAlphaText + action + "</color>");
+                    GUI.Label(new Rect(20, 15, 160, 60), AltUI.UIAlphaText + action + "</color>");
             }
         }
         public class RTSUnitDisp

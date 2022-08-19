@@ -10,6 +10,7 @@ using TAC_AI.AI.AlliedOperations;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using RandomAdditions;
+using TerraTechETCUtil;
 
 namespace TAC_AI.AI
 {
@@ -938,7 +939,7 @@ namespace TAC_AI.AI
             }
             public void ConstructErrorBlocksListDelayed()
             {
-                AIERepair.ConstructErrorBlocksList();
+                BlockIndexer.ConstructBlockLookupList();
             }
 
             private void Update()

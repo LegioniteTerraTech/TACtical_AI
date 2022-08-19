@@ -10,6 +10,7 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using SafeSaves;
+using TerraTechETCUtil;
 
 #if !STEAM
 using ModHelper.Config;
@@ -510,7 +511,7 @@ namespace TAC_AI
         public static void DelayedBaseLoader()
         {
             DebugTAC_AI.Log("TACtical_AI: LAUNCHED MODDED BLOCKS BASE VALIDATOR");
-            AIERepair.ConstructErrorBlocksList();
+            BlockIndexer.ConstructBlockLookupList();
             TempManager.ValidateAllStringTechs();
             DebugRawTechSpawner.Initiate();
             firedAfterBlockInjector = true;

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
+using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 {
@@ -146,7 +147,7 @@ namespace TAC_AI.Templates
                 greatestFaction = FactionLevel.GSO;
                 foreach (BlockMemory bloc in mem)
                 {
-                    BlockTypes type = AIERepair.StringToBlockType(bloc.t);
+                    BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
                     {
                         valid = false;
@@ -209,7 +210,7 @@ namespace TAC_AI.Templates
                 bool valid = true;
                 foreach (BlockMemory bloc in toScreen)
                 {
-                    BlockTypes type = AIERepair.StringToBlockType(bloc.t);
+                    BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
                     {
                         valid = false;
@@ -265,7 +266,7 @@ namespace TAC_AI.Templates
             int cabHash = ManSpawn.inst.GetBlockPrefab(BlockTypes.GSOCockpit_111).name.GetHashCode();
             foreach (BlockMemory bloc in mem)
             {
-                BlockTypes type = AIERepair.StringToBlockType(bloc.t);
+                BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
                 if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) || (type == BlockTypes.GSOCockpit_111 && bloc.t.GetHashCode() != cabHash))
                 {
                     valid = false;

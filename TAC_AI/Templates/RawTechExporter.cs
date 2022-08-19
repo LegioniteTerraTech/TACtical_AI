@@ -10,6 +10,7 @@ using Newtonsoft.Json.Converters;
 using Ionic.Zlib;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI;
+using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 {
@@ -172,7 +173,7 @@ namespace TAC_AI.Templates
 #if DEBUG
             ExportJSONInsteadOfRAWTECH = true;
 #endif
-            PrepareModdedBlocksSearch();
+            BlockIndexer.PrepareModdedBlocksSearch();
         }
 
         public static void DeInit()
@@ -191,10 +192,9 @@ namespace TAC_AI.Templates
             {
                 if (isOpen)
                 {
-                    AIGlobals.FetchResourcesFromGame();
-                    AIGlobals.StartUI();
-                    HotWindow = GUI.Window(RawTechExporterID, HotWindow, GUIHandler, "RAW Tech Saving", AIGlobals.MenuLeft);
-                    AIGlobals.EndUI();
+                    AltUI.StartUI();
+                    HotWindow = GUI.Window(RawTechExporterID, HotWindow, GUIHandler, "RAW Tech Saving", AltUI.MenuLeft);
+                    AltUI.EndUI();
                 }
             }
         }
@@ -207,7 +207,7 @@ namespace TAC_AI.Templates
             ManPauseGame.inst.PauseEvent.Subscribe(inst.UpdatePauseStatus);
             DebugTAC_AI.Log("TACtical_AI: RawTechExporter - Subscribing to Pause Screen");
             if (KickStart.isBlockInjectorPresent)
-                AIERepair.ConstructModdedIDList();
+                BlockIndexer.ConstructModdedIDList();
             isSubbed = true;
             // Was causing way too many issues with enemies
             //Globals.inst.m_BlockSurvivalChance = KickStart.EnemyBlockDropChance / 100.0f;
@@ -247,7 +247,7 @@ namespace TAC_AI.Templates
         {
             float timeDelay = Time.time;
             DebugTAC_AI.Log("TACtical_AI: Rebuilding Raw Tech Loader!");
-            AIERepair.ConstructErrorBlocksList();
+            BlockIndexer.ConstructBlockLookupList();
             TempManager.ValidateAndAddAllExternalTechs(true);
             timeDelay = Time.time - timeDelay;
             DebugTAC_AI.Log("TACtical_AI: Done in " + timeDelay + " seconds");
@@ -256,7 +256,7 @@ namespace TAC_AI.Templates
         {
             float timeDelay = Time.time;
             DebugTAC_AI.Log("TACtical_AI: Rebuilding Raw Tech Loader!");
-            AIERepair.ConstructErrorBlocksList();
+            BlockIndexer.ConstructBlockLookupList();
             TempManager.ValidateAndAddAllExternalTechs(true);
             timeDelay = Time.time - timeDelay;
             DebugTAC_AI.Log("TACtical_AI: Done in " + timeDelay + " seconds");
@@ -286,21 +286,21 @@ namespace TAC_AI.Templates
         private static void GUIHandler(int ID)
         {
             bool snapsAvail = SnapsAvailable();
-            if (GUI.Button(new Rect(20, 30, 160, 40), new GUIContent("<b><color=#ffffffff>SAVE CURRENT</color></b>", "Save current Tech to the Raw Techs directory"), AIGlobals.ButtonBlue))
+            if (GUI.Button(new Rect(20, 30, 160, 40), new GUIContent("<b><color=#ffffffff>SAVE CURRENT</color></b>", "Save current Tech to the Raw Techs directory"), AltUI.ButtonBlue))
             {
                 SaveTechToRawJSON(Singleton.playerTank);
             }
-            if (GUI.Button(new Rect(20, 70, 160, 40), new GUIContent("<b><color=#ffffffff>+ ENEMY POP</color></b>", "Save current Tech to Raw Enemies pop in eLocal."), AIGlobals.ButtonBlue))
+            if (GUI.Button(new Rect(20, 70, 160, 40), new GUIContent("<b><color=#ffffffff>+ ENEMY POP</color></b>", "Save current Tech to Raw Enemies pop in eLocal."), AltUI.ButtonBlue))
             {
                 SaveEnemyTechToRawJSON(Singleton.playerTank);
                 inst.ReloadRawTechLoader();
             }
-            if (GUI.Button(new Rect(20, 110, 160, 40), new GUIContent("<b><color=#ffffffff>+ ALL SNAPS</color></b>", snapsAvail ? "Save ALL snapshots to Raw Enemies pop in eBulk." : "Open the snapshots menu at least once first!"), snapsAvail ? AIGlobals.ButtonBlue : AIGlobals.ButtonGrey))
+            if (GUI.Button(new Rect(20, 110, 160, 40), new GUIContent("<b><color=#ffffffff>+ ALL SNAPS</color></b>", snapsAvail ? "Save ALL snapshots to Raw Enemies pop in eBulk." : "Open the snapshots menu at least once first!"), snapsAvail ? AltUI.ButtonBlue : AltUI.ButtonGrey))
             {
                 SaveEnemyTechsToRawBLK();
                 inst.ReloadRawTechLoader();
             }
-            GUI.Label(new Rect(20, 160, 150, 75), AIGlobals.UIAlphaText + GUI.tooltip + "</color>");
+            GUI.Label(new Rect(20, 160, 150, 75), AltUI.UIAlphaText + GUI.tooltip + "</color>");
             GUI.DragWindow();
         }
         public static void LaunchSubMenu()
@@ -663,7 +663,7 @@ namespace TAC_AI.Templates
             //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
-                BlockTypes type = AIERepair.StringToBlockType(blocRaw.t);
+                BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
                 TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
                 if (bloc.IsNull())
                     continue;
@@ -850,7 +850,7 @@ namespace TAC_AI.Templates
 
             terra = BaseTerrain.Land;
             string purposesList = "None.";
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
+            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
                 purposesList = "";
                 foreach (BasePurpose purp in purposes)
@@ -949,7 +949,7 @@ namespace TAC_AI.Templates
             //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
-                BlockTypes type = AIERepair.StringToBlockType(blocRaw.t);
+                BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
                 TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
                 if (bloc.IsNull())
                     continue;
@@ -1105,7 +1105,7 @@ namespace TAC_AI.Templates
 
             BaseTerrain terra = BaseTerrain.Land;
             string purposesList;
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
+            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
                 purposesList = "";
                 foreach (BasePurpose purp in purposes)
@@ -1664,25 +1664,6 @@ namespace TAC_AI.Templates
                 return null;
             }
 
-        }
-
-
-        // Logless block loader
-        private static Dictionary<string, int> ModdedBlocksGrabbed;
-        private static readonly FieldInfo allModdedBlocks = typeof(ManMods).GetField("m_BlockIDReverseLookup", BindingFlags.NonPublic | BindingFlags.Instance);
-        public static void PrepareModdedBlocksSearch()
-        {
-            ModdedBlocksGrabbed = (Dictionary<string, int>)allModdedBlocks.GetValue(Singleton.Manager<ManMods>.inst);
-        }
-        public static BlockTypes GetBlockIDLogFree(string name)
-        {
-            if (ModdedBlocksGrabbed == null)
-                PrepareModdedBlocksSearch();
-            if (ModdedBlocksGrabbed != null && ModdedBlocksGrabbed.TryGetValue(name, out int blockType))
-                return (BlockTypes)blockType;
-            else if (name == "GSO_Exploder_A1_111")
-                return (BlockTypes)622;
-            return BlockTypes.GSOCockpit_111;
         }
 
         // Utilities

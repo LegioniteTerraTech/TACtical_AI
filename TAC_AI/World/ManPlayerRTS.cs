@@ -4,6 +4,7 @@ using System.Linq;
 using TAC_AI.AI;
 using TAC_AI.Templates;
 using UnityEngine;
+using TerraTechETCUtil;
 
 namespace TAC_AI.World
 {
@@ -1944,7 +1945,7 @@ namespace TAC_AI.World
                     if (isBoxSelecting)
                     {
                         GUISkin cache = GUI.skin;
-                        GUI.skin = AIGlobals.MenuGUI;
+                        GUI.skin = AltUI.MenuGUI;
                         if (modifStyle == null)
                             HotWindow = GUI.Window(AIBoxSelectID, HotWindow, GUIHandler, "");//"<b>BoxSelect</b>"
                         else
@@ -2023,10 +2024,9 @@ namespace TAC_AI.World
                 {
                     if (inst.LocalPlayerTechsControlled.Contains(Singleton.playerTank.GetComponent<AIECore.TankAIHelper>()))
                     {
-                        AIGlobals.FetchResourcesFromGame();
-                        AIGlobals.StartUI();
-                        autopilotMenu = GUI.Window(PlayerAutopilotID, autopilotMenu, GUIHandlerPlayerAutopilot, "", AIGlobals.MenuLeft);
-                        AIGlobals.EndUI();
+                        AltUI.StartUI();
+                        autopilotMenu = GUI.Window(PlayerAutopilotID, autopilotMenu, GUIHandlerPlayerAutopilot, "", AltUI.MenuLeft);
+                        AltUI.EndUI();
                     } 
                 }
                 else
@@ -2046,7 +2046,7 @@ namespace TAC_AI.World
 
         private static void GUIHandlerPlayerAutopilot(int ID)
         {
-            if (GUI.Button(new Rect(10, 10, 140, 30), autopilotPlayer ? "<b>AUTOPILOT ON</b>" : "AUTOPILOT Off", autopilotPlayer ? AIGlobals.ButtonGreen : AIGlobals.ButtonBlue))
+            if (GUI.Button(new Rect(10, 10, 140, 30), autopilotPlayer ? "<b>AUTOPILOT ON</b>" : "AUTOPILOT Off", autopilotPlayer ? AltUI.ButtonGreen : AltUI.ButtonBlue))
             {
                 autopilotPlayer = !autopilotPlayer;
                 if (Singleton.playerTank)

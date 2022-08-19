@@ -6,6 +6,7 @@ using UnityEngine;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
+using TerraTechETCUtil;
 
 namespace TAC_AI.AI
 {
@@ -139,10 +140,9 @@ namespace TAC_AI.AI
             {
                 if (isCurrentlyOpen && KickStart.CanUseMenu && ManNetwork.IsHost)
                 {
-                    AIGlobals.FetchResourcesFromGame();
-                    AIGlobals.StartUI();
-                    HotWindow = GUI.Window(EvictionID, HotWindow, GUIHandler, "You Say:", AIGlobals.MenuLeft);
-                    AIGlobals.EndUI();
+                    AltUI.StartUI();
+                    HotWindow = GUI.Window(EvictionID, HotWindow, GUIHandler, "You Say:", AltUI.MenuLeft);
+                    AltUI.EndUI();
                 }
             }
         }
@@ -175,8 +175,8 @@ namespace TAC_AI.AI
                         }
                     }
                 }
-                GUI.Label(new Rect(10, 25, 180, 30), AIGlobals.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
-                GUI.Label(new Rect(10, 45, 180, 30), (teamFunds > 0 ? AIGlobals.UIAlphaText + "<b>" + (teamFunds + teamCost) + "</b> Bribe: " : AIGlobals.UIAlphaText + "<b>No Bases?</b></color>"));
+                GUI.Label(new Rect(10, 25, 180, 30), AltUI.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
+                GUI.Label(new Rect(10, 45, 180, 30), (teamFunds > 0 ? AltUI.UIAlphaText + "<b>" + (teamFunds + teamCost) + "</b> Bribe: " : AltUI.UIAlphaText + "<b>No Bases?</b></color>"));
                 GUIContent bribeButton;
                 bool afford = ManPlayer.inst.CanAfford(teamFunds + teamCost);
                 if (afford)
@@ -187,7 +187,7 @@ namespace TAC_AI.AI
                 {
                     bribeButton = new GUIContent(randomAllow, "Not enough BB");
                 }
-                if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, afford ? AIGlobals.ButtonGreen : AIGlobals.ButtonGrey))
+                if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, afford ? AltUI.ButtonGreen : AltUI.ButtonGrey))
                 {
                     if (afford)
                     {
@@ -217,7 +217,7 @@ namespace TAC_AI.AI
                 }
                 if (Singleton.playerTank)
                 {
-                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Fight the Team"), AIGlobals.ButtonRed))
+                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Fight the Team"), AltUI.ButtonRed))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.LoadTech);
                         if (AIGlobals.IsEnemyBaseTeam(lastTank.Team))
@@ -231,23 +231,23 @@ namespace TAC_AI.AI
                             RBases.RequestFocusFire(lastTank, Singleton.playerTank.visible, RequestSeverity.ThinkMcFly);
                     }
                 }
-                else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AIGlobals.ButtonGrey))
+                else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))
                 {
                     ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                 }
 
-                GUI.Label(new Rect(10, 65, 180, 30), AIGlobals.UIAlphaText + GUI.tooltip + "</color>");
+                GUI.Label(new Rect(10, 65, 180, 30), AltUI.UIAlphaText + GUI.tooltip + "</color>");
             }
             else
             {
-                GUI.Label(new Rect(10, 25, 180, 30), AIGlobals.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
-                GUI.Label(new Rect(10, 45, 180, 30), (techCost > 0 ? AIGlobals.UIAlphaText + "<b>Bribe: " + techCost + "</b></color>" : AIGlobals.UIAlphaText + "<b>Free tech?</b></color>"));
+                GUI.Label(new Rect(10, 25, 180, 30), AltUI.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
+                GUI.Label(new Rect(10, 45, 180, 30), (techCost > 0 ? AltUI.UIAlphaText + "<b>Bribe: " + techCost + "</b></color>" : AltUI.UIAlphaText + "<b>Free tech?</b></color>"));
                 GUIContent bribeButton; ;
                 bool afford = ManPlayer.inst.CanAfford(techCost);
                 if (afford)
                 {
                     bribeButton = new GUIContent(randomAllow, "Bribe the Tech");
-                    if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AIGlobals.ButtonGreen))
+                    if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AltUI.ButtonGreen))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Buy);
                         ManPlayer.inst.PayMoney(techCost);
@@ -258,14 +258,14 @@ namespace TAC_AI.AI
                 else
                 {
                     bribeButton = new GUIContent(randomAllow, "Not enough BB");
-                    if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AIGlobals.ButtonGrey))
+                    if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
                 }
                 if (Singleton.playerTank)
                 {
-                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Provoke"), AIGlobals.ButtonRed))
+                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Provoke"), AltUI.ButtonRed))
                     {
                         var mind = lastTank.GetComponent<EnemyMind>();
                         if (mind && mind.CommanderSmarts <= EnemySmarts.Meh)
@@ -278,12 +278,12 @@ namespace TAC_AI.AI
                             ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
                 }
-                else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AIGlobals.ButtonGrey))
+                else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))
                 {
                     ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                 }
 
-                GUI.Label(new Rect(10, 65, 180, 30), AIGlobals.UIAlphaText + GUI.tooltip + "</color>");
+                GUI.Label(new Rect(10, 65, 180, 30), AltUI.UIAlphaText + GUI.tooltip + "</color>");
             }
             GUI.DragWindow();
         }

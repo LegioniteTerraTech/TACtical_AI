@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TAC_AI.AI;
 using TAC_AI.World;
+using TerraTechETCUtil;
 
 namespace TAC_AI
 {
@@ -89,10 +90,9 @@ namespace TAC_AI
             {
                 if (isCurrentlyOpen && KickStart.CanUseMenu)
                 {
-                    AIGlobals.FetchResourcesFromGame(); 
-                    AIGlobals.StartUI();
-                    HotWindow = GUI.Window(AIManagerID, HotWindow, GUIHandler, "AI Mode Select", AIGlobals.MenuLeft);
-                    AIGlobals.EndUI();
+                    AltUI.StartUI();
+                    HotWindow = GUI.Window(AIManagerID, HotWindow, GUIHandler, "AI Mode Select", AltUI.MenuLeft);
+                    AltUI.EndUI();
                 }
             }
         }
@@ -126,7 +126,7 @@ namespace TAC_AI
                 if (stuckAnchored)
                 {
                     string textAnchor = "Base";
-                    if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Stationary builder"), AIGlobals.ButtonGreen))
+                    if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Stationary builder"), AltUI.ButtonGreen))
                     {
                         ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
@@ -134,7 +134,7 @@ namespace TAC_AI
                 else if (!lastTank.ActuallyWorks)
                 {
                     string textAnchor = "No AI!";
-                    if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Error"), AIGlobals.ButtonRed))
+                    if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Error"), AltUI.ButtonRed))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
@@ -143,7 +143,7 @@ namespace TAC_AI
                 {
                     string textTank = "<color=#ffffffff>Tank</color>";
                     if (GUI.Button(new Rect(20, 30, 80, 30), AIDriver == AIDriverType.Tank ? new GUIContent(textTank, "ACTIVE") : new GUIContent(textTank, "Drive on Wheels or Treads"),
-                        AIDriver == AIDriverType.Tank ? AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                        AIDriver == AIDriverType.Tank ? AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                     {
                         AIDriver = AIDriverType.Tank;
                         clickedDriver = true;
@@ -153,13 +153,13 @@ namespace TAC_AI
                     if (isAviatorAvail)
                     {
                         if (GUI.Button(new Rect(100, 30, 80, 30), AIDriver == AIDriverType.Pilot ? new GUIContent(textAir, "ACTIVE") : new GUIContent(textAir, "Fly Planes or Helicopters"),
-                            AIDriver == AIDriverType.Pilot ? AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                            AIDriver == AIDriverType.Pilot ? AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             AIDriver = AIDriverType.Pilot;
                             clickedDriver = true;
                         }
                     }
-                    else if (GUI.Button(new Rect(100, 30, 80, 30), new GUIContent(textAir, "Need HE or VEN AI"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(100, 30, 80, 30), new GUIContent(textAir, "Need HE or VEN AI"), AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
@@ -168,13 +168,13 @@ namespace TAC_AI
                     if (isBuccaneerAvail && KickStart.isWaterModPresent)
                     {
                         if (GUI.Button(new Rect(20, 60, 80, 30), AIDriver == AIDriverType.Sailor ? new GUIContent(textWater, "ACTIVE") : new GUIContent(textWater, "Stay in Water"),
-                            AIDriver == AIDriverType.Sailor ? AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                            AIDriver == AIDriverType.Sailor ? AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             AIDriver = AIDriverType.Sailor;
                             clickedDriver = true;
                         }
                     }
-                    else if (GUI.Button(new Rect(20, 60, 80, 30), !KickStart.isWaterModPresent ? new GUIContent(textWater, "Need Water Mod") : new GUIContent(textWater, "Need GSO or VEN AI"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(20, 60, 80, 30), !KickStart.isWaterModPresent ? new GUIContent(textWater, "Need Water Mod") : new GUIContent(textWater, "Need GSO or VEN AI"), AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
@@ -183,24 +183,24 @@ namespace TAC_AI
                     if (isAstrotechAvail)
                     {
                         if (GUI.Button(new Rect(100, 60, 80, 30), AIDriver == AIDriverType.Astronaut ? new GUIContent(textSpace, "ACTIVE") : new GUIContent(textSpace, "Fly with Antigravity or Hoverbug"),
-                            AIDriver == AIDriverType.Astronaut ? AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                            AIDriver == AIDriverType.Astronaut ? AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             AIDriver = AIDriverType.Astronaut;
                             clickedDriver = true;
                         }
                     }
-                    else if (GUI.Button(new Rect(100, 60, 80, 30), new GUIContent(textSpace, "Need BF or HE AI"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(100, 60, 80, 30), new GUIContent(textSpace, "Need BF or HE AI"), AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
                 }
 
-                GUI.Label(new Rect(20, 90, 160, 25), AIGlobals.UIAlphaText + (!lastTank.name.NullOrEmpty() ? lastTank.name == "recycled tech" ? "None Selected" : lastTank.name : "NO NAME") + "</color>");
+                GUI.Label(new Rect(20, 90, 160, 25), AltUI.UIAlphaText + (!lastTank.name.NullOrEmpty() ? lastTank.name == "recycled tech" ? "None Selected" : lastTank.name : "NO NAME") + "</color>");
 
                 if (stuckAnchored)
                 {
                     string textDefend = "<color=#ffffffff>Guard\nBase</color>";
-                    if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textDefend, "Anchored Turret"), AIGlobals.ButtonBlueActive))
+                    if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textDefend, "Anchored Turret"), AltUI.ButtonBlueActive))
                     {
                         ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimGCCab);
                     }
@@ -208,7 +208,7 @@ namespace TAC_AI
                 else if (!lastTank.ActuallyWorks)
                 {
                     string textError = "<color=#ffffffff>Self\nDestruct</color>";
-                    if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textError, "Destroy this Tech"), AIGlobals.ButtonRed))
+                    if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textError, "Destroy this Tech"), AltUI.ButtonRed))
                     {
                         if (!ManNetwork.IsNetworked)
                         {
@@ -224,7 +224,7 @@ namespace TAC_AI
                     // top - Escort
                     string textEscort = "<color=#ffffffff>Escort</color>";
                     if (GUI.Button(new Rect(20, 115, 80, 30), fetchAI == AIType.Escort ? new GUIContent(textEscort, "ACTIVE") : new GUIContent(textEscort, "Follows player"),
-                        fetchAI == AIType.Escort ? AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                        fetchAI == AIType.Escort ? AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                     {
                         changeAI = AIType.Escort;
                         clicked = true;
@@ -234,7 +234,7 @@ namespace TAC_AI
                     if (KickStart.AllowStrategicAI)
                     {
                         if (GUI.Button(new Rect(100, 115, 80, 30), lastTank.RTSControlled ? new GUIContent(textRTS, "ACTIVE") : new GUIContent(textRTS, "Go to last target"),
-                            lastTank.RTSControlled ? AIGlobals.ButtonGreenActive : AIGlobals.ButtonGreen))
+                            lastTank.RTSControlled ? AltUI.ButtonGreenActive : AltUI.ButtonGreen))
                         {
                             bool toTog = !lastTank.RTSControlled;
                             lastTank.SetRTSState(toTog);
@@ -259,7 +259,7 @@ namespace TAC_AI
                                 return;
                         }
                     }
-                    else if (GUI.Button(new Rect(100, 115, 80, 30), new GUIContent(textRTS, "RTS Mode Disabled"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(100, 115, 80, 30), new GUIContent(textRTS, "RTS Mode Disabled"), AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
@@ -269,7 +269,7 @@ namespace TAC_AI
                     string textStation = "<color=#ffffffff>Static</color>";
                     if (GUI.Button(new Rect(100, 145, 80, 30), CantPerformActions ? lastTank.OnlyPlayerMT ? new GUIContent(textStation, "Player not in range") : new GUIContent(textStation, "Ally not in range") :
                         fetchAI == AIType.MTStatic ? new GUIContent(textStation, "ACTIVE") : new GUIContent(textStation, "Mobile Tech Hardpoint"),
-                        fetchAI == AIType.MTStatic ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                        fetchAI == AIType.MTStatic ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                     {
                         changeAI = AIType.MTStatic;
                         clicked = true;
@@ -277,7 +277,7 @@ namespace TAC_AI
                     string textTurret = "<color=#ffffffff>Turret</color>";
                     if (GUI.Button(new Rect(100, 175, 80, 30), CantPerformActions ? lastTank.OnlyPlayerMT ? new GUIContent(textTurret, "Player not in range") : new GUIContent(textTurret, "Ally not in range") :
                         fetchAI == AIType.MTTurret ? new GUIContent(textTurret, "ACTIVE") : new GUIContent(textTurret, "Mobile Tech Turret"),
-                        fetchAI == AIType.MTTurret ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                        fetchAI == AIType.MTTurret ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                     {
                         changeAI = AIType.MTTurret;
                         clicked = true;
@@ -285,7 +285,7 @@ namespace TAC_AI
                     string textMimic = "<color=#ffffffff>Mimic</color>";
                     if (GUI.Button(new Rect(100, 205, 80, 30), CantPerformActions ? lastTank.OnlyPlayerMT ? new GUIContent(textMimic, "Player not in range") : new GUIContent(textMimic, "Ally not in range")
                         : fetchAI == AIType.MTMimic ? new GUIContent(textMimic, "ACTIVE") : new GUIContent(textMimic, "Mobile Tech Copycat"),
-                        fetchAI == AIType.MTMimic ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                        fetchAI == AIType.MTMimic ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                     {
                         changeAI = AIType.MTMimic;
                         clicked = true;
@@ -297,14 +297,14 @@ namespace TAC_AI
                     if (isProspectorAvail)
                     {
                         if (GUI.Button(new Rect(20, 145, 80, 30), fetchAI == AIType.Prospector && !CantPerformActions ? new GUIContent(textMiner, "ACTIVE") : new GUIContent(textMiner, "Needs Receiver Base"),
-                          fetchAI == AIType.Prospector ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                          fetchAI == AIType.Prospector ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             changeAI = AIType.Prospector;
                             clicked = true;
                         }
                     }
                     else if (GUI.Button(new Rect(20, 145, 80, 30), new GUIContent(textMiner, "Need GSO or GC AI"),
-                        AIGlobals.ButtonGrey))
+                        AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
@@ -313,14 +313,14 @@ namespace TAC_AI
                     if (isAssassinAvail)
                     {
                         if (GUI.Button(new Rect(20, 175, 80, 30), fetchAI == AIType.Assault && !CantPerformActions ? new GUIContent(textAttack, "ACTIVE") : new GUIContent(textAttack, "Needs Charging Base"),
-                            fetchAI == AIType.Assault ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                            fetchAI == AIType.Assault ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             changeAI = AIType.Assault;
                             clicked = true;
 
                         }
                     }
-                    else if (GUI.Button(new Rect(20, 175, 80, 30), new GUIContent(textAttack, "Need HE AI"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(20, 175, 80, 30), new GUIContent(textAttack, "Need HE AI"), AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
@@ -329,13 +329,13 @@ namespace TAC_AI
                     if (isAegisAvail)
                     {
                         if (GUI.Button(new Rect(20, 205, 80, 30), CantPerformActions ? new GUIContent(textProtect, "No Allies Nearby") : fetchAI == AIType.Aegis ? new GUIContent(textProtect, "ACTIVE") : new GUIContent(textProtect, "Follow Closest Ally"),
-                            fetchAI == AIType.Aegis ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                            fetchAI == AIType.Aegis ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             changeAI = AIType.Aegis;
                             clicked = true;
                         }
                     }
-                    else if (GUI.Button(new Rect(20, 205, 80, 30), new GUIContent(textProtect, "Need GSO AI"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(20, 205, 80, 30), new GUIContent(textProtect, "Need GSO AI"), AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                     }
@@ -344,13 +344,13 @@ namespace TAC_AI
                     if (isEnergizerAvail)
                     {
                         if (GUI.Button(new Rect(20, 235, 80, 30), fetchAI == AIType.Energizer && !CantPerformActions ? new GUIContent(textCharge, "ACTIVE") : new GUIContent(textCharge, "Need Charge Base & Charger"),
-                            fetchAI == AIType.Energizer ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                            fetchAI == AIType.Energizer ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             changeAI = AIType.Energizer;
                             clicked = true;
                         }
                     }
-                    else if (GUI.Button(new Rect(20, 235, 80, 30), new GUIContent(textCharge, "Need GC AI"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(20, 235, 80, 30), new GUIContent(textCharge, "Need GC AI"), AltUI.ButtonGrey))
                     {
                     }
 
@@ -358,13 +358,13 @@ namespace TAC_AI
                     if (isScrapperAvail)
                     {
                         if (GUI.Button(new Rect(100, 235, 80, 30), fetchAI == AIType.Scrapper && !CantPerformActions ? new GUIContent(textScrap, "ACTIVE") : new GUIContent(textScrap, "Need Block Receiving Base"),
-                            fetchAI == AIType.Scrapper ? CantPerformActions ? AIGlobals.ButtonRedActive : AIGlobals.ButtonBlueActive : AIGlobals.ButtonBlue))
+                            fetchAI == AIType.Scrapper ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue))
                         {
                             changeAI = AIType.Scrapper;
                             clicked = true;
                         }
                     }
-                    else if (GUI.Button(new Rect(100, 235, 80, 30), new GUIContent(textScrap, "Need GC AI"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(100, 235, 80, 30), new GUIContent(textScrap, "Need GC AI"), AltUI.ButtonGrey))
                     {
                     }
                 }
@@ -374,7 +374,7 @@ namespace TAC_AI
                     {
                         if (lastTank.CanAnchorSafely)
                         {
-                            if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AIGlobals.ButtonGreen))
+                            if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AltUI.ButtonGreen))
                             {
                                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
                                 if (ManNetwork.IsHost)
@@ -386,15 +386,15 @@ namespace TAC_AI
                                 clickedDriver = true;
                             }
                         }
-                        else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AIGlobals.ButtonRed))
+                        else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AltUI.ButtonRed))
                         {
                         }
                     }
-                    else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AIGlobals.ButtonGrey))
+                    else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AltUI.ButtonGrey))
                     {
                     }
                 }
-                else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Mobilize", "Detach from ground"), AIGlobals.ButtonGreen))
+                else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Mobilize", "Detach from ground"), AltUI.ButtonGreen))
                 {
                     ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
                     if (ManNetwork.IsHost)
@@ -407,7 +407,7 @@ namespace TAC_AI
                 }
                 
 
-                GUI.Label(new Rect(20, 295, 160, 50), AIGlobals.UIAlphaText + GUI.tooltip + "</color>");
+                GUI.Label(new Rect(20, 295, 160, 50), AltUI.UIAlphaText + GUI.tooltip + "</color>");
                 if (clickedDriver)
                 {
                     SetOptionDriver(AIDriver);

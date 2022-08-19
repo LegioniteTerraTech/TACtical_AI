@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using TAC_AI.AI;
+using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 {
@@ -87,7 +88,7 @@ namespace TAC_AI.Templates
             //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
-                BlockTypes type = AIERepair.StringToBlockType(blocRaw.t);
+                BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
                 TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
                 if (bloc.IsNull())
                     continue;
@@ -281,7 +282,7 @@ namespace TAC_AI.Templates
 
             terrain = BaseTerrain.Land;
             string purposesList = "None.";
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
+            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
                 purposesList = "";
                 foreach (BasePurpose purp in purposes)
@@ -384,7 +385,7 @@ namespace TAC_AI.Templates
             //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
-                BlockTypes type = AIERepair.StringToBlockType(blocRaw.t);
+                BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
                 TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
                 if (bloc.IsNull())
                     continue;
@@ -577,7 +578,7 @@ namespace TAC_AI.Templates
 
             terra = BaseTerrain.Land;
             string purposesList = "None.";
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(AIERepair.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
+            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
             {
                 purposesList = "";
                 foreach (BasePurpose purp in purposes)

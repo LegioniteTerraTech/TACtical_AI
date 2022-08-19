@@ -9,6 +9,7 @@ using TAC_AI.AI;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy;
 using TAC_AI.World;
+using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 {
@@ -1876,7 +1877,7 @@ namespace TAC_AI.Templates
             }
             foreach (BlockMemory mem in mems)
             {
-                BlockTypes type = AIERepair.StringToBlockType(mem.t);
+                BlockTypes type = BlockIndexer.StringToBlockType(mem.t);
                 if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) || !TechDataAvailValidation.IsBlockAvailableInMode(type))
                 {
                     DebugTAC_AI.Log("TACtical_AI: InstantTech - Removed " + mem.t + " as it was invalidated");
@@ -2043,7 +2044,7 @@ namespace TAC_AI.Templates
             ResetSkinIDSet();
             foreach (BlockMemory mem in mems)
             {
-                BlockTypes type = AIERepair.StringToBlockType(mem.t);
+                BlockTypes type = BlockIndexer.StringToBlockType(mem.t);
                 if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) || !TechDataAvailValidation.IsBlockAvailableInMode(type))
                 {
                     DebugTAC_AI.Log("TACtical_AI: InstantTech - Removed " + mem.t + " as it was invalidated");
@@ -2762,7 +2763,7 @@ namespace TAC_AI.Templates
             List<BlockMemory> mem = AIERepair.DesignMemory.JSONToMemoryExternal(JSONTechBlueprint);
             foreach (BlockMemory block in mem)
             {
-                output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(AIERepair.StringToBlockType(block.t), true);
+                output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(BlockIndexer.StringToBlockType(block.t), true);
             }
             return output;
         }

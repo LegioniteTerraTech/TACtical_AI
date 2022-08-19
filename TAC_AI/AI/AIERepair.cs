@@ -7,10 +7,7 @@ using UnityEngine.Serialization;
 using UnityEngine.Networking;
 using UnityEngine;
 using TAC_AI.Templates;
-
-#if !STEAM
-using Nuterra.BlockInjector;
-#endif
+using TerraTechETCUtil;
 
 namespace TAC_AI.AI
 {
@@ -286,7 +283,7 @@ namespace TAC_AI.AI
                 List<BlockMemory> clean = new List<BlockMemory>();
                 foreach (BlockMemory mem in overwrite)
                 {
-                    BlockTypes type = StringToBlockType(mem.t);
+                    BlockTypes type = BlockIndexer.StringToBlockType(mem.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
                     {
                         DebugTAC_AI.Log("TACtical_AI:  DesignMemory - " + tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
@@ -361,7 +358,7 @@ namespace TAC_AI.AI
                 filteredNames = filteredNames.Distinct().ToList();
                 for (int step = 0; step < filteredNames.Count; step++)
                 {
-                    typesToRepair.Add(StringToBlockType(filteredNames.ElementAt(step)));
+                    typesToRepair.Add(BlockIndexer.StringToBlockType(filteredNames.ElementAt(step)));
                 }
 
                 int toFilter2 = typesToRepair.Count();
@@ -437,7 +434,7 @@ namespace TAC_AI.AI
                 List<BlockTypes> typesToRepair = new List<BlockTypes>();
                 for (int step = 0; step < filteredNames.Count; step++)
                 {
-                    typesToRepair.Add(StringToBlockType(filteredNames.ElementAt(step)));
+                    typesToRepair.Add(BlockIndexer.StringToBlockType(filteredNames.ElementAt(step)));
                 }
                 return typesToRepair.Distinct().ToList();
             }
@@ -778,7 +775,7 @@ namespace TAC_AI.AI
                 TankPreset.BlockSpec newRoot = ToSearch.First();
                 foreach (TankPreset.BlockSpec blocS in ToSearch)
                 {
-                    TankBlock bloc = ManSpawn.inst.GetBlockPrefab(StringToBlockType(blocS.block));
+                    TankBlock bloc = ManSpawn.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(blocS.block));
                     Vector3 blockPos = blocS.position + new OrthoRotation((OrthoRotation.r)blocS.orthoRotation) * bloc.filledCells[0];
                     if (bloc.GetComponent<ModuleAnchor>() && blocS.CheckIsAnchored())
                     {
@@ -797,7 +794,7 @@ namespace TAC_AI.AI
                     close = 128 * 128;
                     foreach (TankPreset.BlockSpec blocS in ToSearch)
                     {
-                        TankBlock bloc = ManSpawn.inst.GetBlockPrefab(StringToBlockType(blocS.block));
+                        TankBlock bloc = ManSpawn.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(blocS.block));
                         Vector3 blockPos = blocS.position + new OrthoRotation((OrthoRotation.r)blocS.orthoRotation) * bloc.filledCells[0];
                         float sqrMag = blockPos.sqrMagnitude;
                         if (sqrMag < close && bloc.GetComponent<ModuleAnchor>() && blocS.CheckIsAnchored())
@@ -903,7 +900,7 @@ namespace TAC_AI.AI
 
                 foreach (TankPreset.BlockSpec blocS in ToSave)
                 {
-                    BlockTypes BT = StringToBlockType(blocS.block);
+                    BlockTypes BT = BlockIndexer.StringToBlockType(blocS.block);
                     TankBlock bloc = ManSpawn.inst.GetBlockPrefab(BT);
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(BT))
                         continue;
@@ -1707,197 +1704,8 @@ namespace TAC_AI.AI
             }
             return rot;
         }
-        private static readonly Dictionary<int, BlockTypes> errorNames = new Dictionary<int, BlockTypes>();
-
-        // Get those blocks right!
-        public static void ConstructErrorBlocksList()
-        {
-            errorNames.Clear();
-            try
-            {
-                List<BlockTypes> types = Singleton.Manager<ManSpawn>.inst.GetLoadedTankBlockNames().ToList();
-                foreach (BlockTypes type in types)
-                {
-                    TankBlock prefab = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
-                    string name = prefab.name;
-                    if (prefab.GetComponent<Damageable>() && type.ToString() != name) //&& !Singleton.Manager<ManMods>.inst.IsModdedBlock(type))
-                    {
-                        int hash = name.GetHashCode();
-                        if (!errorNames.Keys.Contains(hash))
-                        {
-                            errorNames.Add(hash, type);
-#if DEBUG
-                            /*
-                        if ((int)type > 5000)
-                            Debug.Log("TACtical_AI: ConstructErrorBlocksList - Added Modded Block " + name + " | " + type.ToString());
-                            */
-#endif
-                        }
-                    }
-                }
-#if !STEAM
-                if (KickStart.isBlockInjectorPresent)
-#endif
-                   ConstructModdedIDList();
-            }
-            catch { };
-
-            DebugTAC_AI.Log("TACtical_AI: ConstructErrorBlocksList - There are " + errorNames.Count + " blocks with names not equal to their type");
-        }
-        public static bool TryGetMismatchNames(string name, ref BlockTypes type)
-        {
-            if (errorNames.TryGetValue(name.GetHashCode(), out BlockTypes val))
-            {
-                type = val;
-                return true;
-            }
-            return false;
-        }
-        /// <summary>
-        /// Delayed
-        /// </summary>
-        public static void ConstructModdedIDList()
-        {
-#if STEAM
-            ModSessionInfo session = (ModSessionInfo)access.GetValue(ManMods.inst);
-            UnOf_Offi.Clear();
-            try
-            {
-                Dictionary<int, string> blocc = session.BlockIDs;
-                foreach (KeyValuePair<int, string> pair in blocc)
-                {
-                    ModdedBlockDefinition MBD = ManMods.inst.FindModdedAsset<ModdedBlockDefinition>(pair.Value);
-
-                    string SCAN = MBD.m_Json.text;
-
-                    if (SCAN.Contains("NuterraBlock"))
-                    {
-                        int num = 0;
-                        string name = "";
-                        if (FindInt(SCAN, "\"ID\":", ref num)) //&& FindText(SCAN, "\"Name\" :", ref name))
-                        {
-                            UnOf_Offi.Add(("_C_BLOCK:" + num.ToString()).GetHashCode(), (BlockTypes)ManMods.inst.GetBlockID(MBD.name));
-                            //Debug.Log("TACtical_AI: ConstructModdedIDList - " + "_C_BLOCK:" + num.ToString() + " | " + MBD.name + " | " + (BlockTypes)ManMods.inst.GetBlockID(MBD.name));
-                        }
-                    }
-                }
-            }
-            catch { DebugTAC_AI.Log("TACtical_AI: ConstructModdedIDList - Error on compile"); };
-            DebugTAC_AI.Log("TACtical_AI: ConstructModdedIDList - compiled " + UnOf_Offi.Count());
-#else
-            try
-            {
-                foreach (KeyValuePair<int, CustomBlock> pair in BlockLoader.CustomBlocks)
-                {
-                    CustomBlock CB = pair.Value;
-                    if (CB != null)
-                    {
-                        var MCB = CB.Prefab.GetComponent<ModuleCustomBlock>();
-                        if (RawTechExporter.GetNameJSON(MCB.FilePath, out string outp, true))
-                            Offi_UnOf.Add(outp.GetHashCode(), (BlockTypes)pair.Key);
-                    }
-                }
-            }
-            catch { Debug.Log("TACtical_AI: ConstructModdedIDList - Error on compile"); };
-            Debug.Log("TACtical_AI: ConstructModdedIDList - compiled " + Offi_UnOf.Count());
-#endif
-        }
-
-
-#if STEAM
-        private static Dictionary<int, BlockTypes> UnOf_Offi = new Dictionary<int, BlockTypes>();
-#else
-        private static readonly Dictionary<int, BlockTypes> Offi_UnOf = new Dictionary<int, BlockTypes>();
-#endif
-        internal static FieldInfo access = typeof(ManMods).GetField("m_CurrentSession", BindingFlags.NonPublic | BindingFlags.Instance);
         
-        public static bool TryGetIDSwap(int hash, out BlockTypes blockType)
-        {
-#if STEAM
-            return UnOf_Offi.TryGetValue(hash, out blockType);
-#else
-            return Offi_UnOf.TryGetValue(hash, out blockType);
-#endif
-        }
-
-        private static bool FindInt(string text, string searchBase, ref int intCase)
-        {
-            int indexFind = text.IndexOf(searchBase);
-            if (indexFind >= 0)
-            {
-                int searchEnd = 0;
-                int searchLength = 0;
-                string output = "";
-                try
-                {
-                    searchEnd = indexFind + searchBase.Length;
-                    searchLength = text.Substring(searchEnd).IndexOf(",");
-                    if (searchLength != -1)
-                    {
-                        output = text.Substring(searchEnd, searchLength);
-                        intCase = (int)float.Parse(output);
-                        return true;
-                    }
-                    //Debug.Log(searchEnd + " | " + searchLength + " | " + output + " | ");
-                }
-                catch (Exception e) { DebugTAC_AI.LogError(searchEnd + " | " + searchLength + " | " + output + " | " + e); }
-            }
-            return false;
-        }
-        private static bool FindText(string text, string searchBase, ref string name)
-        {
-            int indexFind = text.IndexOf(searchBase);
-            if (indexFind >= 0)
-            {
-                int searchEnd = 0;
-                int searchLength = 0;
-                string output = "";
-                try
-                {
-                    searchEnd = indexFind + searchBase.Length;
-                    searchLength = text.Substring(searchEnd).IndexOf(",");
-                    output = text.Substring(searchEnd, searchLength);
-                    name = output;
-                    return true;
-                }
-                catch (Exception e) { DebugTAC_AI.LogError(searchEnd + " | " + searchLength + " | " + output + " | " + e); }
-            }
-            return false;
-        }
-
-
-        public static BlockTypes StringToBlockType(string mem)
-        {
-            if (!Enum.TryParse(mem, out BlockTypes type))
-            {
-                if (!TryGetMismatchNames(mem, ref type))
-                {
-                    if (StringToBIBlockType(mem, out BlockTypes BTC))
-                    {
-                        return BTC;
-                    }
-                    type = RawTechExporter.GetBlockIDLogFree(mem);
-                }
-            }
-            return type;
-        }
-        public static bool StringToBIBlockType(string mem, out BlockTypes BT) // BLOCK INJECTOR
-        {
-            BT = BlockTypes.GSOAIController_111;
-
-#if !STEAM
-            if (!KickStart.isBlockInjectorPresent)
-                return false;
-#endif
-            if (TryGetIDSwap(mem.GetHashCode(), out BlockTypes BTC))
-            {
-                BT = BTC;
-                return true;
-            }
-            return false;
-        }
-
-
+        
         public static BlockTypes JSONToFirstBlock(string toLoad)
         {   // Loading a Tech from the BlockMemory
             StringBuilder RAW = new StringBuilder();
@@ -1922,7 +1730,7 @@ namespace TAC_AI.AI
                     blockCase.Append(ch);
             }
 
-            return StringToBlockType(mem.t);
+            return BlockIndexer.StringToBlockType(mem.t);
         }
 
 
@@ -2474,7 +2282,7 @@ namespace TAC_AI.AI
             filteredNames = filteredNames.Distinct().ToList();
             for (int step = 0; step < filteredNames.Count; step++)
             {
-                typesToRepair.Add(StringToBlockType(filteredNames.ElementAt(step)));
+                typesToRepair.Add(BlockIndexer.StringToBlockType(filteredNames.ElementAt(step)));
             }
             //typesToRepair = typesToRepair.Distinct().ToList();
 

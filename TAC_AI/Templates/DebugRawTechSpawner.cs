@@ -9,6 +9,7 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.AI;
 using System.IO;
 using Newtonsoft.Json;
+using TerraTechETCUtil;
 
 
 namespace TAC_AI.Templates
@@ -74,7 +75,6 @@ namespace TAC_AI.Templates
             {
                 if (isCurrentlyOpen && KickStart.CanUseMenu)
                 {
-                    AIGlobals.FetchResourcesFromGame();
                     if (!isPrefabs)
                     {
                         HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, "<b>Debug Local Spawns</b>");

@@ -262,6 +262,8 @@
     <Compile Include="AI\Movement\AICores\IMovementAICore.cs" />
     <Compile Include="AI\Movement\AICores\VehicleAICore.cs" />
     <Compile Include="AI\Movement\AICores\VtolAICore.cs" />
+    <Compile Include="AltUI.cs" />
+    <Compile Include="BlockIndexer.cs" />
     <Compile Include="CursorChanger.cs" />
     <Compile Include="CustomAttract.cs" />
     <Compile Include="DebugTAC_AI.cs" />
