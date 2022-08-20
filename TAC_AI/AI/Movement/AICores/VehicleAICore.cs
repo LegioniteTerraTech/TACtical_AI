@@ -1091,7 +1091,10 @@ namespace TAC_AI.AI.Movement.AICores
                     driveDyna = Mathf.Clamp((thisInst.lastRangeEnemy - AIGlobals.SpacingRange) / 3f, -1, 1);
                 if (mind.CommanderAttack == EnemyAttack.Circle)
                 {   // works fine for now
-                    thisInst.DriveDir = EDriveFacing.Perpendicular;
+                    if (thisInst.SideToThreat)
+                        thisInst.DriveDir = EDriveFacing.Perpendicular;
+                    else
+                        thisInst.DriveDir = EDriveFacing.Forwards;
                     if (mind.CommanderMind == EnemyAttitude.Miner)
                     {   //orbit WHILE at enemy!;
                         controller.ProcessedDest = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);

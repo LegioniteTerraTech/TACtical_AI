@@ -339,7 +339,6 @@ namespace TAC_AI
                 back = typeof(LocatorPanel).GetField("m_Pin", BindingFlags.NonPublic | BindingFlags.Instance),
                 icon = typeof(LocatorPanel).GetField("m_FactionIcon", BindingFlags.NonPublic | BindingFlags.Instance),
                 lowerName = typeof(LocatorPanel).GetField("m_BottomName", BindingFlags.NonPublic | BindingFlags.Instance);
-
             private static void Postfix(TankDescriptionOverlay __instance)
             {
                 if (KickStart.EnableBetterAI)
@@ -387,7 +386,12 @@ namespace TAC_AI
                                 {   // Allied AI
                                     if (lastTech.SetToActive)
                                     {
-                                        if (RawTechExporter.aiIcons.TryGetValue(KickStart.GetLegacy(lastTech.DediAI, lastTech.DriverType), out Sprite sprite))
+                                        Sprite sprite;
+                                        if (RawTechExporter.aiBackplates.TryGetValue(lastTech.DriverType, out sprite))
+                                        {
+                                            cacheB.sprite = sprite;
+                                        }
+                                        if (RawTechExporter.aiIcons.TryGetValue(KickStart.GetLegacy(lastTech.DediAI, lastTech.DriverType), out sprite))
                                         {
                                             //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                             cache.sprite = sprite;
@@ -398,11 +402,14 @@ namespace TAC_AI
                                 {   // Enemy AI
                                     if (KickStart.enablePainMode)
                                     {
-
                                         var mind = lastTech.GetComponent<EnemyMind>();
                                         if ((bool)mind)
                                         {
                                             Sprite sprite;
+                                            if (RawTechExporter.aiBackplates.TryGetValue(lastTech.DriverType, out sprite))
+                                            {
+                                                cacheB.sprite = sprite;
+                                            }
                                             if (mind.CommanderSmarts < EnemySmarts.Smrt)
                                             {
                                                 switch (mind.CommanderMind)

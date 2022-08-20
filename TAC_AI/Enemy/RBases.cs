@@ -456,6 +456,7 @@ namespace TAC_AI.AI.Enemy
             public static Dictionary<int, KeyValuePair<RequestSeverity, Visible>> targetingRequests = new Dictionary<int, KeyValuePair<RequestSeverity, Visible>>();
             private static readonly List<int> teamsCache = new List<int>();
             private float timeStep = 0;
+            private const float delayedUpdateDelay = 6;
 
             public static void Initiate()
             {
@@ -484,7 +485,7 @@ namespace TAC_AI.AI.Enemy
                 if (timeStep <= 0)
                 {
                     DelayedUpdate();
-                    timeStep = 6;
+                    timeStep = delayedUpdateDelay;
                 }
                 RunBuildRequests();
                 RunFocusFireRequests();
@@ -1245,14 +1246,20 @@ namespace TAC_AI.AI.Enemy
                         Tank lastTankGrab = mind.AIControl.lastEnemy.tank;
                         if (lastTankGrab.IsPopulation)
                         {
-                            if (TryBribeTech(lastTankGrab, mind.Tank.Team))
+                            int team = mind.Tank.Team;
+                            if (TryBribeTech(lastTankGrab, team))
                             {
                                 try
                                 {
                                     if (KickStart.DisplayEnemyEvents)
                                     {
                                         WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTankGrab.visible);
-                                        AIGlobals.PopupPlayerInfo("Bribed!", pos2);
+                                        if (AIGlobals.IsFriendlyBaseTeam(team))
+                                        AIGlobals.PopupAllyInfo("Bribed!", pos2);
+                                        else if (AIGlobals.IsNonAggressiveTeam(team))
+                                            AIGlobals.PopupNeutralInfo("Bribed!", pos2);
+                                        else
+                                            AIGlobals.PopupEnemyInfo("Bribed!", pos2);
 
                                         try
                                         {

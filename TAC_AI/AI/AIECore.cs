@@ -1423,7 +1423,7 @@ namespace TAC_AI.AI
             {
                 try
                 {
-                    lastTechExtents = tank.blockBounds.size.magnitude + 1;
+                    lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
                     cachedBlockCount = tank.blockman.blockCount;
                 }
                 catch { }
@@ -3820,7 +3820,7 @@ namespace TAC_AI.AI
                             {
                                 dirty = false;
                                 tank.blockman.CheckRecalcBlockBounds();
-                                lastTechExtents = tank.blockBounds.size.magnitude + 1;
+                                lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
                                 if (!PendingDamageCheck)
                                     cachedBlockCount = tank.blockman.blockCount;
                             }
@@ -3831,7 +3831,7 @@ namespace TAC_AI.AI
                         {
                             dirty = false;
                             tank.blockman.CheckRecalcBlockBounds();
-                            lastTechExtents = tank.blockBounds.size.magnitude + 1;
+                            lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
                             tank.netTech.SaveTechData();
                             if (!PendingDamageCheck)
                                 cachedBlockCount = tank.blockman.blockCount;
@@ -3844,7 +3844,7 @@ namespace TAC_AI.AI
                         {
                             dirty = false;
                             tank.blockman.CheckRecalcBlockBounds();
-                            lastTechExtents = tank.blockBounds.size.magnitude + 1;
+                            lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
                             if (!PendingDamageCheck)
                                 cachedBlockCount = tank.blockman.blockCount;
                         }

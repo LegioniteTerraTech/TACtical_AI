@@ -605,10 +605,10 @@ namespace TAC_AI.Templates
                 ShowDebugFeedBack = !ShowDebugFeedBack;
             }
             HoriPosOff += ButtonWidth;
-#if DEBUG
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatNoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Priced</b></color>"))
             {
-                DevCheatNoAttackPlayer = !DevCheatNoAttackPlayer;
+                RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), terrainType: BaseTerrain.Any, maxPrice: KickStart.EnemySpawnPriceMatching);
             }
             HoriPosOff += ButtonWidth;
 
@@ -620,19 +620,18 @@ namespace TAC_AI.Templates
                 if (VertPosOff >= MaxWindowHeight)
                     MaxExtensionY = true;
             }
+#if DEBUG
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatNoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+            {
+                DevCheatNoAttackPlayer = !DevCheatNoAttackPlayer;
+            }
+            HoriPosOff += ButtonWidth;
+
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatPlayerEnemyBaseTeam ? redStart + "ENEMY Team</b></color>" : redStart + "Player Team</b></color>"))
             {
                 DevCheatPlayerEnemyBaseTeam = !DevCheatPlayerEnemyBaseTeam;
             }
             HoriPosOff += ButtonWidth;
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
 #endif
             FactionTypesExt currentFaction = FactionTypesExt.NULL;
             string disp;

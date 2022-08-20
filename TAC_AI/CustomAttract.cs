@@ -229,7 +229,6 @@ namespace TAC_AI
         }
         private static void SetupTechCam(Tank target = null)
         {
-            return; // Disabled due to numberous issues in reliability
             UseFollowCam = true;
             //Vector3 frameCamPos = CameraManager.inst.GetCamera<FramingCamera>().transform.position;
             //Quaternion frameCamRot = CameraManager.inst.GetCamera<FramingCamera>().transform.rotation;

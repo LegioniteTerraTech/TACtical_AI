@@ -32,9 +32,8 @@ namespace TAC_AI.Templates
             techBases = new Dictionary<SpawnBaseTypes, BaseTemplate>();
             foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in techBasesProcessing)
             {
-                if (ValidateBlocksInTech(ref pair.Value.savedTech, out int basePrice, out FactionLevel greatestFaction))
+                if (ValidateBlocksInTech(ref pair.Value.savedTech, pair.Value))
                 {
-                    pair.Value.baseCost = basePrice;
                     techBases.Add(pair.Key, pair.Value);
                 }
                 else
@@ -58,10 +57,8 @@ namespace TAC_AI.Templates
                 List<BaseTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
                 foreach (BaseTemplate raw in ExternalTechsRaw)
                 {
-                    if (ValidateBlocksInTech(ref raw.savedTech, out int basePrice, out FactionLevel greatestFaction))
+                    if (ValidateBlocksInTech(ref raw.savedTech, raw))
                     {
-                        raw.baseCost = basePrice;
-                        raw.factionLim = greatestFaction;
                         ExternalEnemyTechsLocal.Add(raw);
                     }
                     else
@@ -77,10 +74,8 @@ namespace TAC_AI.Templates
                 ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechsExternalMods();
                 foreach (BaseTemplate raw in ExternalTechsRaw)
                 {
-                    if (ValidateBlocksInTech(ref raw.savedTech, out int basePrice, out FactionLevel greatestFaction))
+                    if (ValidateBlocksInTech(ref raw.savedTech, raw))
                     {
-                        raw.baseCost = basePrice;
-                        raw.factionLim = greatestFaction;
                         ExternalEnemyTechsMods.Add(raw);
                     }
                     else
@@ -99,7 +94,15 @@ namespace TAC_AI.Templates
             }
         }
 
-        public static bool ValidateBlocksInTech(ref string toLoad, out int basePrice, out FactionLevel greatestFaction)
+        /// <summary>
+        /// Checks all of the blocks in a BaseTemplate Tech to make sure it's safe to spawn as well as calculate other requirements for it.
+        /// </summary>
+        /// <param name="toLoad"></param>
+        /// <param name="templateToCheck"></param>
+        /// <param name="basePrice"></param>
+        /// <param name="greatestFaction"></param>
+        /// <returns></returns>
+        public static bool ValidateBlocksInTech(ref string toLoad, BaseTemplate templateToCheck)
         {
             try
             {
@@ -114,6 +117,7 @@ namespace TAC_AI.Templates
                 List<BlockMemory> mem = new List<BlockMemory>();
                 StringBuilder blockCase = new StringBuilder();
                 string RAWout = RAW.ToString();
+                FactionLevel greatestFaction = FactionLevel.GSO;
                 try
                 {
                     foreach (char ch in RAWout)
@@ -131,20 +135,17 @@ namespace TAC_AI.Templates
                 catch
                 {
                     DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTech - Loading error - File was edited or corrupted!");
-                    basePrice = 0;
                     greatestFaction = FactionLevel.GSO;
                     return false;
                 }
                 bool valid = true;
-                basePrice = 0;
                 if (mem.Count == 0)
                 {
                     greatestFaction = FactionLevel.GSO;
                     DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
                     return false;
                 }
-                FactionLevel campLice = FactionLevel.GSO;
-                greatestFaction = FactionLevel.GSO;
+                int basePrice = 0;
                 foreach (BlockMemory bloc in mem)
                 {
                     BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
@@ -171,11 +172,14 @@ namespace TAC_AI.Templates
                         else
                             throw new Exception("There's a block given that has an invalid corp \nCorp: " + FL + " \nBlockType: " + type);
                     }
-                    if (campLice < FL)
+                    if (greatestFaction < FL)
                         greatestFaction = FL;
                     basePrice += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(type);
                     bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
                 }
+                templateToCheck.baseCost = basePrice;
+                templateToCheck.factionLim = greatestFaction;
+                templateToCheck.blockCount = mem.Count;
 
                 // Rebuild in workable format
                 toLoad = AIERepair.DesignMemory.MemoryToJSONExternal(mem);
@@ -185,8 +189,6 @@ namespace TAC_AI.Templates
             catch
             {
                 DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
-                basePrice = 0;
-                greatestFaction = FactionLevel.NULL;
                 return false;
             }
         }

@@ -8,8 +8,8 @@ namespace TAC_AI.AI.Movement.AICores
 {
     internal class VehicleUtils
     {
-        private const float ignoreSteeringAboveAngle = 0.875f;
-        private const float forwardsLowerSteeringAboveAngle = 0.7f;
+        private const float ignoreSteeringAboveAngle = 0.925f;
+        private const float forwardsLowerSteeringAboveAngle = 0.6f;
         private const float MinLookAngleToTurnFineSideways = 0.65f;
         private const float MaxThrottleToTurnFull = 0.75f;
         private const float MaxThrottleToTurnAccurate = 0.5f;

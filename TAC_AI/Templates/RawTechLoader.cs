@@ -53,8 +53,9 @@ namespace TAC_AI.Templates
             this.population = population;
             this.skins = skins;
         }
-        readonly int maxAttempts = 25;
-        public int fails = 0;
+        readonly int maxAttempts = 30; 
+        readonly int DelayFrames = 5;
+        public int Attempts = 0;
         public Action<Tank> endEvent;
         public string name;
         public string blueprint;
@@ -68,7 +69,8 @@ namespace TAC_AI.Templates
 
         internal bool PushSpawn()
         {
-            if (ManSpawn.inst.IsTechSpawning)
+            Attempts++;
+            if (ManSpawn.inst.IsTechSpawning || DelayFrames > Attempts)
                 return false; // Something else is using it!!  Hold off!
             Tank outcome = RawTechLoader.InstantTech(pos, forward, Team, name, blueprint, grounded, ForceAnchor, population, skins);
             if ((bool)outcome)
@@ -76,9 +78,8 @@ namespace TAC_AI.Templates
                 endEvent.Send(outcome);
                 return true;
             }
-            if (fails > maxAttempts)
+            if (Attempts > maxAttempts)
                 return true; // trash the request
-            fails++;
             return false;
         }
     }
@@ -1162,16 +1163,19 @@ namespace TAC_AI.Templates
             try
             {   // Filters
                 List<BaseTemplate> canidates;
+                Debug.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 if (faction == FactionTypesExt.NULL)
                 {
-                    canidates = TempManager.ExternalEnemyTechsAll;
+                    canidates = TempManager.ExternalEnemyTechsAll.FindAll
+                            (delegate (BaseTemplate cand) { return cand.factionLim <= bestPlayerFaction; });
                 }
                 else
                 {
                     if (UseFactionSubTypes)
                     {
+                        FactionSubTypes FST = KickStart.CorpExtToCorp(faction);
                         canidates = TempManager.ExternalEnemyTechsAll.FindAll
-                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == KickStart.CorpExtToCorp(faction); }).FindAll
+                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == FST; }).FindAll
                             (delegate (BaseTemplate cand) { return cand.factionLim <= bestPlayerFaction; });
                         UseFactionSubTypes = false;
                     }
@@ -1183,50 +1187,12 @@ namespace TAC_AI.Templates
                     }
                 }
 
-                bool cantSpawnErad = (!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs);
+                bool multiplayer = ManNetwork.IsNetworked;
+                bool cantErad = (!KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs);
                 canidates = canidates.FindAll(delegate (BaseTemplate cand)
                 {
                     List<BasePurpose> techPurposes = cand.purposes;
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
-                    {   // no illegal base in MP
-                        return false;
-                    }
-                    if (!AIGlobals.AllowInfAutominers && techPurposes.Contains(BasePurpose.Autominer))
-                    {   // no inf mining
-                        return false;
-                    }
-                    bool mobile = techPurposes.Contains(BasePurpose.NotStationary);
-                    if (purpose == BasePurpose.HarvestingNoHQ)
-                    {
-                        if (techPurposes.Contains(BasePurpose.Headquarters))
-                            return false;
-                        if (!(techPurposes.Contains(BasePurpose.Harvesting) && !mobile))
-                            return false;
-                    }
-                    if (purpose == BasePurpose.AnyNonHQ)
-                    {
-                        if (techPurposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
-                            return false;
-                        return true;
-                    }
-                    if ((purpose == BasePurpose.NotStationary) != mobile)
-                        return false;
-                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
-                        return false;
-                    bool noWeapons = techPurposes.Contains(BasePurpose.NoWeapons);
-                    if (searchAttract && noWeapons)
-                        return false;
-                    if (subNeutral && noWeapons)
-                        return true;
-                    if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
-                        return false;
-
-                    if (purpose == BasePurpose.Harvesting && mobile)
-                        return false;
-
-                    if (techPurposes.Count == 0)
-                        return false;
-                    return techPurposes.Contains(purpose);
+                    return ComparePurposes(new List<BasePurpose> { purpose }, techPurposes, cantErad, subNeutral, searchAttract, multiplayer);
                 });
 
                 if (terra == BaseTerrain.AnyNonSea)
@@ -1279,33 +1245,38 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
+                Debug.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<BaseTemplate> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
-                    canidates = TempManager.ExternalEnemyTechsAll;
+                    canidates = TempManager.ExternalEnemyTechsAll.FindAll
+                            (delegate (BaseTemplate cand) { return cand.factionLim <= bestPlayerFaction; });
                 }
                 else
                 {
                     if (UseFactionSubTypes)
                     {
+                        FactionSubTypes FST = KickStart.CorpExtToCorp(faction);
                         canidates = TempManager.ExternalEnemyTechsAll.FindAll
-                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == KickStart.CorpExtToCorp(faction); });
+                            (delegate (BaseTemplate cand) { return KickStart.CorpExtToCorp(cand.faction) == FST; }).FindAll
+                            (delegate (BaseTemplate cand) { return cand.factionLim <= bestPlayerFaction; });
                         UseFactionSubTypes = false;
                     }
                     else
                     {
                         canidates = TempManager.ExternalEnemyTechsAll.FindAll
-                        (delegate (BaseTemplate cand) { return cand.faction == faction; });
+                        (delegate (BaseTemplate cand) { return cand.faction == faction; }).FindAll
+                            (delegate (BaseTemplate cand) { return cand.factionLim <= bestPlayerFaction; });
                     }
                 }
 
+                bool multiplayer = ManNetwork.IsNetworked;
                 bool cantErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs;
                 canidates = canidates.FindAll(delegate (BaseTemplate cand)
                 {
                     List<BasePurpose> techPurposes = cand.purposes;
-                    return ComparePurposes(purposes, techPurposes, cantErad, subNeutral, searchAttract);
+                    return ComparePurposes(purposes, techPurposes, cantErad, subNeutral, searchAttract, multiplayer);
                 });
-
                 if (terra == BaseTerrain.AnyNonSea)
                 {
                     canidates = canidates.FindAll
@@ -1393,9 +1364,12 @@ namespace TAC_AI.Templates
 
         internal static FactionLevel TryGetPlayerLicenceLevel()
         {
-            FactionLevel lvl = FactionLevel.ALL;
+            FactionLevel lvl = FactionLevel.GSO;
             try
             {
+                if (!ManGameMode.inst.CanEarnXp())
+                    return FactionLevel.ALL;
+
                 foreach (var item in (FactionLevel[])Enum.GetValues(typeof(FactionLevel)))
                 {
                     FactionSubTypes lvlC = (FactionSubTypes)item;
@@ -2343,9 +2317,9 @@ namespace TAC_AI.Templates
         }
 
 
-        internal static bool ComparePurposes(List<BasePurpose> purposes, List<BasePurpose> techPurposes, bool cantErad, bool subNeutral, bool searchAttract)
+        internal static bool ComparePurposes(List<BasePurpose> purposes, List<BasePurpose> techPurposes, bool cantErad, bool subNeutral, bool searchAttract, bool MPMode)
         {
-            if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
+            if (MPMode && techPurposes.Contains(BasePurpose.MPUnsafe))
             {   // no illegal base in MP
                 return false;
             }
@@ -2403,6 +2377,7 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
+                Debug.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -2413,8 +2388,9 @@ namespace TAC_AI.Templates
                 {
                     if (UseFactionSubTypes)
                     {
+                        FactionSubTypes FST = KickStart.CorpExtToCorp(faction);
                         canidates = TempManager.techBases.ToList().FindAll
-                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == KickStart.CorpExtToCorp(faction); }).FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == FST; }).FindAll
                             (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.factionLim <= bestPlayerFaction; });
                         UseFactionSubTypes = false;
                     }
@@ -2426,50 +2402,12 @@ namespace TAC_AI.Templates
                     }
                 }
 
-                bool cantSpawnErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs;
+                bool multiplayer = ManNetwork.IsNetworked;
+                bool cantErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs;
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
                     List<BasePurpose> techPurposes = cand.Value.purposes;
-                    if (Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer() && techPurposes.Contains(BasePurpose.MPUnsafe))
-                    {   // no illegal base in MP
-                        return false;
-                    }
-                    if (!AIGlobals.AllowInfAutominers && techPurposes.Contains(BasePurpose.Autominer))
-                    {   // no inf mining
-                        return false;
-                    }
-                    bool mobile = techPurposes.Contains(BasePurpose.NotStationary);
-                    if (purpose == BasePurpose.HarvestingNoHQ)
-                    {
-                        if (techPurposes.Contains(BasePurpose.Headquarters))
-                            return false;
-                        if (!(techPurposes.Contains(BasePurpose.Harvesting) && !mobile))
-                            return false;
-                    }
-                    if (purpose == BasePurpose.AnyNonHQ)
-                    {
-                        if (techPurposes.Exists(delegate (BasePurpose cand2) { return cand2 == BasePurpose.Headquarters || cand2 == BasePurpose.NotStationary; }))
-                            return false;
-                        return true;
-                    }
-                    if ((purpose == BasePurpose.NotStationary) != mobile)
-                        return false;
-                    if (!searchAttract && techPurposes.Contains(BasePurpose.AttractTech))
-                        return false;
-                    bool noWeapons = techPurposes.Contains(BasePurpose.NoWeapons);
-                    if (searchAttract && noWeapons)
-                        return false;
-                    if (subNeutral && noWeapons)
-                        return true;
-                    if (cantSpawnErad && techPurposes.Contains(BasePurpose.NANI))
-                        return false;
-
-                    if (purpose == BasePurpose.Harvesting && mobile)
-                        return false;
-
-                    if (techPurposes.Count == 0)
-                        return false;
-                    return techPurposes.Contains(purpose);
+                    return ComparePurposes(new List<BasePurpose> { purpose }, techPurposes, cantErad, subNeutral, searchAttract, multiplayer);
                 });
 
                 if (terra == BaseTerrain.Any)
@@ -2528,32 +2466,38 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
+                Debug.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
-                    canidates = TempManager.techBases.ToList();
+                    canidates = TempManager.techBases.ToList().FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.factionLim <= bestPlayerFaction; });
                     UseFactionSubTypes = false;
                 }
                 else
                 {
                     if (UseFactionSubTypes)
                     {
+                        FactionSubTypes FST = KickStart.CorpExtToCorp(faction);
                         canidates = TempManager.techBases.ToList().FindAll
-                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == KickStart.CorpExtToCorp(faction); });
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return KickStart.CorpExtToCorp(cand.Value.faction) == FST; }).FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.factionLim <= bestPlayerFaction; });
                         UseFactionSubTypes = false;
                     }
                     else
                     {
                         canidates = TempManager.techBases.ToList().FindAll
-                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; });
+                        (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.faction == faction; }).FindAll
+                            (delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand) { return cand.Value.factionLim <= bestPlayerFaction; });
                     }
                 }
 
+                bool multiplayer = ManNetwork.IsNetworked;
                 bool cantErad = !KickStart.EnemyEradicators || SpecialAISpawner.Eradicators.Count >= AIGlobals.MaxEradicatorTechs;
                 canidates = canidates.FindAll(delegate (KeyValuePair<SpawnBaseTypes, BaseTemplate> cand)
                 {
                     List<BasePurpose> techPurposes = cand.Value.purposes;
-                    return ComparePurposes(purposes, techPurposes, cantErad, subNeutral, searchAttract);
+                    return ComparePurposes(purposes, techPurposes, cantErad, subNeutral, searchAttract, multiplayer);
                 });
 
 

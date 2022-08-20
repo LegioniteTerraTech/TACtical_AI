@@ -42,15 +42,15 @@ namespace TAC_AI.World
         internal const float SurfaceHarvestingMulti = 5.5f; // The multiplier of unloaded
         internal const int ExpectedDPSDelitime = 60;    // How long we expect an ETU to be hitting an unloaded target for in seconds
 
-        // Gains
-        internal const int PassiveHQBonusIncome = 500;
-        internal const int ExpansionIncome = 125;
+        // Gains - (Per second)
+        internal const int PassiveHQBonusIncome = 150;
+        internal const int ExpansionIncome = 75;
 
         // Health-Based (Volume-Based)
         internal const float MobileHealthMulti = 0.05f;  // Health multiplier for out-of-play combat
         internal const float BaseHealthMulti = 0.1f;     // Health multiplier for out-of-play combat
-        internal const float MobileCombatMulti = 10;    // Damage multiplier for out-of-play combat
-        internal const float BaseCombatMulti = 4f;      // Damage multiplier for out-of-play combat
+        internal const float MobileCombatMulti = 10f;    // Damage multiplier for out-of-play combat
+        internal const float BaseCombatMulti = 2f;      // Damage multiplier for out-of-play combat
         internal const int HealthRepairCost = 60;       // How much BB the AI should spend to repair unloaded damage
         internal const int HealthRepairRate = 15;       // How much the enemy should repair every turn
 
@@ -166,6 +166,7 @@ namespace TAC_AI.World
             EnemyTeams.Clear();
             QueuedUnitMoves.Clear();
             ManEnemySiege.EndSiege(true);
+            ManEnemySiege.ResetSiegeTimer(true);
             if (!(mode is ModeMain || mode is ModeMisc || mode is ModeCoOpCreative || mode is ModeCoOpCampaign))
             {
                 enabledThis = false;

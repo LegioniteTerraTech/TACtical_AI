@@ -85,6 +85,7 @@ namespace TAC_AI.Templates
 
 
         // AI Icons
+        public static Dictionary<AIDriverType, Sprite> aiBackplates;
         public static Dictionary<AIType, Sprite> aiIcons;
         public static Dictionary<EnemySmarts, Sprite> aiIconsEnemy;
         public static AIECore.TankAIHelper lastTech;
@@ -109,26 +110,31 @@ namespace TAC_AI.Templates
                 GUIWindow = new GameObject();
                 GUIWindow.AddComponent<GUIRawDisplay>();
                 GUIWindow.SetActive(false);
+                aiBackplates = new Dictionary<AIDriverType, Sprite> {
+                    {AIDriverType.Pilot,  LoadSprite("AI_BackAir.png", true) },
+                    {AIDriverType.Sailor,  LoadSprite("AI_BackSea.png", true) },
+                    {AIDriverType.Astronaut,  LoadSprite("AI_BackSpace.png", true) },
+                };
                 aiIcons = new Dictionary<AIType, Sprite> {
-                {AIType.Escort,  LoadSprite("AI_Tank.png") },
-                {AIType.MTMimic,  LoadSprite("AI_Mimic.png") },
-                {AIType.MTStatic,  LoadSprite("AI_MT.png") },
-                {AIType.MTTurret,  LoadSprite("AI_Turret.png") },
-                {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
-                {AIType.Assault,  LoadSprite("AI_Assault.png") },
-                {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
-                {AIType.Scrapper,  LoadSprite("AI_Scrapper.png") },
-                {AIType.Energizer,  LoadSprite("AI_Energizer.png") },
-                {AIType.Aviator,  LoadSprite("AI_Pilot.png") },
-                {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
-                {AIType.Astrotech,  LoadSprite("AI_Space.png") },
-            };
+                    {AIType.Escort,  LoadSprite("AI_Tank.png") },
+                    {AIType.MTMimic,  LoadSprite("AI_Mimic.png") },
+                    {AIType.MTStatic,  LoadSprite("AI_MT.png") },
+                    {AIType.MTTurret,  LoadSprite("AI_Turret.png") },
+                    {AIType.Aegis,  LoadSprite("AI_Aegis.png") },
+                    {AIType.Assault,  LoadSprite("AI_Assault.png") },
+                    {AIType.Prospector,  LoadSprite("AI_Harvest.png") },
+                    {AIType.Scrapper,  LoadSprite("AI_Scrapper.png") },
+                    {AIType.Energizer,  LoadSprite("AI_Energizer.png") },
+                    {AIType.Aviator,  LoadSprite("AI_Pilot.png") },
+                    {AIType.Buccaneer,  LoadSprite("AI_Ship.png") },
+                    {AIType.Astrotech,  LoadSprite("AI_Space.png") },
+                };
                 aiIconsEnemy = new Dictionary<EnemySmarts, Sprite> {
-                {EnemySmarts.Mild,  LoadSprite("E_Mild.png") },
-                {EnemySmarts.Meh,  LoadSprite("E_Meh.png") },
-                {EnemySmarts.Smrt,  LoadSprite("E_Smrt.png") },
-                {EnemySmarts.IntAIligent,  LoadSprite("E_Intel.png") },
-            };
+                    {EnemySmarts.Mild,  LoadSprite("E_Mild.png") },
+                    {EnemySmarts.Meh,  LoadSprite("E_Meh.png") },
+                    {EnemySmarts.Smrt,  LoadSprite("E_Smrt.png") },
+                    {EnemySmarts.IntAIligent,  LoadSprite("E_Intel.png") },
+                };
                 firstInit = true;
                 DebugTAC_AI.Log("TACtical_AI: FirstInit RawTechExporter");
             }
@@ -500,7 +506,7 @@ namespace TAC_AI.Templates
                         {
                             techName = ext.Name,
                             savedTech = ext.Blueprint,
-                            startingFunds = ValidateCost(ext.Blueprint, ext.Cost)
+                            startingFunds = ValidateCost(ext.Blueprint, ext.Cost),
                         };
                         errorLevel++; // 2
                         FactionTypesExt MainCorp;
@@ -1161,7 +1167,10 @@ namespace TAC_AI.Templates
         public static int ValidateCost(string blueprint, int ExistingCost)
         {
             if (ExistingCost <= 0)
+            {
+                List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
                 ExistingCost = GetBBCost(AIERepair.DesignMemory.JSONToMemoryExternal(blueprint));
+            }
             if (ExistingCost <= 0)
             {
                 DebugTAC_AI.Log("TACtical_AI: ValidateCost - Invalid tech cost encountered ~ could not handle!");
@@ -1740,14 +1749,27 @@ namespace TAC_AI.Templates
 
             return JSONTech.ToString();
         }
-        private static Sprite LoadSprite(string pngName)
+        private static Sprite LoadSprite(string pngName, bool RemoveBlackOutline = false)
         {
             string destination = DLLDirectory + up + "AI_Icons" + up + pngName;
             try
             {
-                Texture2D tex = FileUtils.LoadTexture(destination);
                 Sprite refS = referenceAIIcon;
-                Sprite output = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), Vector2.zero, refS.pixelsPerUnit, 0, SpriteMeshType.FullRect, refS.border);
+                Texture2D texRef = FileUtils.LoadTexture(destination);
+                Sprite output;
+                if (!RemoveBlackOutline)
+                {
+                    Texture2D tex = new Texture2D(texRef.width, texRef.height, TextureFormat.RGBA32, false);
+                    tex.filterMode = FilterMode.Bilinear;
+                    tex.anisoLevel = refS.texture.anisoLevel;
+                    tex.mipMapBias = 0;
+                    tex.requestedMipmapLevel = 2;
+                    tex.SetPixels(texRef.GetPixels());
+                    tex.Apply(false);
+                    output = Sprite.Create(tex, new Rect(0, 0, texRef.width, texRef.height), Vector2.zero, refS.pixelsPerUnit, 0, SpriteMeshType.FullRect, refS.border);
+                }
+                else
+                    output = Sprite.Create(texRef, new Rect(0, 0, texRef.width, texRef.height), Vector2.zero, refS.pixelsPerUnit, 0, SpriteMeshType.FullRect, refS.border);
                 DebugTAC_AI.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
                 return output;
             }

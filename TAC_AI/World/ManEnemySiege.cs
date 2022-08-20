@@ -45,6 +45,13 @@ namespace TAC_AI.World
                 inst.warningBanner = (UIMultiplayerHUD)Singleton.Manager<ManHUD>.inst.GetHudElement(ManHUD.HUDElementType.Multiplayer);
             }
         }
+        public static void ResetSiegeTimer(bool halfDelay = false)
+        {
+            if (halfDelay)
+                RaidCooldown = AIGlobals.RaidCooldownTimeSecs / 2;
+            else
+                RaidCooldown = AIGlobals.RaidCooldownTimeSecs;
+        }
         public static bool LaunchSiege(EnemyPresence enemyTeamInvolved)
         {
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
@@ -156,7 +163,7 @@ namespace TAC_AI.World
                 inst.Invoke("EndSiege2", 1);
             }
             if (shouldCooldown)
-                RaidCooldown = AIGlobals.RaidCooldownTimeSecs;
+                ResetSiegeTimer();
             else
                 RaidCooldown = 0;
         }
