@@ -2593,7 +2593,6 @@ namespace TAC_AI.AI
 
             public float GetDistanceFromTask(Vector3 taskLocation, float additionalSpacing = 0)
             {
-                DebugTAC_AI.Assert("TACtical_AI: GetDistanceFromTask - CALLED");
                 if (Attempt3DNavi)
                 {
                     Vector3 veloFlat;
