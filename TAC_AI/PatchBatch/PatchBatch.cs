@@ -211,17 +211,14 @@ namespace TAC_AI
         {
             private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
-                int playerTeam;
-                if (Singleton.playerTank)
-                    playerTeam = Singleton.playerTank.Team;
-                else
-                    playerTeam = ManPlayer.inst.PlayerTeam;
-                if ((teamID1 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (teamID2 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID1)))
+                bool team1Player = ManSpawn.IsPlayerTeam(teamID1);
+                bool team2Player = ManSpawn.IsPlayerTeam(teamID2);
+                if ((team1Player && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (team2Player && AIGlobals.IsFriendlyBaseTeam(teamID1)))
                 {
                     __result = false;
                     return false;
                 }
-                if (DebugRawTechSpawner.DevCheatNoAttackPlayer && (teamID1 == playerTeam || teamID2 == playerTeam) && !ManNetwork.IsNetworked)
+                if (DebugRawTechSpawner.DevCheatNoAttackPlayer && (team1Player || team2Player) && !ManNetwork.IsNetworked)
                 {
                     __result = false;
                     return false;
@@ -235,12 +232,7 @@ namespace TAC_AI
         {
             private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
-                int playerTeam;
-                if (Singleton.playerTank)
-                    playerTeam = Singleton.playerTank.Team;
-                else
-                    playerTeam = ManPlayer.inst.PlayerTeam;
-                if (DebugRawTechSpawner.DevCheatPlayerEnemyBaseTeam && (teamID1 == playerTeam || teamID2 == playerTeam) && !ManNetwork.IsNetworked)
+                if (DebugRawTechSpawner.DevCheatPlayerEnemyBaseTeam && (ManSpawn.IsPlayerTeam(teamID1) || ManSpawn.IsPlayerTeam(teamID2)) && !ManNetwork.IsNetworked)
                 {
                     __result = true;
                     return false;
@@ -255,12 +247,7 @@ namespace TAC_AI
         {
             private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
-                int playerTeam;
-                if (Singleton.playerTank)
-                    playerTeam = Singleton.playerTank.Team;
-                else
-                    playerTeam = ManPlayer.inst.PlayerTeam;
-                if ((teamID1 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (teamID2 == playerTeam && AIGlobals.IsFriendlyBaseTeam(teamID1)))
+                if ((ManSpawn.IsPlayerTeam(teamID1) && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (ManSpawn.IsPlayerTeam(teamID2) && AIGlobals.IsFriendlyBaseTeam(teamID1)))
                 {
                     __result = false;
                     return false;

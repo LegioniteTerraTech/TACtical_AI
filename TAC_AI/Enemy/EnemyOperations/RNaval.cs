@@ -33,10 +33,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             RGeneral.Engadge(thisInst, tank, mind);
 
             float enemyExt = thisInst.lastEnemy.GetCheapBounds();
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck, enemyExt);
             float range = AIGlobals.SpacingRange + thisInst.lastTechExtents;
-            thisInst.lastRange = dist;
             float spacer = thisInst.lastTechExtents + enemyExt;
+
             if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EnemyAttack.Coward)
                 spacer = -32;// ram no matter what, or get close for snipers
 
@@ -48,7 +48,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.DriveDest = EDriveDest.FromLastDestination;
                 if (dist < spacer + (range / 4))
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
@@ -58,7 +58,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (dist < spacer + range)
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -68,7 +68,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 thisInst.SideToThreat = true;
                 thisInst.Retreat = false;
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                     thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                 {
@@ -96,7 +96,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.Retreat = false;
                 if (dist < spacer + (range / 2))
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
@@ -110,7 +110,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (dist < thisInst.lastTechExtents + enemyExt + (range * 2))
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
@@ -120,7 +120,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.Retreat = false;
                 if (dist < spacer + 2)
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
@@ -151,7 +151,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (dist < spacer + (range * 1.25f))
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {
@@ -161,7 +161,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else
                 {
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                     {

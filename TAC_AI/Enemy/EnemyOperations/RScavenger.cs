@@ -19,9 +19,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = mind.EvilCommander == EnemyHandling.Starship || mind.EvilCommander == EnemyHandling.Airplane || mind.EvilCommander == EnemyHandling.Chopper;
 
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestination);
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
             thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);

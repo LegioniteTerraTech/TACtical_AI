@@ -213,7 +213,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (final > 1.25f && pilot.BoostBias.y > 0.6f)
                 thisInst.BOOST = true;
             else
-                thisInst.BOOST = thisInst.lastRange > AIGlobals.GroundAttackStagingDist / 3;
+                thisInst.BOOST = thisInst.lastOperatorRange > AIGlobals.GroundAttackStagingDist / 3;
 
             return Mathf.Clamp(final, -0.1f, 1);
         }

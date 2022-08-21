@@ -18,8 +18,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             thisInst.Attempt3DNavi = true;
             thisInst.Retreat = true;    //Prevent the auto-driveaaaa
 
-            float dist = (mind.sceneStationaryPos.ToVector2XZ() - tank.boundsCentreWorldNoCheck.ToVector2XZ()).magnitude;
-            thisInst.lastRange = dist;
+            float dist = thisInst.GetDistanceFromTask2D(mind.sceneStationaryPos);
 
             if (thisInst.lastEnemy == null)
             {

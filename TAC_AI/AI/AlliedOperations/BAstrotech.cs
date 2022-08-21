@@ -23,18 +23,17 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (thisInst.lastPlayer == null)
                 return;
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - thisInst.lastPlayer.GetCheapBounds();
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck, thisInst.lastPlayer.GetCheapBounds());
             float range = thisInst.RangeToStopRush + thisInst.lastTechExtents;
 
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
 
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
 
             if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
@@ -134,11 +133,12 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 //OBSTRUCTION MANAGEMENT
-                if (dist >= range + playerExt + 10 && !thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                bool goingTooSlow = !thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend);
+                if (dist >= range + playerExt + 10 && goingTooSlow)
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
-                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                else if (goingTooSlow)
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");
@@ -203,18 +203,17 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (followThis == null)
                 return;
-            float dist = (tank.boundsCentreWorldNoCheck - followThis.tank.boundsCentreWorldNoCheck).magnitude - followThis.GetCheapBounds();
+            float dist = thisInst.GetDistanceFromTask(followThis.tank.boundsCentreWorldNoCheck, followThis.GetCheapBounds());
             float range = (thisInst.RangeToStopRush * 3) + thisInst.lastTechExtents;
             // The range is tripled here due to flight conditions
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
 
             float playerExt = followThis.GetCheapBounds();
 
             if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
@@ -314,11 +313,12 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 //OBSTRUCTION MANAGEMENT
-                if (dist >= range + playerExt + 10 && !thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                bool goingTooSlow = !thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend);
+                if (dist >= range + playerExt + 10 && goingTooSlow)
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
-                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                else if (goingTooSlow)
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");

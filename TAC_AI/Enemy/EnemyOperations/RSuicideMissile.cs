@@ -32,9 +32,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             RGeneral.Engadge(thisInst, tank, mind);
 
             float enemyExt = thisInst.lastEnemy.GetCheapBounds();
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck, enemyExt);
             float range = AIGlobals.SpacingRange + thisInst.lastTechExtents;
-            thisInst.lastRange = dist;
             float spacer = thisInst.lastTechExtents + enemyExt;
 
             thisInst.SideToThreat = false;
@@ -50,7 +49,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             thisInst.DriveVar = 1;
             if (dist < spacer + (range / 4))
             {
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                     thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                 {
@@ -60,7 +59,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else if (dist < spacer + range)
             {
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                     thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                     thisInst.SettleDown();

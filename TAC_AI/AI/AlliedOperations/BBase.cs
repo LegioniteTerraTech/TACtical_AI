@@ -16,7 +16,7 @@ namespace TAC_AI.AI.AlliedOperations
             thisInst.Attempt3DNavi = true;
             thisInst.Retreat = true;    //Prevent the auto-driveaaaa
 
-            thisInst.lastRange = 96; //arbitrary
+            thisInst.SetDistanceFromTaskUnneeded();
 
             thisInst.PivotOnly = true;
             if (thisInst.lastEnemy)

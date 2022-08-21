@@ -26,15 +26,14 @@ namespace TAC_AI.AI.AlliedOperations
             }
 
             float thisExtents = thisInst.lastTechExtents;
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - thisInst.lastPlayer.GetCheapBounds();
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck, thisInst.lastPlayer.GetCheapBounds());
             float range = thisInst.RangeToStopRush + thisExtents;
-            thisInst.lastRange = dist;
 
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
 
             if (tank.wheelGrounded)
             {
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                     thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                 else
                     thisInst.SettleDown();

@@ -235,7 +235,7 @@ namespace TAC_AI.AI.Movement.AICores
                         Combat = TryAdjustForCombat(true); //If we are set to chase then chase with proper AI
                     if (!Combat)
                     {
-                        if (help.recentSpeed < 10 && help.lastRange < 32)
+                        if (help.recentSpeed < 10 && help.lastOperatorRange < 32)
                         {
                             if (ManPlayerRTS.HasMovementQueue(help))
                             {
@@ -422,7 +422,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (thisInst.DriveDir == EDriveFacing.Perpendicular)
                     {   //Drive to target driving sideways, but obey distance
                         //int range = (int)(destDirect).magnitude;
-                        float range = thisInst.lastRange;
+                        float range = thisInst.lastOperatorRange;
                         if (range < thisInst.MinimumRad + 2)
                         {
                             if (VehicleUtils.Turner(thisControl, thisInst, -destDirect, out float turnVal))
@@ -470,7 +470,7 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             //if (thisInst.DriveDir == EDriveType.Perpendicular)
                             //    thisControl.DriveControl = 1f;
-                            float range = thisInst.lastRange;
+                            float range = thisInst.lastOperatorRange;
                             if (thisInst.DriveDir == EDriveFacing.Neutral)
                                 thisControl.DriveControl = 0f;
                             else if (range < thisInst.MinimumRad - 1)
@@ -863,7 +863,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    float range = thisInst.lastRange;
+                    float range = thisInst.lastOperatorRange;
                     if (range < thisInst.MinimumRad - 1)
                     {
                         driveMultiplier = 1f;
@@ -1003,9 +1003,8 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     targPos = Between(targPos, thisInst.theResource.tank.boundsCentreWorldNoCheck);
                 }
-                thisInst.lastRangeEnemy = (targPos - tank.boundsCentreWorldNoCheck).magnitude;
-                thisInst.lastRange = thisInst.lastRangeEnemy;
-                float driveDyna = Mathf.Clamp((thisInst.lastRangeEnemy - thisInst.IdealRangeCombat) / 3f, -1, 1);
+                thisInst.lastCombatRange = (targPos - tank.boundsCentreWorldNoCheck).magnitude;
+                float driveDyna = Mathf.Clamp((thisInst.lastCombatRange - thisInst.IdealRangeCombat) / 3f, -1, 1);
                 if (thisInst.SideToThreat)
                 {
                     thisInst.DriveDir = EDriveFacing.Perpendicular;
@@ -1071,7 +1070,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             else
-                thisInst.lastRangeEnemy = float.MaxValue;
+                thisInst.lastCombatRange = float.MaxValue;
             return output;
         }
 
@@ -1083,12 +1082,12 @@ namespace TAC_AI.AI.Movement.AICores
             {   
                 output = true;
                 thisInst.Steer = true;
-                thisInst.lastRangeEnemy = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude;
+                thisInst.lastCombatRange = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude;
                 float driveDyna;
                 if (thisInst.Attempt3DNavi)
-                    driveDyna = Mathf.Clamp((thisInst.lastRangeEnemy - AIGlobals.SpacingRangeHoverer) / 3f, -1, 1);
+                    driveDyna = Mathf.Clamp((thisInst.lastCombatRange - AIGlobals.SpacingRangeHoverer) / 3f, -1, 1);
                 else
-                    driveDyna = Mathf.Clamp((thisInst.lastRangeEnemy - AIGlobals.SpacingRange) / 3f, -1, 1);
+                    driveDyna = Mathf.Clamp((thisInst.lastCombatRange - AIGlobals.SpacingRange) / 3f, -1, 1);
                 if (mind.CommanderAttack == EnemyAttack.Circle)
                 {   // works fine for now
                     if (thisInst.SideToThreat)
@@ -1180,7 +1179,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             else
-                thisInst.lastRangeEnemy = float.MaxValue;
+                thisInst.lastCombatRange = float.MaxValue;
             return output;
         }
 

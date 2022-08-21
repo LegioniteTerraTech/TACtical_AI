@@ -302,7 +302,7 @@ namespace TAC_AI
                             RawTechLoader.SpawnSpecificTech(spawn, Vector3.forward, team1, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.HasReceivers });
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
-                            //SetupTechCam(__instance, first);
+                            SetupTechCam(first);
                             return false;
 
                         case AttractType.Dogfight: // Aircraft fight

@@ -28,16 +28,15 @@ namespace TAC_AI.AI.AlliedOperations
             if (thisInst.lastPlayer == null)
                 return;
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - thisInst.lastPlayer.GetCheapBounds();
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck, thisInst.lastPlayer.GetCheapBounds());
             float range = thisInst.RangeToStopRush + thisInst.lastTechExtents + playerExt;
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
 
 
             if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }
@@ -140,7 +139,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
                 }
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }

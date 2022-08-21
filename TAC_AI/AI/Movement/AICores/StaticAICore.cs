@@ -278,7 +278,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                float range = thisInst.lastRange;
+                float range = thisInst.lastOperatorRange;
                 if (range < thisInst.MinimumRad - 1)
                 {
                     driveMultiplier = 1f;
@@ -384,15 +384,14 @@ namespace TAC_AI.AI.Movement.AICores
                 Vector3 targPos = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 output = true;
                 thisInst.Steer = true;
-                thisInst.lastRangeEnemy = (targPos - tank.boundsCentreWorldNoCheck).magnitude;
-                thisInst.lastRange = thisInst.lastRangeEnemy;
+                thisInst.lastCombatRange = (targPos - tank.boundsCentreWorldNoCheck).magnitude;
 
                 thisInst.DriveDir = EDriveFacing.Forwards;
                 controller.AimTarget = targPos;
                 thisInst.MinimumRad = 0;
             }
             else
-                thisInst.lastRangeEnemy = float.MaxValue;
+                thisInst.lastCombatRange = float.MaxValue;
             return output;
         }
 
@@ -404,13 +403,13 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 output = true;
                 thisInst.Steer = true;
-                thisInst.lastRangeEnemy = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude;
+                thisInst.lastCombatRange = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude;
 
                 thisInst.DriveDir = EDriveFacing.Forwards;
                 controller.AimTarget = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
             }
             else
-                thisInst.lastRangeEnemy = float.MaxValue;
+                thisInst.lastCombatRange = float.MaxValue;
             return output;
         }
 

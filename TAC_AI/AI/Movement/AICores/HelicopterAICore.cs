@@ -376,8 +376,8 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     targPos = Between(targPos, thisInst.theResource.tank.boundsCentreWorldNoCheck);
                 }
-                thisInst.lastRangeEnemy = (targPos - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
-                float driveDyna = Mathf.Clamp((thisInst.lastRangeEnemy - thisInst.IdealRangeCombat) / 3f, -1, 1);
+                thisInst.lastCombatRange = (targPos - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                float driveDyna = Mathf.Clamp((thisInst.lastCombatRange - thisInst.IdealRangeCombat) / 3f, -1, 1);
                 if (thisInst.SideToThreat)
                 {
                     if (thisInst.FullMelee)
@@ -439,7 +439,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             else
-                thisInst.lastRangeEnemy = float.MaxValue;
+                thisInst.lastCombatRange = float.MaxValue;
             return output;
         }
 
@@ -451,8 +451,8 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 output = true;
                 thisInst.Steer = true;
-                thisInst.lastRangeEnemy = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
-                float driveDyna = Mathf.Clamp((thisInst.lastRangeEnemy - thisInst.IdealRangeCombat) / 3f, -1, 1);
+                thisInst.lastCombatRange = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                float driveDyna = Mathf.Clamp((thisInst.lastCombatRange - thisInst.IdealRangeCombat) / 3f, -1, 1);
                 if (mind.CommanderAttack == Enemy.EnemyAttack.Circle)
                 {
                     if (mind.CommanderMind == Enemy.EnemyAttitude.Miner)
@@ -510,7 +510,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             else
-                thisInst.lastRangeEnemy = float.MaxValue;
+                thisInst.lastCombatRange = float.MaxValue;
             return output;
         }
         public Vector3 Between(Vector3 Target, Vector3 other)

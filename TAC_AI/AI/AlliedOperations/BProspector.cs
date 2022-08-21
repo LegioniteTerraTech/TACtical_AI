@@ -20,9 +20,8 @@ namespace TAC_AI.AI.AlliedOperations
                 veloFlat.y = 0;
             }
             //The Handler that tells the Tank (Prospector) what to do movement-wise
-            float dist = (tank.boundsCentreWorldNoCheck + veloFlat - thisInst.lastDestination).magnitude;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestination);
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
             thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);

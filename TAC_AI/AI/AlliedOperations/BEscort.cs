@@ -22,17 +22,16 @@ namespace TAC_AI.AI.AlliedOperations
                 veloFlat = tank.rbody.velocity;
                 veloFlat.y = 0;
             }
-            float dist = (tank.boundsCentreWorldNoCheck + veloFlat - thisInst.lastPlayer.tank.boundsCentreWorldNoCheck).magnitude - thisInst.lastPlayer.GetCheapBounds();
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestination, thisInst.lastPlayer.GetCheapBounds());
             float range = thisInst.RangeToStopRush + thisInst.lastTechExtents;
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
 
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
 
             if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
                     thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
                 }

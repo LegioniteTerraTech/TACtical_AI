@@ -20,7 +20,7 @@ namespace TAC_AI.AI.Enemy
         /// <returns></returns>
         public static Vector3 AvoidAssistEnemy(Tank tank, Vector3 targetIn, AIECore.TankAIHelper thisInst, EnemyMind mind, bool dodgeLargeStatics = false)
         {   //WIP
-            if (!thisInst.AvoidStuff || tank.IsAnchored) //Because the enemy AI uses the advanced AI when anchored, unlike the player AI.
+            if (!thisInst.AvoidStuff || tank.IsAnchored)
                 return targetIn;
             List<Tank> Allies = AIEPathing.AllyList(tank);
             try

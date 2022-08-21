@@ -41,10 +41,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             RGeneral.Engadge(thisInst, tank, mind);
 
             float enemyExt = thisInst.lastEnemy.GetCheapBounds();
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck, enemyExt);
             float range;
             float spacing = thisInst.lastTechExtents + enemyExt;
-            thisInst.lastRange = dist;
 
             switch (mind.CommanderAttack)
             {
@@ -57,14 +56,14 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (dist < spacing + (range / 4))
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
                     }
                     else if (dist < spacing + range)
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -75,7 +74,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     range = AIGlobals.SpacingRangeHoverer;
                     thisInst.SideToThreat = true;
                     thisInst.Retreat = false;
-                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                    if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                     else
                         thisInst.SettleDown();
@@ -109,14 +108,14 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         }
                         else if (dist < spacing + range)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
                         }
                         else
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -139,7 +138,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         }
                         else if (dist < spacing + (range * 1.75f))
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -147,7 +146,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                         {
                             thisInst.FeatherBoost = true;
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -163,7 +162,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                         thisInst.DriveDest = EDriveDest.FromLastDestination;
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -177,7 +176,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else if (dist < spacing + (range * 1.25f))
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -186,7 +185,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 4))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();

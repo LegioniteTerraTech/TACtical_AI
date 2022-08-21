@@ -33,12 +33,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             RGeneral.Engadge(thisInst, tank, mind);
 
             if (distToTarget == 0)
-                distToTarget = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude;
+                distToTarget = thisInst.GetDistanceFromTask(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck);
 
             float enemyExt = thisInst.lastEnemy.GetCheapBounds();
             float dist = distToTarget - enemyExt;
             float range;
-            thisInst.lastRange = dist;
+
             float spacer = thisInst.lastTechExtents + enemyExt;
             if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EnemyAttack.Coward)
                 spacer = -32;// ram no matter what, or get close for snipers

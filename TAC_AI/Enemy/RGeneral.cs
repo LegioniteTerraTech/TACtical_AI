@@ -247,7 +247,7 @@ namespace TAC_AI.AI.Enemy
             if (thisInst.lastEnemy != null)
             {
                 //Fire even when retreating - the AI's life depends on this!
-                if (thisInst.lastRange < AIGlobals.MaxRangeFireAll)
+                if (thisInst.lastOperatorRange < AIGlobals.MaxRangeFireAll)
                 {
                     thisInst.AttackEnemy = true;
                     return;

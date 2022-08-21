@@ -14,9 +14,8 @@ namespace TAC_AI.AI.AlliedOperations
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
 
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestination);
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
             thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);

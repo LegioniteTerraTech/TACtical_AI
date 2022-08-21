@@ -17,7 +17,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
+            thisInst.SetDistanceFromTaskUnneeded();
             thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);

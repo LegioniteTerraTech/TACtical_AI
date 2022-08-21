@@ -18,9 +18,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 veloFlat = tank.rbody.velocity;
                 veloFlat.y = 0;
             }
-            float dist = (tank.boundsCentreWorldNoCheck + veloFlat - thisInst.lastDestination).magnitude;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestination);
             bool hasMessaged = false;
-            thisInst.lastRange = dist;
             thisInst.AvoidStuff = true;
 
             BGeneral.ResetValues(thisInst);

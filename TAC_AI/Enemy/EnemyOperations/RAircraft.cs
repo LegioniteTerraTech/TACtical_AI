@@ -49,10 +49,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             RGeneral.Engadge(thisInst, tank, mind);
 
             float enemyExt = thisInst.lastEnemy.GetCheapBounds();
-            float dist = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude - enemyExt;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck, enemyExt);
             float range = AIGlobals.SpacingRangeAircraft;
             float spacing = thisInst.lastTechExtents + enemyExt;
-            thisInst.lastRange = dist;
 
             switch (mind.CommanderAttack)
             {
@@ -66,7 +65,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.BOOST = true;
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -76,7 +75,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -89,7 +88,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.Retreat = false;
                     if (tank.wheelGrounded)
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.SpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                         else
                             thisInst.SettleDown();
@@ -122,7 +121,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.SpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -136,7 +135,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.SpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -148,7 +147,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.SpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -169,7 +168,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -184,7 +183,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.DriveDest = EDriveDest.ToLastDestination;
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
@@ -195,7 +194,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.DriveDest = EDriveDest.ToLastDestination;
                         if (tank.wheelGrounded)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 8))
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                                 thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
                             else
                                 thisInst.SettleDown();
