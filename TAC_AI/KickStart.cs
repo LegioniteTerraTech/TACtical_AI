@@ -328,6 +328,35 @@ namespace TAC_AI
             return true;
         }
 
+        public static void PatchMod()
+        {
+            if (!hasPatched)
+            {
+                try
+                {
+                    harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
+                    hasPatched = true;
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Error on patch");
+                    DebugTAC_AI.Log(e);
+                }
+            }
+        }
+
+        public static void HookToSafeSaves()
+        {
+            try
+            {
+                Assembly assemble = Assembly.GetExecutingAssembly();
+                DebugTAC_AI.Log("TACtical_AI: DLL is " + assemble.GetName());
+                ManSafeSaves.RegisterSaveSystem(assemble);
+                HasHookedUpToSafeSaves = true;
+            }
+            catch { DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem"); }
+        }
+
         public static void MainOfficialInit()
         {
             //Where the fun begins
@@ -342,28 +371,9 @@ namespace TAC_AI
 #endif
 
             //Initiate the madness
-            if (!hasPatched)
-            {
-                try
-                {
-                    harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
-                    hasPatched = true;
-                }
-                catch (Exception e)
-                {
-                    DebugTAC_AI.Log("TACtical_AI: Error on patch");
-                    DebugTAC_AI.Log(e);
-                }
-            }
+            PatchMod();
 
-            try
-            {
-                Assembly assemble = Assembly.GetExecutingAssembly();
-                DebugTAC_AI.Log("TACtical_AI: DLL is " + assemble.GetName());
-                ManSafeSaves.RegisterSaveSystem(assemble);
-                HasHookedUpToSafeSaves = true;
-            }
-            catch { DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem"); }
+            HookToSafeSaves();
 
             AIECore.TankAIManager.Initiate();
             GUIAIManager.Initiate();
@@ -395,6 +405,64 @@ namespace TAC_AI
         }
 
 #if STEAM
+        public static IEnumerator<float> MainOfficialInitIterate()
+        {
+            //Where the fun begins
+            DebugTAC_AI.Log("TACtical_AI: MAIN [ITERATOR] (Steam Workshop Version) startup");
+            if (!VALIDATE_MODS())
+            {
+                yield return 1f;
+            }
+
+            //Initiate the madness
+            PatchMod();
+            yield return 0.1f;
+
+            HookToSafeSaves();
+            yield return 0.16f;
+
+            AIECore.TankAIManager.Initiate();
+            yield return 0.24f;
+
+            GUIAIManager.Initiate();
+            yield return 0.32f;
+
+            RawTechExporter.Initiate();
+            yield return 0.40f;
+
+            RBases.BaseFunderManager.Initiate();
+            yield return 0.48f;
+
+            ManEnemyWorld.Initiate();
+            yield return 0.56f;
+
+            SpecialAISpawner.Initiate();
+            yield return 0.64f;
+
+            GUIEvictionNotice.Initiate();
+            AIERepair.RefreshDelays();
+            yield return 0.72f;
+
+            // Because official fails to init this while switching modes
+            SpecialAISpawner.DetermineActiveOnModeType();
+            yield return 0.80f;
+            AIECore.TankAIManager.inst.CorrectBlocksList();
+            yield return 0.95f;
+
+            try
+            {
+                KickStartOptions.PushExtModOptionsHandling();
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
+                DebugTAC_AI.Log(e);
+            }
+            yield return 1f;
+
+            EnableBetterAI = true;
+        }
+
         public static void DeInitCheck()
         {
             if (AIECore.TankAIManager.inst)
@@ -458,22 +526,8 @@ namespace TAC_AI
                     MainOfficialInit();
                     return;
                 }
-                Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
-                try
-                {
-                    harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
-                }
-                catch (Exception e)
-                {
-                    Debug.Log("TACtical_AI: Error on patch");
-                    Debug.Log(e);
-                }
-
-                try
-                {
-                    ManSafeSaves.RegisterSaveSystem(Assembly.GetExecutingAssembly());
-                }
-                catch { }
+                PatchMod();
+                HookToSafeSaves();
 
                 AIECore.TankAIManager.Initiate();
                 GUIAIManager.Initiate();

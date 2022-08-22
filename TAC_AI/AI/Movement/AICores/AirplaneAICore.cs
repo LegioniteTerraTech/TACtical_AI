@@ -75,7 +75,9 @@ namespace TAC_AI.AI.Movement.AICores
                 if (pilot.TargetGrounded && (thisInst.lastEnemy || thisInst.theResource || thisInst.theBase)) // Divebombing mode
                 {  // We previously disabled the ground offset terrain avoider and aim directly at the enemy
                     Vector3 deltaAim = pilot.deltaMovementClock;
-                    float dist = (thisInst.lastDestination - (tank.boundsCentreWorldNoCheck + deltaAim)).SetY(0).magnitude;
+                    Vector3 posOffset = thisInst.lastDestination - (tank.boundsCentreWorldNoCheck + deltaAim);
+                    float dist = posOffset.magnitude;
+                    float dist2D = posOffset.SetY(0).magnitude;
                     Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(thisInst.lastDestination - tank.boundsCentreWorldNoCheck);
                     if (pilot.ForcePitchUp)
                         pilot.PerformDiveAttack = 0; // too low and we break off from the attack
@@ -160,7 +162,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, thisInst.lastDestination);
                         }
                     }
-                    else if (dist > AIGlobals.GroundAttackStagingDist && Heading.z < 0)
+                    else if (dist2D > AIGlobals.GroundAttackStagingDist && Heading.z < 0)
                     {   // Launch teh attack run
                         //Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
                         pilot.PerformDiveAttack = 1;

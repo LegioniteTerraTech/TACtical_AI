@@ -51,15 +51,17 @@ namespace TAC_AI.AI
             Helper = helper;
             EnemyMind = mind;
 
+            HoldHeight = tank.boundsCentreWorld.y;
             SceneStayPos = tank.boundsCentreWorld.ToVector2XZ();
-            HoldHeight = SceneStayPos.y;
+            /*
             List<Tank> Techs = AIECore.TankAIManager.GetNonEnemyTanks(Tank.Team);
             Techs.Remove(tank);
             if (Techs.Count > 0)
             {
                 Vector3 PosWorld = Techs.OrderByDescending(x => x.IsAnchored).ThenBy(x => (x.boundsCentreWorld - tank.boundsCentreWorldNoCheck).sqrMagnitude).First().boundsCentreWorld;
                 IdleFacingDirect = (tank.boundsCentreWorldNoCheck - PosWorld).ToVector2XZ().normalized;
-            }
+            }*/
+            IdleFacingDirect = Vector3.forward;
             AICore = new StaticAICore();
             AICore.Initiate(tank, this);
 

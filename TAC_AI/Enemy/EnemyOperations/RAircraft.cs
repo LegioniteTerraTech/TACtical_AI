@@ -166,40 +166,26 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         thisInst.DriveDest = EDriveDest.FromLastDestination;
                         thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                        if (tank.wheelGrounded)
-                        {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
-                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                            else
-                                thisInst.SettleDown();
-                        }
                     }
-                    else if (dist < spacing + (range * 2 ))
+                    else if (dist < spacing + (range * 2))
                     {
                         thisInst.DriveDest = EDriveDest.FromLastDestination;
                     }
                     else if (dist < spacing + (range * 3))
                     {
                         thisInst.DriveDest = EDriveDest.ToLastDestination;
-                        if (tank.wheelGrounded)
-                        {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
-                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                            else
-                                thisInst.SettleDown();
-                        }
                     }
                     else
                     {
                         thisInst.DriveDest = EDriveDest.ToLastDestination;
-                        if (tank.wheelGrounded)
-                        {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
-                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
-                            else
-                                thisInst.SettleDown();
-                        }
                         thisInst.BOOST = true;
+                    }
+                    if (tank.wheelGrounded)
+                    {
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        else
+                            thisInst.SettleDown();
                     }
                     break;
             }

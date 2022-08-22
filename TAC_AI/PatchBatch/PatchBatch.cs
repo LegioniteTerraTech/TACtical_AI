@@ -58,6 +58,10 @@ namespace TAC_AI
                 }
             }
         }
+        public IEnumerable<float> InitIterator()
+        {
+            return (IEnumerable<float>)KickStart.MainOfficialInitIterate();
+        }
         public override void Init()
         {
             // We do this check because this mod takes FOREVER to build, so we don't heed every reset
