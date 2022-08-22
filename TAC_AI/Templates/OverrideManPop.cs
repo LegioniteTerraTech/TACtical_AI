@@ -4,10 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Reflection;
+using UnityEngine;
 
 namespace TAC_AI.Templates
 {
-    public class OverrideManPop
+    public class TempFilterStore
+    {
+        internal int Bloc;
+        internal float Val;
+        internal float Rad;
+    }
+    public class OverrideManPop : MonoBehaviour
     {
         private static FieldInfo dayTechs = typeof(ManPop).GetField("m_DayFilter", BindingFlags.NonPublic | BindingFlags.Instance);
         private static FieldInfo nightTechs = typeof(ManPop).GetField("m_NightFilter", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -18,25 +25,44 @@ namespace TAC_AI.Templates
         private static FieldInfo BigRad = typeof(TechSpawnFilter).GetField(" m_MaxRadiusSize", BindingFlags.NonPublic | BindingFlags.Instance);
 
 
-        internal static TechSpawnFilter DayTechsSav;
-        internal static TechSpawnFilter NightTechsSav;
-        internal static TechSpawnFilter NonEXPTechsSav;
+        internal static TempFilterStore DayTechsSav;
+        internal static TempFilterStore NightTechsSav;
+        internal static TempFilterStore NonEXPTechsSav;
+        internal static TempFilterStore UnRestrainedSav;
 
         private static bool SavedRight = false;
         private static bool QueueOverride = false;
         private static bool ToChangeOverride = false;
         private static bool IsOverridden = false;
 
-        private static void SavePop()
+        private static bool SavePop()
         {
-            if (!KickStart.isPopInjectorPresent && !SavedRight)
+            try
             {
-                ManPop pop = Singleton.Manager<ManPop>.inst;
-                DayTechsSav = (TechSpawnFilter)dayTechs.GetValue(pop);
-                NightTechsSav = (TechSpawnFilter)nightTechs.GetValue(pop);
-                NonEXPTechsSav = (TechSpawnFilter)nonEXPTechs.GetValue(pop);
-                SavedRight = true;
+                if (!KickStart.isPopInjectorPresent && !SavedRight)
+                {
+                    ManPop pop = Singleton.Manager<ManPop>.inst;
+                    DayTechsSav = GetFilter(dayTechs, pop);
+                    NightTechsSav = GetFilter(nightTechs, pop);
+                    NonEXPTechsSav = GetFilter(nonEXPTechs, pop);
+                    UnRestrainedSav = new TempFilterStore
+                    {
+                        Bloc = 109001,
+                        Rad = 109001,
+                        Val = 250000000
+                    };
+                    SavedRight = true;
+                    DebugTAC_AI.Log("TACtical_AI: Fetched pop");
+                    return true;
+                }
             }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Could not fetch pop, will try again later");
+                return false;
+            }
+            DebugTAC_AI.Log("TACtical_AI: Pop already fetched");
+            return true;
         }
         public static void ChangeToRagnarokPop(bool isTrue)
         {
@@ -56,9 +82,8 @@ namespace TAC_AI.Templates
         }
         public static void QueuedChangeToRagnarokPop()
         {
-            if (!(bool)ManPop.inst)
+            if (!(bool)ManPop.inst || !SavePop())
                 return;
-            SavePop();
             if (!KickStart.isPopInjectorPresent && QueueOverride)
             {
                 if (ToChangeOverride && !IsOverridden)
@@ -75,58 +100,124 @@ namespace TAC_AI.Templates
 
         private static void OverridePop()
         {
+            DebugTAC_AI.Log("TACtical_AI: RAGNAROK ENABLED");
             ManPop pop = Singleton.Manager<ManPop>.inst;
             try
             {
-                TechSpawnFilter DayTechsSavEdit = DayTechsSav;
-                BigBloc.SetValue(DayTechsSavEdit, 9001);
-                BigRad.SetValue(DayTechsSavEdit, 9001);
-                BigVal.SetValue(DayTechsSavEdit, 25000000);
-                dayTechs.SetValue(pop, DayTechsSavEdit);
+                SetFilter(dayTechs, pop, UnRestrainedSav);
             }
-            catch { }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change dayTechs " + e);
+            }
 
             try
             {
-                TechSpawnFilter NightTechsSavEdit = NightTechsSav;
-                BigBloc.SetValue(NightTechsSavEdit, 9001);
-                BigRad.SetValue(NightTechsSavEdit, 9001);
-                BigVal.SetValue(NightTechsSavEdit, 25000000);
-                dayTechs.SetValue(pop, NightTechsSavEdit);
+                SetFilter(nightTechs, pop, UnRestrainedSav);
             }
-            catch { }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change nightTechs");
+            }
 
             try
             {
-                TechSpawnFilter NonEXPTechsSavEdit = NonEXPTechsSav;
-                BigBloc.SetValue(NonEXPTechsSavEdit, 9001);
-                BigRad.SetValue(NonEXPTechsSavEdit, 9001);
-                BigVal.SetValue(NonEXPTechsSavEdit, 25000000);
-                dayTechs.SetValue(pop, NonEXPTechsSavEdit);
+                SetFilter(nonEXPTechs, pop, UnRestrainedSav);
             }
-            catch { }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change nonEXPTechs");
+            }
             IsOverridden = true;
         }
 
         private static void RecoverPop()
         {
+            DebugTAC_AI.Log("TACtical_AI: RAGNAROK DISABLED");
             ManPop pop = Singleton.Manager<ManPop>.inst;
             try
             {
-                dayTechs.SetValue(pop, DayTechsSav);
+                SetFilter(dayTechs, pop, DayTechsSav);
             }
-            catch { }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change dayTechs");
+            }
             try
             {
-                dayTechs.SetValue(pop, NightTechsSav);
+                SetFilter(nightTechs, pop, NightTechsSav);
             }
-            catch { }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change nightTechs");
+            }
             try
             {
-                dayTechs.SetValue(pop, NonEXPTechsSav);
+                SetFilter(nonEXPTechs, pop, NonEXPTechsSav);
             }
-            catch { }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change nonEXPTechs");
+            }
             IsOverridden = false;
+        }
+
+
+        private static TempFilterStore GetFilter(FieldInfo toApplyTo, ManPop inst)
+        {
+            TempFilterStore TFS = new TempFilterStore();
+            try
+            {
+                TFS.Bloc = (int)BigBloc.GetValue((TechSpawnFilter)toApplyTo.GetValue(inst));
+            }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change Bloc");
+            }
+            try
+            {
+                TFS.Rad = (float)BigRad.GetValue((TechSpawnFilter)toApplyTo.GetValue(inst));
+            }
+            catch
+            {
+                DebugTAC_AI.Info("TACtical_AI: Failed to change Rad");
+            }
+            try
+            {
+                TFS.Val = (float)BigVal.GetValue((TechSpawnFilter)toApplyTo.GetValue(inst));
+            }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change Val");
+            }
+            return TFS;
+        }
+        private static void SetFilter(FieldInfo toApplyTo, ManPop inst, TempFilterStore TFS)
+        {
+            try
+            {
+                BigBloc.SetValue((TechSpawnFilter)toApplyTo.GetValue(inst), TFS.Bloc);
+            }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change Bloc");
+            }
+            try
+            {
+                BigRad.SetValue((TechSpawnFilter)toApplyTo.GetValue(inst), TFS.Rad);
+            }
+            catch
+            {
+                DebugTAC_AI.Info("TACtical_AI: Failed to change Rad");
+            }
+            try
+            {
+                BigVal.SetValue((TechSpawnFilter)toApplyTo.GetValue(inst), TFS.Val);
+            }
+            catch
+            {
+                DebugTAC_AI.Log("TACtical_AI: Failed to change Val");
+            }
         }
     }
 }

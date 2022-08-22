@@ -65,9 +65,9 @@ namespace TAC_AI
         public const float AircraftChillFactorMulti = 4.5f;         // More accuraccy, less responsiveness
         public const float LargeAircraftChillFactorMulti = 1.25f;   // More responsiveness, less accuraccy
 
-        public const float AirNPTMaxHeightOffset = 275;
-        public const float AirWanderMaxHeight = 225;
-        public const float AirPromoteSpaceHeight = 200;
+        public const float AirNPTMaxHeightOffset = 125;     // How far the AI is allowed to go while in combat above the player
+        public const float AirWanderMaxHeight = 75;         // How far the AI is allowed to go while wandering randomly above the player
+        public const float AirPromoteSpaceHeight = 150;     // The height the player, beyond passing, will encounter more spacecraft
         public const float AirMaxYaw = 0.2f; // 0 - 1 (float)
         public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
 
