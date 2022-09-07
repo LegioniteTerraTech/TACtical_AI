@@ -259,7 +259,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                             //thisInst.AttemptedRepairs++;
                         }
-                        //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else
@@ -271,7 +271,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.anchorAttempts = 0;
             }
 
-            //Debug.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
+            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
                 thisInst.lastDestination = mind.sceneStationaryPos;
@@ -328,7 +328,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
-                thisInst.Urgency += KickStart.AIClockPeriod / 25;
+                thisInst.Urgency += KickStart.AIClockPeriod / 25f;
                 Vector3 foreDirect = tank.rootBlockTrans.InverseTransformDirection(aimTo);
                 //if (KickStart.isWeaponAimModPresent && mind.CommanderAttack == EnemyAttack.Circle && ((AIControllerAir) thisInst.MovementController).LargeAircraft)
                 //{   // AC-130 broadside attack

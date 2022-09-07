@@ -29,7 +29,7 @@ namespace TAC_AI.AI.Enemy
         // Main host of operations
         public static void BeEvil(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //Debug.Log("TACtical_AI: enemy AI active!");
+            //DebugTAC_AI.Log("TACtical_AI: enemy AI active!");
             var Mind = thisInst.MovementController.EnemyMind;
             if (Mind.IsNull())
             {
@@ -44,7 +44,7 @@ namespace TAC_AI.AI.Enemy
         }
         public static void ScarePlayer(EnemyMind mind, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //Debug.Log("TACtical_AI: enemy AI active!");
+            //DebugTAC_AI.Log("TACtical_AI: enemy AI active!");
             try
             {
                 if (thisInst.AttackEnemy)
@@ -93,7 +93,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
-                        //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
+                        //DebugTAC_AI.Log("TACtical_AI: Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
                         thisInst.anchorAttempts++;
                         if (tank.IsAnchored)
@@ -120,7 +120,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
-                        //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
+                        //DebugTAC_AI.Log("TACtical_AI: Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
                         thisInst.anchorAttempts++;
                         if (tank.IsAnchored)
@@ -141,21 +141,21 @@ namespace TAC_AI.AI.Enemy
                     RRepair.EnemyRepairStepper(thisInst, tank, Mind, venPower);// longer while fighting
                 }
             }
-            if (Mind.Provoked <= 0)
+            if (Mind.AIControl.Provoked <= 0)
             {
                 if (thisInst.lastEnemy)
                 {
-                    if (!Mind.InRangeOfTarget())
+                    if (!Mind.InRangeOfTargetEnemy())
                     {
                         Mind.EndAggro();
                     }
                 }
                 else
                     Mind.EndAggro();
-                Mind.Provoked = 0;
+                Mind.AIControl.Provoked = 0;
             }
             else
-                Mind.Provoked -= KickStart.AIClockPeriod;
+                Mind.AIControl.Provoked -= KickStart.AIClockPeriod;
 
 
             // Attack handling
@@ -210,7 +210,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
-                        //Debug.Log("TACtical_AI: Trying to anchor " + tank.name);
+                        //DebugTAC_AI.Log("TACtical_AI: Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
                         thisInst.anchorAttempts++;
                         if (tank.IsAnchored)
@@ -231,21 +231,21 @@ namespace TAC_AI.AI.Enemy
                     RRepair.EnemyRepairStepper(thisInst, tank, Mind, venPower);// longer while fighting
                 }
             }
-            if (Mind.Provoked <= 0)
+            if (Mind.AIControl.Provoked <= 0)
             {
                 if (thisInst.lastEnemy)
                 {
-                    if (!Mind.InRangeOfTarget())
+                    if (!Mind.InRangeOfTargetEnemy())
                     {
                         Mind.EndAggro();
                     }
                 }
                 else
                     Mind.EndAggro();
-                Mind.Provoked = 0;
+                Mind.AIControl.Provoked = 0;
             }
             else
-                Mind.Provoked -= KickStart.AIClockPeriod;
+                Mind.AIControl.Provoked -= KickStart.AIClockPeriod;
 
 
             // Attack handling
@@ -283,7 +283,7 @@ namespace TAC_AI.AI.Enemy
         public static void BeSubNeutral(AIECore.TankAIHelper thisInst, Tank tank)
         {
             var Mind = thisInst.MovementController.EnemyMind;
-            if (Mind.Hurt && Mind.Provoked > 0)
+            if (Mind.Hurt && Mind.AIControl.Provoked > 0)
             {   // If we were hit, then we fight back the attacker
                 if (thisInst.lastEnemy?.tank)
                 {
@@ -302,7 +302,7 @@ namespace TAC_AI.AI.Enemy
         public static void BeNeutral(AIECore.TankAIHelper thisInst, Tank tank)
         {
             var Mind = thisInst.MovementController.EnemyMind;
-            if (Mind.Hurt && thisInst.PendingDamageCheck && Mind.Provoked > 0)
+            if (Mind.Hurt && thisInst.PendingDamageCheck && Mind.AIControl.Provoked > 0)
             {   // If we were hit & lost blocks, then we fight back the attacker
                 if (thisInst.lastEnemy?.tank)
                 {
@@ -434,7 +434,7 @@ namespace TAC_AI.AI.Enemy
         // AI SETUP
         public static void RandomizeBrain(AIECore.TankAIHelper thisInst, Tank tank)
         {
-            //Debug.Log("TACtical_AI: offset " + tank.boundsCentreWorldNoCheck);
+            //DebugTAC_AI.Log("TACtical_AI: offset " + tank.boundsCentreWorldNoCheck);
             var toSet = tank.gameObject.GetComponent<EnemyMind>();
             if (!toSet)
             {
@@ -980,6 +980,9 @@ namespace TAC_AI.AI.Enemy
                 }
                 thisInst.SuppressFiring(!toSet.AttackAny);
                 thisInst.FullMelee = toSet.LikelyMelee;
+
+                if (!KickStart.AllowEnemiesToMine && toSet.CommanderMind == EnemyAttitude.Miner)
+                    toSet.CommanderMind = EnemyAttitude.Default;
             }
             if (DebugRawTechSpawner.ShowDebugFeedBack)
             {
@@ -1247,7 +1250,7 @@ namespace TAC_AI.AI.Enemy
                     return;
                 if ((bool)wasSet.GetValue(mover))
                     return;
-                Debug.Log("TACtical_AI: Setting a Control Block...");
+                DebugTAC_AI.Log("TACtical_AI: Setting a Control Block...");
 
                 mover.ProcessOperations.Clear();
                 if (mover.IsPlanarVALUE)

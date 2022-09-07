@@ -116,7 +116,7 @@ namespace TAC_AI.AI.Movement.AICores
 
 
             //Turn our work in to processing
-            //Debug.Log("TACtical_AI: Tech " + tank.name + " | steering " + turnVal + " | drive " + DriveVar);
+            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " | steering " + turnVal + " | drive " + DriveVar);
             control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
             controlGet.SetValue(tank.control, control3D);
         }
@@ -181,14 +181,14 @@ namespace TAC_AI.AI.Movement.AICores
         {
             pilot.LowerEngines = false;
             float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + AIGlobals.ChopperOperatingExtraHeight;
-            //Debug.Log("TACtical_AI: " + tank.name + " thrust = " + final + " | velocity " + tank.rbody.velocity);
+            //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " thrust = " + final + " | velocity " + tank.rbody.velocity);
             if (ForceUp)
             {
                 final = 1;
             }
             else if (final <= -0.4f)
             {
-                //Debug.Log("TACtical_AI: " + tank.name + " Too high!! Cutting engines!!");
+                //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " Too high!! Cutting engines!!");
                 pilot.LowerEngines = true;
                 final = -0.1f;
                 if (tank.rbody.velocity.y < 0)
@@ -198,17 +198,17 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (tank.rbody.velocity.y < 0 && final > -0.4f && final < 0)  // try ease fall
             {
-                //Debug.Log("TACtical_AI: " + tank.name + " dampening fall");
+                //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " dampening fall");
                 final = Mathf.Pow(tank.rbody.velocity.y, 2) / 10;
             }
             if (tank.rbody.velocity.y > 4 && final > 0 && final < 1.4f)     // try ease flight
             {
-                //Debug.Log("TACtical_AI: " + tank.name + " dampening up speed");
+                //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " dampening up speed");
                 final = 0;
             }
             if (final < -0.1f)
                 final = -0.1f;
-            //Debug.Log("TACtical_AI: " + tank.name + " thrustFinal = " + final);
+            //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " thrustFinal = " + final);
 
             if (final > 1.25f && pilot.BoostBias.y > 0.6f)
                 thisInst.BOOST = true;

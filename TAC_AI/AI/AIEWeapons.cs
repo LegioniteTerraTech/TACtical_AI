@@ -71,7 +71,7 @@ namespace TAC_AI.AI
                     {
                         try
                         {
-                            //Debug.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
+                            //DebugTAC_AI.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
                             thisInst.ActiveAimState = AIWeaponState.Obsticle;
                             thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
                             if (thisInst.FIRE_NOW)

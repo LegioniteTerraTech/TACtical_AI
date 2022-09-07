@@ -427,13 +427,13 @@ namespace TAC_AI.World
         public void PresenceDebug(string thing)
         {
 //#if DEBUG
-            Debug.Log(thing);
+            DebugTAC_AI.Log(thing);
 //#endif
         }
         public void PresenceDebugDEV(string thing)
         {
 //#if DEBUG
-            Debug.Log(thing);
+            DebugTAC_AI.Log(thing);
 //#endif
         }
         public static void ReportCombat(string thing)

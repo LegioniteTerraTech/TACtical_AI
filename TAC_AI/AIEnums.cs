@@ -17,7 +17,7 @@ namespace TAC_AI.AI
 
         // Corrdinate-Based Targets
         /// <summary>
-        /// Drive from target POINTING AT TARGET [in relation to DriveDir]
+        /// Drive in reverse from target POINTING AT TARGET [in relation to DriveDir]
         /// </summary>
         FromLastDestination,
 
@@ -45,5 +45,13 @@ namespace TAC_AI.AI
         Forwards,
         Perpendicular,
         Backwards
+    }
+
+    public enum RequestSeverity
+    {
+        ThinkMcFly,
+        Warn,
+        SameTeam,
+        AllHandsOnDeck,
     }
 }

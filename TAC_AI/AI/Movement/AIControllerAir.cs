@@ -213,7 +213,7 @@ namespace TAC_AI.AI
             {
                 Tank.AttachEvent.Unsubscribe(OnAttach);
                 Tank.DetachEvent.Unsubscribe(OnDetach);
-                //Debug.Log("TACtical_AI: Removed aircraft AI from " + Tank.name);
+                //DebugTAC_AI.Log("TACtical_AI: Removed aircraft AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }
@@ -279,25 +279,25 @@ namespace TAC_AI.AI
 
             if (this.BankOnly)
             {  
-                //Debug.Log("TACtical AI: Tech " + Tank.name + " does not apply enough forwards thrust " + totalThrust + " vs " + (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).magnitude + " to perform an immelmann.");
+                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " does not apply enough forwards thrust " + totalThrust + " vs " + (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).magnitude + " to perform an immelmann.");
             }
             if (lowestDelta > 10 && boostBiasDirection == Vector3.zero)
             {   //IT HAS NO VALID PROPS OR BOOSTERS!!!!
-                //Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS OR BOOSTERS TO FLY USING!!");
+                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS OR BOOSTERS TO FLY USING!!");
             }
             if (lowestDelta > 10 && consumeBoosters > 0)
             {
-                //Debug.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS TO FLY USING!!");
+                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS TO FLY USING!!");
                 NoProps = true;
             }
             BoostBias = boostBiasDirection.normalized;
 
             PropBias = biasDirection.normalized;
-            //Debug.Log("TACtical AI: Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
+            //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
             if (Mathf.Abs(Vector3.Dot(PropBias, Vector3.right)) > 0.2f)
             {   //CENTER OF THRUST MAY BE OFF!!!
                 SkewedFlightCenter = true;
-                //Debug.Log("TACtical AI: Tech " + Tank.name + " reported to have off-centered thrust of a factor of " + Mathf.Abs(Vector3.Dot(biasDirection.normalized, Vector3.right)) + ".  \nAs all props don't have uniform thrust backwards and forwards (in relation to the root cab), the AI may not be able to fly correctly!!!");
+                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " reported to have off-centered thrust of a factor of " + Mathf.Abs(Vector3.Dot(biasDirection.normalized, Vector3.right)) + ".  \nAs all props don't have uniform thrust backwards and forwards (in relation to the root cab), the AI may not be able to fly correctly!!!");
             }
             else
                 SkewedFlightCenter = false;
@@ -528,7 +528,7 @@ namespace TAC_AI.AI
                 if (!AIERepair.CanRepairNow(tank))
                 {
                     //if (!Grounded)
-                    //    Debug.Log("TACtical_AI: " + tank.name + " has been damaged too badly with no parts to repair with");
+                    //    DebugTAC_AI.Log("TACtical_AI: " + tank.name + " has been damaged too badly with no parts to repair with");
                     return false;
                 }
                 if (damaged && !Grounded)

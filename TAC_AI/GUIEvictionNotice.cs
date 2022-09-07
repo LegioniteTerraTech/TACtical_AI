@@ -25,7 +25,7 @@ namespace TAC_AI.AI
         private static float yMenu = 0;
 
         // Tech Tracker
-        private static string teamName;
+        private static string teamName = "Unknown";
         private static int techCost = 0;
         private static int teamCost = 0;
         private static string randomAllow = "Let's make a deal";
@@ -120,11 +120,11 @@ namespace TAC_AI.AI
 
             List<string> selectA = randomAllowSayings.ToList();
             selectA.Remove(randomAllow);
-            randomAllow = "<b><color=#ffffffff>" + selectA.GetRandomEntry() + "</color></b>";
+            randomAllow = "<b>" + selectA.GetRandomEntry() + "</b>";
 
             List<string> selectE = randomEvictSayings.ToList();
             selectE.Remove(randomEvict);
-            randomEvict = "<b><color=#ffffffff>" + selectE.GetRandomEntry() + "</color></b>";
+            randomEvict = "<b>" + selectE.GetRandomEntry() + "</b>";
 
             teamName = TeamNamer.GetTeamName(lastTank.Team).ToString();
             LaunchSubMenuClickable();
@@ -155,33 +155,69 @@ namespace TAC_AI.AI
                 return;
             }
             if (lastTank.GetComponent<RBases.EnemyBaseFunder>())
-            {   // Bases that store BB
-                int teamFunds = 0;
-                funder = RBases.GetTeamFunder(lastTank.Team);
-                if (funder != null)
+            {
+                GUIBaseTeam();
+            }
+            else
+            {
+                GUILoneTech();
+            }
+            GUI.DragWindow();
+        }
+
+        private static void GUIBaseTeam()
+        { // Bases that store BB
+            int teamFunds = 0;
+            funder = RBases.GetTeamFunder(lastTank.Team);
+            if (funder != null)
+            {
+                teamFunds = funder.BuildBucks;
+            }
+            else
+            {
+                var teamUnloaded = ManEnemyWorld.GetTeam(lastTank.Team);
+                if (teamUnloaded != null)
                 {
-                    teamFunds = funder.BuildBucks;
-                }
-                else
-                {
-                    var teamUnloaded = ManEnemyWorld.GetTeam(lastTank.Team);
-                    if (teamUnloaded != null)
+                    EnemyBaseUnit EBU = UnloadedBases.GetTeamFunder(teamUnloaded);
+                    if (EBU != null)
                     {
-                        EnemyBaseUnit EBU = UnloadedBases.GetTeamFunder(teamUnloaded);
-                        if (EBU != null)
-                        {
-                            teamFunds = EBU.BuildBucks;
-                            teamCost = teamUnloaded.GlobalTeamCost();
-                        }
+                        teamFunds = EBU.BuildBucks;
+                        teamCost = teamUnloaded.GlobalTeamCost();
                     }
                 }
-                GUI.Label(new Rect(10, 25, 180, 30), AltUI.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
-                GUI.Label(new Rect(10, 45, 180, 30), (teamFunds > 0 ? AltUI.UIAlphaText + "<b>" + (teamFunds + teamCost) + "</b> Bribe: " : AltUI.UIAlphaText + "<b>No Bases?</b></color>"));
-                GUIContent bribeButton;
-                bool afford = ManPlayer.inst.CanAfford(teamFunds + teamCost);
+            }
+            GUI.Label(new Rect(10, 25, 180, 30), "<b>" + teamName + "</b>");//¥¥
+            GUI.Label(new Rect(10, 45, 180, 30), (teamFunds > 0 ? "<b>" + (teamFunds + teamCost) + "</b> Bribe: " : "<b>No Bases?</b>"));
+            GUIContent bribeButton;
+            bool afford = ManPlayer.inst.CanAfford(teamFunds + teamCost);
+            int lastTeam = lastTank.Team;
+            if (ManPlayer.inst.PlayerTeam == lastTeam)
+            {
+                bribeButton = new GUIContent(randomAllow, "Fully Allied!");
+                if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AltUI.ButtonRed))
+                {
+                }
+            }
+            else
+            {
                 if (afford)
                 {
-                    bribeButton = new GUIContent(randomAllow, "Bribe the Team");
+                    string nextAllyState;
+                    if (AIGlobals.IsFriendlyBaseTeam(lastTeam))
+                    {
+                        nextAllyState = "Your Team";
+                    }
+                    else if (AIGlobals.IsNeutralBaseTeam(lastTeam))
+                    {
+                        nextAllyState = "Friendly";
+                    }
+                    else if (AIGlobals.IsEnemyBaseTeam(lastTeam))
+                    {
+                        nextAllyState = "Neutral";
+                    }
+                    else
+                        nextAllyState = "Neutral";
+                    bribeButton = new GUIContent(randomAllow, "Bribe to " + nextAllyState);
                 }
                 else
                 {
@@ -194,7 +230,6 @@ namespace TAC_AI.AI
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Buy);
                         ManPlayer.inst.PayMoney(teamFunds);
                         funder.AddBuildBucks(teamFunds);
-                        int lastTeam = lastTank.Team;
                         int newTeam;
                         if (AIGlobals.IsFriendlyBaseTeam(lastTeam))
                         {
@@ -215,79 +250,76 @@ namespace TAC_AI.AI
                     else
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                 }
-                if (Singleton.playerTank)
+            }
+            if (Singleton.playerTank)
+            {
+                if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Fight the Team"), AltUI.ButtonRed))
                 {
-                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Fight the Team"), AltUI.ButtonRed))
+                    ManSFX.inst.PlayUISFX(ManSFX.UISfxType.LoadTech);
+                    if (!AIGlobals.IsEnemyBaseTeam(lastTank.Team))
                     {
-                        ManSFX.inst.PlayUISFX(ManSFX.UISfxType.LoadTech);
-                        if (AIGlobals.IsEnemyBaseTeam(lastTank.Team))
-                        {
-                            int lastTeam = lastTank.Team;
-                            int newTeam = AIGlobals.GetRandomEnemyBaseTeam();
-                            ManEnemyWorld.ChangeTeam(lastTeam, newTeam);
-                            ManEnemyWorld.TeamWarEvent.Send(lastTeam, newTeam);
-                            CloseSubMenuClickable();
-                        }
-                        RBases.RequestFocusFire(lastTank, Singleton.playerTank.visible, RequestSeverity.ThinkMcFly);
+                        int newTeam = AIGlobals.GetRandomEnemyBaseTeam();
+                        ManEnemyWorld.ChangeTeam(lastTeam, newTeam);
+                        ManEnemyWorld.TeamWarEvent.Send(lastTeam, newTeam);
+                        CloseSubMenuClickable();
                     }
+                    RBases.RequestFocusFireNPTs(lastTank, Singleton.playerTank.visible, RequestSeverity.ThinkMcFly);
                 }
-                else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))
-                {
-                    ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
-                }
+            }
+            else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))
+            {
+                ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
+            }
 
-                GUI.Label(new Rect(10, 65, 180, 30), AltUI.UIAlphaText + GUI.tooltip + "</color>");
+            GUI.Label(new Rect(10, 65, 180, 30), GUI.tooltip);
+        }
+        private static void GUILoneTech()
+        {
+            GUI.Label(new Rect(10, 25, 180, 30), "<b>" + teamName + "</b>");//¥¥
+            GUI.Label(new Rect(10, 45, 180, 30), (techCost > 0 ? "<b>Bribe: " + techCost + "</b>" : "<b>Free tech?</b>"));
+            GUIContent bribeButton; ;
+            bool afford = ManPlayer.inst.CanAfford(techCost);
+            if (afford)
+            {
+                bribeButton = new GUIContent(randomAllow, "Bribe the Tech");
+                if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AltUI.ButtonGreen))
+                {
+                    ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Buy);
+                    ManPlayer.inst.PayMoney(techCost);
+                    lastTank.SetTeam(ManPlayer.inst.PlayerTeam);
+                    CloseSubMenuClickable();
+                }
             }
             else
             {
-                GUI.Label(new Rect(10, 25, 180, 30), AltUI.UIAlphaText + "<b>" + teamName + "</b></color>");//¥¥
-                GUI.Label(new Rect(10, 45, 180, 30), (techCost > 0 ? AltUI.UIAlphaText + "<b>Bribe: " + techCost + "</b></color>" : AltUI.UIAlphaText + "<b>Free tech?</b></color>"));
-                GUIContent bribeButton; ;
-                bool afford = ManPlayer.inst.CanAfford(techCost);
-                if (afford)
-                {
-                    bribeButton = new GUIContent(randomAllow, "Bribe the Tech");
-                    if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AltUI.ButtonGreen))
-                    {
-                        ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Buy);
-                        ManPlayer.inst.PayMoney(techCost);
-                        lastTank.SetTeam(ManPlayer.inst.PlayerTeam);
-                        CloseSubMenuClickable();
-                    }
-                }
-                else
-                {
-                    bribeButton = new GUIContent(randomAllow, "Not enough BB");
-                    if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AltUI.ButtonGrey))
-                    {
-                        ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
-                    }
-                }
-                if (Singleton.playerTank)
-                {
-                    if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Provoke"), AltUI.ButtonRed))
-                    {
-                        var mind = lastTank.GetComponent<EnemyMind>();
-                        if (mind && mind.CommanderSmarts <= EnemySmarts.Meh)
-                        {
-                            ManSFX.inst.PlayUISFX(ManSFX.UISfxType.LockOn);
-                            mind.AIControl.lastEnemy = Singleton.playerTank.visible;
-                            mind.Provoked = AIGlobals.ProvokeTime;
-                        }
-                        else
-                            ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
-                    }
-                }
-                else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))
+                bribeButton = new GUIContent(randomAllow, "Not enough BB");
+                if (GUI.Button(new Rect(10, 90, 180, 30), bribeButton, AltUI.ButtonGrey))
                 {
                     ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                 }
-
-                GUI.Label(new Rect(10, 65, 180, 30), AltUI.UIAlphaText + GUI.tooltip + "</color>");
             }
-            GUI.DragWindow();
-        }
+            if (Singleton.playerTank)
+            {
+                if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "Provoke"), AltUI.ButtonRed))
+                {
+                    var mind = lastTank.GetComponent<EnemyMind>();
+                    if (mind && mind.CommanderSmarts <= EnemySmarts.Meh)
+                    {
+                        ManSFX.inst.PlayUISFX(ManSFX.UISfxType.LockOn);
+                        mind.AIControl.lastEnemy = Singleton.playerTank.visible;
+                        mind.AIControl.Provoked = AIGlobals.ProvokeTime;
+                    }
+                    else
+                        ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
+                }
+            }
+            else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))
+            {
+                ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
+            }
 
+            GUI.Label(new Rect(10, 65, 180, 30), GUI.tooltip);
+        }
 
         public static void LaunchSubMenuClickable()
         {
@@ -330,7 +362,7 @@ namespace TAC_AI.AI
                 float xMenuMax = HotWindow.x + HotWindow.width;
                 float yMenuMin = HotWindow.y;
                 float yMenuMax = HotWindow.y + HotWindow.height;
-                //Debug.Log(Mous + " | " + xMenuMin + " | " + xMenuMax + " | " + yMenuMin + " | " + yMenuMax);
+                //DebugTAC_AI.Log(Mous + " | " + xMenuMin + " | " + xMenuMax + " | " + yMenuMin + " | " + yMenuMax);
                 if (Mous.x > xMenuMin && Mous.x < xMenuMax && Mous.y > yMenuMin && Mous.y < yMenuMax)
                 {
                     return true;

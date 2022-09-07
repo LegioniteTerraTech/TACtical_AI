@@ -97,7 +97,7 @@ namespace TAC_AI.AI.AlliedOperations
                 */
             }
 
-            //Debug.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
+            //DebugTAC_AI.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
             if (!ManNetwork.IsNetworked && (thisInst.CollectedTarget || thisInst.ActionPause > 10))
             {   // BRANCH - Return to base
                 thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, thisInst.DetectionRange + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);

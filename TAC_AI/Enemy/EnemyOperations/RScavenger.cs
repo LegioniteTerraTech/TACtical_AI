@@ -112,7 +112,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 */
             }
 
-            //Debug.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
+            //DebugTAC_AI.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
             if (thisInst.CollectedTarget || thisInst.ActionPause > 10)
             {   // BRANCH - Return to base
                 thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);

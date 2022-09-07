@@ -660,7 +660,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: SpawnSeaBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log("TACtical_AI: SpawnSeaBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -695,7 +695,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                Debug.Log("TACtical_AI: SpawnAirBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log("TACtical_AI: SpawnAirBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -1163,7 +1163,7 @@ namespace TAC_AI.Templates
             try
             {   // Filters
                 List<BaseTemplate> canidates;
-                Debug.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.ExternalEnemyTechsAll.FindAll
@@ -1245,7 +1245,7 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
-                Debug.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<BaseTemplate> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -1408,8 +1408,8 @@ namespace TAC_AI.Templates
             {
                 if (CustomTechs > 0)
                 {
-                    //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Local Techs spawn possible: true");
-                    //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                    //DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Forced Local Techs spawn possible: true");
+                    //DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
                     StringBuilder SB = new StringBuilder();
                     foreach (int val in validIndexes)
                     {
@@ -1419,7 +1419,7 @@ namespace TAC_AI.Templates
                     return true;
                 }
                 //else
-                //    Debug.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: false");
+                //    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: false");
             }
             else
             {
@@ -1427,8 +1427,8 @@ namespace TAC_AI.Templates
                 {
                     if (CustomTechs > 0)
                     {
-                        //Debug.Log("TACtical_AI: ShouldUseCustomTechs - There's only Local Techs available");
-                        //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                        //DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - There's only Local Techs available");
+                        //DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
                         StringBuilder SB = new StringBuilder();
                         foreach (int val in validIndexes)
                         {
@@ -1438,11 +1438,11 @@ namespace TAC_AI.Templates
                         return true;
                     }
                     //else
-                    //    Debug.Log("TACtical_AI: ShouldUseCustomTechs - No Techs found");
+                    //    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - No Techs found");
                     return false;
                 }
                 float RAND = UnityEngine.Random.Range(0, CombinedVal);
-                //Debug.Log("TACtical_AI: ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
+                //DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
                 if (RAND > PrefabTechs)
                 {
                     return true;
@@ -2047,7 +2047,7 @@ namespace TAC_AI.Templates
 
                 data.m_BlockSpecs.Add(spec);
             }
-            //Debug.Log("TACtical_AI: ExportRawTechToTechData - Exported " + name);
+            //DebugTAC_AI.Log("TACtical_AI: ExportRawTechToTechData - Exported " + name);
 
             blockIDs = BTs.ToArray();
             return data;
@@ -2115,7 +2115,7 @@ namespace TAC_AI.Templates
                         if (!ManDLC.inst.IsSkinLocked(skin, FST))
                         {
                             num2.Add(skin);
-                            //Debug.Log("SKINSSSSSS " + ManCustomSkins.inst.GetSkinNameForSnapshot(FST, skin));
+                            //DebugTAC_AI.Log("SKINSSSSSS " + ManCustomSkins.inst.GetSkinNameForSnapshot(FST, skin));
                         }
                     }
                     valid.Add(faction, num2);
@@ -2377,7 +2377,7 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
-                Debug.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -2444,7 +2444,7 @@ namespace TAC_AI.Templates
                 }
                 // finally, remove those which are N/A
 
-                //Debug.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
+                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
                 if (canidates.Count == 0)
                     return FallbackHandler(faction);
 
@@ -2466,7 +2466,7 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
-                Debug.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -2534,7 +2534,7 @@ namespace TAC_AI.Templates
                 }
                 // finally, remove those which are N/A
 
-                //Debug.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
+                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
                 if (canidates.Count == 0)
                     return FallbackHandler(faction);
 

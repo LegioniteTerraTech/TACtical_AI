@@ -38,12 +38,12 @@ namespace TAC_AI
             {
                 if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Blocks))
                 {
-                    //Debug.Log("Block " + name + " is a Block Receiver");
+                    //DebugTAC_AI.Log("Block " + name + " is a Block Receiver");
                     AIECore.BlockHandlers.Add(this);
                 }
                 if (holder.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Chunks))
                 {
-                    //Debug.Log("Block " + name + " is a Chunk Receiver");
+                    //DebugTAC_AI.Log("Block " + name + " is a Chunk Receiver");
                     AIECore.Depots.Add(this);
                 }
             }

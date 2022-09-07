@@ -306,11 +306,11 @@ namespace TAC_AI.AI.Movement
                 }
                 bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 closestTank = AlliesAlt.ElementAt(bestStep);
-                //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
             {
-                //Debug.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+                //DebugTAC_AI.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
             }
             return closestTank;
         }
@@ -339,11 +339,11 @@ namespace TAC_AI.AI.Movement
                 }
                 bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 closestTank = AlliesAlt.ElementAt(bestStep);
-                //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
             {
-                //Debug.Log("TACtical_AI: Crash on ClosestAllyPrecisionProcess " + e);
+                //DebugTAC_AI.Log("TACtical_AI: Crash on ClosestAllyPrecisionProcess " + e);
             }
             return closestTank;
         }
@@ -382,12 +382,12 @@ namespace TAC_AI.AI.Movement
                 closestTank = AlliesAlt.ElementAt(bestStep);
                 auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
             catch //(Exception e)
             {
-                //Debug.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
+                //DebugTAC_AI.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
             }
             DebugTAC_AI.Log("TACtical_AI: SecondClosestAlly - COULD NOT FETCH TANK");
             secondTank = null;
@@ -429,12 +429,12 @@ namespace TAC_AI.AI.Movement
                 closestTank = AlliesAlt.ElementAt(bestStep);
                 auxBestValue = (AlliesAlt.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
             catch //(Exception e)
             {
-                //Debug.Log("TACtical_AI: Crash on SecondClosestAllyPrecisionProcess " + e);
+                //DebugTAC_AI.Log("TACtical_AI: Crash on SecondClosestAllyPrecisionProcess " + e);
             }
             DebugTAC_AI.Log("TACtical_AI: SecondClosestAllyPrecision - COULD NOT FETCH TANK");
             secondTank = null;
@@ -464,11 +464,11 @@ namespace TAC_AI.AI.Movement
                 }
                 bestValue = (AlliesAlt.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 closestTank = AlliesAlt.ElementAt(bestStep);
-                //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
             {
-                //Debug.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+                //DebugTAC_AI.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
             }
             return closestTank;
         }
@@ -511,7 +511,7 @@ namespace TAC_AI.AI.Movement
             // Grab a vector to-go to set how the other tech should react in accordance to the host
             Vector3 DAdjuster = InputLineVal * 2000;
             Vector3 RAdjuster = controlCopyTarget.m_State.m_InputRotation * -1;
-            //Debug.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
+            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
             // Generate a rough tangent
             Vector3 MoveDirectionUnthrottled = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (1000 * AIHelp.lastTechExtents);
 
@@ -541,7 +541,7 @@ namespace TAC_AI.AI.Movement
 
             // Then we pack it all up nicely in the end
             end = tankToCopy.trans.TransformPoint(posToGo + tankToCopy.blockBounds.center);
-            //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
+            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
             IsMoving = !(InputLineVal + controlCopyTarget.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
             return end;
         }
@@ -586,7 +586,7 @@ namespace TAC_AI.AI.Movement
             // Grab a vector to-go to set how the other tech should react in accordance to the host
             Vector3 DAdjuster = InputLineVal * 2000;
             Vector3 RAdjuster = controlCopyTarget.m_State.m_InputRotation * -1;
-            //Debug.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
+            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Host Steering " + controlOverload.m_State.m_InputRotation);
             // Generate a rough tangent
             Vector3 MoveDirectionUnthrottled = ((Quaternion.Euler(RAdjuster.x, RAdjuster.y, RAdjuster.z) * offsetTo) - offsetTo).normalized * (1000 * AIHelp.lastTechExtents);
 
@@ -621,7 +621,7 @@ namespace TAC_AI.AI.Movement
 
             // Then we pack it all up nicely in the end
             end = tankToCopy.trans.TransformPoint(posToGo + tankToCopy.blockBounds.center);
-            //Debug.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
+            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Drive Mimic " + (end - centerThis));
             IsMoving = !(InputLineVal + controlCopyTarget.m_State.m_InputRotation).Approximately(Vector3.zero, 0.05f);
             return end;
         }
@@ -846,7 +846,7 @@ namespace TAC_AI.AI.Movement
                     if (vecCount == 25)
                     {
                         //thisInst.Yield = true;
-                        //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is jammed on land!");
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + thisInst.tank.name + " is jammed on land!");
                         if (thisInst.AdviseAway)
                         { // Reverse
                             final = thisInst.tank.boundsCentreWorldNoCheck + ((input - thisInst.tank.boundsCentreWorldNoCheck).normalized * thisInst.DodgeStrength);
@@ -856,7 +856,7 @@ namespace TAC_AI.AI.Movement
                     }
                     else if (vecCount > 0)
                     {
-                        //Debug.Log("TACtical_AI: Tech " + thisInst.tank.name + " is trying to avoid terrain");
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + thisInst.tank.name + " is trying to avoid terrain");
                         if (thisInst.AdviseAway)
                         { // Reverse
                             final = thisInst.tank.boundsCentreWorldNoCheck - ((tank.boundsCentreWorldNoCheck - (posAll / vecCount)).normalized * thisInst.DodgeStrength);
@@ -921,7 +921,7 @@ namespace TAC_AI.AI.Movement
                 }
                 if (highestHeight > KickStart.WaterHeight)
                 {
-                    //Debug.Log("TACtical_AI: highest terrain  of depth " + highestHeight + " found at " + posBest);
+                    //DebugTAC_AI.Log("TACtical_AI: highest terrain  of depth " + highestHeight + " found at " + posBest);
                     if (thisInst.AdviseAway)
                     { // Reverse
                         final = thisInst.tank.boundsCentreWorldNoCheck + (thisInst.tank.boundsCentreWorldNoCheck - posBest);

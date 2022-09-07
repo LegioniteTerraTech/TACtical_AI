@@ -94,10 +94,10 @@ namespace TAC_AI.AI.AlliedOperations
                 if (dist > range * 2)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Oh Crafty they are too far!");
-                    thisInst.Urgency += KickStart.AIClockPeriod / 2;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 2f;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1f;
-                    //Debug.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
+                    //DebugTAC_AI.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
                     if (thisInst.UrgencyOverload > 0)
                         thisInst.UrgencyOverload--;
                 }
@@ -116,7 +116,7 @@ namespace TAC_AI.AI.AlliedOperations
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
                     thisInst.AvoidStuff = false;
                     thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
-                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 2)
                 {
@@ -126,7 +126,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1;
                     thisInst.FeatherBoost = true;
-                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 1 && thisInst.recentSpeed < 10)
                 {
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.FIRE_NOW = true;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 0.5f;
-                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5;
+                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 //OBSTRUCTION MANAGEMENT
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
@@ -147,7 +147,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     // Moving a bit too slow for what we can do
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");
-                    thisInst.Urgency += KickStart.AIClockPeriod / 5;
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5f;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1;
                 }

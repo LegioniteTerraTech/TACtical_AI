@@ -185,6 +185,13 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2758915184\ConfigHelper.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="WaterMod">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2757919307\WaterMod.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="TerraTechETCUtil">
+      <HintPath>..\..\TTETCUtil\TerraTechETCUtil\TerraTechETCUtil\obj\Steam\TerraTechETCUtil.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup Condition="'$(Configuration)'=='Release'OR'$(Configuration)'=='Debug'">
     <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
@@ -230,6 +237,9 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\Water Mod\WaterMod.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="TerraTechETCUtil">
+      <HintPath>..\..\TTETCUtil\TerraTechETCUtil\TerraTechETCUtil\obj\Release\TerraTechETCUtil.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AIStates.cs" />
@@ -262,8 +272,6 @@
     <Compile Include="AI\Movement\AICores\IMovementAICore.cs" />
     <Compile Include="AI\Movement\AICores\VehicleAICore.cs" />
     <Compile Include="AI\Movement\AICores\VtolAICore.cs" />
-    <Compile Include="AltUI.cs" />
-    <Compile Include="BlockIndexer.cs" />
     <Compile Include="CursorChanger.cs" />
     <Compile Include="CustomAttract.cs" />
     <Compile Include="DebugTAC_AI.cs" />

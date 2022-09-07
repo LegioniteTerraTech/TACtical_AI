@@ -294,7 +294,7 @@ namespace TAC_AI
             {
                 if (KickStart.EnableBetterAI)
                 {
-                    //Debug.Log("TACtical_AI: AIEnhanced enabled");
+                    //DebugTAC_AI.Log("TACtical_AI: AIEnhanced enabled");
                     try
                     {
                         var tank = __instance.transform.root.GetComponent<Tank>();
@@ -384,7 +384,7 @@ namespace TAC_AI
                                         }
                                         if (RawTechExporter.aiIcons.TryGetValue(KickStart.GetLegacy(lastTech.DediAI, lastTech.DriverType), out sprite))
                                         {
-                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                            //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                             cache.sprite = sprite;
                                         }
                                     }
@@ -408,14 +408,14 @@ namespace TAC_AI
                                                     case EnemyAttitude.Homing:
                                                         if (RawTechExporter.aiIcons.TryGetValue(AIType.Assault, out sprite))
                                                         {
-                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                             cache.sprite = sprite;
                                                         }
                                                         break;
                                                     case EnemyAttitude.Junker:
                                                         if (RawTechExporter.aiIcons.TryGetValue(AIType.Scrapper, out sprite))
                                                         {
-                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                             cache.sprite = sprite;
                                                             icon.SetValue(Panel, cache);
                                                         }
@@ -423,7 +423,7 @@ namespace TAC_AI
                                                     case EnemyAttitude.Miner:
                                                         if (RawTechExporter.aiIcons.TryGetValue(AIType.Prospector, out sprite))
                                                         {
-                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                             cache.sprite = sprite;
                                                         }
                                                         break;
@@ -431,7 +431,7 @@ namespace TAC_AI
                                                     case EnemyAttitude.Boss:
                                                         if (RawTechExporter.aiIcons.TryGetValue(AIType.Aegis, out sprite))
                                                         {
-                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                             cache.sprite = sprite;
                                                         }
                                                         break;
@@ -442,28 +442,28 @@ namespace TAC_AI
                                                             case EnemyHandling.Chopper:
                                                                 if (RawTechExporter.aiIcons.TryGetValue(AIType.Aviator, out sprite))
                                                                 {
-                                                                    //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                                    //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                                     cache.sprite = sprite;
                                                                 }
                                                                 break;
                                                             case EnemyHandling.Naval:
                                                                 if (RawTechExporter.aiIcons.TryGetValue(AIType.Buccaneer, out sprite))
                                                                 {
-                                                                    //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                                    //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                                     cache.sprite = sprite;
                                                                 }
                                                                 break;
                                                             case EnemyHandling.Starship:
                                                                 if (RawTechExporter.aiIcons.TryGetValue(AIType.Astrotech, out sprite))
                                                                 {
-                                                                    //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                                    //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                                     cache.sprite = sprite;
                                                                 }
                                                                 break;
                                                             default:
                                                                 if (RawTechExporter.aiIconsEnemy.TryGetValue(mind.CommanderSmarts, out sprite))
                                                                 {
-                                                                    //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                                    //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                                     cache.sprite = sprite;
                                                                 }
                                                                 break;
@@ -479,14 +479,14 @@ namespace TAC_AI
                                                     case EnemyAttitude.Boss:
                                                         if (RawTechExporter.aiIcons.TryGetValue(AIType.Aegis, out sprite))
                                                         {
-                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                             cache.sprite = sprite;
                                                         }
                                                         break;
                                                     default:
                                                         if (RawTechExporter.aiIconsEnemy.TryGetValue(mind.CommanderSmarts, out sprite))
                                                         {
-                                                            //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                                            //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                                             cache.sprite = sprite;
                                                         }
                                                         break;
@@ -500,7 +500,7 @@ namespace TAC_AI
                             }
                         }
                         //Panel.Format(Singleton.Manager<ManUI>.inst.GetAICategoryIcon(AICategories.AIHostile), new Color(0.8f, 0.8f, 0.8f, 0.8f), Singleton.Manager<ManUI>.inst.GetAICategoryIcon(AICategories.AIHostile), new Color(0.8f, 0.8f, 0.8f, 0.8f), TechWeapon.ManualTargetingReticuleState.NotTargeted);
-                        //Debug.Log("TACtical_AI: SendUpdateAIDisp - sent!");
+                        //DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp - sent!");
                         //return false;
                     }
                     catch
@@ -524,14 +524,14 @@ namespace TAC_AI
                     try
                     {
 
-                        //Debug.Log("TACtical_AI: UpdateAIDisplay - Triggered!");
+                        //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Triggered!");
                         if (RawTechExporter.lastTech.IsNotNull())
                         {
                             if (RawTechExporter.lastTech.AIState == 1)
                             {
                                 if (RawTechExporter.aiIcons.TryGetValue(RawTechExporter.lastTech.DediAI, out Sprite sprite))
                                 {
-                                    //Debug.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                    //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
                                     iconSprite = sprite;
                                     return false;
                                 }
@@ -542,11 +542,11 @@ namespace TAC_AI
                         //cache.sprite = Singleton.Manager<ManUI>.inst.GetAICategoryIcon(AICategories.AIHostile);
                         //icon.SetValue(__instance, cache);
 
-                        //Debug.Log("TACtical_AI: SendUpdateAIDisp2 - Caught Update!");
+                        //DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp2 - Caught Update!");
                     }
                     catch
                     {
-                        Debug.Log("TACtical_AI: SendUpdateAIDisp - failiure on send!");
+                        DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp - failiure on send!");
                     }
                 }
                 return true;
@@ -560,14 +560,14 @@ namespace TAC_AI
             static bool fired = false;
             private static bool Prefix(ManUI __instance, ref Sprite __result)
             {
-                //Debug.Log("TACtical_AI: UpdateAIDisplay - Trigger");
+                //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Trigger");
                 if (KickStart.EnableBetterAI)
                 {
                     try
                     {
                         if (!fired)
                         {
-                            Debug.Log("TACtical_AI: UpdateAIDisplay - snapping sprite!"); 
+                            DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - snapping sprite!"); 
                             Sprite image = __instance.m_SpriteFetcher.GetAICategoryIcon(AICategories.AIHostile);
                             RenderTexture grabTex = RenderTexture.GetTemporary(
                                 image.texture.width,
@@ -583,7 +583,7 @@ namespace TAC_AI
                             Texture2D generated = new Texture2D((int)image.rect.width, (int)image.rect.height);
                             generated.ReadPixels(new Rect(0, 0, (int)grabTex.width, (int)grabTex.height), 0, 0);
 
-                            Debug.Log("TACtical_AI: UpdateModeDisplay - deployed!");
+                            DebugTAC_AI.Log("TACtical_AI: UpdateModeDisplay - deployed!");
                             FileUtils.SaveTexture(generated, RawTechExporter.BaseDirectory + up + "AI2.png");
                             fired = true;
                         }
@@ -591,7 +591,7 @@ namespace TAC_AI
                     }
                     catch
                     {
-                        Debug.Log("TACtical_AI: UpdateModeDisplay - failiure on update!");
+                        DebugTAC_AI.Log("TACtical_AI: UpdateModeDisplay - failiure on update!");
                     }
                 }
                 return true;
@@ -737,7 +737,7 @@ namespace TAC_AI
         {
             private static void Postfix(ManTechs __instance, ref Tank t)
             {
-                //Debug.Log("TACtical_AI: Patched Tank OnPool(TankAIHelper & TimeTank)");
+                //DebugTAC_AI.Log("TACtical_AI: Patched Tank OnPool(TankAIHelper & TimeTank)");
                 var ModuleCheck = t.GetComponent<AIECore.TankAIHelper>();
                 if (ModuleCheck.IsNull())
                 {
@@ -755,7 +755,7 @@ namespace TAC_AI
 
             private static void Postfix(TankBeam __instance)
             {
-                //Debug.Log("TACtical_AI: Patched TankBeam Update(TankAIHelper)");
+                //DebugTAC_AI.Log("TACtical_AI: Patched TankBeam Update(TankAIHelper)");
                 if (__instance.IsActive && !ManNetwork.IsNetworked && !ManGameMode.inst.IsCurrent<ModeSumo>())
                 {
                     var helper = __instance.GetComponent<AIECore.TankAIHelper>();
@@ -795,129 +795,7 @@ namespace TAC_AI
                     var ModuleAdd = __instance.gameObject.AddComponent<ModuleAIExtension>();
                     ModuleAdd.OnPool();
                     // Now retrofit AIs
-                    try
-                    {
-                        var name = __instance.gameObject.name;
-                        //Debug.Log("TACtical_AI: Init new AI for " + name);
-                        if (name == "GSO_AI_Module_Guard_111")
-                        {
-                            ModuleAdd.Aegis = true;
-                            ModuleAdd.Prospector = true;
-                            ModuleAdd.Buccaneer = true;
-                            ModuleAdd.AidAI = true;
-                            //ModuleAdd.SelfRepairAI = true; // testing
-                        }
-                        else if (name == "GSO_AIAnchor_121")
-                        {
-                            ModuleAdd.Aegis = true;
-                            ModuleAdd.AidAI = true;
-                            ModuleAdd.MaxCombatRange = 150;
-                        }
-                        else if (name == "GC_AI_Module_Guard_222")
-                        {
-                            ModuleAdd.AutoAnchor = true; // temp testing
-                            ModuleAdd.Prospector = true;
-                            ModuleAdd.Energizer = true;
-                            ModuleAdd.Scrapper = true;  // Temp Testing
-                            ModuleAdd.SelfRepairAI = true; // EXTREMELY POWERFUL
-                            ModuleAdd.MTForAll = true;
-                            ModuleAdd.MeleePreferred = true;
-                        }
-                        else if (name == "VEN_AI_Module_Guard_111")
-                        {
-                            ModuleAdd.Aviator = true;
-                            ModuleAdd.Buccaneer = true;
-                            ModuleAdd.SidePreferred = true;
-                            ModuleAdd.MaxCombatRange = 300;
-                        }
-                        else if (name == "HE_AI_Module_Guard_112")
-                        {
-                            ModuleAdd.Assault = true;
-                            ModuleAdd.Aviator = true;
-                            ModuleAdd.Astrotech = true;
-                            ModuleAdd.AdvancedAI = true;
-                            ModuleAdd.MinCombatRange = 50;
-                            ModuleAdd.MaxCombatRange = 200;
-                        }
-                        else if (name == "HE_AI_Turret_111")
-                        {
-                            ModuleAdd.Assault = true;
-                            ModuleAdd.AdvancedAI = true;
-                            ModuleAdd.MinCombatRange = 50;
-                            ModuleAdd.MaxCombatRange = 225;
-                        }
-                        else if (name == "BF_AI_Module_Guard_212")
-                        {
-                            ModuleAdd.Astrotech = true;
-                            ModuleAdd.AdvAvoidence = true;
-                            ModuleAdd.SelfRepairAI = true; // EXTREMELY POWERFUL
-                            ModuleAdd.InventoryUser = true;
-                            ModuleAdd.MinCombatRange = 60;
-                            ModuleAdd.MaxCombatRange = 250;
-                        }
-                        /*
-                        else if (name == "RR_AI_Module_Guard_212")
-                        {
-                            ModuleAdd.Energizer = true;
-                            ModuleAdd.AdvAvoidence = true;
-                            ModuleAdd.MinCombatRange = 160;
-                            ModuleAdd.MaxCombatRange = 220;
-                        }
-                        else if (name == "SJ_AI_Module_Guard_122")
-                        {
-                            ModuleAdd.Prospector = true;
-                            ModuleAdd.Scrapper = true;
-                            ModuleAdd.MTForAll = true;
-                            ModuleAdd.MinCombatRange = 60;
-                            ModuleAdd.MaxCombatRange = 120;
-                        }
-                        else if (name == "TSN_AI_Module_Guard_312")
-                        {
-                            ModuleAdd.AutoAnchor = true;
-                            ModuleAdd.Buccaneer = true;
-                            ModuleAdd.AdvAvoidence = true;
-                            ModuleAdd.MinCombatRange = 150;
-                            ModuleAdd.MaxCombatRange = 250;
-                        }
-                        else if (name == "LEG_AI_Module_Guard_112")
-                        {   //Incase Legion happens and the AI needs help lol
-                            ModuleAdd.AutoAnchor = true;
-                            ModuleAdd.Assault = true;
-                            ModuleAdd.Aegis = true;
-                            ModuleAdd.Prospector = true;
-                            ModuleAdd.Scrapper = true;
-                            ModuleAdd.Energizer = true;
-                            ModuleAdd.Assault = true;
-                            ModuleAdd.Aviator = true;
-                            ModuleAdd.Buccaneer = true;
-                            ModuleAdd.Astrotech = true;
-                            ModuleAdd.AidAI = true;
-                            ModuleAdd.AdvancedAI = true;
-                            ModuleAdd.AdvAvoidence = true;
-                            ModuleAdd.SidePreferred = true;
-                            ModuleAdd.MeleePreferred = true;
-                            ModuleAdd.MaxCombatRange = 200;
-                        }
-                        else if (name == "TAC_AI_Module_Plex_323")
-                        {
-                            ModuleAdd.AutoAnchor = true;
-                            ModuleAdd.Aviator = true;
-                            ModuleAdd.Buccaneer = true;
-                            ModuleAdd.Astrotech = true;
-                            ModuleAdd.AidAI = true;
-                            ModuleAdd.AnimeAI = true;
-                            ModuleAdd.AdvancedAI = true;
-                            ModuleAdd.AdvAvoidence = true;
-                            ModuleAdd.MinCombatRange = 100;
-                            ModuleAdd.MaxCombatRange = 400;
-                        }
-                        */
-                    }
-                    catch (Exception e)
-                    {
-                        DebugTAC_AI.Log("TACtical_AI: CRASH ON HANDLING EXISTING AIS");
-                        DebugTAC_AI.Log(e);
-                    }
+                    ModuleAdd.AlterExisting();
                 }
             }
         }
@@ -1047,11 +925,11 @@ namespace TAC_AI
             {
                 try
                 { 
-                //Debug.Log("TACtical_AI: Added resource to list (InitState)");
+                //DebugTAC_AI.Log("TACtical_AI: Added resource to list (InitState)");
                 if (!AIECore.Minables.Contains(__instance.visible))
                     AIECore.Minables.Add(__instance.visible);
                     //else
-                    //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (InitState)");
+                    //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (InitState)");
                 }
                 catch { } // null call
             }
@@ -1065,7 +943,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    //Debug.Log("TACtical_AI: Added resource to list (Restore)");
+                    //DebugTAC_AI.Log("TACtical_AI: Added resource to list (Restore)");
                     if (!state.removedFromWorld)
                     {
                         if (!AIECore.Minables.Contains(__instance.visible))
@@ -1077,7 +955,7 @@ namespace TAC_AI
                             AIECore.Minables.Remove(__instance.visible);
                     }
                     //else
-                    //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (Restore)");
+                    //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (Restore)");
                 }
                 catch { } // null call
             }
@@ -1092,7 +970,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    //Debug.Log("TACtical_AI: Removed resource from list (Die)");
+                    //DebugTAC_AI.Log("TACtical_AI: Removed resource from list (Die)");
                     if (AI.AIECore.Minables.Contains(__instance.visible))
                     {
                         AI.AIECore.Minables.Remove(__instance.visible);
@@ -1110,13 +988,13 @@ namespace TAC_AI
         {
             private static void Prefix(ResourceDispenser __instance)
             {
-                //Debug.Log("TACtical_AI: Removed resource from list (OnRecycle)");
+                //DebugTAC_AI.Log("TACtical_AI: Removed resource from list (OnRecycle)");
                 if (AIECore.Minables.Contains(__instance.visible))
                 {
                     AIECore.Minables.Remove(__instance.visible);
                 }
                 //else
-                //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (OnRecycle)");
+                //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (OnRecycle)");
 
             }
         }
@@ -1129,13 +1007,13 @@ namespace TAC_AI
             {
                 try
                 { 
-                //Debug.Log("TACtical_AI: Removed resource from list (Deactivate)");
+                //DebugTAC_AI.Log("TACtical_AI: Removed resource from list (Deactivate)");
                 if (AIECore.Minables.Contains(__instance.visible))
                 {
                     AIECore.Minables.Remove(__instance.visible);
                 }
                     //else
-                    //    Debug.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Deactivate)");
+                    //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Deactivate)");
 
                 }
                 catch { } // null call
@@ -1369,7 +1247,7 @@ namespace TAC_AI
         {
             private static void Prefix(UIRadialTechControlMenu __instance, ref UIRadialTechControlMenu.PlayerCommands command)
             {
-                //Debug.Log("TACtical_AI: click menu FIRED!!!  input = " + command.ToString() + " | num = " + (int)command);
+                //DebugTAC_AI.Log("TACtical_AI: click menu FIRED!!!  input = " + command.ToString() + " | num = " + (int)command);
                 if ((int)command == 3)
                 {
                     if (GUIAIManager.IsTankNull())
@@ -1385,8 +1263,8 @@ namespace TAC_AI
                     GUIAIManager.LaunchSubMenuClickable();
                 }
 
-                //Debug.Log("TACtical_AI: click menu " + __instance.gameObject.name);
-                //Debug.Log("TACtical_AI: click menu host gameobject " + Nuterra.NativeOptions.UIUtilities.GetComponentTree(__instance.gameObject, __instance.gameObject.name));
+                //DebugTAC_AI.Log("TACtical_AI: click menu " + __instance.gameObject.name);
+                //DebugTAC_AI.Log("TACtical_AI: click menu host gameobject " + Nuterra.NativeOptions.UIUtilities.GetComponentTree(__instance.gameObject, __instance.gameObject.name));
             }
         }
 
@@ -1676,7 +1554,7 @@ namespace TAC_AI
                     if ((bool)__instance.GetComponent<ReverseCache>())
                     {
                         __instance.GetComponent<ReverseCache>().LoadNow();
-                        //Debug.Log("TACtical_AI: Destroyed " + __instance.name);
+                        //DebugTAC_AI.Log("TACtical_AI: Destroyed " + __instance.name);
                     }
                 }
                 catch { }

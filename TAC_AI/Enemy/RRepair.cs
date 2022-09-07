@@ -24,7 +24,7 @@ namespace TAC_AI.AI.Enemy
             }
             int savedBCount = mind.TechMemor.ReturnContents().Count;
             int cBCount = cBlocks.Count;
-            //Debug.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
+            //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount < cBCount)
             {
                 DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ":  New blocks were added without " +
@@ -44,14 +44,14 @@ namespace TAC_AI.AI.Enemy
         private static bool EnemyRepairLerp(Tank tank, EnemyMind mind, ref List<TankBlock> fBlocks, ref List<BlockTypes> typesMissing)
         {
             bool hardest = KickStart.EnemyBlockDropChance == 0;
-            //Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
+            //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
 
             if (mind.TechMemor.TryAttachExistingBlockFromListInst(ref typesMissing, ref fBlocks, hardest))
                 return true;
 
             if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks || KickStart.AllowEnemiesToStartBases) && mind.CommanderSmarts >= EnemySmarts.Smrt)
             {
-                //Debug.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
+                //DebugTAC_AI.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
                 RawTechLoader.ResetSkinIDSet();
                 if (mind.TechMemor.TrySpawnAndAttachBlockFromListWithSkinInst(ref typesMissing, false, true))
                     return true;
@@ -63,17 +63,17 @@ namespace TAC_AI.AI.Enemy
             if (ManNetwork.IsNetworked)
                 return EnemyRepairLerp(tank, mind, ref fBlocks, ref typesMissing);
             bool hardest = KickStart.EnemyBlockDropChance == 0;
-            //Debug.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
+            //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
 
             //int attachAttempts = fBlocks.Count();
-            //Debug.Log("TACtical AI: EnemyRepairLerp - Found " + attachAttempts + " loose blocks to use");
+            //DebugTAC_AI.Log("TACtical AI: EnemyRepairLerp - Found " + attachAttempts + " loose blocks to use");
 
             if (mind.TechMemor.TryAttachExistingBlockFromList(ref typesMissing, ref fBlocks, hardest))
                 return true;
 
             if ((KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks || KickStart.AllowEnemiesToStartBases) && mind.CommanderSmarts >= EnemySmarts.Smrt)
             {
-                //Debug.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
+                //DebugTAC_AI.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
                 RawTechLoader.ResetSkinIDSet();
                 if (mind.TechMemor.TrySpawnAndAttachBlockFromListWithSkin(ref typesMissing, false, true))
                     return true;
@@ -121,7 +121,7 @@ namespace TAC_AI.AI.Enemy
         public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
         {
             /*
-            Debug.Log("TACtical_AI: Enemy AI " + tank.name + ": - EnemyRepairStepper "
+            DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ": - EnemyRepairStepper "
                 + mind.TechMemor.blockIntegrityDirty + " | " + thisInst.PendingSystemsCheck);
             */
             if (!(bool)mind.TechMemor)
@@ -145,7 +145,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else if (tank.IsAnchored)
                 {   // Enemy bases must be allowed to build or they will not work!
-                    if (mind.Provoked == 0)
+                    if (mind.AIControl.Provoked == 0)
                     {
                         if (!Super)
                             thisInst.RepairStepperClock = AIERepair.bDelaySafe;
@@ -164,7 +164,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (!KickStart.AllowAISelfRepair)
                         return false;
-                    if (mind.Provoked == 0)
+                    if (mind.AIControl.Provoked == 0)
                     {
                         if (!Super)
                             thisInst.RepairStepperClock = AIERepair.eDelaySafe / Mathf.Max((int)mind.CommanderSmarts + 1, 1);

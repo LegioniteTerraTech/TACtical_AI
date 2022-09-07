@@ -40,7 +40,7 @@ namespace TAC_AI.AI.Movement.AICores
             {   //Fly like plane
                 if (pilot.PerformUTurn > 0)
                 {   //The Immelmann Turn
-                    //Debug.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
+                    //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
                     pilot.MainThrottle = 1;
                     this.pilot.UpdateThrottle(thisInst, thisControl);
                     if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIGlobals.AirStallSpeed - 4)

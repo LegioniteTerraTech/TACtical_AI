@@ -61,7 +61,7 @@ namespace TAC_AI.AI.Enemy
                 lastCloseAlly = ClosestAllyE(tank.boundsCentreWorldNoCheck, out lastAllyDist, Allies);
                 if (lastCloseAlly == null)
                 {
-                    //Debug.Log("TACtical_AI: ALLY IS NULL");
+                    //DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
                     Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 2;
@@ -131,7 +131,7 @@ namespace TAC_AI.AI.Enemy
                 lastCloseAlly = ClosestAllyE(tank.boundsCentreWorldNoCheck, out lastAllyDist, Allies);
                 if (lastCloseAlly == null)
                 {
-                    //Debug.Log("TACtical_AI: ALLY IS NULL");
+                    //DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
                     Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, dodgeLargeStatics);
                     if (obst)
                         return (targetIn + ProccessedVal) / 2;
@@ -209,7 +209,7 @@ namespace TAC_AI.AI.Enemy
                 lastCloseAlly = ClosestAllyE(predictionOffset, out lastAllyDist, Allies);
                 if (lastCloseAlly == null)
                 {
-                    //Debug.Log("TACtical_AI: ALLY IS NULL");
+                    //DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
                     Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, thisInst, out obst, mind.CommanderSmarts >= EnemySmarts.Meh, true);
                     if (obst)
                         return (targetIn + ProccessedVal) / 2;
@@ -258,11 +258,11 @@ namespace TAC_AI.AI.Enemy
                 }
                 bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 closestTank = Allies.ElementAt(bestStep);
-                //Debug.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
             {
-                //Debug.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+                //DebugTAC_AI.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
             }
             return closestTank;
         }
@@ -296,12 +296,12 @@ namespace TAC_AI.AI.Enemy
                 closestTank = Allies.ElementAt(bestStep);
                 auxBestValue = (Allies.ElementAt(auxStep).boundsCentreWorldNoCheck - tankPos).magnitude;
                 bestValue = (Allies.ElementAt(bestStep).boundsCentreWorldNoCheck - tankPos).magnitude;
-                //Debug.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log("TACtical_AI: ClosestAllyProcess " + closestTank.name);
                 return closestTank;
             }
             catch //(Exception e)
             {
-                //Debug.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
+                //DebugTAC_AI.Log("TACtical_AI: Crash on SecondClosestAllyProcess " + e);
             }
             DebugTAC_AI.Log("TACtical_AI: SecondClosestAllyE - COULD NOT FETCH TANK");
             secondTank = null;

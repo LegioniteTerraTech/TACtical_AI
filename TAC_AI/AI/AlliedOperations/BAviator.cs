@@ -88,7 +88,6 @@ namespace TAC_AI.AI.AlliedOperations
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
-                thisInst.Urgency += KickStart.AIClockPeriod / 5;
                 AIControllerAir pilot = (AIControllerAir) thisInst.MovementController;
                 Vector3 foreDirect = tank.rootBlockTrans.InverseTransformDirection(aimTo);
                 /*
@@ -103,11 +102,23 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else
                 {  */ // Normal Dogfighting
-                if ((foreDirect.z > 0.15f && foreDirect.x > -0.5f && foreDirect.x < 0.5f) || thisInst.Urgency >= 30)
-                {
-                    thisInst.AttackEnemy = true;
-                    //thisInst.Urgency = 50;
-                    thisInst.SettleDown();
+                if (thisInst.SideToThreat)
+                {   // Wide forwards attack
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5f;
+                    if ((foreDirect.z > 0.15f && foreDirect.x > -0.5f && foreDirect.x < 0.5f) || thisInst.Urgency >= 30)
+                    {
+                        thisInst.AttackEnemy = true;
+                        thisInst.SettleDown();
+                    }
+                }
+                else
+                {   // Normal Dogfighting
+                    thisInst.Urgency += KickStart.AIClockPeriod / 5f;
+                    if ((foreDirect.z > 0.15f && foreDirect.x > -0.35f && foreDirect.x < 0.35f) || thisInst.Urgency >= 30)
+                    {
+                        thisInst.AttackEnemy = true;
+                        thisInst.SettleDown();
+                    }
                 }
                 //}
             }

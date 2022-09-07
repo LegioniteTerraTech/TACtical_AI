@@ -49,7 +49,7 @@ namespace TAC_AI.World
                 float xMenuMax = HotWindow.x + HotWindow.width;
                 float yMenuMin = HotWindow.y;
                 float yMenuMax = HotWindow.y + HotWindow.height;
-                //Debug.Log(Mous + " | " + xMenuMin + " | " + xMenuMax + " | " + yMenuMin + " | " + yMenuMax);
+                //DebugTAC_AI.Log(Mous + " | " + xMenuMin + " | " + xMenuMax + " | " + yMenuMin + " | " + yMenuMax);
                 if (Mous.x > xMenuMin && Mous.x < xMenuMax && Mous.y > yMenuMin && Mous.y < yMenuMax)
                 {
                     return true;
@@ -206,7 +206,7 @@ namespace TAC_AI.World
                 ManPlayerRTS.inst.SelectTank(temp.unit);
                 ManPlayerRTS.SetSelectHalo(temp.unit, true);
                 //TechUnit.SetRTSState(true);
-                //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
                 ManPlayerRTS.inst.SelectUnitSFX();
             }
             if (MouseIsOverSubMenu())
@@ -352,7 +352,7 @@ namespace TAC_AI.World
                 float xMenuMax = HotWindow.x + bax.x + bax.width;
                 float yMenuMin = HotWindow.y + bax.y;
                 float yMenuMax = HotWindow.y + bax.y + bax.height;
-                //Debug.Log(Mous + " | " + xMenuMin + " | " + xMenuMax + " | " + yMenuMin + " | " + yMenuMax);
+                //DebugTAC_AI.Log(Mous + " | " + xMenuMin + " | " + xMenuMax + " | " + yMenuMin + " | " + yMenuMax);
                 if (Mous.x > xMenuMin && Mous.x < xMenuMax && Mous.y > yMenuMin && Mous.y < yMenuMax)
                 {
                     return true;

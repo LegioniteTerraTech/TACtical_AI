@@ -17,7 +17,7 @@ namespace TAC_AI
         public static void CheckIfUnstable()
         {
             IsUnstable = SKU.DisplayVersion.Count(x => x == '.') > 2;
-            Debug.Log(modName + ": Is " + SKU.DisplayVersion + " an Unstable? - " + IsUnstable);
+            DebugTAC_AI.Log(modName + ": Is " + SKU.DisplayVersion + " an Unstable? - " + IsUnstable);
         }
 
         internal static bool MassPatchAll()
@@ -30,7 +30,7 @@ namespace TAC_AI
             }
             catch (Exception e)
             {
-                Debug.Log(modName + ": FAILED ON ALL PATCH ATTEMPTS - CASCADE FAILIURE " + e);
+                DebugTAC_AI.Log(modName + ": FAILED ON ALL PATCH ATTEMPTS - CASCADE FAILIURE " + e);
             }
             return false;
         }
@@ -44,7 +44,7 @@ namespace TAC_AI
             }
             catch (Exception e)
             {
-                Debug.Log(modName + ": FAILED ON ALL UN-PATCH ATTEMPTS - CASCADE FAILIURE " + e);
+                DebugTAC_AI.Log(modName + ": FAILED ON ALL UN-PATCH ATTEMPTS - CASCADE FAILIURE " + e);
             }
             return false;
         }
@@ -56,7 +56,7 @@ namespace TAC_AI
                 Type[] types = ToPatch.GetNestedTypes(BindingFlags.Static | BindingFlags.NonPublic);
                 if (types == null)
                 {
-                    Debug.Log(modName + ": FAILED TO patch " + ToPatch.Name + " - There's no nested classes?");
+                    DebugTAC_AI.Log(modName + ": FAILED TO patch " + ToPatch.Name + " - There's no nested classes?");
                     return false;
                 }
                 foreach (var typeCase in types)
@@ -70,23 +70,23 @@ namespace TAC_AI
                         }
                         catch
                         {
-                            Debug.Log(modName + ": FAILED TO patch " + typeCase.Name + " of " + ToPatch.Name + " - There must be a declared target type in a field \"target\"");
+                            DebugTAC_AI.Log(modName + ": FAILED TO patch " + typeCase.Name + " of " + ToPatch.Name + " - There must be a declared target type in a field \"target\"");
                             continue;
                         }
                         MethodInfo[] methods = typeCase.GetMethods(BindingFlags.Static | BindingFlags.NonPublic);
                         if (methods == null)
                         {
-                            Debug.Log(modName + ": FAILED TO patch " + typeCase.Name + " of " + ToPatch.Name + " - There are no methods to patch?");
+                            DebugTAC_AI.Log(modName + ": FAILED TO patch " + typeCase.Name + " of " + ToPatch.Name + " - There are no methods to patch?");
                             continue;
                         }
-                        //Debug.Log("MethodCount: " + methods.Length);
+                        //DebugTAC_AI.Log("MethodCount: " + methods.Length);
                         Dictionary<string, MassPatcherTemplate> methodsToPatch = new Dictionary<string, MassPatcherTemplate>();
                         foreach (var item in methods)
                         {
                             int underscore = item.Name.LastIndexOf('_');
                             if (underscore == -1)
                             {
-                                //Debug.Log("No Underscore");
+                                //DebugTAC_AI.Log("No Underscore");
                                 continue;
                             }
                             bool StableOnly = item.Name.EndsWith("1");
@@ -96,14 +96,14 @@ namespace TAC_AI
                             string patchingExecution = nameNoDivider.Substring(underscore + 1, nameNoDivider.Length - 1 - underscore);
                             if (!methodsToPatch.TryGetValue(patcherMethod, out MassPatcherTemplate MPT))
                             {
-                                //Debug.Log("Patching " + patcherMethod);
+                                //DebugTAC_AI.Log("Patching " + patcherMethod);
                                 MPT = new MassPatcherTemplate
                                 {
                                     fullName = item.Name,
                                 };
                                 methodsToPatch.Add(patcherMethod, MPT);
                             }
-                            //Debug.Log("patchingExecution " + patchingExecution);
+                            //DebugTAC_AI.Log("patchingExecution " + patchingExecution);
                             if (UnstableOnly)
                             {   // It's clearly an unstable handler
                                 if (IsUnstable)
@@ -164,28 +164,28 @@ namespace TAC_AI
                                 {
                                     MethodInfo methodCase = AccessTools.Method(patcherType, item.Key);
                                     harmonyInst.Patch(methodCase, item.Value.prefix, item.Value.postfix);
-                                    Debug.Log(modName + ": (" + item.Value.fullName + ") Patched " + item.Key + " of " + ToPatch.Name);//+ "  prefix: " + (item.Value.prefix != null) + "  postfix: " + (item.Value.postfix != null)
+                                    DebugTAC_AI.Log(modName + ": (" + item.Value.fullName + ") Patched " + item.Key + " of " + ToPatch.Name);//+ "  prefix: " + (item.Value.prefix != null) + "  postfix: " + (item.Value.postfix != null)
                                 }
                             }
                             catch (Exception e)
                             {
-                                Debug.Log(modName + ": (" + item.Value.fullName + ") Failure on patch of " + ToPatch.Name + " in type - " + typeCase.Name + " - " + e.Message);
+                                DebugTAC_AI.Log(modName + ": (" + item.Value.fullName + ") Failure on patch of " + ToPatch.Name + " in type - " + typeCase.Name + " - " + e.Message);
                                 return false;
                             }
                         }
                     }
                     catch (Exception e)
                     {
-                        Debug.Log(modName + ": Failed to handle patch of " + ToPatch.Name + " in type - " + typeCase.Name + " - " + e.Message);
+                        DebugTAC_AI.Log(modName + ": Failed to handle patch of " + ToPatch.Name + " in type - " + typeCase.Name + " - " + e.Message);
                         return false;
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.Log(modName + ": FAILED TO patch " + ToPatch.Name + " - " + e);
+                DebugTAC_AI.Log(modName + ": FAILED TO patch " + ToPatch.Name + " - " + e);
             }
-            Debug.Log(modName + ": Mass patched " + ToPatch.Name);
+            DebugTAC_AI.Log(modName + ": Mass patched " + ToPatch.Name);
             return true;
         }
         internal static bool MassUnPatchAllWithin(Type ToPatch)
@@ -195,7 +195,7 @@ namespace TAC_AI
                 Type[] types = ToPatch.GetNestedTypes(BindingFlags.Static | BindingFlags.NonPublic);
                 if (types == null)
                 {
-                    Debug.Log(modName + ": FAILED TO patch " + ToPatch.Name + " - There's no nested classes?");
+                    DebugTAC_AI.Log(modName + ": FAILED TO patch " + ToPatch.Name + " - There's no nested classes?");
                     return false;
                 }
                 foreach (var typeCase in types)
@@ -209,13 +209,13 @@ namespace TAC_AI
                         }
                         catch
                         {
-                            Debug.Log(modName + ": FAILED TO un-patch " + typeCase.Name + " of " + ToPatch.Name + " - There must be a declared target type in a field \"target\"");
+                            DebugTAC_AI.Log(modName + ": FAILED TO un-patch " + typeCase.Name + " of " + ToPatch.Name + " - There must be a declared target type in a field \"target\"");
                             continue;
                         }
                         MethodInfo[] methods = typeCase.GetMethods(BindingFlags.Static | BindingFlags.NonPublic);
                         if (methods == null)
                         {
-                            Debug.Log(modName + ": FAILED TO un-patch " + typeCase.Name + " of " + ToPatch.Name + " - There are no methods to patch?");
+                            DebugTAC_AI.Log(modName + ": FAILED TO un-patch " + typeCase.Name + " of " + ToPatch.Name + " - There are no methods to patch?");
                             continue;
                         }
                         List<string> methodsToUnpatch = new List<string>();
@@ -242,16 +242,16 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        Debug.Log(modName + ": Failed to handle un-patch of " + ToPatch.Name + " in type - " + typeCase.Name + " - " + e.Message);
+                        DebugTAC_AI.Log(modName + ": Failed to handle un-patch of " + ToPatch.Name + " in type - " + typeCase.Name + " - " + e.Message);
                         return false;
                     }
                 }
             }
             catch (Exception e)
             {
-                Debug.Log(modName + ": FAILED TO un-patch " + ToPatch.Name + " - " + e);
+                DebugTAC_AI.Log(modName + ": FAILED TO un-patch " + ToPatch.Name + " - " + e);
             }
-            Debug.Log(modName + ": Mass un-patched " + ToPatch.Name);
+            DebugTAC_AI.Log(modName + ": Mass un-patched " + ToPatch.Name);
             return true;
         }
 

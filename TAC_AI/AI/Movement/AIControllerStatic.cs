@@ -146,7 +146,7 @@ namespace TAC_AI.AI
             AICore = null;
             if (this.IsNotNull())
             {
-                //Debug.Log("TACtical_AI: Removed static AI from " + Tank.name);
+                //DebugTAC_AI.Log("TACtical_AI: Removed static AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }

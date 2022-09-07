@@ -28,7 +28,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.4f)
                 {
-                    //Debug.Log("TACtical_AI: AI " + tank.name + ": Falling back to base! Charge " + (state.storageTotal - state.spareCapacity).ToString());
+                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Falling back to base! Charge " + (state.storageTotal - state.spareCapacity).ToString());
                     thisInst.CollectedTarget = false;
                 }
             }
@@ -36,7 +36,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.95f)
                 {
-                    //Debug.Log("TACtical_AI: AI " + tank.name + ": Charged up and ready to attack!");
+                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Charged up and ready to attack!");
                     thisInst.CollectedTarget = true;
                     thisInst.ActionPause = AIGlobals.ReverseDelay;
                 }
@@ -200,21 +200,21 @@ namespace TAC_AI.AI.AlliedOperations
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
-                thisInst.WeaponDelayClock++;
+                thisInst.WeaponDelayClock += KickStart.AIClockPeriod;
                 if (thisInst.SideToThreat)
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.WeaponDelayClock >= 30)
+                    if (Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) < 0.15f || Mathf.Abs((tank.rootBlockTrans.right - aimTo).magnitude) > -0.15f || thisInst.WeaponDelayClock >= 150)
                     {
                         thisInst.AttackEnemy = true;
-                        thisInst.WeaponDelayClock = 30;
+                        thisInst.WeaponDelayClock = 150;
                     }
                 }
                 else
                 {
-                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.WeaponDelayClock >= 30)
+                    if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.WeaponDelayClock >= 150)
                     {
                         thisInst.AttackEnemy = true;
-                        thisInst.WeaponDelayClock = 30;
+                        thisInst.WeaponDelayClock = 150;
                     }
                 }
             }

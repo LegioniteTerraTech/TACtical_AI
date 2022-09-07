@@ -44,7 +44,7 @@ namespace TAC_AI.AI.Movement.AICores
 
                 return true;
             }
-            //Debug.Log("TACtical_AI: Tech " + tank.name + " plane drive was called");
+            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " plane drive was called");
 
             if (tank.beam.IsActive && thisInst.recentSpeed < 8)
             {   // BEAMING
@@ -55,7 +55,7 @@ namespace TAC_AI.AI.Movement.AICores
                 flat.y = 0;
                 flat = flat.normalized;
                 flat.y = 0.5f;
-                //Debug.Log("TACtical_AI: Tech " + tank.name + " is in build beam");
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is in build beam");
                 AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (flat * 1000));
             }
             else if (tank.grounded || pilot.ForcePitchUp)
@@ -67,7 +67,7 @@ namespace TAC_AI.AI.Movement.AICores
                 flat.y = 0;
                 flat = flat.normalized;
                 flat.y = 1f;
-                //Debug.Log("TACtical_AI: Tech " + tank.name + " is grounded: " + tank.grounded + " | is ForcePitchUp: " + pilot.ForcePitchUp);
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is grounded: " + tank.grounded + " | is ForcePitchUp: " + pilot.ForcePitchUp);
                 AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (flat * 1000));
             }
             else
@@ -85,7 +85,7 @@ namespace TAC_AI.AI.Movement.AICores
                     {   // target is in the air but grounded!?!?
                         pilot.PerformDiveAttack = 0; // abort
 
-                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  Aborting attack! Target too close!");
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aborting attack! Target too close!");
                         // AND PITCH UP NOW
                         pilot.MainThrottle = 1;
                         pilot.PerformUTurn = 0;
@@ -94,7 +94,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (pilot.PerformDiveAttack == 1)
                     {
-                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  Aiming at target!");
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aiming at target!");
                         if (Heading.x > 0.3f && Heading.x < -0.3f && Heading.z > 0)
                             pilot.PerformDiveAttack = 2; 
                         if (pilot.PerformUTurn > 0)
@@ -127,7 +127,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (pilot.PerformDiveAttack == 2)
                     {
-                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  DIVEBOMBING!");
                         if (Helper.GetSpeed() < AIGlobals.AirStallSpeed + 16 || Heading.y > -0.25f)
                             pilot.AdvisedThrottle = 1;
                         else
@@ -164,7 +164,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (dist2D > AIGlobals.GroundAttackStagingDist && Heading.z < 0)
                     {   // Launch teh attack run
-                        //Debug.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Turning back to face target at dist " + dist);
                         pilot.PerformDiveAttack = 1;
                     }
                     else
@@ -172,7 +172,7 @@ namespace TAC_AI.AI.Movement.AICores
                         pilot.PerformUTurn = 0; // hold off on the U-Turn
                         if (Heading.z < 0.35f)
                         {   // Moving away from target
-                            //Debug.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
+                            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Gaining distance for attack run");
                             pilot.MainThrottle = 1;
                             pilot.UpdateThrottle(thisInst, thisControl);
                             Vector3 AwayFlat = (tank.boundsCentreWorldNoCheck - pilot.ProcessedDest).normalized;
@@ -183,7 +183,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {   // Moving to target
-                            //Debug.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
+                            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Closing in on target");
                             if (Helper.GetSpeed() < AIGlobals.AirStallSpeed + 16 || Heading.y > -0.25f)
                                 pilot.AdvisedThrottle = 1;
                             else
@@ -261,7 +261,7 @@ namespace TAC_AI.AI.Movement.AICores
                     {   //Drive to target driving sideways, but obey distance
                         if (VehicleUtils.Turner(thisControl, thisInst, -destDirect, out float turnVal))
                             thisControl.m_Movement.FaceDirection(tank, -destDirect, turnVal);
-                        //Debug.Log("Orbiting away");
+                        //DebugTAC_AI.Log("Orbiting away");
                         thisControl.DriveControl = 1f;
                     }
                     else
@@ -279,13 +279,13 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         if (VehicleUtils.Turner(thisControl, thisInst, -destDirect, out float turnVal))
                             thisControl.m_Movement.FaceDirection(tank, -destDirect, turnVal);
-                        //Debug.Log("Orbiting out " + thisInst.MinimumRad + " | " + destDirect);
+                        //DebugTAC_AI.Log("Orbiting out " + thisInst.MinimumRad + " | " + destDirect);
                     }
                     else if (range > thisInst.MinimumRad + 22)
                     {
                         if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
                             thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
-                        //Debug.Log("Orbiting in " + thisInst.MinimumRad);
+                        //DebugTAC_AI.Log("Orbiting in " + thisInst.MinimumRad);
                     }
                     else  //ORBIT!
                     {
@@ -296,7 +296,7 @@ namespace TAC_AI.AI.Movement.AICores
                             aimDirect = Vector3.Cross(destDirect.normalized, Vector3.up);
                         if (VehicleUtils.Turner(thisControl, thisInst, aimDirect, out float turnVal))
                             thisControl.m_Movement.FaceDirection(tank, aimDirect, turnVal);
-                        //Debug.Log("Orbiting hold " + thisInst.MinimumRad);
+                        //DebugTAC_AI.Log("Orbiting hold " + thisInst.MinimumRad);
                     }
                     thisControl.DriveControl = 1f;
                 }
@@ -304,7 +304,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
                         thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);//Face the music
-                                                                                        //Debug.Log("TACtical_AI: AI " + tank.name + ":  driving to " + thisInst.lastDestination);
+                                                                                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  driving to " + thisInst.lastDestination);
                     if (thisInst.MinimumRad > 0)
                     {
                         //if (thisInst.DriveDir == EDriveType.Perpendicular)
@@ -496,7 +496,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {
-                        //Debug.Log("TACtical_AI: AI IDLE");
+                        //DebugTAC_AI.Log("TACtical_AI: AI IDLE");
                     }
                 }
                 pilot.ProcessedDest = Helper.lastDestination; 
@@ -588,12 +588,19 @@ namespace TAC_AI.AI.Movement.AICores
         {
             pilot.AdvisedThrottle = -1;
             Helper.MinimumRad = AIGlobals.AircraftDestSuccessRadius + Helper.lastTechExtents;
+
+            if (Helper.IsMultiTech)
+            {   //Override and disable most driving abilities
+                pilot.ProcessedDest = MultiTechUtils.HandleMultiTech(Helper, pilot.Tank);
+                return true;
+            }
             bool combat = false;
+
             if (Helper.RTSDestination == Vector3.zero)
                 combat = TryAdjustForCombat(false);  // When set to chase then chase
             else
             {
-                Helper.lastCombatRange = float.MaxValue;
+                Helper.IgnoreEnemyDistance();
                 pilot.TargetGrounded = false;
             }
 
@@ -694,7 +701,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.LowerEngines = false;
                 if ((pilot.ProcessedDest - pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
                 {   //We are at target
-                    //Debug.Log("TACtical_AI: Tech " + pilot.Tank.name + " Arrived at destination");
+                    //DebugTAC_AI.Log("TACtical_AI: Tech " + pilot.Tank.name + " Arrived at destination");
 
                     pilot.ProcessedDest += GetOrbitFlight();
                 }
@@ -779,7 +786,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     targPos = Between(targPos, Helper.theResource.tank.boundsCentreWorldNoCheck);
                 }
-                Helper.lastCombatRange = (targPos - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                Helper.UpdateEnemyDistance(targPos);
                 float driveDyna = Mathf.Clamp((Helper.lastCombatRange - Helper.IdealRangeCombat) / 3f, -1, 1);
 
                 if (Helper.SideToThreat)
@@ -831,7 +838,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
 
-                Helper.lastCombatRange = (Helper.lastEnemy.tank.boundsCentreWorld - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                Helper.UpdateEnemyDistance(Helper.lastEnemy.tank.boundsCentreWorld);
 
                 pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(Helper.lastEnemy.tank.boundsCentreWorldNoCheck, pilot.AerofoilSluggishness + groundOffset);
 
@@ -842,7 +849,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                Helper.lastCombatRange = float.MaxValue;
+                Helper.IgnoreEnemyDistance();
                 pilot.TargetGrounded = false;
             }
             return output;
@@ -861,7 +868,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (!Helper.Retreat && Helper.lastEnemy.IsNotNull() && isCombatAttitude)
             {
                 output = true;
-                Helper.lastCombatRange = (Helper.lastEnemy.tank.boundsCentreWorldNoCheck - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                Helper.UpdateEnemyDistance(Helper.lastEnemy.tank.boundsCentreWorldNoCheck);
                 float driveDyna = Mathf.Clamp((Helper.lastCombatRange - Helper.IdealRangeCombat) / 3f, -1, 1);
                 
                 if (Helper.SideToThreat)
@@ -913,7 +920,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
 
-                Helper.lastCombatRange = (Helper.lastEnemy.tank.boundsCentreWorld - pilot.Tank.boundsCentreWorldNoCheck).magnitude;
+                Helper.UpdateEnemyDistance(Helper.lastEnemy.tank.boundsCentreWorldNoCheck);
 
                 pilot.TargetGrounded = !AIEPathing.AboveHeightFromGround(Helper.lastEnemy.tank.boundsCentreWorldNoCheck, pilot.AerofoilSluggishness + groundOffset);
                 if (mind.CommanderSmarts >= EnemySmarts.Meh)
@@ -928,7 +935,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                Helper.lastCombatRange = float.MaxValue;
+                Helper.IgnoreEnemyDistance();
                 pilot.TargetGrounded = false;
             }
             return output;

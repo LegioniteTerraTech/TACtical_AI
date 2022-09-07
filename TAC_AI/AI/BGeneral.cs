@@ -28,19 +28,21 @@ namespace TAC_AI.AI
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void AidDefend(AIECore.TankAIHelper thisInst, Tank tank)
+        public static bool AidDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI
             if (thisInst.lastEnemy != null)
             {
-                thisInst.lastEnemy = GetTarget(thisInst, tank);
+                thisInst.lastEnemy = thisInst.GetTarget();
                 //Fire even when retreating - the AI's life depends on this!
                 thisInst.AttackEnemy = true;
+                return false;
             }
             else
             {
                 thisInst.AttackEnemy = false;
-                thisInst.lastEnemy = GetTarget(thisInst, tank);
+                thisInst.lastEnemy = thisInst.GetTarget();
+                return thisInst.lastEnemy;
             }
         }
 
@@ -53,7 +55,7 @@ namespace TAC_AI.AI
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             thisInst.AttackEnemy = false;
-            thisInst.lastEnemy = GetTarget(thisInst, tank);
+            thisInst.lastEnemy = thisInst.GetTarget();
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
@@ -106,34 +108,20 @@ namespace TAC_AI.AI
             }
         }
 
-        public static Visible GetTarget(AIECore.TankAIHelper thisInst, Tank tank)
-        {
-            Visible target = null;
-            if ((bool)thisInst.lastPlayer)
-            {
-                target = thisInst.lastPlayer.tank.Weapons.GetManualTarget();
-                // If the player fires while locked-on to a neutral/SubNeutral, the AI will assume this
-                //   is an attack request
-            }
-            if (target == null)
-            {
-                target = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
-                if (target)
-                {
-                    if (AIGlobals.IsNonAggressiveTeam(target.tank.Team))
-                        return null; // Don't want to accidently fire at a neutral
-                }
-            }
-            return target;
-        }
         public static void SelfDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Alternative of the above - does not aim at enemies while mining
             if (thisInst.Obst == null)
             {
-                AidDefend(thisInst, tank);
+                if (AidDefend(thisInst, tank))
+                {
+                    AIECore.RequestFocusFireALL(tank, thisInst.lastEnemy, RequestSeverity.ThinkMcFly);
+                }
+                else
+                    thisInst.AttackEnemy = false;
             }
-            thisInst.AttackEnemy = false;
+            else
+                thisInst.AttackEnemy = true;
         }
 
         /// <summary>
@@ -148,12 +136,12 @@ namespace TAC_AI.AI
             {   // focus fire like Grudge
                 thisInst.AttackEnemy = true;
                 if (!thisInst.lastEnemy.isActive)
-                    thisInst.lastEnemy = GetTarget(thisInst, tank);
+                    thisInst.lastEnemy = thisInst.GetTarget();
             }
             else
             {
                 thisInst.AttackEnemy = false;
-                thisInst.lastEnemy = GetTarget(thisInst, tank);
+                thisInst.lastEnemy = thisInst.GetTarget();
             }
         }
 

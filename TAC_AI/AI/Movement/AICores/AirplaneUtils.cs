@@ -15,7 +15,7 @@ namespace TAC_AI.AI.Movement.AICores
 
         public static void UTurn(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot)
         {
-            //Debug.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
+            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
             pilot.MainThrottle = 1;
             pilot.UpdateThrottle(thisInst, thisControl);
             if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIGlobals.AirStallSpeed)
@@ -75,12 +75,12 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 direct = Vector3.up;
             if (pilot.PerformUTurn == 3)
             {
-                //Debug.Log("TACtical_AI: Tech " + tank.name + "  Stage 3 Immelmann");
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Stage 3 Immelmann");
                 direct = Vector3.down;
             }
             else if (tank.rootBlockTrans.up.y < -0.4f)
             {   // handle invalid request to go upside down
-                //Debug.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
                 // Stay upright
             }
             else if ((pilot.PerformUTurn > 0 && !pilot.LargeAircraft && !pilot.BankOnly) || pilot.ForcePitchUp)
@@ -104,14 +104,14 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (Heading.x > 0f)
                     { // We roll to aim at target
-                      //Debug.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Right");
+                      //DebugTAC_AI.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Right");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, false);
                         rFlat.y = -pilot.RollStrength / 2;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                     }
                     else if (Heading.x < 0f)
                     { // We roll to aim at target
-                      //Debug.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Left");
+                      //DebugTAC_AI.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Left");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, false);
                         rFlat.y = pilot.RollStrength / 2;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
@@ -124,21 +124,21 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (Heading.x > 0f)
                     { // We roll to aim at target
-                      //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Right");
+                      //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Right");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, true);
                         rFlat.y = -pilot.RollStrength;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                     }
                     else if (Heading.x < 0f)
                     { // We roll to aim at target
-                      //Debug.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Left");
+                      //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Left");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, true);
                         rFlat.y = pilot.RollStrength;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
                     }
                 }
             }
-            //Debug.Log("TACtical_AI: upwards direction " + tank.name + "  is " + direct.y);
+            //DebugTAC_AI.Log("TACtical_AI: upwards direction " + tank.name + "  is " + direct.y);
 
             return direct; // IS IN WORLD SPACE
         }
@@ -189,7 +189,7 @@ namespace TAC_AI.AI.Movement.AICores
             //Vector3 forwardFlat = tank.rootBlockTrans.forward;
             //forwardFlat.y = 0;
 
-            //Debug.Log("TACtical_AI: Tech " + tank.name + " steering RAW" + turnVal);
+            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " steering RAW" + turnVal);
 
             //Convert turnVal to runnable format
             // PITCH
@@ -229,9 +229,9 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (tank.rootBlockTrans.up.y < 0)
             {   // upside down due to a unfindable oversight in code - just override the bloody thing when it happens
-                //Debug.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
 
-                //Debug.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
                 //turnVal.z = -Mathf.Clamp(turnVal.z * 10, -1, 1);
             }
 
@@ -243,7 +243,7 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 DriveVar = Vector3.forward * pilot.CurrentThrottle;
 
             //Turn our work in to processing
-            //Debug.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
+            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
             control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
             //if (pilot.SlowestPropLerpSpeed < 0.1f && pilot.PropBias.z > 0.75f && pilot.CurrentThrottle > 0.75f)
             //    control3D.m_State.m_BoostProps = true;
@@ -319,7 +319,7 @@ namespace TAC_AI.AI.Movement.AICores
                         float Extremes = target.GetCheapBounds() + thisInst.lastTechExtents + 5;
                         if (foreTarg > 0)
                             throttleToSet = (foreTarg - Extremes) / pilot.PropLerpValue;
-                        //Debug.Log("TACtical_AI: throttle " + throttleToSet + " | position offset enemy " + foreTarg);
+                        //DebugTAC_AI.Log("TACtical_AI: throttle " + throttleToSet + " | position offset enemy " + foreTarg);
                         pilot.AdvisedThrottle = Mathf.Clamp(throttleToSet, 0, 1);
 
                         if (pilot.NoProps)
@@ -339,11 +339,11 @@ namespace TAC_AI.AI.Movement.AICores
                         return;
                     }
                     //else
-                    //Debug.Log("TACtical_AI: not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AIControllerAir.Stallspeed);
+                    //DebugTAC_AI.Log("TACtical_AI: not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AIControllerAir.Stallspeed);
                 }
                 pilot.AdvisedThrottle = 1;
             }
-            //Debug.Log("TACtical_AI: throttle is already " + pilot.AdvisedThrottle);
+            //DebugTAC_AI.Log("TACtical_AI: throttle is already " + pilot.AdvisedThrottle);
         }
         public static Vector3 ForeAiming(Visible target)
         {

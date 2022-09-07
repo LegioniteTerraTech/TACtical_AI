@@ -17,6 +17,7 @@ namespace TAC_AI.AI.Movement.AICores
             this.controller = (AIControllerStatic)controller;
             this.tank = tank;
             controller.Helper.GroundOffsetHeight = controller.Helper.lastTechExtents + AIGlobals.GeneralAirGroundOffset;
+            DebugTAC_AI.Log("TACtical_AI: StaticAICore - Init");
         }
 
         public Vector3 AvoidAssist(Vector3 targetIn, Vector3 predictionOffset)
@@ -27,7 +28,7 @@ namespace TAC_AI.AI.Movement.AICores
         public bool DriveDirector()
         {
             var help = controller.Helper;
-            // Debug.Log("TACtical_AI: Tech " + tank.name + " drive was called");
+            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");
             try
             {
                 help.PivotOnly = true;
@@ -41,10 +42,8 @@ namespace TAC_AI.AI.Movement.AICores
                 bool Combat = TryAdjustForCombat(true);
                 if (!Combat)
                 {
-                    controller.AimTarget = tank.boundsCentreWorldNoCheck + (controller.IdleFacingDirect * 200).ToVector3XZ(0);
+                    controller.AimTarget = help.lastDestination;
                 }
-                help.lastDestination = controller.MovePosition;
-
             }
             catch (Exception e)
             {
@@ -74,7 +73,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             var help = controller.Helper;
             DriveDirector();
-            // Debug.Log("TACtical_AI: Tech " + tank.name + " drive was called");DriveDirector()
+            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");DriveDirector()
             return true;
         }
 
@@ -104,7 +103,7 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            // Debug.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
+            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
             if (tank.Anchors.Fixed)
             {   // Static base
                 return true;
@@ -119,10 +118,14 @@ namespace TAC_AI.AI.Movement.AICores
 
                 control3D.m_State.m_InputRotation = Vector3.zero;
 
+
                 Vector3 destDirect = controller.AimTarget - tank.boundsCentreWorldNoCheck;
                 thisControl.DriveControl = 0;
-                if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
-                    thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
+                if (thisInst.Steer)
+                {
+                    if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
+                        thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
+                }
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, destDirect * thisInst.lastTechExtents, new Color(1, 0, 1));
 
                 Vector3 InputLineVal = Vector3.zero;
@@ -177,7 +180,7 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
             if (thisInst.Navi3DUp == Vector3.up)
             {
-                //Debug.Log("TACtical_AI: Forwards");
+                //DebugTAC_AI.Log("TACtical_AI: Forwards");
                 if (!thisInst.FullMelee && Vector3.Dot(thisInst.Navi3DDirect, tank.rootBlockTrans.forward) < 0.6f)
                 {
                     //If overtilt then try get back upright again
@@ -210,11 +213,11 @@ namespace TAC_AI.AI.Movement.AICores
                         turnVal.z = -((turnVal.z - 360) / 180);
                     else
                         turnVal.z = -(turnVal.z / 180);
-                    //Debug.Log("TACtical_AI: Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
+                    //DebugTAC_AI.Log("TACtical_AI: Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
                 }
                 else
                 {
-                    //Debug.Log("TACtical_AI: Broadside Z-tilt active");
+                    //DebugTAC_AI.Log("TACtical_AI: Broadside Z-tilt active");
                     if (turnVal.z > 180)
                         turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / 60), -1, 1);
                     else
@@ -233,7 +236,7 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                     turnVal.y = Mathf.Clamp(-(turnVal.y / 60), -1, 1);
 
-                //Debug.Log("TACtical_AI: TurnVal AIM " + turnVal);
+                //DebugTAC_AI.Log("TACtical_AI: TurnVal AIM " + turnVal);
 
             thisInst.Navi3DDirect = Vector3.zero;
             thisInst.Navi3DUp = Vector3.up;
@@ -384,14 +387,14 @@ namespace TAC_AI.AI.Movement.AICores
                 Vector3 targPos = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
                 output = true;
                 thisInst.Steer = true;
-                thisInst.lastCombatRange = (targPos - tank.boundsCentreWorldNoCheck).magnitude;
+                thisInst.UpdateEnemyDistance(targPos);
 
                 thisInst.DriveDir = EDriveFacing.Forwards;
                 controller.AimTarget = targPos;
                 thisInst.MinimumRad = 0;
             }
             else
-                thisInst.lastCombatRange = float.MaxValue;
+                thisInst.IgnoreEnemyDistance();
             return output;
         }
 
@@ -403,13 +406,13 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 output = true;
                 thisInst.Steer = true;
-                thisInst.lastCombatRange = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude;
+                thisInst.UpdateEnemyDistance(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck);
 
                 thisInst.DriveDir = EDriveFacing.Forwards;
                 controller.AimTarget = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
             }
             else
-                thisInst.lastCombatRange = float.MaxValue;
+                thisInst.IgnoreEnemyDistance();
             return output;
         }
 

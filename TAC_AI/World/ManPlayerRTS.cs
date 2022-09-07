@@ -428,7 +428,7 @@ namespace TAC_AI.World
 
                 if (click == ManPointer.Event.LMB)
                 {
-                    //Debug.Log("TACtical_AI: LEFT MOUSE BUTTON");
+                    //DebugTAC_AI.Log("TACtical_AI: LEFT MOUSE BUTTON");
 
                     Vector3 pos = Camera.main.transform.position;
                     Vector3 posD = Singleton.camera.ScreenPointToRay(Input.mousePosition).direction.normalized;
@@ -458,7 +458,7 @@ namespace TAC_AI.World
                                 if (QueuedRelease)
                                 {
                                     inst.ClearList();
-                                    //Debug.Log("TACtical_AI: Cleared Tech Selection.");
+                                    //DebugTAC_AI.Log("TACtical_AI: Cleared Tech Selection.");
                                 }
                                 QueuedRelease = !QueuedRelease;
                             }
@@ -508,7 +508,7 @@ namespace TAC_AI.World
         }
         public void HandleBoxSelectUnits()
         {
-            //Debug.Log("TACtical_AI: GROUP Select ACTIVATED");
+            //DebugTAC_AI.Log("TACtical_AI: GROUP Select ACTIVATED");
             Vector3 ScreenBoxEnd = Input.mousePosition;
             float HighX = ScreenBoxStart.x >= ScreenBoxEnd.x ? ScreenBoxStart.x : ScreenBoxEnd.x;
             float LowX = ScreenBoxStart.x < ScreenBoxEnd.x ? ScreenBoxStart.x : ScreenBoxEnd.x;
@@ -698,7 +698,7 @@ namespace TAC_AI.World
                             if (SelectTank(TechUnit))
                             {
                                 SetSelectHalo(TechUnit, true);
-                                //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
                                 SelectUnitSFX();
                             }
                             QueuedRelease = false;
@@ -717,7 +717,7 @@ namespace TAC_AI.World
                                     if (SelectTank(TechUnit))
                                     {
                                         SetSelectHalo(TechUnit, true);
-                                        //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                        //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
                                         SelectUnitSFX();
                                     }
                                 }
@@ -727,11 +727,11 @@ namespace TAC_AI.World
                                     {
                                         GrabbedThisFrame = TechUnit;
                                         SetSelectHalo(TechUnit, false);
-                                        //Debug.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
+                                        //DebugTAC_AI.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
                                         UnSelectUnitSFX();
                                     }
                                 }
-                                //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
                             }
                             QueuedRelease = !QueuedRelease;
                         }
@@ -745,7 +745,7 @@ namespace TAC_AI.World
                             {
                                 GrabbedThisFrame = TechUnit;
                                 SetSelectHalo(TechUnit, false);
-                                //Debug.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
                                 UnSelectUnitSFX();
                             }
                         }
@@ -759,7 +759,7 @@ namespace TAC_AI.World
                             if (SelectTank(TechUnit))
                             {
                                 SetSelectHalo(TechUnit, true);
-                                //Debug.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
                                 SelectUnitSFX();
                             }
                         }
@@ -1736,7 +1736,7 @@ namespace TAC_AI.World
             foreach (var item in TechMovementQueue)
             {
                 AIECore.TankAIHelper help = item.Key;
-                //Debug.Log(" dist " + (help.tank.boundsCentreWorldNoCheck - help.RTSDestination).magnitude + " vs " + help.lastTechExtents * (1 + (help.recentSpeed / 12)));
+                //DebugTAC_AI.Log(" dist " + (help.tank.boundsCentreWorldNoCheck - help.RTSDestination).magnitude + " vs " + help.lastTechExtents * (1 + (help.recentSpeed / 12)));
                 if ((help.tank.boundsCentreWorldNoCheck - help.RTSDestination).WithinSquareXZ(help.lastTechExtents * (1 + (help.recentSpeed / 12))))
                 {
                     if (TestNextDestination(help, out Vector3 nextPosScene))
@@ -1906,7 +1906,7 @@ namespace TAC_AI.World
         }
         private void DrawSelectBox(Vector3 startPosGlobal, Vector3 endPosGlobal)
         {
-            //Debug.Log("TACtical_AI: DrawSelectBox - " + startPosGlobal + " | " + endPosGlobal);
+            //DebugTAC_AI.Log("TACtical_AI: DrawSelectBox - " + startPosGlobal + " | " + endPosGlobal);
             Vector3 sPos = startPosGlobal;
             Vector3 ePos = endPosGlobal;
             Vector3 ePosVert = ePos.SetY(sPos.y);

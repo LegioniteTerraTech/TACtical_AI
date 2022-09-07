@@ -97,7 +97,7 @@ namespace TAC_AI
         {
             if (UseErrorChecking && !KickStart.isAnimeAIPresent)
             {
-                Debug.Log("TACtical_AI: Tried to run AnimeAI \n" + StackTraceUtility.ExtractStackTrace());
+                DebugTAC_AI.Log("TACtical_AI: Tried to run AnimeAI \n" + StackTraceUtility.ExtractStackTrace());
             }
             return KickStart.isAnimeAIPresent;
         }

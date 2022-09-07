@@ -30,7 +30,7 @@ namespace TAC_AI
 
 				cached = true;
 
-				//Debug.Log("TACtical_AI: Saved " + name);
+				//DebugTAC_AI.Log("TACtical_AI: Saved " + name);
                 try
                 {
                     Tank tank = transform.root.GetComponent<Tank>();
@@ -59,7 +59,7 @@ namespace TAC_AI
 		{   
 			mineOut.SetValue(GetComponent<ModuleItemProducer>(), chunks);
 			minerOp.SetValue(GetComponent<ModuleItemProducer>(), flags);
-			//Debug.Log("TACtical_AI: Loaded " + name);
+			//DebugTAC_AI.Log("TACtical_AI: Loaded " + name);
 			cached = false;
             GetComponent<TankBlock>().AttachEvent.Unsubscribe(LoadNow);
             DestroyImmediate(this);

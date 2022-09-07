@@ -99,9 +99,11 @@ namespace TAC_AI
         public const int DefaultEnemyRange = 150;
         public const int TileFringeDist = 96;
 
-        public const int ProvokeTime = 200;
 
         // Combat target switching
+        public const int ProvokeTime = 200;         // Roughly around 200/40 = 5 seconds
+        public const int ProvokeTimeShort = 80;
+        public const int DamageAlertThreshold = 45;// Above this damage we react to the threat
         public const int ScanDelay = 20;            // Frames until we try to find a appropreate target
         public const int PestererSwitchDelay = 500; // Frames before Pesterers find a new random target
 
@@ -322,7 +324,7 @@ namespace TAC_AI
                 AllySavedOver = true;
             }
             AltUI.PopupCustomInfo(text, pos, AllyOverEdit);
-            //Debug.Log("TACtical_AI: PopupAllyInfo - Threw popup \"" + text + "\"");
+            //DebugTAC_AI.Log("TACtical_AI: PopupAllyInfo - Threw popup \"" + text + "\"");
         }
     }
 }

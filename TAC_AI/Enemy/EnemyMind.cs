@@ -34,9 +34,7 @@ namespace TAC_AI.AI.Enemy
         public bool LikelyMelee = false;        // Can we melee?
 
         public bool SolarsAvail = false;        // Do we currently have solar panels
-        public int Provoked = 0;           // Were we hit from afar?
         public bool Hurt = false;               // Are we damaged?
-        public bool PursuingTarget = false;     // Chasing specified target?
         public int Range = AIGlobals.DefaultEnemyRange;// Aggro range
         public int TargetLockDuration = 0;      // Updates to wait before target swatching
         public Vector3 sceneStationaryPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
@@ -52,10 +50,11 @@ namespace TAC_AI.AI.Enemy
 
         public void Initiate()
         {
-            //Debug.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
+            //DebugTAC_AI.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
             Tank = gameObject.GetComponent<Tank>();
             AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
             AIControl.FinishedRepairEvent.Subscribe(OnFinishedRepairs);
+            Tank.DamageEvent.Unsubscribe(AIControl.OnHit);
             Tank.DamageEvent.Subscribe(OnHit);
             Tank.AttachEvent.Subscribe(OnBlockAdd);
             Tank.DetachEvent.Subscribe(OnBlockLoss);
@@ -65,11 +64,11 @@ namespace TAC_AI.AI.Enemy
             if (GetComponents<EnemyMind>().Count() > 1)
                 DebugTAC_AI.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
 
-            //Debug.Log("TACtical_AI: Refreshing Enemy AI for " + Tank.name);
+            //DebugTAC_AI.Log("TACtical_AI: Refreshing Enemy AI for " + Tank.name);
             EnemyOpsController = new EnemyOperationsController(this);
             AIControl.MovementController.UpdateEnemyMind(this);
             AIControl.AvoidStuff = true;
-            PursuingTarget = false;
+            AIControl.PursuingTarget = false;
             BoltsQueued = 0;
             try
             {
@@ -82,10 +81,12 @@ namespace TAC_AI.AI.Enemy
         }
         public void SetForRemoval()
         {
-            //Debug.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
-            if (gameObject.GetComponent<AIERepair.DesignMemory>().IsNotNull())
-                gameObject.GetComponent<AIERepair.DesignMemory>().Remove();
+            //DebugTAC_AI.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
             Tank.DamageEvent.Unsubscribe(OnHit);
+            if (AIControl)
+                Tank.DamageEvent.Subscribe(AIControl.OnHit);
+            else
+                DebugTAC_AI.Assert("NULL AIControl (AIECore.TankAIHelper) in Tech " + Tank.name);
             Tank.AttachEvent.Unsubscribe(OnBlockAdd);
             Tank.DetachEvent.Unsubscribe(OnBlockLoss);
             AIControl.FinishedRepairEvent.Unsubscribe(OnFinishedRepairs);
@@ -110,30 +111,34 @@ namespace TAC_AI.AI.Enemy
             sceneStationaryPos += move;
         }
 
+        /// <summary>
+        /// React when hit by an attack from another Tech. 
+        /// Must be resubbed and un-subbed when switching to and from enemy
+        /// </summary>
         public void OnHit(ManDamage.DamageInfo dingus)
         {
-            if (dingus.Damage > 75 && dingus.SourceTank)
+            if (dingus.SourceTank && dingus.Damage > AIGlobals.DamageAlertThreshold)
             {
                 Hurt = true;
-                if (Provoked == 0)
+                if (AIControl.Provoked == 0)
                 {
                     AIControl.lastEnemy = dingus.SourceTank.visible;
                     GetRevengeOn(AIControl.lastEnemy);
                     if (Tank.IsAnchored && Tank.GetComponent<RBases.EnemyBaseFunder>())
                     {
                         // Execute remote orders to allied units - Attack that threat!
-                        RBases.RequestFocusFire(Tank, AIControl.lastEnemy, RequestSeverity.AllHandsOnDeck);
+                        RBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemy, RequestSeverity.AllHandsOnDeck);
                     }
                     else if (CommanderSmarts > EnemySmarts.Mild)
                     {
                         // Execute remote orders to allied units - Attack that threat!
                         if (AIGlobals.IsNeutralBaseTeam(Tank.Team))
-                            RBases.RequestFocusFire(Tank, AIControl.lastEnemy, RequestSeverity.Warn);
+                            RBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemy, RequestSeverity.Warn);
                         else
-                            RBases.RequestFocusFire(Tank, AIControl.lastEnemy, RequestSeverity.ThinkMcFly);
+                            RBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemy, RequestSeverity.ThinkMcFly);
                     }
                 }
-                Provoked = AIGlobals.ProvokeTime;
+                AIControl.Provoked = AIGlobals.ProvokeTime;
                 AIControl.FIRE_NOW = true;
             }
         }
@@ -195,10 +200,10 @@ namespace TAC_AI.AI.Enemy
         {
             try
             {
-                //Debug.Log("TACtical_AI: OnFinishedRepair");
+                //DebugTAC_AI.Log("TACtical_AI: OnFinishedRepair");
                 if (TechMemor)
                 {
-                    //Debug.Log("TACtical_AI: TechMemor");
+                    //DebugTAC_AI.Log("TACtical_AI: TechMemor");
                     if (Tank.name.Contains('⟰'))
                     {
                         Tank.SetName(Tank.name.Replace(" ⟰", ""));
@@ -214,7 +219,7 @@ namespace TAC_AI.AI.Enemy
 
         public void GetRevengeOn(Visible target = null, bool forced = false)
         {
-            if (!PursuingTarget && (forced || CommanderAttack != EnemyAttack.Coward))
+            if (!AIControl.PursuingTarget && (forced || CommanderAttack != EnemyAttack.Coward))
             {
                 if (forced)
                 {
@@ -244,12 +249,12 @@ namespace TAC_AI.AI.Enemy
                 {
                     Range = 500;
                 }
-                PursuingTarget = true;
+                AIControl.PursuingTarget = true;
             }
         }
         public void EndAggro()
         {
-            if (PursuingTarget)
+            if (AIControl.PursuingTarget)
             {
                 if (Tank.blockman.IterateBlockComponents<ModuleItemHolderBeam>().Count() != 0)
                     CommanderMind = EnemyAttitude.Miner;
@@ -259,27 +264,19 @@ namespace TAC_AI.AI.Enemy
                 {
                     Range = AIGlobals.DefaultEnemyRange;
                 }
-                PursuingTarget = false;
+                AIControl.PursuingTarget = false;
             }
         }
 
-        public bool IsInRange(Visible target)
+        public bool InRangeOfTargetEnemy()
         {
-            float inRange;
             switch (CommanderAttack)
             {
                 case EnemyAttack.Spyper:
-                    inRange = AIGlobals.SpyperMaxRange;
-                    break;
+                    return AIControl.InRangeOfTarget(AIGlobals.SpyperMaxRange);
                 default:
-                    inRange = Range;
-                    break;
+                    return AIControl.InRangeOfTarget(Range);
             }
-            return (target.tank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).sqrMagnitude <= inRange * inRange;
-        }
-        public bool InRangeOfTarget()
-        {
-            return IsInRange(AIControl.lastEnemy);
         }
 
         /// <summary>
@@ -304,10 +301,10 @@ namespace TAC_AI.AI.Enemy
             {
                 if (!target.isActive || !target.tank.IsEnemy(Tank.Team) || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRange)
                 {
-                    //Debug.Log("Target lost");
+                    //DebugTAC_AI.Log("Target lost");
                     target = null;
                 }
-                else if (PursuingTarget) // Carry on chasing the target
+                else if (AIControl.PursuingTarget) // Carry on chasing the target
                 {
                     return target;
                 }
@@ -491,7 +488,7 @@ namespace TAC_AI.AI.Enemy
             /*
             if (target.IsNull())
             {
-                Debug.Log("TACtical_AI: Tech " + Tank.name + " Could not find target with FindEnemy, resorting to defaults");
+                DebugTAC_AI.Log("TACtical_AI: Tech " + Tank.name + " Could not find target with FindEnemy, resorting to defaults");
                 return Tank.Vision.GetFirstVisibleTechIsEnemy(Tank.Team);
             }
             */
@@ -514,10 +511,10 @@ namespace TAC_AI.AI.Enemy
             {
                 if (!target.isActive || !target.tank.IsEnemy(Tank.Team) || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRange)
                 {
-                    //Debug.Log("Target lost");
+                    //DebugTAC_AI.Log("Target lost");
                     target = null;
                 }
-                else if (PursuingTarget) // Carry on chasing the target
+                else if (AIControl.PursuingTarget) // Carry on chasing the target
                 {
                     return target;
                 }

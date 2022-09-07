@@ -354,7 +354,7 @@ namespace TAC_AI
                                     if (!RawTechLoader.SpawnAttractTech(position, forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Sea))
                                         RawTechLoader.SpawnAttractTech(position,  forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space);
                                 }
-                                //Debug.Log("TACtical_AI: cam is at " + Singleton.Manager<CameraManager>.inst.ca);
+                                //DebugTAC_AI.Log("TACtical_AI: cam is at " + Singleton.Manager<CameraManager>.inst.ca);
                                 Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
                                 Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
                                 Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
@@ -441,7 +441,7 @@ namespace TAC_AI
                     {   // Land battle invoker
                     }
 
-                    //Debug.Log("TACtical_AI: Post-Setup for attract type " + KickStart.SpecialAttractNum.ToString());
+                    //DebugTAC_AI.Log("TACtical_AI: Post-Setup for attract type " + KickStart.SpecialAttractNum.ToString());
                 }
             }
             catch { }

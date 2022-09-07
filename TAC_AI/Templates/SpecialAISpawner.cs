@@ -254,7 +254,7 @@ namespace TAC_AI.Templates
             }
             if (newAirborneAI == null)
             {
-                //Debug.Log("TACtical_AI: SpecialAISpawner - Could not spawn airborneAI - Player has no corps unlocked!?!");
+                //DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Could not spawn airborneAI - Player has no corps unlocked!?!");
                 return;
             }
             TrackedAirborneAI newAir = new TrackedAirborneAI(newAirborneAI, IsSpace);
@@ -724,7 +724,7 @@ namespace TAC_AI.Templates
         }
         public void Update()
         {   // 
-            //Debug.Log("TACtical_AI: SpecialAISpawner - ACTIVE!!!  time" + counter);
+            //DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - ACTIVE!!!  time" + counter);
             bool doubleSpawnRate = false;
             try
             {
@@ -733,7 +733,7 @@ namespace TAC_AI.Templates
             catch { }
             if ((Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn) && counter > (AirSpawnInterval / (doubleSpawnRate ? 2 : 1)) / ((KickStart.Difficulty / 100) + 1.5f))
             {   // determine if we should spawn new one, also manage existing pooled airborneAIs
-                //Debug.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
+                //DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
                 if (KickStart.EnableBetterAI && KickStart.enablePainMode && !AIGlobals.AtSceneTechMax())
                 {
                     if (KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(EnemyTeam, 301 - (KickStart.difficulty + 50)) < AirborneAISpawnOdds)

@@ -12,6 +12,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         public static void MineYerOwnBusiness(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
+
             Vector3 veloFlat = Vector3.zero;
             if ((bool)tank.rbody)   // So that drifting is minimized
             {

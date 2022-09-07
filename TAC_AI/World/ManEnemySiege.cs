@@ -315,7 +315,7 @@ namespace TAC_AI.World
                 m_TechCategory = ManBlockLimiter.TechCategory.Player,
                 m_TeamColour = 5
             };
-            //Debug.Log("TACtical_AI: ManEnemySiege - Color case " + teamC);
+            //DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - Color case " + teamC);
             ManBlockLimiter.inst.CostChangedEvent.Send(CCI);
             UIBlockLimit UIBL = (UIBlockLimit)Singleton.Manager<ManHUD>.inst.GetHudElement(ManHUD.HUDElementType.BlockLimit);
             if (!UIBL)

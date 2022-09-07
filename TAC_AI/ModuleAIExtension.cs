@@ -15,6 +15,7 @@ namespace TAC_AI
     {
         TankBlock TankBlock;
 
+        // Set by saves ingame
         [SSaveField]
         public AIDriverType SavedAIDriver;
         [SSaveField]
@@ -169,6 +170,134 @@ namespace TAC_AI
             SavedAI = AIType.Escort;
         }
 
+        public void AlterExisting()
+        {
+            try
+            {
+                var name = gameObject.name;
+                //DebugTAC_AI.Log("TACtical_AI: Init new AI for " + name);
+                if (name == "GSO_AI_Module_Guard_111")
+                {
+                    Aegis = true;
+                    Prospector = true;
+                    Buccaneer = true;
+                    AidAI = true;
+                    //SelfRepairAI = true; // testing
+                }
+                else if (name == "GSO_AIAnchor_121")
+                {
+                    Aegis = true;
+                    AidAI = true;
+                    MaxCombatRange = 150;
+                }
+                else if (name == "GC_AI_Module_Guard_222")
+                {
+                    AutoAnchor = true; // temp testing
+                    Prospector = true;
+                    Energizer = true;
+                    Scrapper = true;  // Temp Testing
+                    SelfRepairAI = true; // EXTREMELY POWERFUL
+                    MTForAll = true;
+                    MeleePreferred = true;
+                }
+                else if (name == "VEN_AI_Module_Guard_111")
+                {
+                    Aviator = true;
+                    Buccaneer = true;
+                    SidePreferred = true;
+                    MaxCombatRange = 300;
+                }
+                else if (name == "HE_AI_Module_Guard_112")
+                {
+                    Assault = true;
+                    Aviator = true;
+                    Astrotech = true;
+                    AdvancedAI = true;
+                    MinCombatRange = 50;
+                    MaxCombatRange = 200;
+                }
+                else if (name == "HE_AI_Turret_111")
+                {
+                    Assault = true;
+                    AdvancedAI = true;
+                    MinCombatRange = 50;
+                    MaxCombatRange = 225;
+                }
+                else if (name == "BF_AI_Module_Guard_212")
+                {
+                    Astrotech = true;
+                    AdvAvoidence = true;
+                    SelfRepairAI = true; // EXTREMELY POWERFUL
+                    InventoryUser = true;
+                    MinCombatRange = 60;
+                    MaxCombatRange = 250;
+                }
+                /*
+                else if (name == "RR_AI_Module_Guard_212")
+                {
+                    Energizer = true;
+                    AdvAvoidence = true;
+                    MinCombatRange = 160;
+                    MaxCombatRange = 220;
+                }
+                else if (name == "SJ_AI_Module_Guard_122")
+                {
+                    Prospector = true;
+                    Scrapper = true;
+                    MTForAll = true;
+                    MinCombatRange = 60;
+                    MaxCombatRange = 120;
+                }
+                else if (name == "TSN_AI_Module_Guard_312")
+                {
+                    AutoAnchor = true;
+                    Buccaneer = true;
+                    AdvAvoidence = true;
+                    MinCombatRange = 150;
+                    MaxCombatRange = 250;
+                }
+                else if (name == "LEG_AI_Module_Guard_112")
+                {   //Incase Legion happens and the AI needs help lol
+                    AutoAnchor = true;
+                    Assault = true;
+                    Aegis = true;
+                    Prospector = true;
+                    Scrapper = true;
+                    Energizer = true;
+                    Assault = true;
+                    Aviator = true;
+                    Buccaneer = true;
+                    Astrotech = true;
+                    AidAI = true;
+                    AdvancedAI = true;
+                    AdvAvoidence = true;
+                    SidePreferred = true;
+                    MeleePreferred = true;
+                    MaxCombatRange = 200;
+                }
+                else if (name == "TAC_AI_Module_Plex_323")
+                {
+                    AutoAnchor = true;
+                    Aviator = true;
+                    Buccaneer = true;
+                    Astrotech = true;
+                    AidAI = true;
+                    AnimeAI = true;
+                    AdvancedAI = true;
+                    AdvAvoidence = true;
+                    MinCombatRange = 100;
+                    MaxCombatRange = 400;
+                }
+                */
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log("TACtical_AI: CRASH ON HANDLING EXISTING AIS");
+                DebugTAC_AI.Log(e);
+            }
+        }
+
+
         [Serializable]
         // Now obsolete
         public class SerialData : Module.SerialData<SerialData>
@@ -256,7 +385,7 @@ namespace TAC_AI
                         Serialize(true);
                         // OBSOLETE - CAN CAUSE CRASHES
                         //serialData.Store(blockSpec.saveState);
-                        //Debug.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
+                        //DebugTAC_AI.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
                     }
                 }
                 else
@@ -290,7 +419,7 @@ namespace TAC_AI
                                 thisInst.DriverType = SavedAIDriver;
                                 thisInst.DediAI = SavedAI;
                                 thisInst.PlayerAllowAutoAnchoring = WasMobileAnchor;
-                                //Debug.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
+                                //DebugTAC_AI.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
                             }
                         }
                     }

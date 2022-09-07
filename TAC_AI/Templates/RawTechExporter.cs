@@ -179,7 +179,7 @@ namespace TAC_AI.Templates
 #if DEBUG
             ExportJSONInsteadOfRAWTECH = true;
 #endif
-            BlockIndexer.PrepareModdedBlocksSearch();
+            BlockIndexer.PrepareModdedBlocksFetch();
         }
 
         public static void DeInit()
@@ -313,11 +313,11 @@ namespace TAC_AI.Templates
         {
             if (Singleton.playerTank.IsNull() || !KickStart.EnableBetterAI)
             {
-                //Debug.Log("TACtical_AI: TANK IS NULL!");
+                //DebugTAC_AI.Log("TACtical_AI: TANK IS NULL!");
                 CloseSubMenu();
                 return;
             }
-            //Debug.Log("TACtical_AI: Opened RawJSON menu");
+            //DebugTAC_AI.Log("TACtical_AI: Opened RawJSON menu");
             isOpen = true;
             GUIWindow.SetActive(true);
         }
@@ -328,7 +328,7 @@ namespace TAC_AI.Templates
                 isOpen = false;
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
-                //Debug.Log("TACtical_AI: Closed RawJSON menu");
+                //DebugTAC_AI.Log("TACtical_AI: Closed RawJSON menu");
             }
         }
 
@@ -344,8 +344,8 @@ namespace TAC_AI.Templates
             BaseDirectory = di.ToString();
             RawTechsDirectory = di.ToString() + up + "Raw Techs";
 #if DEBUG
-            Debug.Log("TACtical_AI: DLL folder is at: " + DLLDirectory);
-            Debug.Log("TACtical_AI: Raw Techs is at: " + RawTechsDirectory);
+            DebugTAC_AI.Log("TACtical_AI: DLL folder is at: " + DLLDirectory);
+            DebugTAC_AI.Log("TACtical_AI: Raw Techs is at: " + RawTechsDirectory);
 #endif
             ValidateEnemyFolder();
         }
@@ -371,7 +371,7 @@ namespace TAC_AI.Templates
             int count = 0;
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
-            UnityEngine.Debug.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
                 try
@@ -417,10 +417,10 @@ namespace TAC_AI.Templates
         internal static string LoadCommunityDeployedTechs(string location)
         {
             string toAdd = "";
-            //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
             try
             {
-                //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
+                //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
                 if (File.Exists(location))
                 {
                     using (FileStream FS = File.Open(location, FileMode.Open, FileAccess.Read))
@@ -450,14 +450,14 @@ namespace TAC_AI.Templates
             List<BaseTemplate> toAdd = new List<BaseTemplate>();
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
-            //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
                 try
                 {
                     string fileName = "RawTechs.RTList";
                     string GO = directoryLoc + up + fileName;
-                    //Debug.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
+                    //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
                     if (File.Exists(GO))
                     {
                         using (FileStream FS = File.Open(GO, FileMode.Open, FileAccess.Read))
@@ -666,7 +666,7 @@ namespace TAC_AI.Templates
 
             BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
             int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(factionType));
-            //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
+            //DebugTAC_AI.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
                 BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
@@ -789,7 +789,7 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    //Debug.Log("TACtical_AI: GetHandler - error");
+                    //DebugTAC_AI.Log("TACtical_AI: GetHandler - error");
                 }
 
                 if (bloc.GetComponent<ModuleWing>())
@@ -865,7 +865,7 @@ namespace TAC_AI.Templates
                 }
                 DebugTAC_AI.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
 
-                //Debug.Log("TACtical_AI: Purposes: Anchored (static)");
+                //DebugTAC_AI.Log("TACtical_AI: Purposes: Anchored (static)");
                 return purposes;
             }
             else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
@@ -952,7 +952,7 @@ namespace TAC_AI.Templates
             bool hasBaseFunction = false;
 
             //BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
-            //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
+            //DebugTAC_AI.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
                 BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
@@ -1742,7 +1742,7 @@ namespace TAC_AI.Templates
                 else
                     JSONTech.Append(ch);
             }
-            //Debug.Log("TACtical_AI: " + JSONTech.ToString());
+            //DebugTAC_AI.Log("TACtical_AI: " + JSONTech.ToString());
 
             if (invalidBlocks)
                 DebugTAC_AI.Log("TACtical_AI: Invalid blocks in TechData");

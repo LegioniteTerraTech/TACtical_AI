@@ -118,6 +118,7 @@ namespace TAC_AI
         public static float AirEnemiesSpawnRate = 1;
         public static bool AllowSeaEnemiesToSpawn = true;
         public static bool TryForceOnlyPlayerSpawns = false;
+        public static bool AllowEnemiesToMine = true;
         public static bool DesignsToLog = false;
         public static bool CommitDeathMode = false;
         public static bool AllowStrategicAI = true;
@@ -237,9 +238,11 @@ namespace TAC_AI
             get
             {
                 float outValue = -100;
-#if !STEAM
-                try { outValue = WaterMod.QPatch.WaterHeight; } catch { }
-#endif
+                try { 
+                    if (isWaterModPresent)
+                        outValue = WaterMod.QPatch.WaterHeight; 
+                } 
+                catch { }
                 return outValue;
             }
         }
@@ -301,7 +304,7 @@ namespace TAC_AI
             /*
             if (LookForMod("TougherEnemies"))
             {
-                Debug.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
+                DebugTAC_AI.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
                 isTougherEnemiesPresent = true;
             }*/
 
@@ -508,16 +511,16 @@ namespace TAC_AI
         public static void Main()
         {
             //Where the fun begins
-            Debug.Log("TACtical_AI: MAIN (TTMM Version) startup");
+            DebugTAC_AI.Log("TACtical_AI: MAIN (TTMM Version) startup");
             if (!VALIDATE_MODS())
                 return;
             //Initiate the madness
 #if DEBUG
-            Debug.Log("-----------------------------------------");
-            Debug.Log("-----------------------------------------");
-            Debug.Log("        !!! TAC_AI DEBUG MODE !!!");
-            Debug.Log("-----------------------------------------");
-            Debug.Log("-----------------------------------------");
+            DebugTAC_AI.Log("-----------------------------------------");
+            DebugTAC_AI.Log("-----------------------------------------");
+            DebugTAC_AI.Log("        !!! TAC_AI DEBUG MODE !!!");
+            DebugTAC_AI.Log("-----------------------------------------");
+            DebugTAC_AI.Log("-----------------------------------------");
 #endif
             try
             {
@@ -544,15 +547,15 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    Debug.Log("TACtical_AI: Error on Option & Config setup");
-                    Debug.Log(e);
+                    DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
+                    DebugTAC_AI.Log(e);
                 }
             }
             catch
             {
                 try
                 {
-                    Debug.Log("TACtical_AI: Error on TTMM Init setup - there are missing dependancies!");
+                    DebugTAC_AI.Log("TACtical_AI: Error on TTMM Init setup - there are missing dependancies!");
                     DebugTAC_AI.FatalError("Make sure you have installed SafeSaves (and RandomAdditions if it crashes again on start) in TTMM.");
                 }
                 catch { };
@@ -793,6 +796,7 @@ namespace TAC_AI
         public static OptionRange enemyMaxCount;
         public static OptionToggle ragnarok;
         public static OptionToggle enemyStrategic;
+        public static OptionToggle enemyMiners;
         public static OptionToggle useKeypadForGroups;
         public static OptionToggle enemyBaseCulling;
 
@@ -828,6 +832,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "CommitDeathMode");
             thisModConfig.BindConfig<KickStart>(null, "EnemySellGainModifier");
             thisModConfig.BindConfig<KickStart>(null, "CullFarEnemyBases");
+            thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToMine");
 
             // RTS
             thisModConfig.BindConfig<KickStart>(null, "AllowStrategicAI");
@@ -924,6 +929,8 @@ namespace TAC_AI
             });
             displayEvents = new OptionToggle("Show NPT Events", TACAIEnemies, KickStart.DisplayEnemyEvents);
             displayEvents.onValueSaved.AddListener(() => { KickStart.DisplayEnemyEvents = displayEvents.SavedValue; });
+            enemyMiners = new OptionToggle("NPTs Can Mine", TACAIEnemies, KickStart.AllowEnemiesToMine);
+            enemyMiners.onValueSaved.AddListener(() => { KickStart.AllowEnemiesToMine = enemyMiners.SavedValue; });
             blockRecoveryChance = new OptionRange("NPT Block Drop Chance", TACAIEnemies, KickStart.EnemyBlockDropChance, 0, 100, 10);
             blockRecoveryChance.onValueSaved.AddListener(() => {
                 KickStart.EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue;
@@ -1038,6 +1045,15 @@ namespace TAC_AI
             }
             return tank.IsAnchored || tank.name.Contains('¥') || tank.name.Contains(RawTechLoader.turretChar);
         }
+        public static AIECore.TankAIHelper GetHelperInsured(this Tank tank)
+        {
+            AIECore.TankAIHelper help = tank.GetComponent<AIECore.TankAIHelper>();
+            if (!help)
+            {
+                help = tank.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe();
+            }
+            return help;
+        }
         public static float GetCheapBounds(this Visible vis)
         {
             if (!vis)
@@ -1073,7 +1089,7 @@ namespace TAC_AI
             toSort = SortCorps(toSort);
             FactionTypesExt final = toSort.First();
 
-            //Debug.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp");
+            //DebugTAC_AI.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp");
             return final;
         }
         public static FactionTypesExt GetMainCorpExt(this TechData tank)

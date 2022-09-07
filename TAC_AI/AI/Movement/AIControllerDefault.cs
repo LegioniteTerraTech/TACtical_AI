@@ -216,7 +216,7 @@ namespace TAC_AI.AI
             {
                 Tank.AttachEvent.Unsubscribe(OnAttach);
                 Tank.DetachEvent.Unsubscribe(OnDetach);
-                //Debug.Log("TACtical_AI: Removed ground AI from " + Tank.name);
+                //DebugTAC_AI.Log("TACtical_AI: Removed ground AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }

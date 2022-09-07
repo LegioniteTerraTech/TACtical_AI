@@ -42,7 +42,7 @@ namespace TAC_AI.Templates
                 return;
 
             #if DEBUG
-                Debug.Log("TACtical_AI: Raw Techs Debugger launched (DEV)");
+                DebugTAC_AI.Log("TACtical_AI: Raw Techs Debugger launched (DEV)");
             #else
                 DebugTAC_AI.Log("TACtical_AI: Raw Techs Debugger launched");
             #endif
@@ -405,9 +405,9 @@ namespace TAC_AI.Templates
                             step--;
                         }
                     }
-                    Debug.Log("-----------------------------------------------------------");
-                    Debug.Log("----------------- <<< END PURGING >>> ---------------------");
-                    Debug.Log("-----------------------------------------------------------");
+                    DebugTAC_AI.Log("-----------------------------------------------------------");
+                    DebugTAC_AI.Log("----------------- <<< END PURGING >>> ---------------------");
+                    DebugTAC_AI.Log("-----------------------------------------------------------");
                 }
                 catch { }
             }
@@ -439,9 +439,9 @@ namespace TAC_AI.Templates
                             step--;
                         }
                     }
-                    Debug.Log("-----------------------------------------------------------");
-                    Debug.Log("----------------- <<< END PURGING >>> ---------------------");
-                    Debug.Log("-----------------------------------------------------------");
+                    DebugTAC_AI.Log("-----------------------------------------------------------");
+                    DebugTAC_AI.Log("----------------- <<< END PURGING >>> ---------------------");
+                    DebugTAC_AI.Log("-----------------------------------------------------------");
                 }
                 catch { }
             }
@@ -952,7 +952,7 @@ namespace TAC_AI.Templates
 
                         if (AIGlobals.IsBaseTeam(remove.TeamID) && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
                         {
-                            Debug.Log("TACtical_AI: RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | " 
+                            DebugTAC_AI.Log("TACtical_AI: RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | " 
                                 + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | " 
                                 + (remove.visible ? "active" : "inactive"));
                             

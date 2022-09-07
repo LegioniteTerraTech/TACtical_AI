@@ -85,7 +85,7 @@ namespace TAC_AI.AI.Enemy
                             thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                             //thisInst.AttemptedRepairs++;
                         }
-                        //Debug.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else
@@ -97,7 +97,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.anchorAttempts = 0;
             }
 
-            //Debug.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
+            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
                 thisInst.lastDestination = mind.sceneStationaryPos;
@@ -269,24 +269,24 @@ namespace TAC_AI.AI.Enemy
             if (thisInst.lastEnemy != null)
             {
                 Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
-                thisInst.WeaponDelayClock += KickStart.AIClockPeriod / 5;
+                thisInst.WeaponDelayClock += KickStart.AIClockPeriod;
                 if (thisInst.Attempt3DNavi)
                 {
                     if (thisInst.SideToThreat)
                     {
                         float dot = Vector3.Dot(tank.rootBlockTrans.right, aimTo);
-                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
+                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 150)
                         {
                             thisInst.AttackEnemy = true;
-                            thisInst.WeaponDelayClock = 30;
+                            thisInst.WeaponDelayClock = 150;
                         }
                     }
                     else
                     {
-                        if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.45f || thisInst.WeaponDelayClock >= 30)
+                        if (Vector3.Dot(tank.rootBlockTrans.forward, aimTo) > 0.45f || thisInst.WeaponDelayClock >= 150)
                         {
                             thisInst.AttackEnemy = true;
-                            thisInst.WeaponDelayClock = 30;
+                            thisInst.WeaponDelayClock = 150;
                         }
                     }
                 }
@@ -295,18 +295,18 @@ namespace TAC_AI.AI.Enemy
                     if (thisInst.SideToThreat)
                     {
                         float dot = Vector2.Dot(tank.rootBlockTrans.right.ToVector2XZ(), aimTo.ToVector2XZ());
-                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 30)
+                        if (dot > 0.45f || dot < -0.45f || thisInst.WeaponDelayClock >= 150)
                         {
                             thisInst.AttackEnemy = true;
-                            thisInst.WeaponDelayClock = 30;
+                            thisInst.WeaponDelayClock = 150;
                         }
                     }
                     else
                     {
-                        if (Vector2.Dot(tank.rootBlockTrans.forward.ToVector2XZ(), aimTo.ToVector2XZ()) > 0.45f || thisInst.WeaponDelayClock >= 30)
+                        if (Vector2.Dot(tank.rootBlockTrans.forward.ToVector2XZ(), aimTo.ToVector2XZ()) > 0.45f || thisInst.WeaponDelayClock >= 150)
                         {
                             thisInst.AttackEnemy = true;
-                            thisInst.WeaponDelayClock = 30;
+                            thisInst.WeaponDelayClock = 150;
                         }
                     }
                 }
@@ -330,6 +330,8 @@ namespace TAC_AI.AI.Enemy
             {
                 AidAttack(thisInst, tank, mind);
             }
+            else
+                thisInst.AttackEnemy = true;
         }
 
         /// <summary>

@@ -86,7 +86,7 @@ namespace TAC_AI.Templates
 
             BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
             int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(faction));
-            //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
+            //DebugTAC_AI.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
                 BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
@@ -216,7 +216,7 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    //Debug.Log("TACtical_AI: GetHandler - error");
+                    //DebugTAC_AI.Log("TACtical_AI: GetHandler - error");
                 }
 
                 if (bloc.GetComponent<ModuleWing>())
@@ -292,7 +292,7 @@ namespace TAC_AI.Templates
                 }
                 DebugTAC_AI.Info("TACtical_AI: Terrain: " + terrain.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
 
-                //Debug.Log("TACtical_AI: Purposes: Anchored (static)");
+                //DebugTAC_AI.Log("TACtical_AI: Purposes: Anchored (static)");
                 return;
             }
             else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
@@ -383,7 +383,7 @@ namespace TAC_AI.Templates
 
             BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
             int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(factionType));
-            //Debug.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
+            //DebugTAC_AI.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
             foreach (BlockMemory blocRaw in mems)
             {
                 BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
@@ -512,7 +512,7 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    //Debug.Log("TACtical_AI: GetHandler - error");
+                    //DebugTAC_AI.Log("TACtical_AI: GetHandler - error");
                 }
 
                 if (bloc.GetComponent<ModuleWing>())
@@ -588,7 +588,7 @@ namespace TAC_AI.Templates
                 }
                 DebugTAC_AI.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
 
-                //Debug.Log("TACtical_AI: Purposes: Anchored (static)");
+                //DebugTAC_AI.Log("TACtical_AI: Purposes: Anchored (static)");
                 return purposes;
             }
             else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
