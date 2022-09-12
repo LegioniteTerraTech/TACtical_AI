@@ -47,7 +47,7 @@ namespace TAC_AI
                             help.TryReallyAnchor();
                         }
                     }
-                    GetComponent<TankBlock>().AttachEvent.Subscribe(LoadNow);
+                    GetComponent<TankBlock>().SubToBlockAttachConnected(LoadNow, null);
                 }
                 catch
                 {
@@ -61,7 +61,7 @@ namespace TAC_AI
 			minerOp.SetValue(GetComponent<ModuleItemProducer>(), flags);
 			//DebugTAC_AI.Log("TACtical_AI: Loaded " + name);
 			cached = false;
-            GetComponent<TankBlock>().AttachEvent.Unsubscribe(LoadNow);
+            GetComponent<TankBlock>().UnSubToBlockAttachConnected(LoadNow, null);
             DestroyImmediate(this);
 		}
     }

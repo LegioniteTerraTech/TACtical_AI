@@ -1006,8 +1006,31 @@ namespace TAC_AI
         }
 
     }
+    internal static class ExtraExtensions
+    {
+        /// <summary>
+        /// For block attachment updates when Tank is set to a valid reference
+        /// </summary>
+        public static void SubToBlockAttachConnected(this TankBlock TB, Action attachEvent, Action detachEvent)
+        {
+            if (attachEvent != null)
+                TB.AttachEvent.Subscribe(attachEvent);
+            if (detachEvent != null)
+                TB.DetachEvent.Subscribe(detachEvent);
+        }
+        /// <summary>
+        /// For block attachment updates when Tank is set to a valid reference
+        /// </summary>
+        public static void UnSubToBlockAttachConnected(this TankBlock TB, Action attachEvent, Action detachEvent)
+        {
+            if (attachEvent != null)
+                TB.AttachEvent.Unsubscribe(attachEvent);
+            if (detachEvent != null)
+                TB.DetachEvent.Unsubscribe(detachEvent);
+        }
+    }
 
-    public static class TankExtentions
+        public static class TankExtentions
     {
         public static bool IsTeamFounder(this TechData tank)
         {

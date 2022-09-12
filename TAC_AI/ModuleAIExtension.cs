@@ -130,8 +130,7 @@ namespace TAC_AI
         }
         public void DelayedSub()
         {
-            TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
-            TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
+            TankBlock.SubToBlockAttachConnected(OnAttach, OnDetach);
             if (TankBlock.IsAttached)
                 LoadToTech();
         }

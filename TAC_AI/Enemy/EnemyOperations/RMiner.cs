@@ -142,7 +142,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, mind.Range, out thisInst.theResource);
+                    thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, mind.Range
+                        , thisInst.lastTechExtents * AIGlobals.WaterDepthTechHeightPercent, out thisInst.theResource);
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");
                     if (!thisInst.foundGoal)
                     {

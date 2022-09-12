@@ -190,7 +190,9 @@ namespace TAC_AI.World
         public static ManPlayerRTS inst;
         public static int MaxCommandDistance = 9001;//500;
         public static int MaxAllowedSizeForHighlight = 3;
+        /// <summary> Converted Photo Mode </summary>
         public static bool PlayerIsInRTS = false;
+        /// <summary> The controlling Tech command hotkey </summary>
         public static bool PlayerRTSOverlay = false;
         public static bool QueuedRelease = false;
         private static bool isDragging = false;
@@ -1543,7 +1545,7 @@ namespace TAC_AI.World
                         if (vis.block.tank.Team == ManPlayer.inst.PlayerTeam)
                         {
                             var helper = vis.block.tank.GetComponent<AIECore.TankAIHelper>();
-                            if (helper && helper.ActuallyWorks)
+                            if (helper && helper.ActuallyWorks && (!helper.tank.PlayerFocused || PlayerIsInRTS))
                             {
                                 SetPlayerHovered(helper);
                                 bool isAlreadySelected = LocalPlayerTechsControlled.Contains(helper);
@@ -1566,7 +1568,7 @@ namespace TAC_AI.World
                                 }
                             }
                             else
-                            {
+                            {   // Player IS NOT hovering over a valid target
                                 if (PlayerHovered)
                                 {
                                     SetPlayerHovered(null);

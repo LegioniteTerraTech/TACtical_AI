@@ -93,7 +93,7 @@ namespace TAC_AI.AI
             }
             return fired;
         }
-        public static bool FetchClosestResource(Vector3 tankPos, float MaxScanRange, out Visible theResource)
+        public static bool FetchClosestResource(Vector3 tankPos, float MaxScanRange, float MaxDepth, out Visible theResource)
         {
             bool fired = false;
             theResource = null;
@@ -102,7 +102,7 @@ namespace TAC_AI.AI
             for (int step = 0; step < run; step++)
             {
                 var trans = Minables.ElementAt(step);
-                if (trans.isActive)
+                if (trans.isActive && trans.trans.position.y <= MaxDepth)
                 {
                     var res = trans.GetComponent<ResourceDispenser>();
                     if (!res.IsDeactivated && res.visible.isActive)

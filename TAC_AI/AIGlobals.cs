@@ -55,6 +55,8 @@ namespace TAC_AI
         public const int ReverseDelay = 60;
         public const float PlayerAISpeedPanicDividend = 6;
         public const float EnemyAISpeedPanicDividend = 9;
+        /// <summary>Depth that land Techs are able to drive into</summary>
+        public const float WaterDepthTechHeightPercent = 0.35f;
 
         // Control the aircrafts and AI
         public const float AircraftPreCrashDetection = 1.6f;

@@ -24,13 +24,13 @@ namespace TAC_AI
             Invoke("DelayedSub", 0.001f);
             trans = transform;
             holder = gameObject.GetComponent<ModuleItemHolder>();
-            TankBlock.DetachEvent.Subscribe(new Action(OnDetach));
+            TankBlock.SubToBlockAttachConnected(null, OnDetach);
             if (TankBlock.tank)
                 OnAttach();
         }
         public void DelayedSub()
         {
-            TankBlock.AttachEvent.Subscribe(new Action(OnAttach));
+            TankBlock.SubToBlockAttachConnected(OnAttach, null);
         }
         public void OnAttach()
         {

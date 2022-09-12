@@ -804,15 +804,6 @@ namespace TAC_AI.AI.Movement
             bool terrain = Singleton.Manager<ManWorld>.inst.GetTerrainHeight(input, out float height);
             if (terrain)
             {
-                /*
-                float estHeight;
-                if (Mathf.Abs(tank.transform.InverseTransformDirection(tank.rootBlockTrans.up).z) > 0.8f)
-                    estHeight = tank.blockman.blockCentreBounds.extents.z;
-                else if (Mathf.Abs(tank.transform.InverseTransformDirection(tank.rootBlockTrans.up).x) > 0.8f)
-                    estHeight = tank.blockman.blockCentreBounds.extents.x;
-                else
-                    estHeight = tank.blockman.blockCentreBounds.extents.y;
-                */
                 if (thisInst.PendingHeightCheck)
                 {
                     thisInst.GetLowestPointOnTech();
@@ -898,7 +889,7 @@ namespace TAC_AI.AI.Movement
                 // Iterate closest terrain spots
                 int stepxM = 3;
                 int stepzM = 3;
-                float highestHeight = KickStart.WaterHeight;
+                float highestHeight = KickStart.WaterHeight - thisInst.lastTechExtents * AIGlobals.WaterDepthTechHeightPercent;
                 Vector3 posBest = Vector3.zero;
                 for (int stepz = 0; stepz < stepzM; stepz++)
                 {
