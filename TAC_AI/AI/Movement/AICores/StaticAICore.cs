@@ -17,7 +17,7 @@ namespace TAC_AI.AI.Movement.AICores
             this.controller = (AIControllerStatic)controller;
             this.tank = tank;
             controller.Helper.GroundOffsetHeight = controller.Helper.lastTechExtents + AIGlobals.GeneralAirGroundOffset;
-            DebugTAC_AI.Log("TACtical_AI: StaticAICore - Init");
+            //DebugTAC_AI.Log("TACtical_AI: StaticAICore - Init");
         }
 
         public Vector3 AvoidAssist(Vector3 targetIn, Vector3 predictionOffset)

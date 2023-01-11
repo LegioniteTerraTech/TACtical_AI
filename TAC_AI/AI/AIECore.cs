@@ -666,6 +666,7 @@ namespace TAC_AI.AI
                 if (inst)
                     return;
                 inst = new GameObject("AIManager").AddComponent<TankAIManager>();
+                inst.gameObject.AddComponent<AIEPathMapper>();
                 //Allies = new List<Tank>();
                 Minables = new List<Visible>();
                 Depots = new List<ModuleHarvestReciever>();

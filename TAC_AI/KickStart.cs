@@ -247,7 +247,7 @@ namespace TAC_AI
             }
         }
         public static Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
-        public static bool hasPatched = false;
+        private static bool hasPatched = false;
         internal static bool HasHookedUpToSafeSaves = false;
 
         internal static bool isSteamManaged = false;
@@ -333,11 +333,17 @@ namespace TAC_AI
 
         public static void PatchMod()
         {
+            DebugTAC_AI.Log("TACtical_AI: Patch Call");
             if (!hasPatched)
             {
                 try
                 {
+                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(GlobalPatches), "TACtical_AI");
+                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(ManagerPatches), "TACtical_AI");
+                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(UIPatches), "TACtical_AI");
+                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(ModulePatches), "TACtical_AI");
                     harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
+                    DebugTAC_AI.Log("TACtical_AI: Patched");
                     hasPatched = true;
                 }
                 catch (Exception e)
@@ -481,6 +487,10 @@ namespace TAC_AI
             {
                 try
                 {
+                    MassPatcher.MassUnPatchAllWithin(harmonyInstance, typeof(ModulePatches), "TACtical_AI");
+                    MassPatcher.MassUnPatchAllWithin(harmonyInstance, typeof(UIPatches), "TACtical_AI");
+                    MassPatcher.MassUnPatchAllWithin(harmonyInstance, typeof(ManagerPatches), "TACtical_AI");
+                    MassPatcher.MassUnPatchAllWithin(harmonyInstance, typeof(GlobalPatches), "TACtical_AI");
                     harmonyInstance.UnpatchAll("legionite.tactical_ai");
                     hasPatched = false;
                 }
@@ -1006,31 +1016,8 @@ namespace TAC_AI
         }
 
     }
-    internal static class ExtraExtensions
-    {
-        /// <summary>
-        /// For block attachment updates when Tank is set to a valid reference
-        /// </summary>
-        public static void SubToBlockAttachConnected(this TankBlock TB, Action attachEvent, Action detachEvent)
-        {
-            if (attachEvent != null)
-                TB.AttachEvent.Subscribe(attachEvent);
-            if (detachEvent != null)
-                TB.DetachEvent.Subscribe(detachEvent);
-        }
-        /// <summary>
-        /// For block attachment updates when Tank is set to a valid reference
-        /// </summary>
-        public static void UnSubToBlockAttachConnected(this TankBlock TB, Action attachEvent, Action detachEvent)
-        {
-            if (attachEvent != null)
-                TB.AttachEvent.Unsubscribe(attachEvent);
-            if (detachEvent != null)
-                TB.DetachEvent.Unsubscribe(detachEvent);
-        }
-    }
 
-        public static class TankExtentions
+    public static class TankExtentions
     {
         public static bool IsTeamFounder(this TechData tank)
         {

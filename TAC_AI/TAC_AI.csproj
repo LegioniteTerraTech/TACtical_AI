@@ -249,6 +249,7 @@
     <Compile Include="AI\AlliedOperations\BBase.cs" />
     <Compile Include="AI\AlliedOperations\BEnergizer.cs" />
     <Compile Include="AI\AlliedOperations\BScrapper.cs" />
+    <Compile Include="AI\Movement\AIEAutoPather2D.cs" />
     <Compile Include="AI\Movement\AIControllerAir.cs" />
     <Compile Include="AI\Movement\AIControllerDefault.cs" />
     <Compile Include="AI\Movement\AICores\MultiTechUtils.cs" />
@@ -272,6 +273,7 @@
     <Compile Include="AI\Movement\AICores\IMovementAICore.cs" />
     <Compile Include="AI\Movement\AICores\VehicleAICore.cs" />
     <Compile Include="AI\Movement\AICores\VtolAICore.cs" />
+    <Compile Include="AI\Movement\AIEPathMapper.cs" />
     <Compile Include="CursorChanger.cs" />
     <Compile Include="CustomAttract.cs" />
     <Compile Include="DebugTAC_AI.cs" />
@@ -308,7 +310,9 @@
     <Compile Include="GUIEvictionNotice.cs" />
     <Compile Include="ModuleWorldRadar.cs" />
     <Compile Include="PatchBatch\GlobalPatches.cs" />
-    <Compile Include="PatchBatch\MassPatcher.cs" />
+    <Compile Include="PatchBatch\ManagerPatches.cs" />
+    <Compile Include="PatchBatch\ModulePatches.cs" />
+    <Compile Include="PatchBatch\UIPatches.cs" />
     <Compile Include="ReverseCache.cs" />
     <Compile Include="ModuleAIExtension.cs" />
     <Compile Include="ModuleChargerTracker.cs" />

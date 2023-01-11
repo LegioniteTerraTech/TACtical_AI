@@ -84,66 +84,88 @@ namespace TAC_AI.World
             {
                 if (ManNetwork.IsHost)
                 {
+                    // Sieges are "All In" for the AI.  They should not retreat since a siege is a long distance attack.
                     if (inst.EP == null || !Singleton.playerTank)
+                        return; // Cannot run while no targetable player Tech is present
+                    CallAllRaidersToPlayerTile();
+                    TryRefocusIdleRaidersOnPlayer();
+                    ScrapStuckOrFrozenRaiders();
+                    CheckSiegeEnded();
+                }
+            }
+        }
+
+        private static void CallAllRaidersToPlayerTile()
+        {
+            try
+            {
+                inst.EP.SetEvent(Singleton.playerTank.visible.tileCache.tile.Coord);
+            }
+            catch
+            {
+                DebugTAC_AI.Log("ManEnemySiege - Player Tech does not have a valid coord.  Could not update this frame.");
+                return;
+            }
+        }
+        private static void TryRefocusIdleRaidersOnPlayer()
+        {
+            inst.techsInvolved.Clear();
+            foreach (Tank tech in ManTechs.inst.CurrentTechs)
+            {
+                if ((bool)tech?.visible?.isActive)
+                {
+                    if (tech.Team == inst.EP.Team && !tech.IsAnchored)
                     {
-                        return;
-                    }
-                    try
-                    {
-                        inst.EP.SetEvent(Singleton.playerTank.visible.tileCache.tile.Coord);
-                    }
-                    catch 
-                    {
-                        DebugTAC_AI.Assert(true, "Player Tech does not have a valid coord.  Could not update this frame.");
-                        return; 
-                    }
-                    inst.techsInvolved.Clear();
-                    foreach (Tank tech in ManTechs.inst.CurrentTechs)
-                    {
-                        if ((bool)tech?.visible?.isActive)
+                        if (!tech.IsSleeping)
                         {
-                            if (tech.Team == inst.EP.Team && !tech.IsAnchored)
+                            var helper = tech.GetHelperInsured();
+                            if (!helper.lastEnemy)
                             {
-                                if (!tech.IsSleeping)
+                                helper.lastEnemy = Singleton.playerTank?.visible;
+                                var mind = tech.GetComponent<EnemyMind>();
+                                if (mind)
                                 {
-                                    var helper = tech.GetComponent<AIECore.TankAIHelper>();
-                                    if (!helper.lastEnemy)
-                                    {
-                                        helper.lastEnemy = Singleton.playerTank?.visible;
-                                        var mind = tech.GetComponent<EnemyMind>();
-                                        if (mind.CommanderAttack == EnemyAttack.Coward)
-                                            mind.CommanderAttack = EnemyAttack.Bully;
-                                        mind.CommanderMind = EnemyAttitude.Homing;
-                                    }
-                                    inst.techsInvolved.Add(tech);
+                                    if (mind.CommanderAttack == EnemyAttack.Coward)
+                                        mind.CommanderAttack = EnemyAttack.Bully;
+                                    mind.CommanderMind = EnemyAttitude.Homing;
                                 }
-                                else
-                                    inst.techsFrozen.Add(tech);
                             }
+                            inst.techsInvolved.Add(tech);
                         }
-                    }
-                    int count = inst.techsFrozen.Count;
-                    for (int step = 0; step < count; count--)
-                    {
-                        Tank tech = inst.techsFrozen[0];
-                        inst.techsFrozen.RemoveAt(0);
-                        if ((bool)tech?.visible)
-                        {
-                            UnloadedBases.RecycleLoadedTechToTeam(tech);
-                            SpecialAISpawner.Purge(tech);
-                        }
-                    }
-                    inst.techsFrozen.Clear();
-                    var mainBase = UnloadedBases.GetTeamFunder(inst.EP);
-                    bool defeatedAllUnits = !Tank.IsEnemy(inst.Team, ManPlayer.inst.PlayerTeam) || (inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs());
-                    if ((mainBase != null && !UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos)) || defeatedAllUnits)
-                    {
-                        NetworkHandler.TryBroadcastNewEnemySiege(inst.Team, MaxHP, false);
-                        EndSiege(shouldCooldown: defeatedAllUnits);
+                        else
+                            inst.techsFrozen.Add(tech);
                     }
                 }
             }
         }
+        private static void ScrapStuckOrFrozenRaiders()
+        {
+            int count = inst.techsFrozen.Count;
+            for (int step = 0; step < count; count--)
+            {
+                Tank tech = inst.techsFrozen[0];
+                inst.techsFrozen.RemoveAt(0);
+                if ((bool)tech?.visible)
+                {
+                    UnloadedBases.RecycleLoadedTechToTeam(tech);
+                    SpecialAISpawner.Purge(tech);
+                }
+            }
+            inst.techsFrozen.Clear();
+        }
+        private static void CheckSiegeEnded()
+        {
+            var mainBase = UnloadedBases.GetTeamFunder(inst.EP);
+            bool defeatedAllUnits = !Tank.IsEnemy(inst.Team, ManPlayer.inst.PlayerTeam) || (inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs());
+            if ((mainBase != null && !UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos)) || defeatedAllUnits)
+            {
+                NetworkHandler.TryBroadcastNewEnemySiege(inst.Team, MaxHP, false);
+                EndSiege(shouldCooldown: defeatedAllUnits);
+            }
+        }
+
+
+
         public static void EndSiege(bool immedeate = false, bool shouldCooldown = false)
         {
             if (!inst || !ready)

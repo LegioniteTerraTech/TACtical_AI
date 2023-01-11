@@ -30,7 +30,7 @@ namespace TAC_AI
         public const int MaxBlockLimitAttract = 128;
 
         public const float MinimumBaseSpacing = 450;
-        public const float MinimumMonitorSpacingSqr = 30625;//175
+        public const float MinimumMonitorSpacingSqr = 75^2;//175
 
         // GENERAL AI PARAMETERS
         public const float RTSAirGroundOffset = 24;
@@ -47,6 +47,9 @@ namespace TAC_AI
 
 
         // Pathfinding
+        public const float AIPathingSuccessRad = 2.4f; // How far should the tech radius from the path point to consider finishing the path point?
+        public const float AIPathingSuccessRadPrecise = 1.8f; // How far should the tech radius from the path point to consider finishing the path point?
+
         public const int ExtraSpace = 6;  // Extra pathfinding space
         public const float DefaultDodgeStrengthMultiplier = 1.75f;  // The motivation in trying to move away from a tech in the way
         public const float AirborneDodgeStrengthMultiplier = 0.4f;  // The motivation in trying to move away from a tech in the way
@@ -75,6 +78,10 @@ namespace TAC_AI
 
         public const float ChopperOperatingExtraHeight = 0.38f;
         public const float ChopperChillFactorMulti = 30f;
+
+        public const float HovershipHorizontalDriveMulti = 1.25f;
+        public const float HovershipUpDriveMulti = 1f;
+        public const float HovershipDownDriveMulti = 0.6f;
 
 
         /// <summary> IN m/s !!!</summary>

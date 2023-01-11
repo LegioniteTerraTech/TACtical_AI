@@ -1144,6 +1144,7 @@ namespace TAC_AI.World
                     List<EnemyPresence> EPScrambled = EnemyTeams.Values.ToList();
                     EPScrambled.Shuffle();
                     int Count = EPScrambled.Count;
+                    DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
                     for (int step = 0; step < Count;)
                     {
                         EnemyPresence EP = EPScrambled.ElementAt(step);

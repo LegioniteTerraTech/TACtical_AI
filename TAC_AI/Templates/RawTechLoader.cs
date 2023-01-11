@@ -71,7 +71,10 @@ namespace TAC_AI.Templates
         {
             Attempts++;
             if (ManSpawn.inst.IsTechSpawning || DelayFrames > Attempts)
-                return false; // Something else is using it!!  Hold off!
+            {
+                DebugTAC_AI.Exception("TACtical_AI: QueueInstantTech.PushSpawn: ManSpawn Tech spawning appears to be jammed.  Unable to queue Tech spawn.");
+                return false; // Something else is using it!!  Hold off! 
+            }
             Tank outcome = RawTechLoader.InstantTech(pos, forward, Team, name, blueprint, grounded, ForceAnchor, population, skins);
             if ((bool)outcome)
             {
@@ -1163,7 +1166,7 @@ namespace TAC_AI.Templates
             try
             {   // Filters
                 List<BaseTemplate> canidates;
-                DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 if (faction == FactionTypesExt.NULL)
                 {
                     canidates = TempManager.ExternalEnemyTechsAll.FindAll
@@ -1245,7 +1248,7 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
-                DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<BaseTemplate> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -1903,12 +1906,12 @@ namespace TAC_AI.Templates
                     Quaternion.LookRotation(forward, Vector3.up), grounded);
                 if (TV == null)
                 {
-                    DebugTAC_AI.LogError("TACtical_AI: InstantTech(TrackedVisible)[MP] - error on SpawnTank");
+                    DebugTAC_AI.FatalError("TACtical_AI: InstantTech(TrackedVisible)[MP] - error on SpawnTank");
                     return null;
                 }
                 if (TV.visible == null)
                 {
-                    DebugTAC_AI.LogError("TACtical_AI: InstantTech(Visible)[MP] - error on SpawnTank");
+                    DebugTAC_AI.FatalError("TACtical_AI: InstantTech(Visible)[MP] - error on SpawnTank");
                     return null;
                 }
                 theTech = TV.visible.tank;
@@ -1934,7 +1937,7 @@ namespace TAC_AI.Templates
             }
             if (theTech.IsNull())
             {
-                DebugTAC_AI.LogError("TACtical_AI: InstantTech - error on SpawnTank");
+                DebugTAC_AI.Exception("TACtical_AI: InstantTech - error on SpawnTank");
                 return null;
             }
             else
@@ -2304,16 +2307,23 @@ namespace TAC_AI.Templates
         }
         internal static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
         {
+            if (TempManager.techBases == null)
+                DebugTAC_AI.Exception("IsBaseTemplateAvailable - techBases is null.  This should not be possible.");
             return TempManager.techBases.TryGetValue(toSpawn, out _);
         }
         internal static BaseTemplate GetBaseTemplate(SpawnBaseTypes toSpawn)
         {
+            if (TempManager.techBases == null)
+            {
+                DebugTAC_AI.Exception("TACtical_AI: GetBaseTemplate - techBases IS NULL");
+                return null;
+            }
             if (TempManager.techBases.TryGetValue(toSpawn, out BaseTemplate baseT))
             {
                 return baseT;
             }
             DebugTAC_AI.Exception("TACtical_AI: GetBaseTemplate - COULD NOT FETCH BaseTemplate FOR ID " + toSpawn + "!");
-            return TempManager.techBases.ElementAtOrDefault(0).Value;
+            return null;
         }
 
 
@@ -2377,7 +2387,7 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
-                DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -2466,7 +2476,7 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
-                DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> canidates;
                 if (faction == FactionTypesExt.NULL)
                 {
@@ -2618,8 +2628,9 @@ namespace TAC_AI.Templates
                     DebugTAC_AI.Exception("TACtical_AI: GetEnemyBaseType - population entry " + toSpawn + " has a null BaseTemplate.  How?");
                 return toSpawn;
             }
-            catch { } // we resort to legacy
-            DebugTAC_AI.Assert(true, "TACtical_AI: GetEnemyBaseType - Population seach FAILED");
+            catch (Exception e)
+            { DebugTAC_AI.Exception("TACtical_AI: GetEnemyBaseType - Population seach FAILED:\n" + e); } // we resort to legacy
+            //DebugTAC_AI.Assert(true, "TACtical_AI: GetEnemyBaseType - Population seach FAILED");
 
             int lowerRANDRange = 1;
             int higherRANDRange = 20;

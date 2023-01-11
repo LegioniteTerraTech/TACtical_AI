@@ -944,7 +944,7 @@ namespace TAC_AI.Templates
                     WorldTile WT = ManWorld.inst.TileManager.LookupTile(WP.TileCoord);
                     if (WT != null && WT.IsLoaded)
                     {
-                        if (WT.StoredVisiblesWaitingToLoad != null && WT.StoredVisiblesWaitingToLoad.Count > 0)
+                        if (WT.StoredVisiblesWaitingToLoad != null && WT.StoredVisiblesWaitingToLoad.Count > 0 && remove.visible.isActive)
                         {
                             step++;
                             continue; // TECHS ARE LOADING AND IF WE REMOVE IT NOW IT WILL IGNORE TEAMS

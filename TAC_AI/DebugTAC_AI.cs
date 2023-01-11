@@ -10,6 +10,7 @@ namespace TAC_AI
     {
         internal static bool LogAll = false;
         internal static bool ShouldLog = true;
+        internal static bool ShouldLogPathing = true;
         private static bool ShouldLogNet = true;
         private static bool LogDev = false;
 
@@ -22,6 +23,12 @@ namespace TAC_AI
         internal static void Log(string message)
         {
             if (!ShouldLog)
+                return;
+            UnityEngine.Debug.Log(message);
+        }
+        internal static void LogPathing(string message)
+        {
+            if (!ShouldLog || !ShouldLogPathing)
                 return;
             UnityEngine.Debug.Log(message);
         }

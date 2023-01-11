@@ -14,6 +14,19 @@ namespace TAC_AI.Templates
         private static int lastExtLocalCount = 0;
         private static int lastExtModCount = 0;
 
+
+        /// <summary>
+        /// Hosts active techs
+        /// </summary>
+        public static Dictionary<SpawnBaseTypes, BaseTemplate> techBases;
+
+        public static List<BaseTemplate> ExternalEnemyTechsLocal;
+
+        public static List<BaseTemplate> ExternalEnemyTechsMods;
+
+        public static List<BaseTemplate> ExternalEnemyTechsAll;
+
+
         public static void ValidateAllStringTechs()
         {
             ValidateAndAddAllInternalTechs();
@@ -282,21 +295,6 @@ namespace TAC_AI.Templates
 
             return valid;
         }
-
-
-        /// <summary>
-        /// Hosts active techs
-        /// </summary>
-        public static Dictionary<SpawnBaseTypes, BaseTemplate> techBases;
-
-        public static List<BaseTemplate> ExternalEnemyTechsLocal;
-
-        public static List<BaseTemplate> ExternalEnemyTechsMods;
-
-        public static List<BaseTemplate> ExternalEnemyTechsAll;
-
-
-
 
     }
 }

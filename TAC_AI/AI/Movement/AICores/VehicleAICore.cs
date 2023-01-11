@@ -36,15 +36,123 @@ namespace TAC_AI.AI.Movement.AICores
             throw new NotImplementedException();
         }
 
-        public bool DriveDirector()
+        public bool GetPathingTargetRTS(out Vector3 pos, out AISteerAim aim)
         {
             var help = controller.Helper;
-            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");
+            pos = controller.PathPoint;
+            aim = AISteerAim.OnlyImmedeate;
+            try
+            {
+                help.Steer = true;
+                help.MinimumRad = 0.5f;
+                help.DriveDir = EDriveFacing.Forwards;
+                if (help.IsMultiTech)
+                {   //Override and disable most driving abilities
+                    aim = AISteerAim.IgnoreAll;
+
+                    pos = MultiTechUtils.HandleMultiTech(help, tank);
+                }
+                else
+                {
+                    help.Steer = true;
+                    help.DriveDir = EDriveFacing.Forwards;
+                    bool Combat = false;
+                    if (help.RTSDestination == Vector3.zero)
+                        Combat = TryAdjustForCombat(true); //If we are set to chase then chase with proper AI
+                    if (!Combat)
+                    {
+                        if (help.recentSpeed < 10 && help.lastOperatorRange < 32)
+                        {
+                            if (ManPlayerRTS.HasMovementQueue(help))
+                            {
+                                help.ForceSetDrive = true;
+                                help.DriveVar = 1;
+                                aim = AISteerAim.PrecisePath;
+
+                                pos = help.RTSDestination;
+                            }
+                            else
+                            {
+                                help.PivotOnly = true;
+                                if (help.lastEnemy != null)
+                                {
+                                    pos = help.lastEnemy.tank.boundsCentreWorldNoCheck;
+                                }
+                                else
+                                {
+                                    aim = AISteerAim.PrecisePath;
+
+                                    pos = help.RTSDestination;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            aim = AISteerAim.PrecisePath;
+
+                            pos = help.RTSDestination;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    DebugTAC_AI.Log("TACtical_AI: ERROR IN VehicleAICore - GetPathingTargetRTS");
+                    DebugTAC_AI.Log("TACtical_AI: Tank - " + tank.name);
+                    DebugTAC_AI.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
+                    DebugTAC_AI.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
+                    if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
+                        DebugTAC_AI.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
+                    DebugTAC_AI.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
+                    if ((bool)help.lastEnemy)
+                        DebugTAC_AI.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
+                    DebugTAC_AI.Log("TACtical_AI: " + e);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Missing variable(s)");
+                }
+            }
+            return true;
+        }
+        
+        public bool DriveDirectorRTS()
+        {
+            if (!GetPathingTargetRTS(out Vector3 Target, out AISteerAim aim))
+                return false;
+
+            var help = controller.Helper;
+            if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
+                Target = AIEPathing.OffsetFromGround(Target, help);
+            else if (help.DriverType == AIDriverType.Sailor)
+                Target = AIEPathing.OffsetToSea(Target, tank, help);
+            controller.ProcessedDest = AIEPathing.ModerateMaxAlt(Target, help);
+            help.lastDestination = controller.ProcessedDest;
+
+            // Planned pathing
+            if (PlanningPathing(Target, aim))
+                return true;
+
+            // Immedeate Pathing
+            return ImmedeatePathing(Target, aim);
+        }
+
+
+
+        public bool GetPathingTarget(out Vector3 pos, out AISteerAim aim)
+        {
+            var help = controller.Helper;
+            pos = controller.PathPoint;
+            aim = AISteerAim.OnlyImmedeate;
             try
             {
                 if (help.IsMultiTech)
                 {   //Override and disable most driving abilities
-                    controller.ProcessedDest = MultiTechUtils.HandleMultiTech(help, tank);
+                    aim = AISteerAim.IgnoreAll;
+                    pos = MultiTechUtils.HandleMultiTech(help, tank);
                 }
                 else if (help.DriveDest == EDriveDest.ToBase)
                 {
@@ -53,7 +161,9 @@ namespace TAC_AI.AI.Movement.AICores
                         help.Steer = true;
                         help.DriveDir = EDriveFacing.Forwards;
                         help.MinimumRad = Mathf.Max(help.lastTechExtents - 2, 0.5f);
-                        controller.ProcessedDest = help.AvoidAssistPrecise(help.lastBasePos.position);
+                        aim = AISteerAim.PrecisePath;
+
+                        pos = help.lastBasePos.position;
                     }
                 }
                 else if (help.DriveDest == EDriveDest.ToMine)
@@ -64,8 +174,9 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveFacing.Forwards;
-                            controller.ProcessedDest = help.theResource.tank.boundsCentreWorldNoCheck;
                             help.MinimumRad = 0;
+
+                            pos = help.theResource.tank.boundsCentreWorldNoCheck;
                         }
                         else
                         {
@@ -73,15 +184,19 @@ namespace TAC_AI.AI.Movement.AICores
                             {
                                 help.Steer = true;
                                 help.DriveDir = EDriveFacing.Forwards;
-                                controller.ProcessedDest = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
                                 help.MinimumRad = 0;
+                                aim = AISteerAim.PrecisePath;
+
+                                pos = help.theResource.tank.boundsCentreWorldNoCheck;
                             }
                             else
                             {
                                 help.Steer = true;
                                 help.DriveDir = EDriveFacing.Forwards;
-                                controller.ProcessedDest = help.AvoidAssistPrecise(help.theResource.tank.boundsCentreWorldNoCheck);
+                                aim = AISteerAim.PrecisePath;
                                 help.MinimumRad = help.lastTechExtents + 2;
+
+                                pos = help.theResource.tank.boundsCentreWorldNoCheck;
                             }
                         }
                     }
@@ -91,8 +206,9 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveFacing.Forwards;
-                            controller.ProcessedDest = help.theResource.trans.position;
                             help.MinimumRad = 0;
+
+                            pos = help.theResource.trans.position;
                         }
                         else
                         {
@@ -100,15 +216,19 @@ namespace TAC_AI.AI.Movement.AICores
                             {
                                 help.Steer = true;
                                 help.DriveDir = EDriveFacing.Forwards;
-                                controller.ProcessedDest = help.AvoidAssistPrecise(help.theResource.trans.position);
+                                aim = AISteerAim.PrecisePath;
                                 help.MinimumRad = 0;
+
+                                pos = help.theResource.trans.position;
                             }
                             else
                             {
                                 help.Steer = true;
                                 help.DriveDir = EDriveFacing.Forwards;
-                                controller.ProcessedDest = help.AvoidAssistPrecise(help.theResource.centrePosition);
+                                aim = AISteerAim.PrecisePath;
                                 help.MinimumRad = help.lastTechExtents + 2;
+
+                                pos = help.theResource.centrePosition;
                             }
                         }
                     }
@@ -124,15 +244,18 @@ namespace TAC_AI.AI.Movement.AICores
                             help.Steer = true;
                             help.DriveDir = EDriveFacing.Forwards;
                             help.AdviseAway = true;
-                            controller.ProcessedDest = help.theResource.transform.position;
                             help.MinimumRad = 0.5f;
+
+                            pos = help.theResource.transform.position;
                         }
                         else if (help.DriveDest == EDriveDest.ToLastDestination && help.theResource.IsNotNull())
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveFacing.Forwards;
-                            controller.ProcessedDest = help.AvoidAssist(help.theResource.tank.transform.position);
+                            aim = AISteerAim.Path;
                             help.MinimumRad = help.lastTechExtents + help.theResource.GetCheapBounds() + 5;
+
+                            pos = help.theResource.tank.transform.position;
                         }
                         else
                         {
@@ -150,15 +273,18 @@ namespace TAC_AI.AI.Movement.AICores
                             help.Steer = true;
                             help.DriveDir = EDriveFacing.Forwards;
                             help.AdviseAway = true;
-                            controller.ProcessedDest = help.lastPlayer.tank.boundsCentreWorldNoCheck;//help.AvoidAssistInv(help.lastPlayer.transform.position);
                             help.MinimumRad = 0.5f;
+
+                            pos = help.lastPlayer.tank.boundsCentreWorldNoCheck;
                         }
                         else if (help.DriveDest == EDriveDest.ToLastDestination && (bool)help.lastPlayer)
                         {
                             help.Steer = true;
                             help.DriveDir = EDriveFacing.Forwards;
-                            controller.ProcessedDest = help.AvoidAssist(help.lastPlayer.tank.boundsCentreWorldNoCheck);
+                            aim = AISteerAim.Path;
                             help.MinimumRad = help.lastTechExtents + help.lastPlayer.GetCheapBounds() + 5;
+
+                            pos = help.lastPlayer.tank.boundsCentreWorldNoCheck;
                         }
                         else
                         {
@@ -168,89 +294,11 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
             }
-            catch  (Exception e)
-            {
-                try
-                {
-                    DebugTAC_AI.Log("TACtical_AI: ERROR IN VehicleAICore");
-                    DebugTAC_AI.Log("TACtical_AI: Tank - " + tank.name);
-                    DebugTAC_AI.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
-                    DebugTAC_AI.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
-                    if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
-                        DebugTAC_AI.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
-                    DebugTAC_AI.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
-                    DebugTAC_AI.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
-                    if ((bool)help.lastEnemy)
-                        DebugTAC_AI.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
-                    DebugTAC_AI.Log("TACtical_AI: " + e);
-                }
-                catch
-                {
-                    DebugTAC_AI.Log("TACtical_AI: Missing variable(s)");
-                }
-            }
-            if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
-                controller.ProcessedDest = AIEPathing.OffsetFromGround(controller.ProcessedDest, controller.Helper);
-            else if (help.DriverType == AIDriverType.Sailor)
-                controller.ProcessedDest = AIEPathing.OffsetToSea(controller.ProcessedDest, tank, controller.Helper);
-
-            controller.ProcessedDest = AIEPathing.ModerateMaxAlt(controller.ProcessedDest, help);
-
-            return true;
-        }
-
-        public bool DriveDirectorRTS()
-        {
-            var help = controller.Helper;
-            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");
-            try
-            {
-                help.Steer = true;
-                help.MinimumRad = 0.5f;
-                help.DriveDir = EDriveFacing.Forwards;
-                if (help.IsMultiTech)
-                {   //Override and disable most driving abilities
-                    controller.ProcessedDest = MultiTechUtils.HandleMultiTech(help, tank);
-                }
-                else
-                {
-                    help.Steer = true;
-                    help.DriveDir = EDriveFacing.Forwards;
-                    bool Combat = false;
-                    if (help.RTSDestination == Vector3.zero)
-                        Combat = TryAdjustForCombat(true); //If we are set to chase then chase with proper AI
-                    if (!Combat)
-                    {
-                        if (help.recentSpeed < 10 && help.lastOperatorRange < 32)
-                        {
-                            if (ManPlayerRTS.HasMovementQueue(help))
-                            {
-                                help.ForceSetDrive = true;
-                                help.DriveVar = 1;
-                                help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
-                            }
-                            else
-                            {
-                                help.PivotOnly = true;
-                                if (help.lastEnemy != null)
-                                {
-                                    help.lastDestination = help.lastEnemy.tank.boundsCentreWorldNoCheck;
-                                }
-                                else
-                                    help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
-                            }
-                        }
-                        else
-                            help.lastDestination = help.AvoidAssistPrecise(help.RTSDestination);
-                        controller.ProcessedDest = help.lastDestination;
-                    }
-                }
-            }
             catch (Exception e)
             {
                 try
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ERROR IN VehicleAICore (RTS)");
+                    DebugTAC_AI.Log("TACtical_AI: ERROR IN VehicleAICore - GetPathingTarget");
                     DebugTAC_AI.Log("TACtical_AI: Tank - " + tank.name);
                     DebugTAC_AI.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
                     DebugTAC_AI.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
@@ -267,19 +315,140 @@ namespace TAC_AI.AI.Movement.AICores
                     DebugTAC_AI.Log("TACtical_AI: Missing variable(s)");
                 }
             }
+            return true;
+        }
+        public bool PlanningPathing(Vector3 Target, AISteerAim aim)
+        {
+            if (!AIEAutoPather2D.IsFarEnough(tank.boundsCentreWorldNoCheck, Target))
+                return false;
+            var help = controller.Helper;
+            switch (help.DriverType)
+            {
+                case AIDriverType.Null:
+                    return false; // NULL
+                case AIDriverType.AutoSet:
+                    return false; // It's still thinking.  This should not be the case though...
+                case AIDriverType.Tank:
+                    controller.WaterPathing = WaterPathing.AvoidWater;
+                    break;
+                case AIDriverType.Sailor:
+                    controller.WaterPathing = WaterPathing.StayInWater;
+                    break;
+                case AIDriverType.Pilot:
+                case AIDriverType.Astronaut:
+                    controller.WaterPathing = WaterPathing.AllowWater;
+                    return false; // UNSUPPORTED for now
+                case AIDriverType.Stationary:
+                    return false; // Bases do not need planned pathing.
+            }
+            float pathSuccessMulti = 1;
+            switch (aim)
+            {
+                case AISteerAim.IgnoreAll:
+                case AISteerAim.OnlyImmedeate:
+                    controller.SetAutoPathfinding(false);
+                    return false;
+                case AISteerAim.Path:
+                    pathSuccessMulti = AIGlobals.AIPathingSuccessRad;
+                    break;
+                case AISteerAim.PrecisePath:
+                    pathSuccessMulti = AIGlobals.AIPathingSuccessRadPrecise;
+                    break;
+            }
+            if (!controller.AutoPathfind)
+                DebugTAC_AI.LogPathing(tank.name + ": PlanningPathing - Started pathfinding!");
+
+            controller.TargetDestination = WorldPosition.FromScenePosition(Target);
+            controller.SetAutoPathfinding(true);
+            if (controller.PathPlanned != null)
+            {
+                help.MinimumRad = 0; // Drive DIRECTLY to target
+                if (help.DriverType == AIDriverType.Sailor)
+                    controller.PathPoint = AIEPathing.ForceOffsetToSea(controller.PathPlanned.Peek().ScenePosition);
+                else
+                    controller.PathPoint = AIEPathing.ForceOffsetFromGroundA(controller.PathPlanned.Peek().ScenePosition, 1);
+                switch (aim)
+                {
+                    case AISteerAim.Path:
+                        controller.PathPoint = help.AvoidAssist(controller.PathPoint);
+                        break;
+                    case AISteerAim.PrecisePath:
+                        controller.PathPoint = help.AvoidAssistPrecise(controller.PathPoint);
+                        break;
+                }
+                DebugTAC_AI.LogPathing(tank.name + ": PlanningPathing - Current pos is " + tank.boundsCentreWorldNoCheck + " and target is " + controller.PathPoint + " of waypoints left " + controller.PathPlanned.Count);
+
+                if ((controller.PathPoint - tank.boundsCentreWorldNoCheck).WithinSquareXZ(tank.GetCheapBounds() * pathSuccessMulti))
+                {
+                    controller.PathPlanned.Dequeue(); // Next position!
+                    DebugTAC_AI.LogPathing(tank.name + ": PlanningPathing - finished pathing to " + controller.PathPoint);
+                    if (controller.PathPlanned.Count == 0)
+                    {
+                        DebugTAC_AI.LogPathing(tank.name + ": PlanningPathing - All Done!");
+                        controller.PathPlanned = null; // Finished!
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+        public bool ImmedeatePathing(Vector3 Target, AISteerAim aim)
+        {
+            var help = controller.Helper;
+
+            switch (aim)
+            {
+                case AISteerAim.IgnoreAll:
+                    controller.PathPoint = Target;
+                    return true;
+                case AISteerAim.OnlyImmedeate:
+                    break;
+                case AISteerAim.Path:
+                    Target = help.AvoidAssist(Target);
+                    break;
+                case AISteerAim.PrecisePath:
+                    Target = help.AvoidAssistPrecise(Target);
+                    break;
+            }
+
             if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
-                controller.ProcessedDest = AIEPathing.OffsetFromGround(controller.ProcessedDest, controller.Helper);
+                Target = AIEPathing.OffsetFromGround(Target, help);
             else if (help.DriverType == AIDriverType.Sailor)
-                controller.ProcessedDest = AIEPathing.OffsetToSea(controller.ProcessedDest, tank, controller.Helper);
+                Target = AIEPathing.OffsetToSea(Target, tank, help);
 
-            controller.ProcessedDest = AIEPathing.ModerateMaxAlt(controller.ProcessedDest, help);
-
+            controller.PathPoint = AIEPathing.ModerateMaxAlt(Target, help);
+            DebugTAC_AI.LogPathing(tank.name + ": ImmedeatePathing - Current pos is " + tank.boundsCentreWorldNoCheck + " and target is " + controller.PathPoint);
             return true;
         }
 
-        public bool DriveDirectorEnemy(EnemyMind mind)
+        public bool DriveDirector()
+        {
+            if (!GetPathingTarget(out Vector3 Target, out AISteerAim aim))
+                return false;
+
+            var help = controller.Helper;
+            if (help.Attempt3DNavi && !(help.FullMelee && help.lastEnemy.IsNotNull()))
+                Target = AIEPathing.OffsetFromGround(Target, help);
+            else if (help.DriverType == AIDriverType.Sailor)
+                Target = AIEPathing.OffsetToSea(Target, tank, help);
+            controller.ProcessedDest = AIEPathing.ModerateMaxAlt(Target, help);
+
+            // Planned pathing
+            if (PlanningPathing(Target, aim))
+                return true;
+
+            // Immedeate Pathing
+            return ImmedeatePathing(Target, aim);
+        }
+
+
+
+        public bool GetPathingTargetEnemy(EnemyMind mind, out Vector3 pos, out AISteerAim aim)
         {
             var help = controller.Helper;
+            pos = controller.PathPoint;
+            aim = AISteerAim.OnlyImmedeate;
+
             if (mind.IsNull())
                 return false;
             if (help.DriveDest == EDriveDest.ToBase)
@@ -288,8 +457,10 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     help.Steer = true;
                     help.DriveDir = EDriveFacing.Forwards;
-                    controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(controller.Tank, help.lastBasePos.position, controller.Helper, mind);
                     help.MinimumRad = Mathf.Max(help.lastTechExtents - 2, 0.5f);
+                    aim = AISteerAim.PrecisePath;
+
+                    pos = help.lastBasePos.position;
                 }
             }
             else if (help.DriveDest == EDriveDest.ToMine)
@@ -298,8 +469,9 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     help.Steer = true;
                     help.DriveDir = EDriveFacing.Forwards;
-                    controller.ProcessedDest = help.theResource.trans.position;
                     help.MinimumRad = 0;
+
+                    pos = help.theResource.trans.position;
                 }
                 else
                 {
@@ -307,15 +479,19 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveFacing.Forwards;
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(controller.Tank, help.theResource.trans.position, controller.Helper, mind);
                         help.MinimumRad = 0;
+                        aim = AISteerAim.PrecisePath;
+
+                        pos = help.theResource.trans.position;
                     }
                     else
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveFacing.Forwards;
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(controller.Tank, help.theResource.trans.position, controller.Helper, mind);
                         help.MinimumRad = help.lastTechExtents + 2;
+                        aim = AISteerAim.PrecisePath;
+
+                        pos = RPathfinding.AvoidAssistEnemy(controller.Tank, help.theResource.trans.position, controller.Helper, mind);
                     }
                 }
             }
@@ -332,36 +508,157 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                             help.DriveDir = EDriveFacing.Backwards;
                         help.AdviseAway = true;
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemyInv(controller.Tank, help.lastDestination, controller.Helper, mind);
                         help.MinimumRad = 0.5f;
+                        aim = AISteerAim.Path;
+
+                        pos = help.lastDestination;
                     }
                     else if (help.DriveDest == EDriveDest.ToLastDestination)
                     {
                         help.Steer = true;
                         help.DriveDir = EDriveFacing.Forwards;
-
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(controller.Tank, help.lastDestination, controller.Helper, mind);
-
                         if (mind.EvilCommander == EnemyHandling.Stationary)
                             help.MinimumRad = 0.5f;
                         else
                             help.MinimumRad = help.lastTechExtents + 8;
+                        aim = AISteerAim.Path;
+
+                        pos = help.lastDestination;
                     }
                 }
             }
-            if (mind.EvilCommander == EnemyHandling.Naval)
-                controller.ProcessedDest = AIEPathing.OffsetToSea(controller.ProcessedDest, tank, controller.Helper);
-            else if (mind.EvilCommander == EnemyHandling.Starship)
-                controller.ProcessedDest = AIEPathing.OffsetFromGround(controller.ProcessedDest, controller.Helper);
-            else
-                controller.ProcessedDest = AIEPathing.OffsetFromGround(controller.ProcessedDest, controller.Helper, controller.Tank.blockBounds.size.y);
-            if (mind.EvilCommander == EnemyHandling.Wheeled)
-                controller.ProcessedDest = AIEPathing.OffsetFromSea(controller.ProcessedDest, tank, controller.Helper);
-
-            controller.ProcessedDest = AIEPathing.ModerateMaxAlt(controller.ProcessedDest, help);
-            help.lastDestination = controller.ProcessedDest;
             return true;
         }
+        public bool PlanningPathingEnemy(EnemyMind mind, Vector3 Target, AISteerAim aim)
+        {
+            if (!AIEAutoPather2D.IsFarEnough(tank.boundsCentreWorldNoCheck, Target))
+                return false;
+            var help = controller.Helper;
+            switch (mind.EvilCommander)
+            {
+                case EnemyHandling.Wheeled:
+                    controller.WaterPathing = WaterPathing.AvoidWater;
+                    break;
+                case EnemyHandling.Naval:
+                    controller.WaterPathing = WaterPathing.StayInWater;
+                    break;
+                case EnemyHandling.Chopper:
+                case EnemyHandling.Airplane:
+                case EnemyHandling.Starship:
+                case EnemyHandling.SuicideMissile:
+                    controller.WaterPathing = WaterPathing.AllowWater;
+                    return false; // UNSUPPORTED for now
+                case EnemyHandling.Stationary:
+                    return false; // Bases do not need planned pathing.
+                default:
+                    break;
+            }
+            float pathSuccessMulti = 1;
+            switch (aim)
+            {
+                case AISteerAim.IgnoreAll:
+                case AISteerAim.OnlyImmedeate:
+                    controller.SetAutoPathfinding(false);
+                    return false;
+                case AISteerAim.Path:
+                    pathSuccessMulti = AIGlobals.AIPathingSuccessRad;
+                    break;
+                case AISteerAim.PrecisePath:
+                    pathSuccessMulti = AIGlobals.AIPathingSuccessRadPrecise;
+                    break;
+            }
+            if (!controller.AutoPathfind)
+                DebugTAC_AI.LogPathing(tank.name + ": PlanningPathingEnemy - Started pathfinding!");
+
+            controller.TargetDestination = WorldPosition.FromScenePosition(Target);
+            controller.SetAutoPathfinding(true);
+            if (controller.PathPlanned != null)
+            {
+                help.MinimumRad = 0; // Drive DIRECTLY to target
+                if (help.DriverType == AIDriverType.Sailor)
+                    controller.PathPoint = AIEPathing.ForceOffsetToSea(controller.PathPlanned.Peek().ScenePosition);
+                else
+                    controller.PathPoint = AIEPathing.ForceOffsetFromGroundA(controller.PathPlanned.Peek().ScenePosition, 1);
+                switch (aim)
+                {
+                    case AISteerAim.Path:
+                    case AISteerAim.PrecisePath:
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemy(tank, controller.PathPoint, help, mind, mind.CommanderSmarts > EnemySmarts.Meh);
+                        break;
+                }
+                DebugTAC_AI.LogPathing(tank.name + ": PlanningPathingEnemy - Current pos is " + tank.boundsCentreWorldNoCheck + " and target is " + controller.PathPoint + " of waypoints left " + controller.PathPlanned.Count);
+
+                if ((controller.PathPoint - tank.boundsCentreWorldNoCheck).WithinSquareXZ(tank.GetCheapBounds() * pathSuccessMulti))
+                {
+                    controller.PathPlanned.Dequeue(); // Next position!
+                    DebugTAC_AI.LogPathing(tank.name + ": PlanningPathingEnemy - finished pathing to " + controller.PathPoint);
+                    if (controller.PathPlanned.Count == 0)
+                    {
+                        DebugTAC_AI.LogPathing(tank.name + ": PlanningPathingEnemy - All Done!");
+                        controller.PathPlanned = null; // Finished!
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+        public bool ImmedeatePathingEnemy(EnemyMind mind, Vector3 Target, AISteerAim aim)
+        {
+            var help = controller.Helper;
+
+            switch (aim)
+            {
+                case AISteerAim.IgnoreAll:
+                    controller.PathPoint = Target;
+                    return true;
+                case AISteerAim.OnlyImmedeate:
+                    break;
+                case AISteerAim.Path:
+                case AISteerAim.PrecisePath:
+                    Target = RPathfinding.AvoidAssistEnemy(tank, Target, help, mind, mind.CommanderSmarts > EnemySmarts.Meh);
+                    break;
+            }
+
+            if (mind.EvilCommander == EnemyHandling.Naval)
+                Target = AIEPathing.OffsetToSea(Target, tank, help);
+            else if (mind.EvilCommander == EnemyHandling.Starship)
+                Target = AIEPathing.OffsetFromGround(Target, help);
+            else
+                Target = AIEPathing.OffsetFromGround(Target, help, tank.blockBounds.size.y);
+            if (mind.EvilCommander == EnemyHandling.Wheeled)
+                Target = AIEPathing.OffsetFromSea(Target, tank, help);
+
+            controller.PathPoint = AIEPathing.ModerateMaxAlt(Target, help);
+            help.lastDestination = controller.ProcessedDest;
+            DebugTAC_AI.LogPathing(tank.name + ": ImmedeatePathingEnemy - Current pos is " + tank.boundsCentreWorldNoCheck + " and target is " + controller.PathPoint);
+            return true;
+        }
+
+        public bool DriveDirectorEnemy(EnemyMind mind)
+        {
+            if (!GetPathingTargetEnemy(mind, out Vector3 Target, out AISteerAim aim))
+                return false;
+
+            var help = controller.Helper;
+            if (mind.EvilCommander == EnemyHandling.Naval)
+                Target = AIEPathing.OffsetToSea(Target, tank, help);
+            else if (mind.EvilCommander == EnemyHandling.Starship)
+                Target = AIEPathing.OffsetFromGround(Target, help);
+            else
+                Target = AIEPathing.OffsetFromGround(Target, help, tank.blockBounds.size.y);
+            if (mind.EvilCommander == EnemyHandling.Wheeled)
+                Target = AIEPathing.OffsetFromSea(Target, tank, help);
+            controller.ProcessedDest = AIEPathing.ModerateMaxAlt(Target, help);
+
+            // Planned pathing
+            if (PlanningPathingEnemy(mind, Target, aim))
+                return true;
+
+            // Immedeate Pathing
+            return ImmedeatePathingEnemy(mind, Target, aim);
+        }
+
+
 
         public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
         {
@@ -378,9 +675,9 @@ namespace TAC_AI.AI.Movement.AICores
                 control3D.m_State.m_InputRotation = Vector3.zero;
                 control3D.m_State.m_InputMovement = Vector3.zero;
                 controlGet.SetValue(tank.control, control3D);
-                Vector3 destDirect = controller.ProcessedDest - tank.boundsCentreWorldNoCheck;
+                Vector3 destDirect = controller.PathPoint - tank.boundsCentreWorldNoCheck;
 
-                //DebugTAC_AI.Log("IS target player " + Singleton.playerTank == thisInst.lastEnemy + " | MinimumRad " + thisInst.MinimumRad + " | destination" + controller.ProcessedDest);
+                //DebugTAC_AI.Log("IS target player " + Singleton.playerTank == thisInst.lastEnemy + " | MinimumRad " + thisInst.MinimumRad + " | destination" + controller.PathPoint);
                 thisControl.DriveControl = 0f;
                 if (thisInst.Steer)
                 {
@@ -447,11 +744,11 @@ namespace TAC_AI.AI.Movement.AICores
                     else
                     {
                         //if (thisInst.PivotOnly)
-                        //    thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);// need max aiming strength for turning
+                        //    thisControl.m_Movement.FacePosition(tank, controller.PathPoint, 1);// need max aiming strength for turning
                         //else
                         if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
                             thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);//Face the music
-                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  driving to " + controller.ProcessedDest);
+                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  driving to " + controller.PathPoint);
                         if (thisInst.MinimumRad > 0)
                         {
                             //if (thisInst.DriveDir == EDriveType.Perpendicular)
@@ -580,7 +877,7 @@ namespace TAC_AI.AI.Movement.AICores
             float driveMultiplier = 0;
 
             //AI Steering Rotational
-            Vector3 distDiff = controller.ProcessedDest - tank.boundsCentreWorldNoCheck;
+            Vector3 distDiff = controller.PathPoint - tank.boundsCentreWorldNoCheck;
             Vector3 turnVal;
             Vector3 forwardFlat = tank.rootBlockTrans.forward;
             forwardFlat.y = 0;
@@ -692,7 +989,7 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
-                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
+                                thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
                         }
                         // Disabled for now as most spaceships in the pop do not have broadsides.
                         /*
@@ -714,8 +1011,8 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            //thisInst.Navi3DDirect = controller.ProcessedDest - tank.boundsCentreWorldNoCheck;
-                            thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, 1);
+                            //thisInst.Navi3DDirect = controller.PathPoint - tank.boundsCentreWorldNoCheck;
+                            thisControl.m_Movement.FacePosition(tank, controller.PathPoint, 1);
                         }*/
                     }
                     else if (thisInst.DriveDir == EDriveFacing.Forwards)
@@ -728,14 +1025,14 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
-                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
+                                thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
                         }
                     }
                     else if (thisInst.DriveDir == EDriveFacing.Backwards)
                     {
                         control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
                         if (VehicleUtils.TurnerHovership(tank.control, thisInst, -distDiff, out turnValF))
-                            thisControl.m_Movement.FaceDirection(tank, tank.boundsCentreWorldNoCheck - controller.ProcessedDest, turnValF);
+                            thisControl.m_Movement.FaceDirection(tank, tank.boundsCentreWorldNoCheck - controller.PathPoint, turnValF);
                     }
                     else
                     {
@@ -764,9 +1061,9 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            //thisInst.Navi3DDirect = controller.ProcessedDest - tank.boundsCentreWorldNoCheck;
+                            //thisInst.Navi3DDirect = controller.PathPoint - tank.boundsCentreWorldNoCheck;
                             if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
-                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
+                                thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
                         }
                     }
                     else if (thisInst.DriveDir == EDriveFacing.Backwards)
@@ -784,16 +1081,16 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            //thisInst.Navi3DDirect = controller.ProcessedDest - tank.boundsCentreWorldNoCheck;
+                            //thisInst.Navi3DDirect = controller.PathPoint - tank.boundsCentreWorldNoCheck;
                             if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
-                                thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
+                                thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
                         }
                     }
                     else
                     {   //Forwards follow but no pitch controls
                         control3D.m_State.m_InputRotation = (turnVal * Mathf.Clamp(1 - Vector3.Dot(turnVal, tank.rootBlockTrans.forward), 0, 1)).Clamp01Box();
                         if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, out turnValF))
-                            thisControl.m_Movement.FacePosition(tank, controller.ProcessedDest, turnValF);
+                            thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
                     }
                 }
             }
@@ -807,7 +1104,7 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.lastEnemy.IsNotNull() && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
-                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
+                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized);
                     if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                     {
                         if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
@@ -824,7 +1121,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
                 else
-                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
+                    driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized);
                 driveMultiplier = 1f;
             }
             else
@@ -832,7 +1129,7 @@ namespace TAC_AI.AI.Movement.AICores
                 if (thisInst.lastEnemy.IsNotNull() && !thisInst.IsMultiTech && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {   //level alt with enemy
                     float enemyOffsetH = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y;
-                    driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
+                    driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized);
                     if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                     {
                         if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
@@ -853,18 +1150,18 @@ namespace TAC_AI.AI.Movement.AICores
                     if (range < thisInst.MinimumRad - 1)
                     {
                         driveMultiplier = 1f;
-                        driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized * 0.3f);
+                        driveVal = InertiaTranslation(-tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized * 0.3f);
                     }
                     else if (range > thisInst.MinimumRad + 1)
                     {
-                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
+                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized);
                         if (thisInst.DriveDir == EDriveFacing.Forwards || thisInst.DriveDir == EDriveFacing.Backwards)
                             driveMultiplier = 1f;
                         else
                             driveMultiplier = 0.4f;
                     }
                     else
-                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized);
+                        driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized);
                 }
             }
 
@@ -949,6 +1246,12 @@ namespace TAC_AI.AI.Movement.AICores
             //thisInst.MinimumRad
             // Prevent drifting
             Vector3 final = (driveVal * Mathf.Clamp(distDiff.magnitude / 5, 0, 1) * driveMultiplier).Clamp01Box();
+            final.x = final.x * AIGlobals.HovershipHorizontalDriveMulti;
+            final.z = final.z * AIGlobals.HovershipHorizontalDriveMulti;
+            if (final.y > 0)
+                final.y = final.y * AIGlobals.HovershipUpDriveMulti;
+            else
+                final.y = final.y * AIGlobals.HovershipDownDriveMulti;
 
             if (thisInst.DriveDir != EDriveFacing.Neutral)
             {
@@ -996,18 +1299,18 @@ namespace TAC_AI.AI.Movement.AICores
                     thisInst.DriveDir = EDriveFacing.Perpendicular;
                     if (thisInst.FullMelee)
                     {   //orbit WHILE at enemy!
-                        controller.ProcessedDest = targPos;
+                        controller.PathPoint = targPos;
                         thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
                     }
                     else if (driveDyna == 1)
                     {
-                        controller.ProcessedDest = thisInst.AvoidAssist(targPos);
+                        controller.PathPoint = thisInst.AvoidAssist(targPos);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 3;
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.AdviseAway = true;
-                        controller.ProcessedDest = thisInst.AvoidAssist(targPos);
+                        controller.PathPoint = thisInst.AvoidAssist(targPos);
                         //thisInst.MinimumRad = 0.5f;
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 3;
                     }
@@ -1015,13 +1318,13 @@ namespace TAC_AI.AI.Movement.AICores
                     else if (driveDyna < 0.5f)
                     {
                         thisInst.PivotOnly = true;
-                        controller.ProcessedDest = thisInst.AvoidAssist(targPos);
+                        controller.PathPoint = thisInst.AvoidAssist(targPos);
                         //thisInst.MinimumRad = 0.5f;
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 3;
                     }*/
                     else
                     {
-                        controller.ProcessedDest = thisInst.AvoidAssist(targPos);
+                        controller.PathPoint = thisInst.AvoidAssist(targPos);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 3;
                     }
                 }
@@ -1030,26 +1333,26 @@ namespace TAC_AI.AI.Movement.AICores
                     thisInst.DriveDir = EDriveFacing.Forwards;
                     if (thisInst.FullMelee)
                     {
-                        controller.ProcessedDest = targPos;
+                        controller.PathPoint = targPos;
                         thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
                                                 //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.ForwardOnly, thisInst.lastEnemy, Mathf.Max(thisInst.lastTechExtents - 10, 0.2f));
                     }
                     else if (driveDyna == 1)
                     {
-                        controller.ProcessedDest = thisInst.AvoidAssist(targPos);
+                        controller.PathPoint = thisInst.AvoidAssist(targPos);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 5;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.AdviseAway = true;
-                        controller.ProcessedDest = thisInst.AvoidAssist(targPos);
+                        controller.PathPoint = thisInst.AvoidAssist(targPos);
                         thisInst.MinimumRad = 0.5f;
                         //thisControl.m_Movement.DriveToPosition(tank, thisInst.AvoidAssist(thisInst.lastEnemy.transform.position), 1, TankControl.DriveRestriction.None, thisInst.lastEnemy, thisInst.lastTechExtents + AIEnhancedCore.Extremes(thisInst.lastEnemy.tank.blockBounds.extents) + 5);
                     }
                     else
                     {
-                        controller.ProcessedDest = thisInst.AvoidAssist(targPos);
+                        controller.PathPoint = thisInst.AvoidAssist(targPos);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 3;
                         //thisControl.m_Movement.FacePosition(tank, thisInst.lastEnemy.transform.position, driveDyna);//Face the music
                     }
@@ -1057,6 +1360,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
                 thisInst.IgnoreEnemyDistance();
+            controller.ProcessedDest = controller.PathPoint;
             return output;
         }
 
@@ -1082,23 +1386,23 @@ namespace TAC_AI.AI.Movement.AICores
                         thisInst.DriveDir = EDriveFacing.Forwards;
                     if (mind.CommanderMind == EnemyAttitude.Miner)
                     {   //orbit WHILE at enemy!;
-                        controller.ProcessedDest = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        controller.PathPoint = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
                         thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
                     }
                     else if (driveDyna == 1)
                     {
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         //thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 2;
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.AdviseAway = true;
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         //thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 2;
                     }
                     else
                     {
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         //thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 2;
                     }
                     //DebugTAC_AI.Log("DriveDyna is " + driveDyna);
@@ -1116,49 +1420,49 @@ namespace TAC_AI.AI.Movement.AICores
                         */
                         thisInst.DriveDir = EDriveFacing.Forwards;
                         thisInst.AdviseAway = true;
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemyInv(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemyInv(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
                         thisInst.MinimumRad = 0.5f;
                     }
                     else if (thisInst.DriveDest == EDriveDest.ToLastDestination && mind.LikelyMelee)
                     {
                         thisInst.Steer = true;
                         thisInst.DriveDir = EDriveFacing.Forwards;
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemy(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
                         thisInst.MinimumRad = 0.5f;
                     }
                     else if (thisInst.DriveDest == EDriveDest.ToLastDestination)
                     {
                         thisInst.Steer = true;
                         thisInst.DriveDir = EDriveFacing.Forwards;
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemy(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 5;
                     }
                     else
                     {
-                        controller.ProcessedDest = RPathfinding.AvoidAssistEnemy(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
+                        controller.PathPoint = RPathfinding.AvoidAssistEnemy(controller.Tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), controller.Helper, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 5;
                     }
                     /*
                     thisInst.DriveDir = EDriveType.Forwards;
                     if (mind.CommanderMind == Enemy.EnemyAttitude.Miner)
                     {
-                        controller.ProcessedDest = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        controller.PathPoint = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
                         thisInst.MinimumRad = 0;//WHAAAAAAAAAAAM
                     }
                     else if (driveDyna == 1)
                     {
-                        controller.ProcessedDest = Enemy.RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        controller.PathPoint = Enemy.RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 5;
                     }
                     else if (driveDyna < 0)
                     {
                         thisInst.AdviseAway = true;
-                        controller.ProcessedDest = Enemy.RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
+                        controller.PathPoint = Enemy.RPathfinding.AvoidAssistEnemy(tank, RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind), thisInst, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 5; ;
                     }
                     else
                     {
-                        controller.ProcessedDest = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                        controller.PathPoint = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
                         thisInst.MinimumRad = thisInst.lastTechExtents + thisInst.lastEnemy.GetCheapBounds() + 5; ;
                     }
                     */
@@ -1166,6 +1470,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
                 thisInst.IgnoreEnemyDistance();
+            controller.ProcessedDest = controller.PathPoint;
             return output;
         }
 

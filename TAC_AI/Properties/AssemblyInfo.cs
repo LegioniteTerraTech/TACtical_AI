@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("TAC_AI")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("Advanced AI for TerraTech game.  Overhauls A.I. with many fun new abilities.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("TAC_AI")]

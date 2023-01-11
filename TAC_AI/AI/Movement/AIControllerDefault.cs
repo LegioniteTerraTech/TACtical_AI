@@ -4,12 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using TAC_AI.AI.Enemy;
+using TAC_AI.AI.Movement;
 using TAC_AI.AI.Movement.AICores;
 using UnityEngine;
 
 namespace TAC_AI.AI
 {
-    public class AIControllerDefault : MonoBehaviour, IMovementAIController
+    public class AIControllerDefault : MonoBehaviour, IMovementAIController, IPathfindable
     {
         internal static FieldInfo boostGet = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -39,11 +40,48 @@ namespace TAC_AI.AI
         }
 
         //Manuvering (Post-Pathfinding)
+        public Vector3 PathPoint = Vector3.zero;// Where land and spaceships coordinate movement
         public Vector3 ProcessedDest = Vector3.zero;// Where land and spaceships coordinate movement
 
         //Tech Drive Data Gathering
         public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
         public float BoosterThrustBias = 0.5f;
+
+        //AI Pathfinding
+        public bool AutoPathfind { get; set; } = false;
+        public AIEAutoPather2D Pathfinder { get; set; }
+        public WaterPathing WaterPathing { get; set; }
+        public float PathingPrecision { get; set; } = 10;
+        public byte MaxPathDifficulty { get; set; } = 65;
+        public Queue<WorldPosition> PathPlanned = null;
+        public WorldPosition TargetDestination;
+
+        public Vector3 CurrentPosition()
+        {
+            return Tank.boundsCentreWorldNoCheck;
+        }
+        public Vector3 GetTargetDestination()
+        {
+            return TargetDestination.ScenePosition;
+        }
+        public void OnFinishedPathfinding(List<WorldPosition> pos)
+        {
+            if (pos.Count == 0)
+                throw new Exception("OnFinishedPathfinding expects at least one pathing WorldPosition in pos, but received none!");
+            DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + pos.Count + " waypoints to follow.");
+            PathPlanned = new Queue<WorldPosition>();
+            StringBuilder SB = new StringBuilder();
+            int num = 0;
+            foreach (var item in pos)
+            {
+                PathPlanned.Enqueue(item);
+                SB.Append(" > " + item.ScenePosition.ToString());
+                //AIGlobals.PopupNeutralInfo(num + " | " + item.GameWorldPosition.ToString(), item);
+                num++;
+            }
+            DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Path -" + SB.ToString());
+        }
+
 
         public void DriveDirector()
         {
