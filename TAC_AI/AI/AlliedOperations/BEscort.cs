@@ -3,7 +3,7 @@
 namespace TAC_AI.AI.AlliedOperations
 {
     public static class BEscort {
-        public static void MotivateMove(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MotivateMove(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             thisInst.IsMultiTech = false;
@@ -11,7 +11,7 @@ namespace TAC_AI.AI.AlliedOperations
             thisInst.foundGoal = false;
             thisInst.Attempt3DNavi = false;
 
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
             thisInst.AvoidStuff = true;
 
             if (thisInst.lastPlayer == null)
@@ -22,18 +22,18 @@ namespace TAC_AI.AI.AlliedOperations
                 veloFlat = tank.rbody.velocity;
                 veloFlat.y = 0;
             }
-            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestination, thisInst.lastPlayer.GetCheapBounds());
-            float range = thisInst.RangeToStopRush + thisInst.lastTechExtents;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestinationCore, thisInst.lastPlayer.GetCheapBounds());
+            float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents;
             bool hasMessaged = false;
 
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
 
-            if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
+            if ((bool)thisInst.lastEnemyGet && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
                 }
                 else
                 {
@@ -47,10 +47,10 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 thisInst.DelayedAnchorClock = 0;
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
-                thisInst.DriveDest = EDriveDest.FromLastDestination;
+                direct.DriveAwayFacingTowards();
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
-                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
+                //direct.lastDestination = thisInst.lastPlayer.centrePosition;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
                 if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
@@ -66,8 +66,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Departing!");
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
-                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
+                direct.DriveToFacingTowards();
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -84,8 +83,8 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist >= range + playerExt)
             {
                 thisInst.DelayedAnchorClock = 0;
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
-                //thisInst.lastDestination = thisInst.lastPlayer.centrePosition;
+                direct.DriveToFacingTowards();
+                //direct.lastDestination = thisInst.lastPlayer.centrePosition;
                 //thisInst.ForceSetDrive = true;
                 //thisInst.DriveVar = 1f;
 
@@ -97,7 +96,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.Urgency += KickStart.AIClockPeriod / 2f;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1f;
-                    thisInst.FeatherBoost = true;
+                    thisInst.LightBoost = true;
                     //DebugTAC_AI.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
                     if (thisInst.UrgencyOverload > 0)
                         thisInst.UrgencyOverload -= KickStart.AIClockPeriod / 5f;
@@ -105,7 +104,7 @@ namespace TAC_AI.AI.AlliedOperations
                 //OBSTRUCTION MANAGEMENT
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / 5))
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                     return;
                 }
                 else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 3))
@@ -136,7 +135,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //FARRR behind! BOOSTERS NOW!
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
                     thisInst.AvoidStuff = false;
-                    thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
+                    thisInst.FullBoost = true; // WE ARE SOO FAR BEHIND
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 15)
@@ -146,7 +145,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.AvoidStuff = false;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1;
-                    thisInst.FeatherBoost = true;
+                    thisInst.LightBoost = true;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 5 && thisInst.recentSpeed < 6)
@@ -164,10 +163,10 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
-                //thisInst.lastDestination = tank.transform.position;
+                //direct.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
-                if ((bool)thisInst.lastEnemy)
+                if ((bool)thisInst.lastEnemyGet)
                 {
                     thisInst.PivotOnly = true;
                 }
@@ -188,10 +187,10 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 //Likely idle
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
-                //thisInst.lastDestination = tank.transform.position;
+                //direct.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
-                if ((bool)thisInst.lastEnemy)
+                if ((bool)thisInst.lastEnemyGet)
                 {
                     thisInst.PivotOnly = true;
                 }

@@ -242,13 +242,22 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AISettings.cs" />
     <Compile Include="AIStates.cs" />
     <Compile Include="AIGlobals.cs" />
+    <Compile Include="AI\AIEBases.cs" />
     <Compile Include="AI\AIESplitHandler.cs" />
+    <Compile Include="AI\AIEnabledModes.cs" />
     <Compile Include="AI\AlliedOperations\BAssassin.cs" />
     <Compile Include="AI\AlliedOperations\BBase.cs" />
     <Compile Include="AI\AlliedOperations\BEnergizer.cs" />
     <Compile Include="AI\AlliedOperations\BScrapper.cs" />
+    <Compile Include="AI\EWeapSetup.cs" />
+    <Compile Include="AI\Movement\AICores\LandAICore.cs" />
+    <Compile Include="AI\Movement\AICores\SeaAICore.cs" />
+    <Compile Include="AI\Movement\AICores\SpaceAICore.cs" />
+    <Compile Include="AI\Movement\AIEAutoPather.cs" />
+    <Compile Include="AI\Movement\AIEAutoPather3D.cs" />
     <Compile Include="AI\Movement\AIEAutoPather2D.cs" />
     <Compile Include="AI\Movement\AIControllerAir.cs" />
     <Compile Include="AI\Movement\AIControllerDefault.cs" />
@@ -278,7 +287,6 @@
     <Compile Include="CustomAttract.cs" />
     <Compile Include="DebugTAC_AI.cs" />
     <Compile Include="Enemy\EnemyOperations\RScavenger.cs" />
-    <Compile Include="FactionTypesExt.cs" />
     <Compile Include="AIEnums.cs" />
     <Compile Include="AI\AlliedOperations\BAstrotech.cs" />
     <Compile Include="AI\AlliedOperations\BEscort.cs" />
@@ -295,12 +303,11 @@
     <Compile Include="Enemy\EnemyOperations\RChopper.cs" />
     <Compile Include="Enemy\RGeneral.cs" />
     <Compile Include="Enemy\EnemyOperations\RMiner.cs" />
-    <Compile Include="Enemy\RBases.cs" />
-    <Compile Include="Enemy\RPathfinding.cs" />
+    <Compile Include="Enemy\RLoadedBases.cs" />
     <Compile Include="Enemy\RRepair.cs" />
     <Compile Include="Enemy\EnemyOperations\RNaval.cs" />
     <Compile Include="Enemy\EnemyOperations\RStarship.cs" />
-    <Compile Include="Enemy\EnemyOperations\RSuicideMissile.cs" />
+    <Compile Include="Enemy\EnemyOperations\RCrashMissile.cs" />
     <Compile Include="Enemy\EnemyOperations\RStation.cs" />
     <Compile Include="Enemy\EnemyOperations\RWheeled.cs" />
     <Compile Include="Enemy\RMission.cs" />
@@ -308,6 +315,7 @@
     <Compile Include="Enemy\RWeapSetup.cs" />
     <Compile Include="GUIAIManager.cs" />
     <Compile Include="GUIEvictionNotice.cs" />
+    <Compile Include="GUILister.cs" />
     <Compile Include="ModuleWorldRadar.cs" />
     <Compile Include="PatchBatch\GlobalPatches.cs" />
     <Compile Include="PatchBatch\ManagerPatches.cs" />
@@ -324,12 +332,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TeamNamer.cs" />
     <Compile Include="Templates\CommunityCluster.cs" />
-    <Compile Include="Templates\FactionLevel.cs" />
     <Compile Include="World\ManEnemySiege.cs" />
     <Compile Include="World\ManPlayerRTS.cs" />
     <Compile Include="Templates\CommunityStorage.cs" />
     <Compile Include="Templates\DebugRawTechSpawner.cs" />
-    <Compile Include="Templates\EBasePurpose.cs" />
     <Compile Include="Templates\SpawnBaseTypes.cs" />
     <Compile Include="Templates\OverrideManPop.cs" />
     <Compile Include="Templates\PlayerSpawnAid.cs" />
@@ -339,10 +345,10 @@
     <Compile Include="Templates\TempManager.cs" />
     <Compile Include="Templates\TempStorage.cs" />
     <Compile Include="UnityEngineExtensions.cs" />
-    <Compile Include="World\EnemyBaseUnit.cs" />
+    <Compile Include="World\NP_BaseUnit.cs" />
     <Compile Include="World\UnloadedBases.cs" />
-    <Compile Include="World\EnemyPresence.cs" />
-    <Compile Include="World\EnemyTechUnit.cs" />
+    <Compile Include="World\NP_Presence.cs" />
+    <Compile Include="World\NP_TechUnit.cs" />
     <Compile Include="World\ManEnemyWorld.cs" />
     <Compile Include="World\PlayerRTSUI.cs" />
     <Compile Include="World\TileMoveCommand.cs" />
@@ -356,118 +362,6 @@
     </None>
     <None Include="mod.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\AI_Aegis.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Assault.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Harvest.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_MT.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Pilot.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Ship.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Space.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Tank.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\E_Intel.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\E_Meh.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\E_Mild.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\E_Smrt.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\AI_Energizer.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Scrapper.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\AIOrderBox.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\AIOrderAttack1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AIOrderEmpty1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AIOrderMove1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AIOrderSelect1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\AIOrderAegis1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AIOrderBlock1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AIOrderMine1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AIOrderScout1.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Mimic.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_Turret.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\O_AllySelect.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\O_AttackTarg.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\O_HoverSelect.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\M_MoveLine.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="AI_Icons\AI_BackAir.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_BackSea.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="AI_Icons\AI_BackSpace.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

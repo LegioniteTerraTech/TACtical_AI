@@ -156,7 +156,7 @@ namespace TAC_AI
                                 {   // Use anchor icon
 
                                 }
-                                else if (lastTech.AIState == AIAlignment.Player)
+                                else if (lastTech.AIAlign == AIAlignment.Player)
                                 {   // Allied AI
                                     if (lastTech.SetToActive)
                                     {
@@ -172,7 +172,7 @@ namespace TAC_AI
                                         }
                                     }
                                 }
-                                else if (lastTech.AIState == AIAlignment.NonPlayer)
+                                else if (lastTech.AIAlign == AIAlignment.NonPlayer)
                                 {   // Enemy AI
                                     if (KickStart.enablePainMode)
                                     {

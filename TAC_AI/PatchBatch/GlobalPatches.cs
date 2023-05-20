@@ -16,6 +16,25 @@ namespace TAC_AI
 {
     internal class GlobalPatches
     {
+        // GAME
+        internal static class ManSpawnPatches
+        {
+            internal static Type target = typeof(ManSpawn);
+
+            static readonly FieldInfo teamC = typeof(ManSpawn).GetField("m_TeamCounter", BindingFlags.NonPublic | BindingFlags.Instance);
+            //Startup - On very late update
+            private static void GenerateAutomaticTeamID_Prefix(ref ManSpawn __instance, ref int __result)
+            {
+                if (__result == -1)
+                {
+                    if (AIGlobals.IsBaseTeam((int)teamC.GetValue(__instance)))
+                    {
+                        __result = AIGlobals.BaseTeamsEnd + 1;
+                        teamC.SetValue(__instance, AIGlobals.BaseTeamsEnd + 2);
+                    }
+                }
+            }
+        }
 
         internal static class ModePatches
         {
@@ -112,6 +131,7 @@ namespace TAC_AI
             internal static Type target = typeof(TankBeam);
 
             static readonly FieldInfo beamPush = typeof(TankBeam).GetField("m_NudgeStrafe", BindingFlags.NonPublic | BindingFlags.Instance);
+            static readonly FieldInfo beamRot = typeof(TankBeam).GetField("m_NudgeRotate", BindingFlags.NonPublic | BindingFlags.Instance);
 
             //PatchTankBeamToHelpAI - Give the AI some untangle help
             private static void OnUpdate_Postfix(TankBeam __instance)
@@ -122,17 +142,66 @@ namespace TAC_AI
                     var helper = __instance.GetComponent<AIECore.TankAIHelper>();
                     if (helper != null && (!helper.tank.PlayerFocused || (ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS)))
                     {
-                        if (helper.AIState != AIAlignment.Static)
+                        if (helper.AIAlign != AIAlignment.Static && (helper.AIAlign != AIAlignment.Player || helper.ActuallyWorks))
                         {
-                            Vector2 headingSquare = (helper.lastDestination - helper.tank.boundsCentreWorldNoCheck).ToVector2XZ();
-                            if (helper.DriveDest == EDriveDest.ToLastDestination)
+                            bool ReversedMove;
+                            switch (helper.DriveDestDirected)
                             {
-                                beamPush.SetValue(__instance, helper.tank.rootBlockTrans.InverseTransformDirection(headingSquare * helper.DriveVar * Time.deltaTime));
+                                case EDriveDest.FromLastDestination:
+                                    ReversedMove = !helper.IsTryingToUnjam;
+                                    break;
+                                case EDriveDest.ToLastDestination:
+                                case EDriveDest.ToMine:
+                                default:
+                                    ReversedMove = helper.IsTryingToUnjam;
+                                    break;
                             }
-                            else if (helper.DriveDest == EDriveDest.FromLastDestination)
+                            Vector2 headingVec = (helper.lastDestinationCore - helper.tank.boundsCentreWorldNoCheck).ToVector2XZ();
+                            if (headingVec.sqrMagnitude > 1)
+                                headingVec = headingVec.normalized;
+
+                            float turnControl;
+                            if (helper.IsTryingToUnjam)
                             {
-                                beamPush.SetValue(__instance, helper.tank.rootBlockTrans.InverseTransformDirection(-headingSquare * helper.DriveVar * Time.deltaTime));
+                                turnControl = Mathf.Sign(Vector2.Dot(helper.tank.rootBlockTrans.right.ToVector2XZ().normalized, headingVec.normalized)) * Vector2.Dot(helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized, headingVec.normalized);
                             }
+                            else
+                            {
+                                switch (helper.DriveDirDirected)
+                                {
+                                    case EDriveFacing.Perpendicular:
+                                        turnControl = Mathf.Sign(Vector2.Dot(helper.tank.rootBlockTrans.right.ToVector2XZ().normalized, headingVec.normalized)) * Vector2.Dot(helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized, headingVec.normalized);
+                                        break;
+                                    case EDriveFacing.Backwards:
+                                        turnControl = -Vector2.Dot(helper.tank.rootBlockTrans.right.ToVector2XZ().normalized, headingVec.normalized);
+                                        ReversedMove = !ReversedMove;
+                                        break;
+                                    case EDriveFacing.Forwards:
+                                    default:
+                                        turnControl = Vector2.Dot(helper.tank.rootBlockTrans.right.ToVector2XZ().normalized, headingVec.normalized);
+                                        break;
+                                }
+                            }
+                            beamRot.SetValue(__instance, -turnControl);
+                            float forceVal = 0;
+                            if (helper.DriveVar != 0)
+                            {
+                                forceVal = helper.DriveVar;
+                                beamPush.SetValue(__instance,
+                                    helper.tank.rootBlockTrans.InverseTransformDirection((new Vector2(1, 0) * forceVal).
+                                    Clamp(-Vector2.one, Vector2.one)));
+                                return;
+                            }
+                            else if (helper.IsDirectedMovingAnyDest)
+                                forceVal = 1.41f;
+                            if (ReversedMove)
+                                beamPush.SetValue(__instance,
+                                    helper.tank.rootBlockTrans.InverseTransformDirection((-headingVec * forceVal).
+                                    Clamp(-Vector2.one, Vector2.one)));
+                            else
+                                beamPush.SetValue(__instance,
+                                    helper.tank.rootBlockTrans.InverseTransformDirection((headingVec * forceVal).
+                                    Clamp(-Vector2.one, Vector2.one)));
                         }
                     }
                 }
@@ -148,7 +217,7 @@ namespace TAC_AI
             {
                 if (!KickStart.EnableBetterAI || !tankToFollow)
                     return;
-                var AICommand = tankToFollow.GetComponent<AIECore.TankAIHelper>();
+                var AICommand = tankToFollow.GetHelperInsured();
                 if (AICommand.lastLockedTarget)
                     __result = false;
             }
@@ -190,7 +259,7 @@ namespace TAC_AI
                 var tAI = __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
                 if (tAI.IsNotNull())
                 {
-                    if (tAI.JustUnanchored && tAI.AIState == AIAlignment.Player)
+                    if (tAI.JustUnanchored && tAI.AIAlign == AIAlignment.Player)
                     {   //Set the AI back to escort to continue operations if autoanchor is true
                         __instance.SetBehaviorType(AITreeType.AITypes.Escort);
                         if (!__instance.TryGetCurrentAIType(out AITreeType.AITypes type))
@@ -231,157 +300,7 @@ namespace TAC_AI
                 {
                     if (objectSpawnParams is ManSpawn.TechSpawnParams TSP)
                     {
-                        if (TSP.m_IsPopulation)
-                        {
-                            if (!KickStart.isPopInjectorPresent && KickStart.EnableBetterAI && (ManNetwork.IsHost || !ManNetwork.IsNetworked))
-                            {
-                                RawTechLoader.UseFactionSubTypes = true;
-                                TechData newTech;
-                                FactionTypesExt FTE = TSP.m_TechToSpawn.GetMainCorpExt();
-                                FactionSubTypes FST = KickStart.CorpExtToCorp(FTE);
-                                FactionLevel lvl = RawTechLoader.TryGetPlayerLicenceLevel();
-                                if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(freeSpaceParams.m_CenterPos) && RawTechExporter.GetBaseTerrain(TSP.m_TechToSpawn, TSP.m_TechToSpawn.CheckIsAnchored()) == BaseTerrain.Land)
-                                {
-                                    // OVERRIDE TO SHIP
-                                    try
-                                    {
-                                        int grade = 99;
-                                        try
-                                        {
-                                            if (!SpecialAISpawner.CreativeMode)
-                                                grade = ManLicenses.inst.GetCurrentLevel(FST);
-                                        }
-                                        catch { }
-
-
-                                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
-                                        {
-                                            int randSelect = valid.GetRandomEntry();
-                                            newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
-
-                                            if (newTech == null)
-                                            {
-                                                DebugTAC_AI.Exception("Water Tech spawning override failed as fetched TechData is null.  Please report this.");
-                                                return;
-                                            }
-                                            if (newTech.m_BlockSpecs == null)
-                                            {
-                                                DebugTAC_AI.Exception("Water Tech spawning override failed as fetched TechData's block info is null.  Please report this.");
-                                                return;
-                                            }
-                                            if (newTech.m_BlockSpecs.Count == 0)
-                                            {
-                                                DebugTAC_AI.Exception("Water Tech spawning override failed as no blocks are present on modified spawning Tech.  Please report this.");
-                                                return;
-                                            }
-                                            DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
-                                            TSP.m_TechToSpawn = newTech;
-                                        }
-                                        else
-                                        {
-                                            SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
-                                            if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
-                                            {
-                                                newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
-                                                if (newTech == null)
-                                                {
-                                                    DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as fetched TechData is null.  Please report this.");
-                                                    return;
-                                                }
-                                                if (newTech.m_BlockSpecs == null)
-                                                {
-                                                    DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as fetched TechData's block info is null.  Please report this.");
-                                                    return;
-                                                }
-                                                if (newTech.m_BlockSpecs.Count == 0)
-                                                {
-                                                    DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as no blocks are present on modified spawning Tech.  Please report this.");
-                                                    return;
-                                                }
-                                                DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
-
-                                                TSP.m_TechToSpawn = newTech;
-                                            }
-                                            // Else we don't do anything.
-                                        }
-                                    }
-                                    catch
-                                    {
-                                        DebugTAC_AI.Assert(true, "TACtical_AI:  Attempt to swap sea tech failed!");
-                                    }
-                                }
-                                else if (UnityEngine.Random.Range(0, 100) < KickStart.LandEnemyOverrideChance) // Override for normal Tech spawns
-                                {
-                                    // OVERRIDE TECH SPAWN
-                                    try
-                                    {
-                                        int grade = 99;
-                                        try
-                                        {
-                                            if (!SpecialAISpawner.CreativeMode)
-                                                grade = ManLicenses.inst.GetCurrentLevel(FST);
-                                        }
-                                        catch { }
-                                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
-                                        {
-                                            int randSelect = valid.GetRandomEntry();
-                                            newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
-
-                                            if (newTech == null)
-                                            {
-                                                DebugTAC_AI.Exception("Land Tech spawning override failed as fetched TechData is null.  Please report this.");
-                                                return;
-                                            }
-                                            if (newTech.m_BlockSpecs == null)
-                                            {
-                                                DebugTAC_AI.Exception("Land Tech spawning override failed as fetched TechData's block info is null.  Please report this.");
-                                                return;
-                                            }
-                                            if (newTech.m_BlockSpecs.Count == 0)
-                                            {
-                                                DebugTAC_AI.Exception("Land Tech spawning override failed as no blocks are present on modified spawning Tech.  Please report this.");
-                                                return;
-                                            }
-                                            DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
-                                            TSP.m_TechToSpawn = newTech;
-                                        }
-                                        else
-                                        {
-                                            SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
-                                            if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
-                                            {
-                                                newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
-                                                if (newTech == null)
-                                                {
-                                                    DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as fetched TechData is null.  Please report this.");
-                                                    return;
-                                                }
-                                                if (newTech.m_BlockSpecs == null)
-                                                {
-                                                    DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as fetched TechData's block info is null.  Please report this.");
-                                                    return;
-                                                }
-                                                if (newTech.m_BlockSpecs.Count == 0)
-                                                {
-                                                    DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as no blocks are present on modified spawning Tech.  Please report this.");
-                                                    return;
-                                                }
-
-                                                DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
-                                                TSP.m_TechToSpawn = newTech;
-                                            }
-                                            // Else we don't do anything.
-                                        }
-                                    }
-                                    catch
-                                    {
-                                        DebugTAC_AI.Assert(true, "TACtical_AI: Attempt to swap Land tech failed!");
-                                    }
-                                }
-
-                                RawTechLoader.UseFactionSubTypes = false;
-                            }
-                        }
+                        SpecialAISpawner.OverrideSpawning(TSP, freeSpaceParams.m_CenterPos);
                     }
                 }
             }

@@ -5,6 +5,7 @@ using System.Reflection;
 using UnityEngine;
 using TerraTech.Network;
 using TAC_AI.AI.Movement;
+using TAC_AI.AI.Movement.AICores;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.AlliedOperations;
 using TAC_AI.Templates;
@@ -53,21 +54,33 @@ namespace TAC_AI.AI
         // Note: All neutrals are under -1 (-256) for this mod
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        internal static HashSet<SceneryTypes> IndestructableScenery = new HashSet<SceneryTypes>
+        {
+            SceneryTypes.Pillar, SceneryTypes.ScrapPile,
+        };
+
+
         public static Event<Tank, string> AIMessageEvent = new Event<Tank, string>();
 
+        public static List<TankAIHelper> AllHelpers;
         //public static List<ResourceDispenser> Minables;
         public static List<Visible> Minables;
         public static List<ModuleHarvestReciever> Depots;
         public static List<ModuleHarvestReciever> BlockHandlers;
         public static List<ModuleChargerTracker> Chargers;
-        public static List<int> RetreatingTeams;
-        public static bool moreThan2Allies;
-        public static bool PlayerIsInNonCombatZone = false;
+        public static HashSet<int> RetreatingTeams;
+        public static bool PlayerIsInNonCombatZone => _playerIsInNonCombatZone;
+        private static bool _playerIsInNonCombatZone = false;
         private static bool PlayerCombatLastState = false;
         //private static int lastTechCount = 0;
 
         // legdev
         internal static bool Feedback = false;// set this to true to get AI feedback testing
+#if DEBUG
+        internal static bool debugVisuals = true;// set this to true to get AI visual testing
+#else
+        internal static bool debugVisuals = false;// set this to true to get AI visual testing
+#endif
 
 
         // Mining
@@ -108,7 +121,8 @@ namespace TAC_AI.AI
                     if (!res.IsDeactivated && res.visible.isActive)
                     {
                         //DebugTAC_AI.Log("TACtical_AI:Skipped over inactive");
-                        if (!trans.GetComponent<Damageable>().Invulnerable)
+                        if (!trans.GetComponent<Damageable>().Invulnerable && 
+                            !IndestructableScenery.Contains(res.GetSceneryType()))
                         {
                             //DebugTAC_AI.Log("TACtical_AI: Skipped over invincible");
                             float temp = (trans.trans.position - tankPos).sqrMagnitude;
@@ -185,7 +199,42 @@ namespace TAC_AI.AI
         internal static FieldInfo blocksGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
 
-
+        // Multi-Techs
+        public static bool FetchCopyableAlly(Vector3 tankPos, TankAIHelper helper, out float distanceSqr, out Visible ToFetch)
+        {
+            // Finds the closest ally and outputs their respective distance as well as their being
+            distanceSqr = 62500;
+            int bestStep = -1;
+            bool fired = false;
+            ToFetch = null;
+            try
+            {
+                HashSet<Tank> AlliesAlt = AIEPathing.AllyList(helper.tank);
+                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                {
+                    Tank ally = AlliesAlt.ElementAt(stepper);
+                    if (ally.GetHelperInsured().CanCopyControls)
+                    {
+                        float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
+                        if (distanceSqr > temp && temp > 1)
+                        {
+                            distanceSqr = temp;
+                            bestStep = stepper;
+                            fired = true;
+                        }
+                    }
+                }
+                if (bestStep == -1)
+                    return false;
+                ToFetch = AlliesAlt.ElementAt(bestStep).visible;
+                //DebugTAC_AI.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+            }
+            catch //(Exception e)
+            {
+                //DebugTAC_AI.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+            }
+            return fired;
+        }
 
 
         // Charging
@@ -224,7 +273,7 @@ namespace TAC_AI.AI
             toCharge = null;
             try
             {
-                List<Tank> AlliesAlt = AIEPathing.AllyList(helper.tank);
+                HashSet<Tank> AlliesAlt = AIEPathing.AllyList(helper.tank);
                 for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
                 {
                     Tank ally = AlliesAlt.ElementAt(stepper);
@@ -256,7 +305,7 @@ namespace TAC_AI.AI
         public static bool FindTarget(Tank tank, TankAIHelper helper, Visible targetIn, out Visible target)
         {   // Grants a much larger target search range
 
-            float TargetRange = helper.RangeToChase * 2;
+            float TargetRange = helper.MaxCombatRange * 2;
             TargetRange *= TargetRange;
             Vector3 scanCenter = tank.boundsCentreWorldNoCheck;
             target = targetIn;
@@ -271,16 +320,13 @@ namespace TAC_AI.AI
                     target = null;
             }
 
-            foreach (var cTank in ManTechs.inst.IterateTechs())
+            foreach (var cTank in TankAIManager.GetTargetTanks(tank.Team))
             {
-                if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                if (dist <= TargetRange)
                 {
-                    float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                    if (dist <= TargetRange)
-                    {
-                        TargetRange = dist;
-                        target = cTank.visible;
-                    }
+                    TargetRange = dist;
+                    target = cTank.visible;
                 }
             }
 
@@ -605,8 +651,8 @@ namespace TAC_AI.AI
                 AIMessage(tank, "Player Base " + tank.name + " is under attack!  Concentrate all fire on " + Target.tank.name + "!");
             else
                 AIMessage(tank, tank.name + ": Requesting assistance!  Cover me!");
-            if (!TankAIManager.targetingRequestsPlayer.ContainsKey(Team))
-                TankAIManager.targetingRequestsPlayer.Add(Team, new KeyValuePair<RequestSeverity, Visible>(priority, Target));
+            if (!TankAIManager.targetingRequests.ContainsKey(Team))
+                TankAIManager.targetingRequests.Add(Team, new KeyValuePair<RequestSeverity, Visible>(priority, Target));
         }
 
         public class TankAIManager : MonoBehaviour
@@ -616,7 +662,7 @@ namespace TAC_AI.AI
             internal static TankAIManager inst;
             private static Tank lastPlayerTech;
 
-            public static Dictionary<int, KeyValuePair<RequestSeverity, Visible>> targetingRequestsPlayer = new Dictionary<int, KeyValuePair<RequestSeverity, Visible>>();
+            public static Dictionary<int, KeyValuePair<RequestSeverity, Visible>> targetingRequests = new Dictionary<int, KeyValuePair<RequestSeverity, Visible>>();
 
             //public static EventNoParams QueueUpdater = new EventNoParams();
             private static Dictionary<int, TeamIndex> teamsIndexed;
@@ -666,22 +712,23 @@ namespace TAC_AI.AI
                 if (inst)
                     return;
                 inst = new GameObject("AIManager").AddComponent<TankAIManager>();
-                inst.gameObject.AddComponent<AIEPathMapper>();
+                AIEPathMapper.inst = inst.gameObject.AddComponent<AIEPathMapper>();
                 //Allies = new List<Tank>();
                 Minables = new List<Visible>();
                 Depots = new List<ModuleHarvestReciever>();
                 BlockHandlers = new List<ModuleHarvestReciever>();
                 Chargers = new List<ModuleChargerTracker>();
-                RetreatingTeams = new List<int>();
+                RetreatingTeams = new HashSet<int>();
                 teamsIndexed = new Dictionary<int, TeamIndex>();
+                AllHelpers = new List<TankAIHelper>();
                 Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Subscribe(OnTankAddition);
                 Singleton.Manager<ManTechs>.inst.TankTeamChangedEvent.Subscribe(OnTankChange);
-                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnTankRemoval);
                 Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Subscribe(OnPlayerTechChange);
                 //QueueUpdater.Subscribe(FetchAllAllies);
                 DebugTAC_AI.Log("TACtical_AI: Created AIECore Manager.");
 
                 // Only change if no other mod changed
+                DebugTAC_AI.Log("TACtical_AI: Current AI interaction range is " + (float)rangeOverride.GetValue(ManTechs.inst) + ".");
                 if ((float)rangeOverride.GetValue(ManTechs.inst) == 200f)
                 {   // more than twice the range
                     rangeOverride.SetValue(ManTechs.inst, AIGlobals.EnemyExtendActionRange);
@@ -702,10 +749,18 @@ namespace TAC_AI.AI
             {
                 if (!inst)
                     return;
+                AIEPathMapper.ResetAll();
                 Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Unsubscribe(OnTankAddition);
                 Singleton.Manager<ManTechs>.inst.TankTeamChangedEvent.Unsubscribe(OnTankChange);
-                Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Unsubscribe(OnTankRemoval);
                 Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Unsubscribe(OnPlayerTechChange);
+                DestroyAllHelpers();
+                AllHelpers = null;
+                teamsIndexed = null;
+                RetreatingTeams = null;
+                Chargers = null;
+                BlockHandlers = null;
+                Depots = null;
+                Minables = null;
                 inst.enabled = false;
                 Destroy(inst.gameObject);
                 inst = null;
@@ -719,39 +774,53 @@ namespace TAC_AI.AI
                 }
             }
 #endif
+            private static void DestroyAllHelpers()
+            {
+                foreach (var item in new List<TankAIHelper>(AllHelpers))
+                {
+                    Destroy(item);
+                }
+                AllHelpers.Clear();
+            }
 
 
             private static void OnTankAddition(Tank tonk)
             {
-                IndexTech(tonk);
-                var helper = InsureHelper(tonk);
+                var helper = tonk.GetHelperInsured();
+                //IndexTech(tonk, tonk.Team);
 
                 if (tonk.GetComponents<TankAIHelper>().Count() > 1)
-                    DebugTAC_AI.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE TankAIHelper ON " + tonk.name + "!!!");
+                    throw new InvalidOperationException("TACtical_AI: ASSERT: THERE IS MORE THAN ONE TankAIHelper ON " + tonk.name + "!!!");
 
                 //DebugTAC_AI.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnSpawn");
                 //if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
-                helper.ResetAll(tonk);
-                helper.OnTechTeamChange();
+                //helper.ResetAll(tonk);
+                //helper.OnTechTeamChange();
 
                 //QueueUpdater.Send();
             }
             private static void OnTankChange(Tank tonk, ManTechs.TeamChangeInfo info)
             {
-                RemoveTech(tonk);
-                var helper = InsureHelper(tonk);
-                helper.ResetAll(tonk);
+                if (tonk == null)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: OnTankChange tonk is NULL");
+                    return;
+                }
+                var helper = tonk.GetHelperInsured();
+                //RemoveTech(tonk);
+                //helper.ResetAll(tonk);
                 helper.OnTechTeamChange();
-                IndexTech(tonk);
+                //IndexTech(tonk, info.m_NewTeam);
+                DebugTAC_AI.Log("TACtical_AI: AI Helper " + tonk.name + ":  Called OnTankChange");
                 //QueueUpdater.Send();
             }
-            private static void OnTankRemoval(Tank tonk, ManDamage.DamageInfo info)
+            private static void OnTankRecycled(Tank tonk)
             {
-                var helper = InsureHelper(tonk);
+                var helper = tonk.GetHelperInsured();
                 TechRemovedEvent.Send(helper);
                 helper.Recycled();
                 RemoveTech(tonk);
-                //DebugTAC_AI.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnDeathOrRemoval");
+                //DebugTAC_AI.Log("TACtical_AI: Allied AI " + tonk.name + ":  Called OnTankRecycled");
 
                 helper.OverrideAllControls = false;
 
@@ -788,14 +857,14 @@ namespace TAC_AI.AI
                 {
                     if (tonk != null)
                     {
-                        helper = InsureHelper(tonk);
+                        helper = tonk.GetHelperInsured();
                         helper.OnTechTeamChange();
                     }
                     try
                     {
                         if (lastPlayerTech)
                         {
-                            helper = InsureHelper(lastPlayerTech);
+                            helper = tonk.GetHelperInsured();
                             helper.OnTechTeamChange();
                         }
                     }
@@ -804,112 +873,118 @@ namespace TAC_AI.AI
                 }
             }
 
-
-            private static TankAIHelper InsureHelper(Tank tonk)
-            {
-                var helper = tonk.GetComponent<TankAIHelper>();
-                if (!helper)
-                {
-                    helper = tonk.gameObject.AddComponent<TankAIHelper>().Subscribe();
-                }
-                return helper;
-            }
-            public static List<Tank> GetTeamTanks(int Team)
+            /// <summary> DO NOT ALTER </summary>
+            private static HashSet<Tank> emptyHash = new HashSet<Tank>();
+            public static HashSet<Tank> GetTeamTanks(int Team)
             {
                 if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
                 {
-                    return TIndex.Team;
+                    //RemoveAllInvalid(TIndex.Teammates);
+                    return TIndex.Teammates;
                 }
-                return new List<Tank>();
+                return emptyHash;
             }
-            public static List<Tank> GetNonEnemyTanks(int Team)
+            public static HashSet<Tank> GetNonEnemyTanks(int Team)
             {
                 if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
                 {
+                    //RemoveAllInvalid(TIndex.NonHostile);
                     return TIndex.NonHostile;
                 }
-                return new List<Tank>();
+                return emptyHash;
             }
-            public static List<Tank> GetTargetTanks(int Team)
+            public static HashSet<Tank> GetTargetTanks(int Team)
             {
                 if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
                 {
+                    //RemoveAllInvalid(TIndex.Targets);
                     return TIndex.Targets;
                 }
-                return new List<Tank>();
+                return emptyHash;
             }
-            private static void IndexTech(Tank tonk)
+            private static void RemoveAllInvalid(HashSet<Tank> list)
             {
-                if (tonk == null)
+                for (int step = list.Count - 1; step > -1; step--)
+                {
+                    var ele = list.ElementAt(step);
+                    if (ele?.visible == null || !ele.visible.isActive)
+                    {
+                        DebugTAC_AI.Assert("TACtical AI: RemoveAllInvalid - Tech indexes were desynced - a Tech that was null or had no blocks was in the collection!");
+                        list.Remove(ele);
+                    }
+                }
+            }
+            internal static void UpdateTechTeam(Tank tonk)
+            {
+                RemoveTech(tonk);
+                IndexTech(tonk, tonk.Team);
+            }
+            private static void IndexTech(Tank tonk, int Team)
+            {
+                if (tonk?.visible == null || !tonk.visible.isActive)
                     return;
+                tonk.TankRecycledEvent.Subscribe(OnTankRecycled);
                 try
                 {
-                    if (teamsIndexed.TryGetValue(tonk.Team, out TeamIndex TIndex))
-                    {
-                        if (!tonk.IsEnemy(tonk.Team))
-                        {
-                            TIndex.Team.Add(tonk);
-                            TIndex.Team.RemoveAll(delegate (Tank cand) { return cand == null; });
-                        }
-                    }
-                    else
+                    if (!teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
                     {
                         TeamIndex TI = new TeamIndex();
-                        if (!tonk.IsEnemy(tonk.Team))
+                        foreach (var item in ManTechs.inst.IterateTechs())
                         {
-                            TI.Team.Add(tonk);
+                            if (item == null || item == tonk)
+                                continue;
+                            if (item.IsEnemy(Team))
+                                TI.Targets.Add(item);
+                            else
+                                TI.NonHostile.Add(item);
                         }
-                        teamsIndexed.Add(tonk.Team, TI);
+                        //RemoveAllInvalid(TI.Targets);
+                        //RemoveAllInvalid(TI.NonHostile);
+                        teamsIndexed.Add(Team, TI);
                     }
                     foreach (KeyValuePair<int, TeamIndex> TI in teamsIndexed)
                     {
-                        if (tonk.IsEnemy(TI.Key))
+                        if (Tank.IsEnemy(TI.Key, Team))
                         {
                             TI.Value.Targets.Add(tonk);
-                            TI.Value.Targets.RemoveAll(delegate (Tank cand) { return cand == null || cand.blockman.blockCount == 0; });
+                            //RemoveAllInvalid(TI.Value.Targets);
                         }
                         else
                         {
+                            if (TI.Key == Team)
+                            {
+                                TI.Value.Teammates.Add(tonk);
+                                //RemoveAllInvalid(TI.Value.Teammates);
+                            }
                             TI.Value.NonHostile.Add(tonk);
-                            TI.Value.NonHostile.RemoveAll(delegate (Tank cand) { return cand == null || cand.blockman.blockCount == 0; });
+                            //RemoveAllInvalid(TI.Value.NonHostile);
                         }
                     }
+                    //DebugTAC_AI.Log("IndexTech added " + tonk.name + " of team " + Team);
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError("Error in IndexTech" + e);
+                    DebugTAC_AI.Log("Error in IndexTech " + e);
                 }
             }
             private static void RemoveTech(Tank tonk)
             {
-                int count = teamsIndexed.Count;
-                for (int step = 0; count > step;)
+                if (tonk != null)
+                    tonk.TankRecycledEvent.Unsubscribe(OnTankRecycled);
+                for (int step = teamsIndexed.Count - 1; 0 <= step; step--)
                 {
                     KeyValuePair<int, TeamIndex> TI = teamsIndexed.ElementAt(step);
-                    bool isEnemy = tonk.IsEnemy(TI.Key);
-                    if (tonk.Team == TI.Key)
-                    {
-                        TI.Value.NonHostile.Remove(tonk);
-                        TI.Value.Team.Remove(tonk);
-                        if (TI.Value.Team.Count == 0)
-                        {
-                            teamsIndexed.Remove(tonk.Team);
-                            count--;
-                            continue;
-                        }
-                    }
-                    else if (!isEnemy)
-                    {
-                        TI.Value.NonHostile.Remove(tonk);
-                    }
-                    else if (isEnemy)
+                    TI.Value.Teammates.Remove(tonk);
+                    if (TI.Value.Teammates.Count == 0)
+                        teamsIndexed.Remove(tonk.Team);
+                    else
                     {
                         TI.Value.Targets.Remove(tonk);
+                        TI.Value.NonHostile.Remove(tonk);
                     }
-                    step++;
                 }
+                //DebugTAC_AI.Log("RemoveTech " + tonk.name);
             }
-
 
 
             /*
@@ -973,39 +1048,40 @@ namespace TAC_AI.AI
             }
 
             // AI comms
+            private static List<Tank> retreiveCache = new List<Tank>();
             public static List<Tank> TeamActiveMobileTechs(int Team)
             {
-                List<Tank> activeCount = new List<Tank>();
+                retreiveCache.Clear();
                 foreach (var item in ManTechs.inst.IterateTechs())
                 {
                     if (item.Team == Team && !item.IsBase())
-                        activeCount.Add(item);
+                        retreiveCache.Add(item);
                 }
-                return activeCount;
+                return retreiveCache;
             }
             public static List<Tank> TeamActiveMobileTechsInCombat(int Team)
             {
-                List<Tank> activeCount = new List<Tank>();
+                retreiveCache.Clear();
                 foreach (var item in ManTechs.inst.IterateTechs())
                 {
                     if (item.Team == Team && !item.IsBase())
                     {
-                        var help = item.GetComponent<AIECore.TankAIHelper>();
-                        if (help && help.AttackEnemy && help.lastEnemy)
+                        var help = item.GetHelperInsured();
+                        if (help && help.AttackEnemy && help.lastEnemyGet)
                         {
-                            activeCount.Add(item);
+                            retreiveCache.Add(item);
                         }
                     }
                 }
-                return activeCount;
+                return retreiveCache;
             }
             private void RunFocusFireRequests()
             {
-                foreach (KeyValuePair<int, KeyValuePair<RequestSeverity, Visible>> request in targetingRequestsPlayer)
+                foreach (KeyValuePair<int, KeyValuePair<RequestSeverity, Visible>> request in targetingRequests)
                 {
                     ProcessFocusFireRequestAllied(request.Key, request.Value.Value, request.Value.Key);
                 }
-                targetingRequestsPlayer.Clear();
+                targetingRequests.Clear();
             }
             private static void ProcessFocusFireRequestAllied(int requestingTeam, Visible Target, RequestSeverity Priority)
             {
@@ -1020,7 +1096,7 @@ namespace TAC_AI.AI
                                 if (!tech.IsAnchored && !helper.Retreat && helper.DediAI == AIType.Aegis)
                                 {
                                     helper.Provoked = AIGlobals.ProvokeTimeShort;
-                                    if (!(bool)helper.lastEnemy)
+                                    if (!(bool)helper.lastEnemyGet)
                                         helper.SetPursuit(Target);
                                 }
                             }
@@ -1032,7 +1108,7 @@ namespace TAC_AI.AI
                                 if (!tech.IsAnchored && !helper.Retreat && (!ManSpawn.IsPlayerTeam(tech.Team) || helper.DediAI == AIType.Aegis))
                                 {
                                     helper.Provoked = AIGlobals.ProvokeTime;
-                                    if (!(bool)helper.lastEnemy)
+                                    if (!(bool)helper.lastEnemyGet)
                                         helper.SetPursuit(Target);
                                 }
                             }
@@ -1042,7 +1118,7 @@ namespace TAC_AI.AI
                             {
                                 var helper = tech.GetComponent<TankAIHelper>();
                                 helper.Provoked = AIGlobals.ProvokeTime;
-                                if (!(bool)helper.lastEnemy)
+                                if (!(bool)helper.lastEnemyGet)
                                     helper.SetPursuit(Target);
                             }
                             break;
@@ -1053,7 +1129,7 @@ namespace TAC_AI.AI
                                 if (!tech.IsAnchored || (ManSpawn.IsPlayerTeam(tech.Team) && (helper.DediAI == AIType.Aegis || helper.AdvancedAI)))
                                 {
                                     helper.Provoked = AIGlobals.ProvokeTime;
-                                    if (!(bool)helper.lastEnemy)
+                                    if (!(bool)helper.lastEnemyGet)
                                         helper.SetPursuit(Target);
                                 }
                             }
@@ -1067,6 +1143,27 @@ namespace TAC_AI.AI
 
             private void Update()
             {
+                /*
+                foreach (var item in ManTechs.inst.IterateTechs())
+                {
+                    if (item == null || Tank.IsEnemy(item.Team, item.Team))
+                        continue;
+                    if (teamsIndexed.TryGetValue(item.Team, out TeamIndex TIndex))
+                    {
+                        if (!TIndex.Teammates.Contains(item))
+                        {
+                            DebugTAC_AI.Log("Tech " + item.name + " is not registered in teamsIndexed!");
+                            IndexTech(item, item.Team);
+                        }
+                    }
+                    else
+                    {
+                        DebugTAC_AI.Log("Tech team " + item.Team + " for tech " + item.name + " is not registered in teamsIndexed!");
+                        IndexTech(item, item.Team);
+                    }
+                    if (item.IsEnemy() && !GetTargetTanks(item.Team).Contains(Singleton.playerTank))
+                        DebugTAC_AI.Log("Tech team " + item.Team + " has player as enemy but this is not in the quick lookup!");
+                }*/
                 if (!ManPauseGame.inst.IsPaused)
                 {
                     if (!AIGlobals.IsAttract)
@@ -1075,6 +1172,8 @@ namespace TAC_AI.AI
                         CameraManager.inst.GetCamera<TankCamera>().SetFollowTech(null);
                         CustomAttract.UseFollowCam = false;
                     }
+                    if (Input.GetKeyDown(KeyCode.Quote))
+                        debugVisuals = !debugVisuals;
 
                     if (Input.GetKeyDown(KickStart.RetreatHotkey) && ManHUD.inst.HighlightedOverlay == null)
                         ToggleTeamRetreat(Singleton.Manager<ManPlayer>.inst.PlayerTeam);
@@ -1107,10 +1206,10 @@ namespace TAC_AI.AI
                     if (lastCombatTime > 6)
                     {
                         if (ManEncounterPlacement.IsOverlappingEncounter(Singleton.playerPos, 64, false))
-                            PlayerIsInNonCombatZone = true;
-                        if (PlayerCombatLastState != PlayerIsInNonCombatZone)
+                            _playerIsInNonCombatZone = true;
+                        if (PlayerCombatLastState != _playerIsInNonCombatZone)
                         {
-                            PlayerCombatLastState = PlayerIsInNonCombatZone;
+                            PlayerCombatLastState = _playerIsInNonCombatZone;
                         }
                         lastCombatTime = 0;
                         terrainHeight = ManWorld.inst.ProjectToGround(Singleton.playerPos).y;
@@ -1121,12 +1220,183 @@ namespace TAC_AI.AI
                 ManageTimeRunner();
                 RunFocusFireRequests();
             }
+
+            // Why?  Because this distributes the processing load equally across frames!
+            private const int UpdateFramesPerSecond = 40;
+
+            private List<TankAIHelper> helpersActive = new List<TankAIHelper>();
+            private int clockHelperStepDirectors = 0;
+            private int clockHelperStepOperations = 0;
+
+            private float DirectorUpdateClock = 0;
+            private float OperationsUpdateClock = 500;
+            private int DirectorsToUpdateThisFrame()
+            {
+                DirectorUpdateClock += (float)helpersActive.Count / KickStart.AIDodgeCheapness;
+                int count = Mathf.FloorToInt(DirectorUpdateClock);
+                DirectorUpdateClock -= count;
+                return count;
+            }
+            private int OperationsToUpdateThisFrame()
+            {
+                OperationsUpdateClock += (float)helpersActive.Count / KickStart.AIClockPeriod;
+                int count = Mathf.FloorToInt(OperationsUpdateClock);
+                OperationsUpdateClock -= count;
+                return count;
+            }
+            private void UpdateAllHelpers()
+            {
+                if (!KickStart.EnableBetterAI)
+                    return;
+                for (int step = 0; step < AllHelpers.Count; step++)
+                {
+                    var helper = AllHelpers[step];
+                    if (helper != null && helper.isActiveAndEnabled)
+                        helpersActive.Add(helper);
+                }
+                foreach (var item in helpersActive)
+                {
+                    item.OnPreUpdate();
+                }
+                StaggerUpdateAllHelpersDirAndOps();
+                foreach (var item in helpersActive)
+                {
+                    item.OnPostUpdate();
+                }
+                helpersActive.Clear();
+            }
+            private void StaggerUpdateAllHelpersDirAndOps()
+            {
+                int numDirUpdate = Mathf.Min(helpersActive.Count, DirectorsToUpdateThisFrame());
+                int numOpUpdate = Mathf.Min(helpersActive.Count, OperationsToUpdateThisFrame());
+                if (ManNetwork.IsHost)
+                {
+                    while (numDirUpdate > 0)
+                    {
+                        if (clockHelperStepDirectors >= helpersActive.Count)
+                            clockHelperStepDirectors = 0;
+                        helpersActive[clockHelperStepDirectors].OnUpdateHostAIDirectors();
+                        clockHelperStepDirectors++;
+                        numDirUpdate--;
+                    }
+                    while (numOpUpdate > 0)
+                    {
+                        if (clockHelperStepOperations >= helpersActive.Count)
+                            clockHelperStepOperations = 0;
+                        helpersActive[clockHelperStepOperations].OnUpdateHostAIOperations();
+                        clockHelperStepOperations++;
+                        numOpUpdate--;
+                    }
+                }
+                else
+                {
+                    while (numDirUpdate > 0)
+                    {
+                        if (clockHelperStepDirectors >= helpersActive.Count)
+                            clockHelperStepDirectors = 0;
+                        helpersActive[clockHelperStepDirectors].OnUpdateClientAIDirectors();
+                        clockHelperStepDirectors++;
+                        numDirUpdate--;
+                    }
+                    while (numOpUpdate > 0)
+                    {
+                        if (clockHelperStepOperations >= helpersActive.Count)
+                            clockHelperStepOperations = 0;
+                        helpersActive[clockHelperStepOperations].OnUpdateClientAIOperations();
+                        clockHelperStepOperations++;
+                        numOpUpdate--;
+                    }
+                }
+            }
+            private void FixedUpdate()
+            {
+                if (!ManPauseGame.inst.IsPaused && KickStart.EnableBetterAI)
+                {
+                    UpdateAllHelpers();
+                }
+            }
+
+
+            internal class GUIManaged
+            {
+                private static bool controlledDisp = false;
+                private static bool typesDisp = false;
+                private static HashSet<AIType> enabledTabs = null;
+                public static void GUIGetTotalManaged()
+                {
+                    if (enabledTabs == null)
+                    {
+                        enabledTabs = new HashSet<AIType>();
+                    }
+                    GUILayout.Box("--- Helpers --- ");
+                    int activeCount = 0;
+                    int baseCount = 0;
+                    Dictionary<AIAlignment, int> alignments = new Dictionary<AIAlignment, int>();
+                    foreach (AIAlignment item in Enum.GetValues(typeof(AIAlignment)))
+                    {
+                        alignments.Add(item, 0);
+                    }
+                    Dictionary<AIType, int> types = new Dictionary<AIType, int>();
+                    foreach (AIType item in Enum.GetValues(typeof(AIType)))
+                    {
+                        types.Add(item, 0);
+                    }
+                    for (int step = 0; step < AllHelpers.Count; step++)
+                    {
+                        var helper = AllHelpers[step];
+                        if (helper != null && helper.isActiveAndEnabled)
+                        {
+                            activeCount++;
+                            alignments[helper.AIAlign]++;
+                            types[helper.DediAI]++;
+                            if (helper.tank.IsAnchored)
+                                baseCount++;
+                        }
+                    }
+                    GUILayout.Label("  Capacity: " + KickStart.MaxEnemyWorldCapacity);
+                    GUILayout.Label("  Num Bases: " + baseCount);
+                    if (GUILayout.Button("Total: " + AllHelpers.Count + " | Active: " + activeCount)) 
+                        controlledDisp = !controlledDisp;
+                    if (controlledDisp)
+                    {
+                        foreach (var item in alignments)
+                        {
+                            GUILayout.Label("  Alignment: " + item.Key.ToString() + " - " + item.Value);
+                        }
+                    }
+                    if (GUILayout.Button("Types: " + types.Count))
+                        typesDisp = !typesDisp;
+                    if (typesDisp)
+                    {
+                        foreach (var item in types)
+                        {
+                            if (GUILayout.Button("Type: " + item.Key.ToString() + " - " + item.Value))
+                            {
+                                if (enabledTabs.Contains(item.Key))
+                                    enabledTabs.Remove(item.Key);
+                                else
+                                    enabledTabs.Add(item.Key);
+                            }
+                            if (enabledTabs.Contains(item.Key))
+                            {
+                                foreach (var item2 in AllHelpers.FindAll(x => x != null &&
+                                x.isActiveAndEnabled && x.DediAI == item.Key))
+                                {
+                                    Vector3 pos = item2.tank.boundsCentreWorldNoCheck;
+                                    GUILayout.Label("  Tech: " + item2.tank.name + " | Pos: " + pos);
+                                    DebugRawTechSpawner.DrawDirIndicator(pos, pos + new Vector3(0, 32, 0), Color.white);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
         public class TeamIndex
         {   // 
-            public List<Tank> Team = new List<Tank>();
-            public List<Tank> NonHostile = new List<Tank>();
-            public List<Tank> Targets = new List<Tank>();
+            public HashSet<Tank> Teammates = new HashSet<Tank>();
+            public HashSet<Tank> NonHostile = new HashSet<Tank>();
+            public HashSet<Tank> Targets = new HashSet<Tank>();
         }
 
         /// <summary>
@@ -1145,6 +1415,7 @@ namespace TAC_AI.AI
             /// The task the AI will perform
             /// </summary>
             public AIType DediAI = AIType.Escort;
+            public EAttackMode AttackMode = EAttackMode.Circle; // How to attack the enemy
             private AlliedOperationsController _OpsController;
             public AlliedOperationsController OpsController
             {
@@ -1163,20 +1434,33 @@ namespace TAC_AI.AI
             }
 
             public List<ModuleAIExtension> AIList;
-            public AIERepair.DesignMemory TechMemor;
+            public AIERepair.DesignMemory TechMemor { get; internal set; }
+            public void InsureTechMemor(string context, bool doFirstSave)
+            {
+                if (TechMemor.IsNull())
+                {
+                    TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
+                    TechMemor.Initiate(doFirstSave);
+
+                    DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (" + context + ")");
+                }
+            }
 
             // Checking Booleans
+            public bool IsPlayerControlled => AIAlign == AIAlignment.PlayerNoAI || AIAlign == AIAlignment.Player;
             public bool ActuallyWorks => hasAI || tank.PlayerFocused;
 
             public bool SetToActive => lastAIType == AITreeType.AITypes.Escort || lastAIType == AITreeType.AITypes.Guard;
 
 
+            public bool Allied => AIAlign == AIAlignment.Player;
             public bool NotInBeam => BeamTimeoutClock == 0;
-            public bool CanCopyControls => !IsMultiTech;
+            public bool CanCopyControls => !IsMultiTech || tank.PlayerFocused;
             public bool CanUseBuildBeam => !(tank.IsAnchored && !PlayerAllowAutoAnchoring);
             public bool CanAutoAnchor => AutoAnchor && PlayerAllowAutoAnchoring && !AttackEnemy && tank.Anchors.NumPossibleAnchors >= 1 && DelayedAnchorClock >= 15 && CanAnchorSafely;
-            public bool CanAnchorSafely => !lastEnemy || (lastEnemy && lastCombatRange > AIGlobals.SafeAnchorDist);
-            public bool MovingAndOrHasTarget => tank.IsAnchored ? lastEnemy : DriverType == AIDriverType.Pilot || (DriveDir != EDriveFacing.Neutral && (ForceSetDrive || Steer));
+            public bool CanAnchorSafely => !lastEnemyGet || (lastEnemyGet && lastCombatRange > AIGlobals.SafeAnchorDist);
+            public bool MovingAndOrHasTarget => tank.IsAnchored ? lastEnemyGet : DriverType == AIDriverType.Pilot || (DriveDirDirected > EDriveFacing.Neutral && (ForceSetDrive || DoSteerCore));
+            public bool UsingPathfinding => ControlCore.DrivePathing >= EDrivePathing.Path;
 
             // Constants
             internal float DodgeStrength
@@ -1191,36 +1475,117 @@ namespace TAC_AI.AI
 
 
 
-            // Settables in ModuleAIExtension
-            //   "turns on" functionality on the host Tech, none of these force it off
+            // Settables in ModuleAIExtension - "turns on" functionality on the host Tech, none of these force it off
             public bool IsMultiTech = false;    // Should the other AIs ignore collision with this Tech?
-            public bool PursueThreat = true;    // Should the AI chase the enemy?
+            public bool ChaseThreat = true;    // Should the AI chase the enemy?
             public bool RequestBuildBeam = true;// Should the AI Auto-BuildBeam on flip?
 
-            public bool FullMelee = false;      // Should the AI ram the enemy?
-            public bool OnlyPlayerMT = false;   // Should the AI only follow player movement while in MT mode?
-            public bool AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
-            public bool SecondAvoidence = false;// Should the AI avoid two techs at once?
-            public bool SideToThreat = false;   // Should the AI circle the enemy?
+            // Player Toggleable
+            public bool AdvancedAI
+            // Should the AI take combat calculations and retreat if nesseary?
+            {
+                get => Allied ? (AISetSettings.AdvancedAI && AILimitSettings.AdvancedAI) : AILimitSettings.AdvancedAI;
+                set => AILimitSettings.AdvancedAI = value;
+            }
+            public bool AllMT
+            // Should the AI only follow player movement while in MT mode?
+            {
+                get => Allied ? (AISetSettings.AllMT && AILimitSettings.AllMT) : AILimitSettings.AllMT;
+                set => AILimitSettings.AllMT = value;
+            }
+            public bool FullMelee
+            // Should the AI ram the enemy?
+            {
+                get => Allied ? (AISetSettings.FullMelee && AILimitSettings.FullMelee) : AILimitSettings.FullMelee;
+                set => AILimitSettings.FullMelee = value;
+            }
 
-            // Distance operations - Automatically accounts for tech sizes
-            /// <summary>  How far should we pursue the enemy? </summary>
-            public float RangeToChase = 50;
-            /// <summary> The range the AI will linger from the player in general </summary>
-            public float RangeToStopRush = 20;
-            /// <summary> The range the AI will linger from the enemy if PursueThreat is true </summary>
-            public float IdealRangeCombat = 25;
-            /// <summary> How much do we dampen anchor movements by? </summary>
-            public int AnchorAimDampening = 45;
-
-            public bool AutoAnchor = false;      // Should the AI toggle the anchor when it is still?
+            public bool SideToThreat
+            // Should the AI circle the enemy?
+            {
+                get => Allied ? (AISetSettings.SideToThreat && AILimitSettings.SideToThreat) : AILimitSettings.SideToThreat;
+                set => AILimitSettings.SideToThreat = value;
+            }
 
             // Repair Auxilliaries
-            public bool allowAutoRepair = false;// Allied auto-repair
-            public bool useInventory = false;   // Draw from player inventory reserves
+            public bool AutoRepair      // Allied auto-repair
+            {
+                get => Allied ? (AISetSettings.AutoRepair && AILimitSettings.AutoRepair) : AILimitSettings.AutoRepair;
+                set => AILimitSettings.AutoRepair = value;
+            }
+            public bool UseInventory    // Draw from player inventory reserves
+            {
+                get => Allied ? (AISetSettings.UseInventory && AILimitSettings.UseInventory) : AILimitSettings.UseInventory;
+                set => AILimitSettings.UseInventory = value;
+            }
+
+
+            // Additional
+            public bool AutoAnchor = false;      // Should the AI toggle the anchor when it is still?
+            public bool SecondAvoidence = false;// Should the AI avoid two techs at once?
+
+            // Distance operations - Automatically accounts for tech sizes
+            public AISettings AISetSettings = AISettings.DefaultSettable;
+            public AISettings AILimitSettings = AISettings.DefaultLimit;
+            /// <summary> The range the AI will linger from the enemy while attacking if PursueThreat is true </summary>
+            public float MinCombatRange => Allied ? Mathf.Min(AISetSettings.CombatRange, AILimitSettings.CombatRange) : AILimitSettings.CombatRange;
+            /// <summary>  How far should we pursue the enemy? </summary>
+            public float MaxCombatRange => Allied ? Mathf.Min(AISetSettings.ChaseRange, AILimitSettings.ChaseRange) : AILimitSettings.ChaseRange;
+            /// <summary> The range the AI will linger from the target objective in general </summary>
+            public float MaxObjectiveRange => Allied ? Mathf.Min(AISetSettings.ObjectiveRange, AILimitSettings.ObjectiveRange) : AILimitSettings.ObjectiveRange;
+            internal float JobSearchRange
+            {
+                get => AISetSettings.GetJobRange(tank);
+                set => AISetSettings.ScanRange = value;
+            }
+
+
 
             // Allied AI Operating Allowed types (self-filling)
-            //   I'll convert these to flags later
+            // WARNING - These values are set to TRUE when called.
+            private AIEnabledModes AIWorkingModes = AIEnabledModes.None;
+            public bool isAssassinAvail //Is there an Assassin-enabled AI on this tech?
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Assassin); }
+                set { AIWorkingModes |= AIEnabledModes.Assassin; }
+            }
+            public bool isAegisAvail    //Is there an Aegis-enabled AI on this tech?
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Aegis); }
+                set { AIWorkingModes |= AIEnabledModes.Aegis; }
+            }
+            public bool isProspectorAvail  //Is there a Prospector-enabled AI on this tech?
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Prospector); }
+                set { AIWorkingModes |= AIEnabledModes.Prospector; }
+            }
+            public bool isScrapperAvail   //Is there a Scrapper-enabled AI on this tech?
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Scrapper); }
+                set { AIWorkingModes |= AIEnabledModes.Scrapper; }
+            }
+            public bool isEnergizerAvail   //Is there a Energizer-enabled AI on this tech?
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Energizer); }
+                set { AIWorkingModes |= AIEnabledModes.Energizer; }
+            }
+
+            public bool isAviatorAvail
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Aviator); }
+                set { AIWorkingModes |= AIEnabledModes.Aviator; }
+            }
+            public bool isAstrotechAvail
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Astrotech); }
+                set { AIWorkingModes |= AIEnabledModes.Astrotech; }
+            }
+            public bool isBuccaneerAvail
+            {
+                get { return AIWorkingModes.HasFlag(AIEnabledModes.Buccaneer); }
+                set { AIWorkingModes |= AIEnabledModes.Buccaneer; }
+            }
+            /*
             public bool isAssassinAvail = false;    //Is there an Assassin-enabled AI on this tech?
             public bool isAegisAvail = false;       //Is there an Aegis-enabled AI on this tech?
 
@@ -1231,6 +1596,7 @@ namespace TAC_AI.AI
             public bool isAviatorAvail = false;
             public bool isAstrotechAvail = false;
             public bool isBuccaneerAvail = false;
+            */
 
 
             // Action Handlers
@@ -1244,7 +1610,7 @@ namespace TAC_AI.AI
             /// </summary>
             public AIWeaponState ActiveAimState = AIWeaponState.Normal;
 
-            public AIAlignment AIState = AIAlignment.Static;             // 0 is static, 1 is ally, 2 is enemy
+            public AIAlignment AIAlign = AIAlignment.Static;             // 0 is static, 1 is ally, 2 is enemy
             public AIWeaponState WeaponState = AIWeaponState.Normal;    // 0 is sleep, 1 is target, 2 is obsticle, 3 is mimic
             public bool UpdatePathfinding = false;       // Collision avoidence active this FixedUpdate frame?
             public bool UsingAirControls = false; // Use the not-VehicleAICore cores
@@ -1255,16 +1621,16 @@ namespace TAC_AI.AI
             /// <summary>
             /// Repairs requested?
             /// </summary>
-            public bool PendingDamageCheck = false;    // Is this tech damaged?
-
+            public bool PendingDamageCheck = true;
             /*
+            private bool damageCheck = true;
             public bool PendingDamageCheck
             {
-                get { return _PendingDamageCheck; }
+                get { return damageCheck; }
                 set
                 {
                     DebugTAC_AI.Log("PendingDamageCheck set by: " + StackTraceUtility.ExtractStackTrace());
-                    _PendingDamageCheck = value;
+                    damageCheck = value;
                 }
             }*/
 
@@ -1275,9 +1641,14 @@ namespace TAC_AI.AI
 
             /// <summary>
             /// IN WORLD SPACE
-            /// Handles all operator decisions
+            /// Handles all Director/Operator decisions
             /// </summary>
-            internal Vector3 lastDestination = Vector3.zero;    // Where we drive to in the world
+            internal Vector3 lastDestinationOp => ControlOperator.lastDestination; // Where we drive to in the world
+            /// <summary>
+            /// IN WORLD SPACE
+            /// Handles all Core decisions
+            /// </summary>
+            internal Vector3 lastDestinationCore => ControlCore.lastDestination;// Vector3.zero;    // Where we drive to in the world
 
             /*
             internal Vector3 lastDestination {
@@ -1293,9 +1664,10 @@ namespace TAC_AI.AI
             private float _lastOperatorRange = 0;
             internal float lastCombatRange => _lastCombatRange;
             private float _lastCombatRange = 0;
+            private float lastLockOnDistance = 0;
+            public float NextFindTargetTime = 0;      // Updates to wait before target swatching
 
             //AutoCollection
-            internal float DetectionRange => tank.Vision.SearchRadius >= 100 ? tank.Vision.SearchRadius : 100;
             internal bool hasAI = false;    // Has an active AI module
             internal bool dirtyAI = true;  // Update Player AI state if needed
             internal bool dirty = true;    // The Tech has new blocks attached recently
@@ -1307,7 +1679,8 @@ namespace TAC_AI.AI
             internal float lastAuxVal = 0;
 
             public Visible lastPlayer;
-            public Visible lastEnemy;
+            public Visible lastEnemyGet { get => lastEnemy; }
+            internal Visible lastEnemy { get; set; }  = null;
             public Visible lastLockedTarget;
             public Transform Obst;
 
@@ -1359,35 +1732,60 @@ namespace TAC_AI.AI
             public float GroundOffsetHeight = 35;           // flote above ground this dist
 
             //Timestep
-            internal short DirectorUpdateClock = 0;
-            internal short OperationsUpdateClock = 500;
             internal short DelayedAnchorClock = 0;
-            internal short FeatherBoostersClock = 50;
+            internal short LightBoostFeatheringClock = 50;
             internal float RepairStepperClock = 0;
             internal short BeamTimeoutClock = 0;
             internal int WeaponDelayClock = 0;
             internal int ActionPause = 0;               // when [val > 0], used to halt other actions 
             internal short unanchorCountdown = 0;         // aux warning for unanchor
 
+
+            // Hierachy System:
+            //   Operations --[ControlPre]-> Maintainer --[ControlPost]-> Core
             //Drive Direction Handlers
-            /// <summary> Do we steer to target destination? </summary>
-            internal bool Steer = false;
+            // We need to tell the AI some important information:
+            //  Target Destination
+            //  Direction to point while heading to the target
+            //  Driving direction in relation to driving to the target
+            private EControlOperatorSet ControlOperator = EControlOperatorSet.Default;
+            internal EControlOperatorSet GetDirectedControl()
+            {
+                return ControlOperator;
+            }
+            internal void SetDirectedControl(EControlOperatorSet cont)
+            {
+                ControlOperator = cont;
+            }
+            internal bool IsDirectedMovingAnyDest => ControlOperator.DriveDest != EDriveDest.None;
+            internal bool IsDirectedMovingToDest => ControlOperator.DriveDest > EDriveDest.FromLastDestination;
+            internal bool IsDirectedMovingFromDest => ControlOperator.DriveDest == EDriveDest.FromLastDestination;
 
             /// <summary> Drive direction </summary>
-            internal EDriveFacing DriveDir = EDriveFacing.Neutral;
+            internal EDriveFacing DriveDirDirected => ControlOperator.DriveDir;
+            /// <summary> Move to a dynamic target </summary>
+            internal EDriveDest DriveDestDirected => ControlOperator.DriveDest;
+
+
+            private EControlCoreSet ControlCore = EControlCoreSet.Default;
+            internal string GetCoreControlString()
+            {
+                return ControlCore.ToString();
+            }
+            internal void SetCoreControl(EControlCoreSet cont)
+            {
+                ControlCore = cont;
+            }
+
+            /// <summary> Do we steer to target destination? </summary>
+            internal bool DoSteerCore => ControlCore.DriveDir > EDriveFacing.Neutral;
 
             /// <summary> Drive AWAY from target </summary>
-            internal bool AdviseAway = false;
-
-            /// <summary>
-            /// Move to a dynamic target
-            /// </summary>
-            internal EDriveDest DriveDest = EDriveDest.None;
-            internal bool IsMovingAnyDest => DriveDest != EDriveDest.None;
-            internal bool IsMovingToDest => DriveDest > EDriveDest.FromLastDestination;
-            internal bool IsMovingFromDest => DriveDest == EDriveDest.FromLastDestination;
+            internal bool AdviseAwayCore => ControlCore.DriveDest == EDriveDest.FromLastDestination;
+            
 
             //Finals
+            /// <summary> Leave at 0 to disable automatic spacing</summary>
             internal float MinimumRad = 0;              // Minimum radial spacing distance from destination
             internal float DriveVar = 0;                // Forwards drive (-1, 1)
 
@@ -1411,8 +1809,8 @@ namespace TAC_AI.AI
 
 
             internal bool FIRE_NOW = false;             // hold down tech's spacebar
-            internal bool BOOST = false;                // hold down boost button
-            internal bool FeatherBoost = false;         // moderated booster pressing
+            internal bool FullBoost = false;                // hold down boost button
+            internal bool LightBoost = false;         // moderated booster pressing
             internal bool FirePROPS = false;            // hold down prop button
             internal bool ForceSetBeam = false;         // activate build beam
             internal bool ForceSetDrive = false;        // Force the drive (cab forwards!) to a specific set value
@@ -1428,9 +1826,9 @@ namespace TAC_AI.AI
             /// <summary>
             /// ONLY SET EXTERNALLY BY NETWORKING
             /// </summary>
-            public bool isRTSControlled = false;
+            public bool isRTSControlled { get; internal set; } = false;
             public bool RTSControlled {
-                get { return isRTSControlled; }
+                get { return isRTSControlled; } 
                 set
                 {
                     if (isRTSControlled != value)
@@ -1441,24 +1839,25 @@ namespace TAC_AI.AI
                         isRTSControlled = value;
                         foreach (ModuleAIExtension AIEx in AIList)
                         {
-                            AIEx.WasRTS = isRTSControlled;
+                            AIEx.RTSActive = isRTSControlled;
                         }
                     }
                 }
             } // force the tech to be controlled by RTS
-            public bool IsGoingToRTSDest => RTSDestInternal != Vector3.zero;
-            internal Vector3 RTSDestination {
+            public bool IsGoingToRTSDest => RTSDestInternal != RTSDisabled;
+            public static IntVector3 RTSDisabled = IntVector3.invalid;
+            internal IntVector3 RTSDestination {
                 get
                 {
-                    if (RTSDestInternal == Vector3.zero)
+                    if (RTSDestInternal == RTSDisabled)
                     {
-                        if (lastEnemy != null)
-                            return lastEnemy.tank.boundsCentreWorldNoCheck;
+                        if (lastEnemyGet != null)
+                            return new IntVector3(lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         else if (Obst != null)
-                            return Obst.position + Vector3.up;
-                        return tank.boundsCentreWorldNoCheck;
+                            return new IntVector3(Obst.position + Vector3.up);
+                        return new IntVector3(tank.boundsCentreWorldNoCheck);
                     }
-                    return RTSDestInternal;
+                    return new IntVector3(RTSDestInternal);
                 }
                 set
                 {
@@ -1475,20 +1874,19 @@ namespace TAC_AI.AI
                         }
                     }
 
-                    if (value == Vector3.zero)
-                        RTSDestInternal = value;
+                    if (value == RTSDisabled)
+                        RTSDestInternal = RTSDisabled;
                     else if (DriverType == AIDriverType.Astronaut || DriverType == AIDriverType.Pilot)
-                        RTSDestInternal = AIEPathing.OffsetFromGroundA(value, this, AIGlobals.RTSAirGroundOffset);
+                        RTSDestInternal = AIEPathing.OffsetFromGroundA(new IntVector3(value), this, AIGlobals.GroundOffsetRTSAir);
                     else
-                        RTSDestInternal = value;
+                        RTSDestInternal = new IntVector3(value);
                     foreach (ModuleAIExtension AIEx in AIList)
                     {
-                        AIEx.WasRTS = isRTSControlled;
-                        AIEx.RTSPos = RTSDestInternal;
+                        AIEx.SaveRTS(this, RTSDestInternal);
                     }
                 }
             }
-            private Vector3 RTSDestInternal = Vector3.zero;
+            private IntVector3 RTSDestInternal = RTSDisabled;
 
             public Vector3 DriveTargetLocation
             {
@@ -1502,7 +1900,7 @@ namespace TAC_AI.AI
             }
 
             /// <summary>
-            /// ONLY CALL FROM NETWORK HANDLER!
+            /// ONLY CALL FROM NETWORK HANDLER AND NON-PLAYER AI!
             /// </summary>
             /// <param name="Pos"></param>
             internal void DirectRTSDest(Vector3 Pos)
@@ -1510,19 +1908,19 @@ namespace TAC_AI.AI
                 RTSDestInternal = Pos;
                 foreach (ModuleAIExtension AIEx in AIList)
                 {
-                    AIEx.WasRTS = isRTSControlled;
-                    AIEx.RTSPos = RTSDestInternal;
+                    AIEx.SaveRTS(this, RTSDestInternal);
                 }
             }
 
             public bool OverrideAllControls = false;        // force the tech to be controlled by external means
             public bool PlayerAllowAutoAnchoring = false;   // Allow auto-anchor
             public bool ExpectAITampering = false;          // Set the AI back to Escort next update
-            internal EventNoParams FinishedRepairEvent = new EventNoParams();
+            internal Event<TankAIHelper> FinishedRepairEvent = new Event<TankAIHelper>();
 
 
             // AI Core
             public IMovementAIController MovementController;
+            public AIEAutoPather autoPather => (MovementController is AIControllerDefault def) ? def.Pathfinder : null;
 
             // Troubleshooting
             //internal bool RequirementsFailiure = false;
@@ -1534,12 +1932,20 @@ namespace TAC_AI.AI
             //-----------------------------
             public TankAIHelper Subscribe()
             {
+                if (tank != null)
+                {
+                    DebugTAC_AI.Assert("Game attempted to fire Subscribe for TankAIHelper twice.");
+                    return this;
+                }
                 tank = GetComponent<Tank>();
                 Vector3 _ = tank.boundsCentreWorld;
                 AIList = new List<ModuleAIExtension>();
                 ManWorldTreadmill.inst.AddListener(this);
                 tank.DamageEvent.Subscribe(OnHit);
+                if (DriverType == AIDriverType.AutoSet)
+                    DriverType = HandlingDetermine(tank, this);
                 SetupDefaultMovementAIController();
+                AllHelpers.Add(this);
                 Invoke("DelayedSubscribe", 0.1f);
                 return this;
             }
@@ -1548,9 +1954,17 @@ namespace TAC_AI.AI
                 try
                 {
                     lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
+                    if (lastTechExtents < 1)
+                    {
+                        Debug.LogError("lastTechExtents is below 1: " + lastTechExtents);
+                        lastTechExtents = 1;
+                    }
                     cachedBlockCount = tank.blockman.blockCount;
                 }
-                catch { }
+                catch (Exception e)
+                {
+                    Debug.Log("DelayedSubscribe - Error " + e);
+                }
             }
 
             public void OnAttach(TankBlock newBlock, Tank tank)
@@ -1562,18 +1976,19 @@ namespace TAC_AI.AI
                 thisInst.PendingHeightCheck = true;
                 thisInst.dirty = true;
                 dirtyAI = true;
-                if (thisInst.AIState == AIAlignment.Player)
+                if (thisInst.AIAlign == AIAlignment.Player)
                 {
                     try
                     {
-                        if (!thisInst.PendingDamageCheck && thisInst.TechMemor)
+                        if (!tank.FirstUpdateAfterSpawn && !thisInst.PendingDamageCheck && thisInst.TechMemor)
                         {
+                            //DebugTAC_AI.Log("TACtical_AI: Saved TechMemor for " + tank.name);
                             thisInst.TechMemor.SaveTech();
                         }
                     }
                     catch { }
                 }
-                else if (thisInst.AIState == AIAlignment.NonPlayer)
+                else if (thisInst.AIAlign == AIAlignment.NonPlayer)
                 {
                     if (newBlock.GetComponent<ModulePacemaker>())
                         tank.Holders.SetHeartbeatSpeed(TechHolders.HeartbeatSpeed.Fast);
@@ -1587,7 +2002,7 @@ namespace TAC_AI.AI
                 thisInst.PendingHeightCheck = true;
                 thisInst.PendingDamageCheck = true;
                 thisInst.dirty = true;
-                if (thisInst.AIState == AIAlignment.Player)
+                if (thisInst.AIAlign == AIAlignment.Player)
                 {
                     try
                     {
@@ -1607,6 +2022,14 @@ namespace TAC_AI.AI
                 isRTSControlled = false;
                 DriverType = AIDriverType.AutoSet;
                 DediAI = AIType.Escort;
+                NextFindTargetTime = 0;
+                RemoveBookmarkBuilder();
+                if (TechMemor.IsNotNull())
+                {
+                    TechMemor.Remove();
+                    TechMemor = null;
+                }
+                ResetAll(null);
             }
 
 
@@ -1671,23 +2094,23 @@ namespace TAC_AI.AI
                 foreach (ModuleAIExtension AIEx in AIList)
                 {
                     if (AIEx)
-                        AIEx.WasRTS = isRTSControlled;
+                        AIEx.RTSActive = isRTSControlled;
                     else
                         DebugTAC_AI.Log("TACtical_AI: NULL ModuleAIExtension IN " + tank.name);
                 }
             }
             public void OnMoveWorldOrigin(IntVector3 move)
             {
-                if (RTSDestInternal != Vector3.zero)
+                if (RTSDestInternal != RTSDisabled)
                     RTSDestInternal += move;
-                lastDestination += move;
+                ControlOperator.lastDestination += move;
 
                 if (MovementController != null)
                     MovementController.OnMoveWorldOrigin(move);
             }
 
 
-            public void ResetAll(Tank tank)
+            public void ResetAll(Tank unused)
             {
                 DebugTAC_AI.Assert(MovementController == null, "MovementController is null.  How is this possible?!");
                 //DebugTAC_AI.Log("TACtical_AI: Resetting all for " + tank.name);
@@ -1698,11 +2121,12 @@ namespace TAC_AI.AI
                 dirtyAI = true;
                 PlayerAllowAutoAnchoring = !tank.IsAnchored;
                 ExpectAITampering = false;
-                GroundOffsetHeight = AIGlobals.GeneralAirGroundOffset;
+                GroundOffsetHeight = AIGlobals.GroundOffsetGeneralAir;
                 Provoked = 0;
-                PursuingTarget = false;
+                ActionPause = 0;
+                KeepEnemyFocus = false;
 
-                AIState = AIAlignment.Static;
+                AIAlign = AIAlignment.Static;
                 Hibernate = false;
                 PendingDamageCheck = true;
                 ActiveAimState = 0;
@@ -1725,22 +2149,27 @@ namespace TAC_AI.AI
                 OverrideAllControls = false;
                 DropBlock();
                 isRTSControlled = false;
-                RTSDestination = Vector3.zero;
+                RTSDestination = RTSDisabled;
+                lastTargetGatherTime = 0;
+                ChaseThreat = true;
                 tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
                 World.ManPlayerRTS.ReleaseControl(this);
-                var Funds = tank.gameObject.GetComponent<RBases.EnemyBaseFunder>();
+                var Funds = tank.gameObject.GetComponent<RLoadedBases.EnemyBaseFunder>();
                 if (Funds.IsNotNull())
                     Funds.OnRecycle(tank);
                 var Mem = tank.gameObject.GetComponent<AIERepair.DesignMemory>();
-                if (Mem.IsNotNull())
+                if (Mem.IsNotNull() && !GetComponent<BookmarkBuilder>())
+                {
                     Mem.Remove();
+                    TechMemor = null;
+                }
                 var Mind = tank.gameObject.GetComponent<EnemyMind>();
                 if (Mind.IsNotNull())
                     Mind.SetForRemoval();
                 var Select = tank.gameObject.GetComponent<SelectHalo>();
                 if (Select.IsNotNull())
                     Select.Remove();
-                var Pnt = tank.gameObject.GetComponents<BookmarkBuilder>();
+                BookmarkBuilder[] Pnt = tank.gameObject.GetComponents<BookmarkBuilder>();
                 if (Pnt.Count() > 1)
                 {
                     DestroyImmediate(Pnt[0]);
@@ -1788,40 +2217,64 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Info("RecalibrateMovementAIController for " + tank.name);
                 UsingAirControls = false;
                 var enemy = gameObject.GetComponent<EnemyMind>();
-                if (DriverType == AIDriverType.Stationary && !enemy)
+                if (AIAlign == AIAlignment.NonPlayer)
                 {
-                    if (!(MovementController is AIControllerStatic))
+                    if (enemy.IsNotNull())
                     {
-                        IMovementAIController controller = MovementController;
-                        MovementController = null;
-                        if (controller != null)
+                        if (enemy.StartedAnchored)
                         {
-                            controller.Recycle();
+                            if (!(MovementController is AIControllerStatic))
+                            {
+                                IMovementAIController controller = MovementController;
+                                MovementController = null;
+                                if (controller != null)
+                                {
+                                    controller.Recycle();
+                                }
+                            }
+                            DriverType = AIDriverType.Stationary;
+                            MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
+                            MovementController.Initiate(tank, this, enemy);
+                            return false;
+                        }
+                        if (enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
+                        {
+                            if (!(MovementController is AIControllerAir))
+                            {
+                                IMovementAIController controller = MovementController;
+                                MovementController = null;
+                                if (controller != null)
+                                {
+                                    controller.Recycle();
+                                }
+                            }
+                            MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
+                            MovementController.Initiate(tank, this, enemy);
+                            UsingAirControls = true;
+                            return true;
                         }
                     }
-                    MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
-                    MovementController.Initiate(tank, this, null);
-                    return false;
+                    else
+                        throw new Exception("RecalibrateMovementAIController for " + tank.name + " was NonPlayer but no EnemyMind present!");
                 }
-                else if (DriverType == AIDriverType.Pilot && AIState == AIAlignment.Player)
+                else
                 {
-                    if (!(MovementController is AIControllerAir))
+                    if (DriverType == AIDriverType.Stationary)
                     {
-                        IMovementAIController controller = MovementController;
-                        MovementController = null;
-                        if (controller != null)
+                        if (!(MovementController is AIControllerStatic))
                         {
-                            controller.Recycle();
+                            IMovementAIController controller = MovementController;
+                            MovementController = null;
+                            if (controller != null)
+                            {
+                                controller.Recycle();
+                            }
                         }
+                        MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
+                        MovementController.Initiate(tank, this);
+                        return false;
                     }
-                    MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
-                    MovementController.Initiate(tank, this);
-                    UsingAirControls = true;
-                    return true;
-                }
-                else if (AIState == AIAlignment.NonPlayer && enemy.IsNotNull())
-                {
-                    if (enemy && enemy.EvilCommander == Enemy.EnemyHandling.Chopper || enemy.EvilCommander == Enemy.EnemyHandling.Airplane)
+                    else if (DriverType == AIDriverType.Pilot)
                     {
                         if (!(MovementController is AIControllerAir))
                         {
@@ -1833,60 +2286,46 @@ namespace TAC_AI.AI
                             }
                         }
                         MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
-                        MovementController.Initiate(tank, this, enemy);
+                        MovementController.Initiate(tank, this);
                         UsingAirControls = true;
+                        return true;
                     }
-                    return true;
                 }
-                else
+                if (!(MovementController is AIControllerDefault))
                 {
-                    if (!(MovementController is AIControllerDefault))
+                    IMovementAIController controller = MovementController;
+                    MovementController = null;
+                    if (controller != null)
                     {
-                        IMovementAIController controller = MovementController;
-                        MovementController = null;
-                        if (controller != null)
-                        {
-                            controller.Recycle();
-                        }
-                        MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
-                        MovementController.Initiate(tank, this, enemy);
+                        controller.Recycle();
                     }
-                    return false;
                 }
+                MovementController = gameObject.GetOrAddComponent<AIControllerDefault>();
+                MovementController.Initiate(tank, this, enemy);
+                return false;
             }
 
-
-            /// <summary>
-            /// Does not remove EnemyMind
-            /// </summary>
-            public void RefreshAI()
+            public void ReValidateAI()
             {
-                AvoidStuff = true;
-                IdealRangeCombat = 25;
+                AILimitSettings.CombatRange = 25;
                 AutoAnchor = false;
-                FullMelee = false;      // Should the AI ram the enemy?
-                AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
+                AILimitSettings.FullMelee = false; // Should the AI ram the enemy?
+                AILimitSettings.AdvancedAI = false;// Should the AI take combat calculations and retreat if nesseary?
+                AILimitSettings.AllMT = false;
+                AILimitSettings.SideToThreat = false;
                 SecondAvoidence = false;// Should the AI avoid two techs at once?
-                OnlyPlayerMT = true;
-                SideToThreat = false;
-                UsingAirControls = false;
-                useInventory = false;
+                UseInventory = false;
+                ChaseThreat = true;
+                ActionPause = 0;
 
                 if (tank.PlayerFocused)
                 {   // player gets full control
-                    isAegisAvail = true;
-                    isAssassinAvail = true;
-
-                    isProspectorAvail = true;
-                    isScrapperAvail = true;
-                    isEnergizerAvail = true;
-
-                    isAstrotechAvail = true;
-                    isAviatorAvail = true;
-                    isBuccaneerAvail = true;
+                    AIWorkingModes = AIEnabledModes.All;
                 }
                 else
                 {
+                    AIWorkingModes = AIEnabledModes.None;
+                    /*
                     isAegisAvail = false;
                     isAssassinAvail = false;
 
@@ -1897,16 +2336,8 @@ namespace TAC_AI.AI
                     isAstrotechAvail = false;
                     isAviatorAvail = false;
                     isBuccaneerAvail = false;
+                    */
                 }
-
-                TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
-                control3D.m_State.m_Beam = false;
-                control3D.m_State.m_BoostJets = false;
-                control3D.m_State.m_BoostProps = false;
-                control3D.m_State.m_Fire = false;
-                control3D.m_State.m_InputMovement = Vector3.zero;
-                control3D.m_State.m_InputRotation = Vector3.zero;
-                controlGet.SetValue(tank.control, control3D);
 
                 AIList.Clear();
                 List<ModuleAIBot> AIs = tank.blockman.IterateBlockComponents<ModuleAIBot>().ToList();
@@ -1946,32 +2377,32 @@ namespace TAC_AI.AI
 
                     // Auxillary Functions
                     if (AIEx.AdvancedAI)
-                        AdvancedAI = true;
+                        AILimitSettings.AdvancedAI = true;
                     if (AIEx.AutoAnchor)
                         AutoAnchor = true;
                     if (AIEx.MeleePreferred)
-                        FullMelee = true;
+                        AILimitSettings.FullMelee = true;
                     if (AIEx.AdvAvoidence)
                         SecondAvoidence = true;
                     if (AIEx.MTForAll)
-                        OnlyPlayerMT = false;
+                        AILimitSettings.AllMT = true;
                     if (AIEx.SidePreferred)
-                        SideToThreat = true;
+                        AILimitSettings.SideToThreat = true;
                     if (AIEx.SelfRepairAI)
-                        allowAutoRepair = true;
+                        AutoRepair = true;
                     if (AIEx.InventoryUser)
-                        useInventory = true;
+                        UseInventory = true;
 
                     // Engadgement Ranges
-                    if (AIEx.MinCombatRange > IdealRangeCombat)
-                        IdealRangeCombat = AIEx.MinCombatRange;
-                    if (AIEx.MaxCombatRange > RangeToChase)
-                        RangeToChase = AIEx.MaxCombatRange;
+                    if (AIEx.MinCombatRange > MinCombatRange)
+                        AILimitSettings.CombatRange = AIEx.MinCombatRange;
+                    if (AIEx.MaxCombatRange > MaxCombatRange)
+                        AILimitSettings.ChaseRange = AIEx.MaxCombatRange;
 
-                    if (AIEx.WasRTS)
+                    if (AIEx.RTSActive)
                     {
                         SetRTSState(true);
-                        RTSDestination = AIEx.RTSPos;
+                        RTSDestination = AIEx.GetRTSScenePos();
                     }
                 }
                 // REMOVE any AI states that have been removed!!!
@@ -2016,27 +2447,46 @@ namespace TAC_AI.AI
 
                 if (DriverType == AIDriverType.AutoSet)
                 {
-                    ExecuteAutoSet();
+                    ExecuteAutoSetNoCalibrate();
                 }
                 else if (ShouldBeStationary(tank, this))
                     DriverType = AIDriverType.Stationary;
 
                 RecalibrateMovementAIController();
 
-                if (allowAutoRepair)
-                {
-                    if (TechMemor.IsNull())
-                    {
-                        TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
-                        TechMemor.Initiate();
+                AttackMode = EWeapSetup.GetAttackStrat(tank, this);
+            }
+            /// <summary>
+            /// Does not remove EnemyMind
+            /// </summary>
+            public void RefreshAI()
+            {
+                AvoidStuff = true;
+                UsingAirControls = false;
 
-                        DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (RefreshAI)");
-                    }
+                ReValidateAI();
+
+                TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
+                control3D.m_State.m_Beam = false;
+                control3D.m_State.m_BoostJets = false;
+                control3D.m_State.m_BoostProps = false;
+                control3D.m_State.m_Fire = false;
+                control3D.m_State.m_InputMovement = Vector3.zero;
+                control3D.m_State.m_InputRotation = Vector3.zero;
+                controlGet.SetValue(tank.control, control3D);
+
+                bool check = AIEBases.CheckIfTechNeedsToBeBuilt(this);
+                if (AutoRepair || check)
+                {
+                    InsureTechMemor("RefreshAI", false);
                 }
                 else
                 {
                     if (TechMemor.IsNotNull())
+                    {
                         TechMemor.Remove();
+                        TechMemor = null;
+                    }
                 }
                 try
                 {
@@ -2051,6 +2501,7 @@ namespace TAC_AI.AI
                     tank.DetachEvent.Subscribe(OnDetach);
                 }
                 catch { }
+                AIEBases.SetupTechAutoConstruction(this);
 
                 /*
                 if (hasAnchorableAI)
@@ -2065,6 +2516,11 @@ namespace TAC_AI.AI
             }
 
             public void ExecuteAutoSet()
+            {
+                ExecuteAutoSetNoCalibrate();
+                RecalibrateMovementAIController();
+            }
+            public void ExecuteAutoSetNoCalibrate()
             {
                 DriverType = HandlingDetermine(tank, this);
                 switch (DriverType)
@@ -2091,7 +2547,6 @@ namespace TAC_AI.AI
                         DebugTAC_AI.LogError("TACtical_AI: Encountered illegal AIDriverType on Allied AI Driver HandlingDetermine!");
                         break;
                 }
-                RecalibrateMovementAIController();
             }
 
             /// <summary>
@@ -2108,7 +2563,7 @@ namespace TAC_AI.AI
                         if (tank.IsAnchored)
                         {
                             // Execute remote orders to allied units - Attack that threat!
-                            RequestFocusFireALL(tank, lastEnemy, RequestSeverity.AllHandsOnDeck);
+                            RequestFocusFireALL(tank, lastEnemyGet, RequestSeverity.AllHandsOnDeck);
                         }
                         else
                         {
@@ -2118,16 +2573,33 @@ namespace TAC_AI.AI
                                 case AIType.Prospector:
                                 case AIType.Scrapper:
                                 case AIType.Energizer:
-                                    RequestFocusFireALL(tank, lastEnemy, RequestSeverity.Warn);
+                                    RequestFocusFireALL(tank, lastEnemyGet, RequestSeverity.Warn);
                                     break;
                                 default:
-                                    RequestFocusFireALL(tank, lastEnemy, RequestSeverity.ThinkMcFly);
+                                    RequestFocusFireALL(tank, lastEnemyGet, RequestSeverity.ThinkMcFly);
                                     break;
                             }
                         }
                     }
                     Provoked = AIGlobals.ProvokeTime;
                     FIRE_NOW = true;
+                    if (ManPlayerRTS.PlayerIsInRTS)
+                    {
+                        if (tank.IsAnchored)
+                        {
+                            PlayerRTSUI.RTSDamageWarnings(0.5f, 0.25f);
+                            ManEnemySiege.BigF5broningWarning("Base is Under Attack");
+                        }
+                        else if (tank.PlayerFocused)
+                        {
+                            PlayerRTSUI.RTSDamageWarnings(1.5f, 0.75f);
+                            ManEnemySiege.BigF5broningWarning("You are under attack");
+                        }
+                        else
+                        {
+                            ManSFX.inst.PlayUISFX(ManSFX.UISfxType.RadarOn);
+                        }
+                    }
                 }
             }
             public void OnSwitchAI(bool resetRTSstate)
@@ -2142,19 +2614,21 @@ namespace TAC_AI.AI
                 theBase = null;
                 IsTryingToUnjam = false;
                 JustUnanchored = false;
+                ChaseThreat = true;
+                ActionPause = 0;
                 DropBlock();
                 if (resetRTSstate)
                 {
                     isRTSControlled = false;
                     foreach (ModuleAIExtension AIEx in AIList)
                     {
-                        AIEx.WasRTS = isRTSControlled;
+                        AIEx.RTSActive = isRTSControlled;
                     }
                     tank.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
                 }
                 //World.PlayerRTSControl.ReleaseControl(this);
             }
-            public void ForceAllAIsToEscort(bool Do = true)
+            public void ForceAllAIsToEscort(bool Do, bool RebuildAlignmentDelayed)
             {
                 //Needed to return AI mode back to Escort on unanchor as unanchoring causes it to go to idle
                 try
@@ -2191,7 +2665,10 @@ namespace TAC_AI.AI
                             lastAIType = AITreeType.AITypes.Idle;
                         }
                     }
-                    ForceRebuildAlignment();
+                    if (!RebuildAlignmentDelayed)
+                        ForceRebuildAlignment();
+                    else
+                        dirtyAI = true;
                 }
                 catch { }
             }
@@ -2206,9 +2683,9 @@ namespace TAC_AI.AI
             {
                 //What actually does the avoidence
                 //DebugTAC_AI.Log("TACtical_AI: GetOtherDir");
-                Vector3 inputOffset = tank.transform.position - targetToAvoid.transform.position;
+                Vector3 inputOffset = tank.boundsCentreWorldNoCheck - targetToAvoid.boundsCentreWorldNoCheck;
                 float inputSpacing = targetToAvoid.GetCheapBounds() + lastTechExtents + DodgeStrength;
-                Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.transform.position;
+                Vector3 Final = (inputOffset.normalized * inputSpacing) + tank.boundsCentreWorldNoCheck;
                 return Final;
             }
             /// <summary>
@@ -2220,15 +2697,16 @@ namespace TAC_AI.AI
             {
                 //What actually does the avoidence
                 //DebugTAC_AI.Log("TACtical_AI: GetDir");
-                Vector3 inputOffset = tank.transform.position - targetToAvoid.transform.position;
+                Vector3 inputOffset = tank.boundsCentreWorldNoCheck - targetToAvoid.boundsCentreWorldNoCheck;
                 float inputSpacing = targetToAvoid.GetCheapBounds() + lastTechExtents + DodgeStrength;
-                Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.transform.position;
+                Vector3 Final = -(inputOffset.normalized * inputSpacing) + tank.boundsCentreWorldNoCheck;
                 return Final;
             }
 
 
             // Collision Avoidence
-            public Vector3 AvoidAssist(Vector3 targetIn)
+            public static List<KeyValuePair<Vector3, float>> posWeights = new List<KeyValuePair<Vector3, float>>();
+            public Vector3 AvoidAssist(Vector3 targetIn, bool AvoidStatic = true)
             {
                 //The method to determine if we should avoid an ally nearby while navigating to the target
                 //IsLikelyJammed = false;
@@ -2245,62 +2723,75 @@ namespace TAC_AI.AI
                     bool obst;
                     Tank lastCloseAlly;
                     float lastAllyDist;
-                    if (SecondAvoidence && moreThan2Allies)// MORE processing power
+                    HashSet<Tank> AlliesAlt = AIEPathing.AllyList(tank);
+                    posWeights.Clear();
+                    if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                     {
-                        lastCloseAlly = AIEPathing.SecondClosestAlly(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
-                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.ExtraSpace)
+                        lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                         {
-                            if (lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.ExtraSpace)
+                            if (lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                             {
                                 //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name + " and " + lastCloseAlly2.name);
                                 //IsLikelyJammed = true;
-                                Vector3 ProccessedVal2 = GetOtherDir(lastCloseAlly) + GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI);
+                                Vector3 ProccessedVal = GetOtherDir(lastCloseAlly) + GetOtherDir(lastCloseAlly2);
                                 if (obst)
-                                    return (targetIn + ProccessedVal2) / 4;
-                                else
-                                    return (targetIn + ProccessedVal2) / 3;
-
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 8));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 2));
                             }
-                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-                            //IsLikelyJammed = true;
-                            Vector3 ProccessedVal = GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
-                            if (obst)
-                                return (targetIn + ProccessedVal) / 3;
                             else
-                                return (targetIn + ProccessedVal) / 2;
+                            {
+                                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                                //IsLikelyJammed = true;
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI);
+                                Vector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                                if (obst)
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                            }
                         }
                         else
                         {
-                            Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI);
                             if (obst)
-                                return (targetIn + ProccessedVal) / 2;
-                            else
-                                return targetIn;
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
                         }
-                    }
-                    lastCloseAlly = AIEPathing.ClosestAlly(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
-                    //DebugTAC_AI.Log("TACtical_AI: Ally is " + lastAllyDist + " dist away");
-                    //DebugTAC_AI.Log("TACtical_AI: Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
-                    //if (lastCloseAlly == null)
-                    //    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
-                    if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.ExtraSpace)
-                    {
-                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-                        //IsLikelyJammed = true;
-                        Vector3 ProccessedVal = GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
-                        if (obst)
-                            return (targetIn + ProccessedVal) / 3;
-                        else
-                            return (targetIn + ProccessedVal) / 2;
                     }
                     else
                     {
-                        Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
-                        if (obst)
-                            return (targetIn + ProccessedVal) / 2;
+                        lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
+                        //DebugTAC_AI.Log("TACtical_AI: Ally is " + lastAllyDist + " dist away");
+                        //DebugTAC_AI.Log("TACtical_AI: Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
+                        //if (lastCloseAlly == null)
+                        //    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
+                        if (lastCloseAlly != null && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
+                        {
+                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                            //IsLikelyJammed = true;
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI);
+                            Vector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                            posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                        }
                         else
-                            return targetIn;
+                        {
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
+                        }
                     }
+                    if (posWeights.Count == 0)
+                        return targetIn;
+                    Vector3 posCombined = targetIn;
+                    float totalWeight = 1;
+                    foreach (var item in posWeights)
+                    {
+                        totalWeight += item.Value;
+                        posCombined += item.Key * item.Value;
+                    }
+                    return posCombined / totalWeight;
                 }
                 catch (Exception e)
                 {
@@ -2308,7 +2799,12 @@ namespace TAC_AI.AI
                     return targetIn;
                 }
             }
-            public Vector3 AvoidAssistInv(Vector3 targetIn)
+            /// <summary>
+            /// When moving AWAY from target
+            /// </summary>
+            /// <param name="targetIn"></param>
+            /// <returns></returns>
+            public Vector3 AvoidAssistInv(Vector3 targetIn, bool AvoidStatic = true)
             {
                 //The method to determine if we should avoid an ally nearby while navigating to the target - REVERSED
                 if (!AvoidStuff || tank.IsAnchored)
@@ -2324,55 +2820,76 @@ namespace TAC_AI.AI
                     bool obst;
                     Tank lastCloseAlly;
                     float lastAllyDist;
-                    if (SecondAvoidence && moreThan2Allies)// MORE processing power
+                    HashSet<Tank> AlliesAlt = AIEPathing.AllyList(tank);
+                    posWeights.Clear();
+                    if (SecondAvoidence && AlliesAlt.Count() > 1)// MORE processing power
                     {
-                        lastCloseAlly = AIEPathing.SecondClosestAlly(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
-                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.ExtraSpace)
+                        lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                         {
-                            if (lastAuxVal < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.ExtraSpace)
+                            if (lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                             {
                                 //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name + " and " + lastCloseAlly2.name);
                                 //IsLikelyJammed = true;
-                                Vector3 ProccessedVal2 = GetDir(lastCloseAlly) + GetDir(lastCloseAlly2) - AIEPathing.ObstDodgeOffsetInv(tank, this, out obst, AdvancedAI);
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffsetInv(tank, this, AvoidStatic, out obst, AdvancedAI);
+                                Vector3 ProccessedVal = GetDir(lastCloseAlly) + GetDir(lastCloseAlly2);
                                 if (obst)
-                                    return (targetIn + ProccessedVal2) / 4;
-                                else
-                                    return (targetIn + ProccessedVal2) / 3;
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 8));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 2));
 
                             }
-                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-                            //IsLikelyJammed = true;
-                            Vector3 ProccessedVal = GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, this, out obst, AdvancedAI);
-                            if (obst)
-                                return (targetIn + ProccessedVal) / 3;
                             else
-                                return (targetIn + ProccessedVal) / 2;
+                            {
+                                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                                //IsLikelyJammed = true;
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffsetInv(tank, this, AvoidStatic, out obst, AdvancedAI);
+                                Vector3 ProccessedVal = GetDir(lastCloseAlly);
+                                if (obst)
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                            }
                         }
-
-                    }
-                    lastCloseAlly = AIEPathing.ClosestAlly(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
-                    //DebugTAC_AI.Log("TACtical_AI: Ally is " + lastAllyDist + " dist away");
-                    //DebugTAC_AI.Log("TACtical_AI: Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
-                    //if (lastCloseAlly == null)
-                    //    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
-                    if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.ExtraSpace)
-                    {
-                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-                        //IsLikelyJammed = true;
-                        Vector3 ProccessedVal = GetDir(lastCloseAlly) + AIEPathing.ObstDodgeOffsetInv(tank, this, out obst, AdvancedAI);
-                        if (obst)
-                            return (targetIn + ProccessedVal) / 3;
                         else
-                            return (targetIn + ProccessedVal) / 2;
+                        {
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffsetInv(tank, this, AvoidStatic, out obst, AdvancedAI);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
+                        }
                     }
                     else
                     {
-                        Vector3 ProccessedVal = AIEPathing.ObstDodgeOffsetInv(tank, this, out obst, AdvancedAI);
-                        if (obst)
-                            return (targetIn + ProccessedVal) / 2;
+                        lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
+                        //DebugTAC_AI.Log("TACtical_AI: Ally is " + lastAllyDist + " dist away");
+                        //DebugTAC_AI.Log("TACtical_AI: Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
+                        //if (lastCloseAlly == null)
+                        //    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
+                        if (lastCloseAlly != null && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
+                        {
+                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                            //IsLikelyJammed = true;
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffsetInv(tank, this, AvoidStatic, out obst, AdvancedAI);
+                            Vector3 ProccessedVal = GetDir(lastCloseAlly);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                            posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                        }
                         else
-                            return targetIn;
+                        {
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffsetInv(tank, this, AvoidStatic, out obst, AdvancedAI);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
+                        }
                     }
+                    if (posWeights.Count == 0)
+                        return targetIn;
+                    Vector3 posCombined = targetIn;
+                    float totalWeight = 1;
+                    foreach (var item in posWeights)
+                    {
+                        totalWeight += item.Value;
+                        posCombined += item.Key * item.Value;
+                    }
+                    return posCombined / totalWeight;
                 }
                 catch (Exception e)
                 {
@@ -2380,7 +2897,7 @@ namespace TAC_AI.AI
                     return targetIn;
                 }
             }
-            public Vector3 AvoidAssistPrecise(Vector3 targetIn)
+            public Vector3 AvoidAssistPrecise(Vector3 targetIn, bool AvoidStatic = true, bool IgnoreDestructable = false)
             {
                 //The method to determine if we should avoid an ally nearby while navigating to the target
                 //  MORE DEMANDING THAN THE ABOVE!
@@ -2397,60 +2914,72 @@ namespace TAC_AI.AI
                     bool obst;
                     Tank lastCloseAlly;
                     float lastAllyDist;
-                    if (SecondAvoidence && moreThan2Allies)// MORE processing power
+                    HashSet<Tank> AlliesAlt = AIEPathing.AllyList(tank);
+                    posWeights.Clear();
+                    if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                     {
-                        lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
-                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.ExtraSpace)
+                        lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                         {
-                            if (lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.ExtraSpace)
+                            if (lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                             {
                                 //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name + " and " + lastCloseAlly2.name);
-                                Vector3 ProccessedVal2 = GetOtherDir(lastCloseAlly) + GetOtherDir(lastCloseAlly2) + AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI, IgnoreDestructable);
+                                Vector3 ProccessedVal = GetOtherDir(lastCloseAlly) + GetOtherDir(lastCloseAlly2);
                                 if (obst)
-                                    return (targetIn + ProccessedVal2) / 4;
-                                else
-                                    return (targetIn + ProccessedVal2) / 3;
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 8));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 2));
                             }
-                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-
-                            Vector3 ProccessedVal = GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
-                            if (obst)
-                                return (targetIn + ProccessedVal) / 3;
                             else
-                                return (targetIn + ProccessedVal) / 2;
+                            {
+                                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI, IgnoreDestructable);
+                                Vector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                                if (obst)
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                            }
                         }
                         else
                         {
-                            Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI);
                             if (obst)
-                                return (targetIn + ProccessedVal) / 2;
-                            else
-                                return targetIn;
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
                         }
-
-                    }
-                    lastCloseAlly = AIEPathing.ClosestAllyPrecision(tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
-                    //DebugTAC_AI.Log("TACtical_AI: Ally is " + lastAllyDist + " dist away");
-                    //DebugTAC_AI.Log("TACtical_AI: Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
-                    //if (lastCloseAlly == null)
-                    //    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
-                    if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.ExtraSpace)
-                    {
-                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
-                        Vector3 ProccessedVal = GetOtherDir(lastCloseAlly) + AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
-                        if (obst)
-                            return (targetIn + ProccessedVal) / 3;
-                        else
-                            return (targetIn + ProccessedVal) / 2;
                     }
                     else
                     {
-                        Vector3 ProccessedVal = AIEPathing.ObstDodgeOffset(tank, this, out obst, AdvancedAI);
-                        if (obst)
-                            return (targetIn + ProccessedVal) / 2;
+                        lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
+                        //DebugTAC_AI.Log("TACtical_AI: Ally is " + lastAllyDist + " dist away");
+                        //DebugTAC_AI.Log("TACtical_AI: Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
+                        //if (lastCloseAlly == null)
+                        //    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
+                        if (lastCloseAlly != null && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
+                        {
+                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI, IgnoreDestructable);
+                            Vector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                            posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                        }
                         else
-                            return targetIn;
+                        {
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, AvoidStatic, out obst, AdvancedAI, IgnoreDestructable);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
+                        }
                     }
+                    if (posWeights.Count == 0)
+                        return targetIn;
+                    Vector3 posCombined = targetIn;
+                    float totalWeight = 1;
+                    foreach (var item in posWeights)
+                    {
+                        totalWeight += item.Value;
+                        posCombined += item.Key * item.Value;
+                    }
+                    return posCombined / totalWeight;
                 }
                 catch //(Exception e)
                 {
@@ -2458,19 +2987,167 @@ namespace TAC_AI.AI
                     return targetIn;
                 }
             }
+            public Vector3 AvoidAssistPrediction(Vector3 targetIn, float Foresight)
+            {
+                //The method to determine if we should avoid an ally nearby while navigating to the target
+                //IsLikelyJammed = false;
+                if (!AvoidStuff || tank.IsAnchored)
+                    return targetIn;
+                if (targetIn.IsNaN())
+                {
+                    DebugTAC_AI.Log("TACtical_AI: AvoidAssistPrecise IS NaN!!");
+                    //TankAIManager.FetchAllAllies();
+                    return targetIn;
+                }
+                try
+                {
+                    bool obst;
+                    Tank lastCloseAlly;
+                    float lastAllyDist;
+                    Vector3 posOffset = tank.boundsCentreWorldNoCheck + (SafeVelocity * Foresight);
+                    HashSet<Tank> AlliesAlt = AIEPathing.AllyList(tank);
+                    posWeights.Clear();
+                    if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
+                    {
+                        lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, posOffset, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
+                        {
+                            if (lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
+                            {
+                                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name + " and " + lastCloseAlly2.name);
+                                //IsLikelyJammed = true;
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, true, out obst, AdvancedAI);
+                                Vector3 ProccessedVal = GetOtherDir(lastCloseAlly) + GetOtherDir(lastCloseAlly2);
+                                if (obst)
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 8));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 2));
+                            }
+                            else
+                            {
+                                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                                //IsLikelyJammed = true;
+                                Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, true, out obst, AdvancedAI);
+                                Vector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                                if (obst)
+                                    posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                                posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                            }
+                        }
+                        else
+                        {
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, true, out obst, AdvancedAI);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
+                        }
+                    }
+                    else
+                    {
+                        lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, posOffset, out lastAllyDist, tank);
+                        //DebugTAC_AI.Log("TACtical_AI: Ally is " + lastAllyDist + " dist away");
+                        //DebugTAC_AI.Log("TACtical_AI: Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
+                        //if (lastCloseAlly == null)
+                        //    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
+                        if (lastCloseAlly != null && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
+                        {
+                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Spacing from " + lastCloseAlly.name);
+                            //IsLikelyJammed = true;
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, true, out obst, AdvancedAI);
+                            Vector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 4));
+                            posWeights.Add(new KeyValuePair<Vector3, float>(ProccessedVal, 1));
+                        }
+                        else
+                        {
+                            Vector3 obstOff = AIEPathing.ObstDodgeOffset(tank, this, true, out obst, AdvancedAI);
+                            if (obst)
+                                posWeights.Add(new KeyValuePair<Vector3, float>(obstOff, 2));
+                        }
+                    }
+                    if (posWeights.Count == 0)
+                        return targetIn;
+                    Vector3 posCombined = targetIn;
+                    float totalWeight = 1;
+                    foreach (var item in posWeights)
+                    {
+                        totalWeight += item.Value;
+                        posCombined += item.Key * item.Value;
+                    }
+                    return posCombined / totalWeight;
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Crash on Avoid " + e);
+                    return targetIn;
+                }
+            }
+
+            /// <summary>
+            /// An airborne version of the Player AI pathfinding which handles obstructions
+            /// </summary>
+            /// <param name="targetIn"></param>
+            /// <param name="predictionOffset"></param>
+            /// <returns></returns>
+            public Vector3 AvoidAssistAirSpacing(Vector3 targetIn, float Responsiveness)
+            {
+                //The method to determine if we should avoid an ally nearby while navigating to the target
+                try
+                {
+                    Tank lastCloseAlly;
+                    float lastAllyDist;
+                    Vector3 DSO = DodgeSphereCenter / Responsiveness;
+                    float moveSpace = (DSO - tank.boundsCentreWorldNoCheck).magnitude;
+                    HashSet<Tank> AlliesAlt = AIEPathing.AllyList(tank);
+                    if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
+                    {
+                        lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, DSO, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                        if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace + moveSpace)
+                        {
+                            if (lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace + moveSpace)
+                            {
+                                IntVector3 ProccessedVal2 = GetOtherDir(lastCloseAlly) + GetOtherDir(lastCloseAlly2);
+                                return (targetIn + ProccessedVal2) / 3;
+                            }
+                            IntVector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                            return (targetIn + ProccessedVal) / 2;
+                        }
+
+                    }
+                    lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, DSO, out lastAllyDist, tank);
+                    if (lastCloseAlly == null)
+                        DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
+                    if (lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace + moveSpace)
+                    {
+                        IntVector3 ProccessedVal = GetOtherDir(lastCloseAlly);
+                        return (targetIn + ProccessedVal) / 2;
+                    }
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Crash on AvoidAssistAir " + e);
+                    return targetIn;
+                }
+                if (targetIn.IsNaN())
+                {
+                    DebugTAC_AI.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
+                    //AIECore.TankAIManager.FetchAllAllies();
+                }
+                return targetIn;
+            }
+
 
 
             // Obstruction Management
-            public bool AutoHandleObstruction(float dist = 0, bool useRush = false, bool useGun = true, float div = 4)
+            public bool AutoHandleObstruction(ref EControlOperatorSet direct, float dist = 0, bool useRush = false, bool useGun = true, float div = 4)
             {
                 if (!IsTechMoving(EstTopSped / div))
                 {
-                    TryHandleObstruction(!Feedback, dist, useRush, useGun);
+                    TryHandleObstruction(!Feedback, dist, useRush, useGun, ref direct);
                     return true;
                 }
                 return false;
             }
-            public void TryHandleObstruction(bool hasMessaged, float dist, bool useRush, bool useGun)
+            public void TryHandleObstruction(bool hasMessaged, float dist, bool useRush, bool useGun, ref EControlOperatorSet direct)
             {
                 //Something is in the way - try fetch the scenery to shoot at
                 //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Obstructed");
@@ -2480,7 +3157,8 @@ namespace TAC_AI.AI
                 }
 
                 IsTryingToUnjam = false;
-                if (ForceSetDrive && DriveVar < 0)
+                PivotOnly = false;
+                if (direct.DriveDir == EDriveFacing.Backwards)
                 {   // we are likely driving backwards
                     ForceSetDrive = true;
                     DriveVar = -1;
@@ -2488,7 +3166,7 @@ namespace TAC_AI.AI
                     UrgencyOverload += KickStart.AIClockPeriod / 2f;
                     if (Urgency >= 0)
                         Urgency += KickStart.AIClockPeriod / 5f;
-                    if (UrgencyOverload > 50)
+                    if (UrgencyOverload > 80)
                     {
                         //Are we just randomly angry for too long? let's fix that
                         AIMessage(tech: tank, ref hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
@@ -2496,7 +3174,7 @@ namespace TAC_AI.AI
                         AvoidStuff = true;
                         UrgencyOverload = 0;
                     }
-                    else if (useRush && dist > RangeToStopRush * 2)
+                    else if (useRush && dist > MaxObjectiveRange * 2)
                     {
                         //SCREW IT - GO FULL SPEED WE ARE TOO FAR BEHIND!
                         if (useGun)
@@ -2505,23 +3183,31 @@ namespace TAC_AI.AI
                         DriveVar = -1f;
                         Urgency += KickStart.AIClockPeriod / 5f;
                     }
-                    else if (75 < FrustrationMeter)
+                    else if (AIGlobals.UnjamUpdateStart < FrustrationMeter)
                     {
                         IsTryingToUnjam = true;
                         //Try build beaming to clear debris
                         FrustrationMeter += KickStart.AIClockPeriod;
-                        if (225 < FrustrationMeter)
+                        if (AIGlobals.UnjamUpdateEnd < FrustrationMeter)
                         {
-                            FrustrationMeter = 0;
+                            FrustrationMeter = 45;
                         }
-                        else if (150 < FrustrationMeter)
+                        else if (AIGlobals.UnjamUpdateDrop < FrustrationMeter)
                         {
+                            ControlCore.DriveToFacingTowards();
+                            //ControlCore.lastDestination = tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward * 50);
                             ForceSetBeam = false;
                             ForceSetDrive = true;
                             DriveVar = 1;
                         }
                         else
+                        {
+                            ControlCore.DriveToFacingTowards();
+                            //ControlCore.lastDestination = tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward * 50);
+                            ForceSetDrive = true;
+                            DriveVar = 1;
                             ForceSetBeam = true;
+                        }
                     }
                     else if (45 < FrustrationMeter)
                     {
@@ -2547,7 +3233,7 @@ namespace TAC_AI.AI
                     UrgencyOverload += KickStart.AIClockPeriod / 2f;
                     if (Urgency >= 0)
                         Urgency += KickStart.AIClockPeriod / 5f;
-                    if (UrgencyOverload > 50)
+                    if (UrgencyOverload > 80)
                     {
                         //Are we just randomly angry for too long? let's fix that
                         AIMessage(tech: tank, ref hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
@@ -2555,7 +3241,7 @@ namespace TAC_AI.AI
                         AvoidStuff = true;
                         UrgencyOverload = 0;
                     }
-                    else if (useRush && dist > RangeToStopRush * 2)
+                    else if (useRush && dist > MaxObjectiveRange * 2)
                     {
                         //SCREW IT - GO FULL SPEED WE ARE TOO FAR BEHIND!
                         if (useGun)
@@ -2564,25 +3250,29 @@ namespace TAC_AI.AI
                         DriveVar = 1f;
                         Urgency += KickStart.AIClockPeriod / 5f;
                     }
-                    else if (75 < FrustrationMeter)
+                    else if (AIGlobals.UnjamUpdateStart < FrustrationMeter)
                     {
                         IsTryingToUnjam = true;
                         //Try build beaming to clear debris
                         FrustrationMeter += KickStart.AIClockPeriod;
-                        if (225 < FrustrationMeter)
+                        if (AIGlobals.UnjamUpdateEnd < FrustrationMeter)
                         {
-                            FrustrationMeter = 0;
+                            FrustrationMeter = 45;
                         }
-                        else if (150 < FrustrationMeter)
+                        else if (AIGlobals.UnjamUpdateDrop < FrustrationMeter)
                         {
-                            DriveDest = EDriveDest.None;
                             ForceSetBeam = false;
+                            ControlCore.DriveAwayFacingTowards();
+                            //ControlCore.lastDestination = tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward * -50);
                             ForceSetDrive = true;
                             DriveVar = -1;
                         }
                         else
                         {
-                            DriveDest = EDriveDest.FromLastDestination;
+                            ControlCore.DriveAwayFacingTowards();
+                            //ControlCore.lastDestination = tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward * -50);
+                            ForceSetDrive = true;
+                            DriveVar = -1;
                             ForceSetBeam = true;
                         }
                     }
@@ -2608,7 +3298,7 @@ namespace TAC_AI.AI
             {
                 List<Visible> ObstList;
                 if (tank.rbody)
-                    ObstList = AIEPathing.ObstructionAwareness(tank.boundsCentreWorldNoCheck + tank.rbody.velocity, this, searchRad);
+                    ObstList = AIEPathing.ObstructionAwareness(tank.boundsCentreWorldNoCheck + SafeVelocity, this, searchRad);
                 else
                     ObstList = AIEPathing.ObstructionAwareness(tank.boundsCentreWorldNoCheck, this, searchRad);
                 int bestStep = 0;
@@ -2654,76 +3344,100 @@ namespace TAC_AI.AI
 
             // Target Management
             public int Provoked = 0;           // Were we hit from afar?
-            public bool PursuingTarget = false;     // Chasing specified target?
+            public bool KeepEnemyFocus { get; private set; } = false;     // Chasing specified target?
             /// <summary>
             /// Set a target to chase after
             /// </summary>
             /// <param name="target"></param>
             /// <returns>true if PursuingTarget is true</returns>
-            public bool SetPursuit(Visible target = null)
+            public bool SetPursuit(Visible target)
             {
-                if (!PursuingTarget)
+                if (!KeepEnemyFocus)
                 {
                     if ((bool)target)
                     {
                         if ((bool)target.tank)
                         {
                             lastEnemy = target;
-                            lastDestination = target.tank.boundsCentreWorldNoCheck;
-                            PursuingTarget = true;
+                            ControlOperator.lastDestination = target.tank.boundsCentreWorldNoCheck;
+                            KeepEnemyFocus = true;
                             return true;
                         }
                     }
                 }
+                else if (target == null) 
+                    KeepEnemyFocus = false;
                 return false;
             }
-            public void EndAggro()
+            public void EndPursuit()
             {
-                if (PursuingTarget)
+                if (KeepEnemyFocus)
                 {
-                    PursuingTarget = false;
+                    KeepEnemyFocus = false;
                 }
             }
             public bool InRangeOfTarget(float distance)
             {
-                return InRangeOfTarget(lastEnemy, distance);
+                return InRangeOfTarget(lastEnemyGet, distance);
             }
             public bool InRangeOfTarget(Visible target, float distance)
             {
                 return (target.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude <= distance * distance;
             }
 
-            public Visible GetTarget()
+            public Visible GetEnemyAllied()
             {
-                Visible target = lastEnemy;
+                Visible target = lastEnemyGet;
                 if (Provoked == 0)
                     target = null;
                 else
                 {
-                    float TargetRange = DetectionRange * DetectionRange;
+                    float TargetRangeSqr = MaxCombatRange * MaxCombatRange;
                     Vector3 scanCenter = tank.boundsCentreWorldNoCheck;
-                    if (!target.isActive || !target.tank.IsEnemy(tank.Team) || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRange)
+                    if (!target.isActive || !target.tank.IsEnemy(tank.Team) || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRangeSqr)
                     {
                         //DebugTAC_AI.Log("Target lost");
                         target = null;
+                    }
+                    else if (NextFindTargetTime >= Time.time)
+                    {
+                        if ((bool)lastPlayer)
+                        {
+                            Visible playerTarget = lastPlayer.tank.Weapons.GetManualTarget();
+                            if (playerTarget)
+                            {
+                                // If the player fires while locked-on to a neutral/SubNeutral, the AI will assume this
+                                //   is an attack request
+                                Provoked = 0;
+                                EndPursuit();
+                                target = playerTarget;
+                                return target;
+                            }
+                        }
+                        return target;
                     }
                 }
 
                 if ((bool)lastPlayer)
                 {
                     Visible playerTarget = lastPlayer.tank.Weapons.GetManualTarget();
-                    if (playerTarget)
+                    if (playerTarget?.tank != null && playerTarget.isActive && playerTarget.tank.CentralBlock)
                     {
                         // If the player fires while locked-on to a neutral/SubNeutral, the AI will assume this
                         //   is an attack request
                         Provoked = 0;
-                        EndAggro();
+                        EndPursuit();
                         target = playerTarget;
                     }
                 }
                 if (target == null)
                 {
-                    target = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                    if (MovementController is AIControllerAir air && air.FlyStyle == AIControllerAir.FlightType.Aircraft)
+                    {
+                        target = FindEnemyAir(false);
+                    }
+                    else
+                        target = FindEnemy(false);
                     if (target)
                     {
                         if (AIGlobals.IsNonAggressiveTeam(target.tank.Team))
@@ -2736,15 +3450,15 @@ namespace TAC_AI.AI
             {
                 if (Provoked <= 0)
                 {
-                    if (lastEnemy)
+                    if (lastEnemyGet)
                     {
-                        if (!InRangeOfTarget(RangeToChase))
+                        if (!InRangeOfTarget(MaxCombatRange))
                         {
-                            EndAggro();
+                            EndPursuit();
                         }
                     }
                     else
-                        EndAggro();
+                        EndPursuit();
                     Provoked = 0;
                 }
                 else
@@ -2769,8 +3483,8 @@ namespace TAC_AI.AI
             private void DetermineCombat()
             {
                 bool DoNotEngage = false;
-                if (lastEnemy?.tank)
-                    if (!tank.IsEnemy(lastEnemy.tank.Team))
+                if (lastEnemyGet?.tank)
+                    if (!tank.IsEnemy(lastEnemyGet.tank.Team))
                         lastEnemy = null;
                 if (RetreatingTeams.Contains(tank.Team))
                 {
@@ -2791,7 +3505,7 @@ namespace TAC_AI.AI
 
                 if (DediAI == AIType.Assault && lastBasePos.IsNotNull())
                 {
-                    if (RangeToChase * 2 < (lastBasePos.position - tank.boundsCentreWorldNoCheck).magnitude)
+                    if (MaxCombatRange * 2 < (lastBasePos.position - tank.boundsCentreWorldNoCheck).magnitude)
                     {
                         DoNotEngage = true;
                     }
@@ -2808,7 +3522,7 @@ namespace TAC_AI.AI
                 {
                     if (DriverType == AIDriverType.Pilot)
                     {
-                        if (RangeToChase * 4 < (lastPlayer.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude)
+                        if (MaxCombatRange * 4 < (lastPlayer.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude)
                         {
                             DoNotEngage = true;
                         }
@@ -2823,7 +3537,7 @@ namespace TAC_AI.AI
                     }
                     else if (DediAI != AIType.Assault)
                     {
-                        if (RangeToChase < (lastPlayer.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude)
+                        if (MaxCombatRange < (lastPlayer.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).magnitude)
                         {
                             DoNotEngage = true;
                         }
@@ -2841,15 +3555,8 @@ namespace TAC_AI.AI
             }
             private void DetermineCombatEnemy()
             {
-                bool DoNotEngage = false;
-                if (lastEnemy?.tank)
-                    if (!tank.IsEnemy(lastEnemy.tank.Team))
-                        lastEnemy = null;
-                if (RetreatingTeams.Contains(tank.Team))
-                {
-                    Retreat = true;
-                    return;
-                }
+                //bool DoNotEngage = false;
+                Retreat = RetreatingTeams.Contains(tank.Team);
 
 #if !STEAM
                 if (KickStart.isAnimeAIPresent)
@@ -2864,7 +3571,25 @@ namespace TAC_AI.AI
             }
 
 
-
+            private float CurHeight = 0;
+            /// <summary>
+            /// AboveGround
+            /// </summary>
+            public float GetFrameHeight()
+            {
+                if (CurHeight == -500)
+                {
+                    //ManWorld.inst.GetTerrainHeight(tank.boundsCentreWorldNoCheck, out float height);
+                    //CurHeight = height;
+                    CurHeight = AIEPathMapper.GetAltitudeCached(tank.boundsCentreWorldNoCheck);
+                }
+                return CurHeight;
+            }
+            public bool IsOrbiting(Vector3 taskLocation, float orbitDistDelta, float minimumCloseInSpeed = AIGlobals.MinimumCloseInSpeed)
+            {
+                return orbitDistDelta * (KickStart.AIClockPeriod / 40) < minimumCloseInSpeed &&
+                    Vector3.Dot((taskLocation - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) < 0;
+            }
             public float GetDistanceFromTask(Vector3 taskLocation, float additionalSpacing = 0)
             {
                 if (Attempt3DNavi)
@@ -2872,7 +3597,7 @@ namespace TAC_AI.AI
                     Vector3 veloFlat;
                     if ((bool)tank.rbody)   // So that drifting is minimized
                     {
-                        veloFlat = tank.rbody.velocity;
+                        veloFlat = SafeVelocity;
                         veloFlat.y = 0;
                     }
                     else
@@ -2890,7 +3615,7 @@ namespace TAC_AI.AI
                 Vector3 veloFlat;
                 if ((bool)tank.rbody)   // So that drifting is minimized
                 {
-                    veloFlat = tank.rbody.velocity;
+                    veloFlat = SafeVelocity;
                     veloFlat.y = 0;
                 }
                 else
@@ -2902,6 +3627,8 @@ namespace TAC_AI.AI
             {
                 lastOperatorRange = 96; //arbitrary
             }
+
+
             public string GetActionStatus(out bool cantDo)
             {
                 cantDo = false;
@@ -2910,91 +3637,206 @@ namespace TAC_AI.AI
                     if (!RTSControlled)
                         return "Autopilot Disabled";
                 }
-                else
+                else if (AIAlign != AIAlignment.NonPlayer)
                 {
                     if (!ActuallyWorks)
                         return "No AI Modules";
                     else if (!SetToActive)
-                        return "Idle (Off)";
+                    {
+                        if (AIAlign != AIAlignment.NonPlayer)
+                            return "Idle (Off)";
+                    }
+                }
+                if (Retreat)
+                {
+                    return "Retreat!";
                 }
                 string output = "At Destination";
                 if (RTSControlled)
                 {
-                    switch (DriverType)
-                    {
-                        case AIDriverType.Astronaut:
-                            if (lastEnemy)
-                                output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
-                            else
-                            {
-                                if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Removing Obstruction";
-                                else
-                                    output = "Space Orders";
-                            }
-                            break;
-                        case AIDriverType.Pilot:
-                            if (lastEnemy)
-                                output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
-                            else
-                            {
-                                if (MovementController is AIControllerAir air)
-                                {
-                                    if (air.Grounded)
-                                    {
-                                        cantDo = true;
-                                        output = "Unable to takeoff";
-                                    }
-                                    else
-                                    {
-                                        if (WeaponState == AIWeaponState.Obsticle)
-                                            output = "Crashed";
-                                        else
-                                            output = "Flying Orders";
-                                    }
-                                }
-                                else
-                                    output = "Unhandled error in switch";
-                            }
-                            break;
-                        case AIDriverType.Sailor:
-                            if (lastEnemy)
-                                output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
-                            else
-                            {
-                                if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Stuck & Beached";
-                                else
-                                    output = "Sailing Orders";
-                            }
-                            break;
-                        default:
-                            if (lastEnemy)
-                                output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
-                            else
-                            {
-                                if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Stuck on an obsticle";
-                                else
-                                    output = "Land Orders";
-                            }
-                            break;
-                    }
+                    GetActionOperatorsPositional(ref output, ref cantDo);
                     return output;
                 }
 
+                if (AIAlign == AIAlignment.NonPlayer)
+                {
+                    GetActionOperatorsNonPlayer(ref output, ref cantDo);
+                }
+                else
+                {
+                    GetActionOperatorsAllied(ref output, ref cantDo);
+                }
+                return output;
+            }
+            public void GetActionOperatorsPositional(ref string output, ref bool cantDo)
+            {
+                if (tank.IsAnchored)
+                {
+                    if (lastEnemyGet)
+                        output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                    else
+                        output = "Stationary";
+                    return;
+                }
+                switch (DriverType)
+                {
+                    case AIDriverType.Astronaut:
+                        if (lastEnemyGet)
+                            output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                        {
+                            if (WeaponState == AIWeaponState.Obsticle)
+                                output = "Removing Obstruction";
+                            else
+                            {
+                                switch (ControlOperator.DriveDest)
+                                {
+                                    case EDriveDest.FromLastDestination:
+                                        output = "Moving from destination";
+                                        break;
+                                    case EDriveDest.ToLastDestination:
+                                        output = "Moving to destination";
+                                        break;
+                                    case EDriveDest.ToBase:
+                                        output = "Moving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                        break;
+                                    case EDriveDest.ToMine:
+                                        output = "Moving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                        break;
+                                    default:
+                                        output = "Arrived at destination";
+                                        break;
+                                }
+                            }
+                        }
+                        break;
+                    case AIDriverType.Pilot:
+                        if (lastEnemyGet)
+                            output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                        {
+                            if (MovementController is AIControllerAir air)
+                            {
+                                if (air.Grounded)
+                                {
+                                    cantDo = true;
+                                    output = "Unable to takeoff";
+                                }
+                                else
+                                {
+                                    if (WeaponState == AIWeaponState.Obsticle)
+                                        output = "Crashed";
+                                    else
+                                    {
+                                        switch (ControlOperator.DriveDest)
+                                        {
+                                            case EDriveDest.FromLastDestination:
+                                                output = "Flying from destination";
+                                                break;
+                                            case EDriveDest.ToLastDestination:
+                                                output = "Flying to destination";
+                                                break;
+                                            case EDriveDest.ToBase:
+                                                output = "Flying to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                                break;
+                                            case EDriveDest.ToMine:
+                                                output = "Flying to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                                break;
+                                            default:
+                                                output = "Arrived at destination";
+                                                break;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                                output = "Unhandled error in switch";
+                        }
+                        break;
+                    case AIDriverType.Sailor:
+                        if (lastEnemyGet)
+                            output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                        {
+                            if (WeaponState == AIWeaponState.Obsticle)
+                                output = "Stuck & Beached";
+                            else
+                            {
+                                switch (ControlOperator.DriveDest)
+                                {
+                                    case EDriveDest.FromLastDestination:
+                                        output = "Sailing from destination";
+                                        break;
+                                    case EDriveDest.ToLastDestination:
+                                        output = "Sailing to destination";
+                                        break;
+                                    case EDriveDest.ToBase:
+                                        output = "Sailing to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                        break;
+                                    case EDriveDest.ToMine:
+                                        output = "Sailing to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                        break;
+                                    default:
+                                        output = "Arrived at destination";
+                                        break;
+                                }
+                            }
+                        }
+                        break;
+                    case AIDriverType.Stationary:
+                        if (lastEnemyGet)
+                            output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                        {
+                            output = "Stationary Base";
+                        }
+                        break;
+                    default:
+                        if (lastEnemyGet)
+                            output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                        {
+                            if (WeaponState == AIWeaponState.Obsticle)
+                                output = "Stuck on an obsticle";
+                            else
+                            {
+                                switch (ControlOperator.DriveDest)
+                                {
+                                    case EDriveDest.FromLastDestination:
+                                        output = "Driving from destination";
+                                        break;
+                                    case EDriveDest.ToLastDestination:
+                                        output = "Driving to destination";
+                                        break;
+                                    case EDriveDest.ToBase:
+                                        output = "Driving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                        break;
+                                    case EDriveDest.ToMine:
+                                        output = "Driving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                        break;
+                                    default:
+                                        output = "Arrived at destination";
+                                        break;
+                                }
+                            }
+                        }
+                        break;
+                }
+            }
+            public void GetActionOperatorsAllied(ref string output, ref bool cantDo)
+            {
                 switch (DediAI)
                 {
                     case AIType.Aegis:
-                        if (lastEnemy)
-                            output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
-                        else if (lastCloseAlly)
-                            output = "Following " + (lastCloseAlly.name.NullOrEmpty() ? "unknown" : lastCloseAlly.name);
+                        if (lastEnemyGet)
+                            output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else if (theResource)
+                            output = "Protecting " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
                         else
                             output = "Looking for Ally";
                         break;
                     case AIType.Assault:
-                        if (DriveDest == EDriveDest.ToBase)
+                        if (DriveDestDirected == EDriveDest.ToBase)
                         {
                             if (theBase)
                             {
@@ -3014,9 +3856,9 @@ namespace TAC_AI.AI
                         {
                             if (theResource)
                             {
-                                if (lastEnemy)
+                                if (lastEnemyGet)
                                 {
-                                    output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
+                                    output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
                                 }
                                 else
                                     output = "Moving out to enemy";
@@ -3026,13 +3868,13 @@ namespace TAC_AI.AI
                         }
                         break;
                     case AIType.Energizer:
-                        if (DriveDest == EDriveDest.ToBase)
+                        if (DriveDestDirected == EDriveDest.ToBase)
                         {
                             if (theBase)
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
                                     output = "Removing Obstruction";
-                                else if(recentSpeed > 8)
+                                else if (recentSpeed > 8)
                                     output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
                                 else if (GetEnergyPercent() <= 0.95f)
                                     output = "Recharging batteries...";
@@ -3051,7 +3893,7 @@ namespace TAC_AI.AI
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
                                     output = "Removing Obstruction";
-                                else if(recentSpeed > 8)
+                                else if (recentSpeed > 8)
                                     output = "Requester " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
                                 else
                                     output = "Charging Ally";
@@ -3064,19 +3906,38 @@ namespace TAC_AI.AI
                         switch (DriverType)
                         {
                             case AIDriverType.Astronaut:
-                                if (lastEnemy)
-                                    output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
+                                if (lastEnemyGet)
+                                    output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
                                 else
                                 {
                                     if (WeaponState == AIWeaponState.Obsticle)
                                         output = "Removing Obstruction";
                                     else
-                                        output = "Floating Escort";
+                                    {
+                                        switch (ControlOperator.DriveDest)
+                                        {
+                                            case EDriveDest.FromLastDestination:
+                                                output = "Moving from Player";
+                                                break;
+                                            case EDriveDest.ToLastDestination:
+                                                output = "Moving to Player";
+                                                break;
+                                            case EDriveDest.ToBase:
+                                                output = "Moving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                                break;
+                                            case EDriveDest.ToMine:
+                                                output = "Moving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                                break;
+                                            default:
+                                                output = "Floating Escort";
+                                                break;
+                                        }
+                                    }
                                 }
                                 break;
                             case AIDriverType.Pilot:
-                                if (lastEnemy)
-                                    output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
+                                if (lastEnemyGet)
+                                    output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
                                 else
                                 {
                                     if (MovementController is AIControllerAir air)
@@ -3084,14 +3945,33 @@ namespace TAC_AI.AI
                                         if (air.Grounded)
                                         {
                                             cantDo = true;
-                                            output = "Unable to takeoff";
+                                            output = "Can't takeoff, Too damaged / parts missing";
                                         }
                                         else
                                         {
                                             if (WeaponState == AIWeaponState.Obsticle)
                                                 output = "Crashed";
                                             else
-                                                output = "Flying Escort";
+                                            {
+                                                switch (ControlOperator.DriveDest)
+                                                {
+                                                    case EDriveDest.FromLastDestination:
+                                                        output = "Flying from Player";
+                                                        break;
+                                                    case EDriveDest.ToLastDestination:
+                                                        output = "Flying to Player";
+                                                        break;
+                                                    case EDriveDest.ToBase:
+                                                        output = "Flying to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                                        break;
+                                                    case EDriveDest.ToMine:
+                                                        output = "Flying to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                                        break;
+                                                    default:
+                                                        output = "Flying Escort";
+                                                        break;
+                                                }
+                                            }
                                         }
                                     }
                                     else
@@ -3099,31 +3979,69 @@ namespace TAC_AI.AI
                                 }
                                 break;
                             case AIDriverType.Sailor:
-                                if (lastEnemy)
-                                    output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
+                                if (lastEnemyGet)
+                                    output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
                                 else
                                 {
                                     if (WeaponState == AIWeaponState.Obsticle)
                                         output = "Stuck & Beached";
                                     else
-                                        output = "Sailing Escort";
+                                    {
+                                        switch (ControlOperator.DriveDest)
+                                        {
+                                            case EDriveDest.FromLastDestination:
+                                                output = "Sailing from Player";
+                                                break;
+                                            case EDriveDest.ToLastDestination:
+                                                output = "Sailing to Player";
+                                                break;
+                                            case EDriveDest.ToBase:
+                                                output = "Sailing to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                                break;
+                                            case EDriveDest.ToMine:
+                                                output = "Sailing to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                                break;
+                                            default:
+                                                output = "Sailing Escort";
+                                                break;
+                                        }
+                                    }
                                 }
                                 break;
                             default:
-                                if (lastEnemy)
-                                    output = "Fighting " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
+                                if (lastEnemyGet)
+                                    output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
                                 else
                                 {
                                     if (WeaponState == AIWeaponState.Obsticle)
                                         output = "Stuck on an obsticle";
                                     else
-                                        output = "Land Escort";
+                                    {
+                                        switch (ControlOperator.DriveDest)
+                                        {
+                                            case EDriveDest.FromLastDestination:
+                                                output = "Driving from Player";
+                                                break;
+                                            case EDriveDest.ToLastDestination:
+                                                output = "Driving to Player";
+                                                break;
+                                            case EDriveDest.ToBase:
+                                                output = "Driving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                                break;
+                                            case EDriveDest.ToMine:
+                                                output = "Driving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                                break;
+                                            default:
+                                                output = "Land Escort";
+                                                break;
+                                        }
+                                    }
                                 }
                                 break;
                         }
                         break;
                     case AIType.MTMimic:
-                        if (OnlyPlayerMT)
+                        if (!AllMT)
                         {
                             if ((bool)lastCloseAlly)
                                 output = "Copying Player";
@@ -3151,24 +4069,24 @@ namespace TAC_AI.AI
                             output = "Weapons Primed";
                         break;
                     case AIType.MTTurret:
-                        if ((bool)lastEnemy)
+                        if ((bool)lastEnemyGet)
                         {
                             if (AttackEnemy)
-                                output = "Shooting at " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
+                                output = "Shooting at " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
                             else
-                                output = "Aiming at " + (lastEnemy.name.NullOrEmpty() ? "unknown" : lastEnemy.name);
+                                output = "Aiming at " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
                         }
                         else
                             output = "Face the Danger";
                         break;
                     case AIType.Prospector:
-                        if (DriveDest == EDriveDest.ToBase)
+                        if (DriveDestDirected == EDriveDest.ToBase)
                         {
                             if ((bool)theBase)
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
                                     output = "Removing Obstruction";
-                                else if(recentSpeed > 8)
+                                else if (recentSpeed > 8)
                                     output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
                                 else
                                     output = "Unloading resources...";
@@ -3189,7 +4107,7 @@ namespace TAC_AI.AI
                                     if (CT.Count == 0)
                                         output = "Going to remove rocks";
                                     else
-                                        output = "Going to dig " + theResource.name;
+                                        output = "Going to dig " + StringLookup.GetItemName(theResource.m_ItemType); //theResource.name;
                                     //StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                                 }
                                 else
@@ -3197,22 +4115,22 @@ namespace TAC_AI.AI
                                     if (CT.Count == 0)
                                         output = "Clearing rocks";
                                     else
-                                        output = "Mining " + theResource.name;
+                                        output = "Mining " + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
                                     //output = "Mining " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                                 }
                             }
                             else
-                                output = "No resources in " + (DetectionRange + AIGlobals.FindItemExtension) + " meters";
+                                output = "No resources in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
                         }
                         break;
                     case AIType.Scrapper:
-                        if (DriveDest == EDriveDest.ToBase)
+                        if (DriveDestDirected == EDriveDest.ToBase)
                         {
                             if ((bool)theBase)
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
                                     output = "Removing Obstruction";
-                                else if(recentSpeed > 8)
+                                else if (recentSpeed > 8)
                                     output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
                                 else
                                     output = "Unloading blocks...";
@@ -3230,7 +4148,7 @@ namespace TAC_AI.AI
                                 BlockTypes BT = theResource.block.BlockType;
                                 if (WeaponState == AIWeaponState.Obsticle)
                                     output = "Removing Obstruction";
-                                else if(recentSpeed > 8)
+                                else if (recentSpeed > 8)
                                 {
                                     if (BT == BlockTypes.GSOAIController_111)
                                         output = "Fetching unknown block";
@@ -3246,27 +4164,225 @@ namespace TAC_AI.AI
                                 }
                             }
                             else
-                                output = "No blocks in " + (DetectionRange + AIGlobals.FindItemExtension) + " meters";
+                                output = "No blocks in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
                         }
                         break;
                 }
-                return output;
             }
+            public void GetActionOperatorsNonPlayer(ref string output, ref bool cantDo)
+            {
+                var mind = GetComponent<EnemyMind>();
+                /*
+                if (PursuingTarget)
+                {
+                    output = "Getting revenge for comrade";
+                    return;
+                }*/
+                switch (mind.CommanderMind)
+                {
+                    case EnemyAttitude.Homing:
+                        if (lastEnemyGet)
+                            GetActionOperatorsNonPlayerCombat(mind, ref output, ref cantDo);
+                        else
+                        {
+                            output = "Looking for trouble (Homing)!";
+                        }
+                        break;
+                    case EnemyAttitude.Miner:
+                        if (lastEnemyGet)
+                            GetActionOperatorsNonPlayerCombat(mind, ref output, ref cantDo);
+                        else
+                        {
+                            if (DriveDestDirected == EDriveDest.ToBase)
+                            {
+                                if ((bool)theBase)
+                                {
+                                    if (WeaponState == AIWeaponState.Obsticle)
+                                        output = "Removing Obstruction";
+                                    else if (recentSpeed > 8)
+                                        output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                    else
+                                        output = "Unloading resources...";
+                                }
+                                else
+                                {
+                                    cantDo = true;
+                                    output = "No Receiver Base!";
+                                }
+                            }
+                            else
+                            {
+                                if ((bool)theResource?.resdisp)
+                                {
+                                    List<ChunkTypes> CT = theResource.resdisp.AllDispensableItems().ToList();
+                                    if (recentSpeed > 8)
+                                    {
+                                        if (CT.Count == 0)
+                                            output = "Going to remove rocks";
+                                        else
+                                            output = "Going to dig " + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
+                                        //StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
+                                    }
+                                    else
+                                    {
+                                        if (CT.Count == 0)
+                                            output = "Clearing rocks";
+                                        else
+                                            output = "Mining " + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
+                                        //output = "Mining " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
+                                    }
+                                }
+                                else
+                                    output = "No resources in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
+                            }
+                        }
+                        break;
+                    case EnemyAttitude.Junker:
+                        if (lastEnemyGet)
+                            GetActionOperatorsNonPlayerCombat(mind, ref output, ref cantDo);
+                        else
+                        {
+                            if (DriveDestDirected == EDriveDest.ToBase)
+                            {
+                                if ((bool)theBase)
+                                {
+                                    if (WeaponState == AIWeaponState.Obsticle)
+                                        output = "Removing Obstruction";
+                                    else if (recentSpeed > 8)
+                                        output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                    else
+                                        output = "Unloading blocks...";
+                                }
+                                else
+                                {
+                                    cantDo = true;
+                                    output = "No Collection Base!";
+                                }
+                            }
+                            else
+                            {
+                                if ((bool)theResource?.block)
+                                {
+                                    BlockTypes BT = theResource.block.BlockType;
+                                    if (WeaponState == AIWeaponState.Obsticle)
+                                        output = "Removing Obstruction";
+                                    else if (recentSpeed > 8)
+                                    {
+                                        if (BT == BlockTypes.GSOAIController_111)
+                                            output = "Fetching unknown block";
+                                        else
+                                            output = "Fetching " + StringLookup.GetItemName(theResource.m_ItemType);
+                                    }
+                                    else
+                                    {
+                                        if (BT == BlockTypes.GSOAIController_111)
+                                            output = "Grabbing unknown block";
+                                        else
+                                            output = "Grabbing " + StringLookup.GetItemName(theResource.m_ItemType);
+                                    }
+                                }
+                                else
+                                    output = "No blocks in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
+                            }
+                        }
+                        break;
+                    case EnemyAttitude.OnRails:
+                        if (lastEnemyGet)
+                            output = "Enemy in range = " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                        {
+                            output = "Script Commanded";
+                        }
+                        break;
+                    case EnemyAttitude.NPCBaseHost:
+                        if (lastEnemyGet)
+                            GetActionOperatorsNonPlayerCombat(mind, ref output, ref cantDo);
+                        else
+                        {
+                            output = "Managing Base";
+                        }
+                        break;
+                    case EnemyAttitude.Boss:
+                        if (lastEnemyGet)
+                            GetActionOperatorsNonPlayerCombat(mind, ref output, ref cantDo);
+                        else
+                        {
+                            output = "Plotting next attack...";
+                        }
+                        break;
+                    case EnemyAttitude.Invader:
+                        if (lastEnemyGet)
+                            GetActionOperatorsNonPlayerCombat(mind, ref output, ref cantDo);
+                        else
+                        {
+                            output = "Invading";
+                        }
+                        break;
+                    default:
+                        if (lastEnemyGet)
+                            GetActionOperatorsNonPlayerCombat(mind, ref output, ref cantDo);
+                        else
+                        {
+                            GetActionOperatorsPositional(ref output, ref cantDo);
+                        }
+                        break;
+                }
+            }
+            public void GetActionOperatorsNonPlayerCombat(EnemyMind mind, ref string output, ref bool cantDo)
+            {
+                switch (mind.CommanderAttack)
+                {
+                    case EAttackMode.Safety:
+                        if (ControlCore.DriveDest == EDriveDest.ToLastDestination)
+                            output = "Moving to " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                            output = "Running from " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        break;
+                    case EAttackMode.Ranged:
+                        if (ControlCore.DriveDest == EDriveDest.ToLastDestination)
+                            output = "Closing in on Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                            output = "Spacing from Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        break;
+                    default:
+                        if (ControlCore.DriveDest == EDriveDest.ToLastDestination)
+                            output = "Moving to Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        else
+                            output = "Moving from Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        break;
+                }
+            }
+
+
 
             private int cachedBlockCount = 1;
             public bool CanDetectHealth()
             {
-                return TechMemor || AdvancedAI; 
+                return true;//TechMemor || AdvancedAI; 
+            }
+            public float GetHealth()
+            {
+                return GetHealthPercent() * (cachedBlockCount * 10);
+            }
+            public float GetHealthMax()
+            {
+                return cachedBlockCount * 10;
             }
             /// <summary>
             /// 100 for max, 0 for pretty much destroyed
             /// </summary>
             /// <returns></returns>
-            public float GetHealth()
+            public float GetHealth100()
             {
                 if (!CanDetectHealth())
                     return 100;
                 return 100 - DamageThreshold;
+            }
+            public float GetHealthPercent()
+            {
+                if (!CanDetectHealth())
+                    return 1;
+                return (100 - DamageThreshold) / 100;
             }
             public float GetSpeed()
             {
@@ -3276,7 +4392,7 @@ namespace TAC_AI.AI
                     return 0;
                 if (Attempt3DNavi || MovementController is AIControllerAir)
                 {
-                    return tank.rbody.velocity.magnitude;
+                    return SafeVelocity.magnitude;
                 }
                 else
                 {
@@ -3296,7 +4412,15 @@ namespace TAC_AI.AI
                 if (energy.storageTotal < 1)
                     return 0;
 
-                return energy.spareCapacity - energy.storageTotal;
+                return energy.storageTotal - energy.spareCapacity;
+            }
+            public float GetEnergyMax()
+            {
+                var energy = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+                if (energy.storageTotal < 1)
+                    return 1;
+
+                return energy.storageTotal;
             }
             public float GetEnergyPercent()
             {
@@ -3314,13 +4438,13 @@ namespace TAC_AI.AI
                     return false;
                 if (Attempt3DNavi || MovementController is AIControllerAir)
                 {
-                    return tank.rbody.velocity.sqrMagnitude > minSpeed * minSpeed;
+                    return SafeVelocity.sqrMagnitude > minSpeed * minSpeed;
                 }
                 else
                 {
                     if (!(bool)tank.rootBlockTrans)
                         return false;
-                    return tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z > minSpeed || Mathf.Abs(tank.control.DriveControl) < 0.5f;
+                    return tank.rootBlockTrans.InverseTransformDirection(SafeVelocity).z > minSpeed || Mathf.Abs(tank.control.DriveControl) < 0.5f;
                 }
             }
             public bool IsTechMovingActual(float minSpeed)
@@ -3331,13 +4455,13 @@ namespace TAC_AI.AI
                     return false;
                 if (Attempt3DNavi || MovementController is AIControllerAir)
                 {
-                    return tank.rbody.velocity.sqrMagnitude > minSpeed * minSpeed;
+                    return SafeVelocity.sqrMagnitude > minSpeed * minSpeed;
                 }
                 else
                 {
                     if (!(bool)tank.rootBlockTrans)
                         return false;
-                    return tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z > minSpeed;
+                    return tank.rootBlockTrans.InverseTransformDirection(SafeVelocity).z > minSpeed;
                 }
             }
 
@@ -3433,14 +4557,17 @@ namespace TAC_AI.AI
             }
             public void CheckEnemyErrorState()
             {
-                if (lastEnemy?.tank)
+                if (lastEnemyGet?.tank)
                 {
-                    if (lastEnemy.tank.blockman.blockCount == 0)
+                    if (!tank.IsEnemy(lastEnemyGet.tank.Team) || !lastEnemyGet.isActive
+                        || lastEnemyGet.tank.blockman.blockCount == 0)
                     {
                         lastEnemy = null;
-                        //Debug.Assert(true, "TACtical_AI: Tech " + tank.name + " has valid, live target but it has no blocks.  How is this possible?!");
+                        //Debug.Assert(true, "TACtical_AI: Tech " + tank.name + " has valid, live target but it has no blocks.  How is this possible?!"); 
                     }
                 }
+                else
+                    lastEnemy = null;
             }
 
 
@@ -3454,30 +4581,10 @@ namespace TAC_AI.AI
                 switch (ActiveAimState)
                 {
                     case AIWeaponState.Enemy:
-                        if (lastEnemy.IsNotNull())
+                        if (lastEnemyGet.IsNotNull())
                         {   // Allow the enemy AI to finely select targets
                             //DebugTAC_AI.Log("TACtical_AI: Overriding targeting to aim at " + lastEnemy.name + "  pos " + lastEnemy.tank.boundsCentreWorldNoCheck);
-
-                            if (lastPlayer.IsNotNull())
-                            {
-                                var playerTarg = lastPlayer.tank.Weapons.GetManualTarget();
-                                if (playerTarg != null)
-                                {
-                                    if ((bool)playerTarg.tank)
-                                    {
-                                        try
-                                        {
-                                            if (playerTarg.tank.CentralBlock && playerTarg.isActive)
-                                            {   // Relay position from player to allow artillery support
-                                                lastLockedTarget = playerTarg;
-                                                return;
-                                            }
-                                        }
-                                        catch { }
-                                    }
-                                }
-                            }
-                            lastLockedTarget = lastEnemy;
+                            lastLockedTarget = lastEnemyGet;
                         }
                         break;
                     case AIWeaponState.Obsticle:
@@ -3497,7 +4604,7 @@ namespace TAC_AI.AI
                             //DebugTAC_AI.Log("TACtical_AI: Overriding targeting to aim at player's target");
                             var helperAlly = lastCloseAlly.GetComponent<TankAIHelper>();
                             if (helperAlly.ActiveAimState == AIWeaponState.Enemy)
-                                lastLockedTarget = helperAlly.lastEnemy;
+                                lastLockedTarget = helperAlly.lastEnemyGet;
                         }
                         break;
                 }
@@ -3507,6 +4614,12 @@ namespace TAC_AI.AI
                     bool playerAim = tank.PlayerFocused && !ManPlayerRTS.PlayerIsInRTS;
                     if (!lastLockedTarget.isActive || (playerAim && !tank.control.FireControl))
                     {   // Cannot do as camera breaks
+                        lastLockedTarget = null;
+                        return;
+                    }
+                    if (lastLockedTarget == tank.visible)
+                    {
+                        DebugTAC_AI.Assert("Tech " + tank.name + " tried to lock-on to itself!!!");
                         lastLockedTarget = null;
                         return;
                     }
@@ -3524,7 +4637,7 @@ namespace TAC_AI.AI
                     {
                         maxDist = tank.Weapons.m_ManualTargetingSettingsMAndKB.m_ManualTargetingRadiusSP;
                     }
-                    if ((lastLockedTarget.centrePosition - tank.boundsCentreWorldNoCheck).sqrMagnitude > maxDist * maxDist)
+                    if (lastLockOnDistance > maxDist * maxDist)
                     {
                         lastLockedTarget = null;
                     }
@@ -3645,14 +4758,14 @@ namespace TAC_AI.AI
                                 Vector3 up = tank.trans.TransformDirection(blockHoldRot * Vector3.up);
                                 Quaternion rotChangeWorld = Quaternion.LookRotation(forward, up);
                                 heldBlock.rbody.MoveRotation(Quaternion.RotateTowards(heldBlock.trans.rotation, rotChangeWorld, (360 / AIGlobals.BlockAttachDelay) * Time.fixedDeltaTime));
-                                heldBlock.visible.SetInteractionTimeout(0.25f);
+                                heldBlock.visible.SetLockTimout(Visible.LockTimerTypes.Interactible, 0.25f);
                             }
                             else
                             {
                                 moveVec = tank.boundsCentreWorldNoCheck + (Vector3.up * (lastTechExtents + 3)) - heldBlock.visible.centrePosition;
                                 moveVec = Vector3.ClampMagnitude(moveVec * 4, AIGlobals.ItemGrabStrength);
                                 heldBlock.rbody.AddForce(moveVec - (Physics.gravity * heldBlock.AverageGravityScaleFactor), ForceMode.Acceleration);
-                                heldBlock.visible.SetInteractionTimeout(0.25f);
+                                heldBlock.visible.SetLockTimout(Visible.LockTimerTypes.Interactible, 0.25f);
                             }
                         }
                     }
@@ -3734,7 +4847,7 @@ namespace TAC_AI.AI
                         + " of type " + TB.type + " when they are only allowed to grab blocks");
                 return false;
             }
-            internal bool HoldBlock(Visible TB, BlockMemory BM)
+            internal bool HoldBlock(Visible TB, RawBlockMem BM)
             {
                 if (!TB)
                 {
@@ -3797,7 +4910,7 @@ namespace TAC_AI.AI
                     var CS = heldBlock.GetComponent<ColliderSwapper>();
                     if (CS)
                         CS.EnableCollision(true);
-                    heldBlock.visible.SetInteractionTimeout(0);
+                    heldBlock.visible.SetLockTimout(Visible.LockTimerTypes.Interactible, 0);
                     heldBlock = null;
                 }
             }
@@ -3808,7 +4921,7 @@ namespace TAC_AI.AI
                     var CS = heldBlock.GetComponent<ColliderSwapper>();
                     if (CS)
                         CS.EnableCollision(true);
-                    heldBlock.visible.SetInteractionTimeout(0);
+                    heldBlock.visible.SetLockTimout(Visible.LockTimerTypes.Interactible, 0);
                     heldBlock = null;
                 }
             }
@@ -3820,7 +4933,30 @@ namespace TAC_AI.AI
                 if (CanAnchorSafely && !tank.IsAnchored)
                 {
                     //DebugTAC_AI.Assert(true,"TACtical_AI: AI " + tank.name + ":  Trying to anchor " + StackTraceUtility.ExtractStackTrace());
-                    tank.Anchors.TryAnchorAll(true);
+                    tank.FixupAnchors(false);
+                    if (!tank.IsAnchored)
+                    {
+                        tank.Anchors.TryAnchorAll(true);
+                        if (tank.IsAnchored)
+                            return;
+                        Vector3 startPos = tank.visible.centrePosition;
+                        Quaternion tankFore = Quaternion.LookRotation(tank.trans.forward.SetY(0).normalized, Vector3.up);
+                        tank.visible.Teleport(startPos, tankFore, true);
+                        //Quaternion tankStartRot = tank.trans.rotation;
+                        for (int step = 0; step < 16; step++)
+                        {
+                            if (!tank.IsAnchored)
+                            {
+                                Vector3 newPos = startPos + new Vector3(0, -4, 0);
+                                newPos.y += step / 2f;
+                                tank.visible.Teleport(newPos, tankFore, false);
+                                tank.Anchors.TryAnchorAll();
+                            }
+                            if (tank.IsAnchored)
+                                break;
+                            tank.FixupAnchors(true);
+                        }
+                    }
                     //TryReallyAnchor();
                 }
             }
@@ -3897,8 +5033,8 @@ namespace TAC_AI.AI
             {
                 if (tank.Anchors.NumIsAnchored > 0)
                     tank.Anchors.UnanchorAll(true);
-                if (!tank.IsAnchored && AIState == AIAlignment.Player)
-                    ForceAllAIsToEscort(true);
+                if (!tank.IsAnchored && AIAlign == AIAlignment.Player)
+                    ForceAllAIsToEscort(true, false);
                 JustUnanchored = true;
             }
 
@@ -3954,14 +5090,14 @@ namespace TAC_AI.AI
                                 }
                                 // let the icon update
                             }
-                            else if (AIState == AIAlignment.Player)
+                            else if (AIAlign == AIAlignment.Player)
                             {
                                 //DebugTAC_AI.Log("TACtical_AI: AI Valid!");
                                 //DebugTAC_AI.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
                                 //tankAIHelp.AIState && 
                                 if (JustUnanchored)
                                 {
-                                    ForceAllAIsToEscort();
+                                    ForceAllAIsToEscort(true, false);
                                     JustUnanchored = false;
                                 }
                                 else if (SetToActive)
@@ -3979,7 +5115,7 @@ namespace TAC_AI.AI
                                 return true;
                                 //return false;
                             }
-                            else if (KickStart.enablePainMode && AIState == AIAlignment.NonPlayer)
+                            else if (KickStart.enablePainMode && AIAlign == AIAlignment.NonPlayer)
                             {
                                 if (!Hibernate)
                                 {
@@ -4005,7 +5141,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (!tank.PlayerFocused || (KickStart.AllowStrategicAI && ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS))//&& !Singleton.Manager<ManGameMode>.inst.IsCurrentModeMultiplayer())
+                    if (!tank.PlayerFocused || (KickStart.AllowStrategicAI && ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS))
                     {
                         if (tank.FirstUpdateAfterSpawn)
                         {
@@ -4015,18 +5151,18 @@ namespace TAC_AI.AI
                             }
                             // let the icon update
                         }
-                        else if (AIState == AIAlignment.Player)
+                        else if (AIAlign == AIAlignment.Player)
                         {
                             //DebugTAC_AI.Log("TACtical_AI: AI Valid!");
                             //DebugTAC_AI.Log("TACtical_AI: (TankAIHelper) is " + tank.gameObject.GetComponent<AIEnhancedCore.TankAIHelper>().wasEscort);
                             if (JustUnanchored)
                             {
-                                ForceAllAIsToEscort();
+                                ForceAllAIsToEscort(true, false);
                                 JustUnanchored = false;
                             }
                             else if (tank.PlayerFocused)
                             {
-                                SetRTSState(true);
+                                //SetRTSState(true);
                                 UpdateTechControl(thisControl);
                                 return true;
                             }
@@ -4044,7 +5180,7 @@ namespace TAC_AI.AI
                             thisControl.BoostControlJets = true;
                             return true;
                         }
-                        else if (KickStart.enablePainMode && AIState == AIAlignment.NonPlayer)
+                        else if (KickStart.enablePainMode && AIAlign == AIAlignment.NonPlayer)
                         {
                             if (!Hibernate)
                             {
@@ -4061,6 +5197,7 @@ namespace TAC_AI.AI
             {   // The interface method for actually handling the tank - note that this fires at a different rate
                 if (OverrideAllControls)
                     return;
+                CurHeight = -500;
 
                 if (MovementController is null)
                 {
@@ -4075,15 +5212,20 @@ namespace TAC_AI.AI
                     {
                         AIEWeapons.WeaponDirector(thisControl, this, tank);
 
-                        AdviseAway = false;
-                        if (RTSControlled)
-                            MovementController.DriveDirectorRTS();
-                        else
-                            MovementController.DriveDirector();
+                        if (!IsTryingToUnjam)
+                        {
+                            EControlCoreSet coreCont = new EControlCoreSet(ControlOperator);
+                            if (RTSControlled)
+                                MovementController.DriveDirectorRTS(ref coreCont);
+                            else
+                                MovementController.DriveDirector(ref coreCont);
+                            //coreCont.MergePrevCommands(ControlDirected);
+                            SetCoreControl(coreCont);
+                        }
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Potential error in DriveDirector (or WeaponDirector)!");
+                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Potential error in DriveDirector (or WeaponDirector)! " + e);
                     }
 
                     UpdatePathfinding = false; // incase they fall out of sync
@@ -4093,7 +5235,7 @@ namespace TAC_AI.AI
                     if (NotInBeam)
                     {
                         AIEWeapons.WeaponMaintainer(thisControl, this, tank);
-                        MovementController.DriveMaintainer(thisControl);
+                        MovementController.DriveMaintainer(thisControl, ref ControlCore);
                     }
                 }
                 catch
@@ -4109,170 +5251,145 @@ namespace TAC_AI.AI
             /// <summary>
             /// Processing center for AI brains
             /// </summary>
-            public void FixedUpdate()
-            {   
-                if (KickStart.EnableBetterAI)
+            // OnPreUpdate -> Directors -> Operations -> OnPostUpdate
+            public void OnPreUpdate()
+            {
+                if (MovementController == null)
                 {
-                    UpdateOperatorsAndDirectorClock();
+                    DebugTAC_AI.Assert(true, "MOVEMENT CONTROLLER IS NULL");
+                    SetupDefaultMovementAIController();
+                    RecalibrateMovementAIController();
                 }
+                recentSpeed = GetSpeed();
+                if (recentSpeed < 1)
+                    recentSpeed = 1;
+                UpdateLastTechExtentsIfNeeded();
+                RebuildAlignment();
+                UpdateCollectors();
             }
-            private void UpdateOperatorsAndDirectorClock()
+            public void OnPostUpdate()
+            {
+                ManageAILockOn();
+                UpdateBlockHold();
+                ShowDebugThisFrame();
+            }
+            private void UpdateLastTechExtentsIfNeeded()
             {//Handler for the improved AI, gets the job done.
                 try
                 {
-                    if (MovementController == null)
+                    if (dirty)
                     {
-                        DebugTAC_AI.Assert(true, "MOVEMENT CONTROLLER IS NULL");
-                        SetupDefaultMovementAIController();
-                        RecalibrateMovementAIController();
-                    }
-                    RebuildAlignment();
-                    UpdateCollectors();
-                    UpdateBlockHold();
-                    ManageAILockOn();
-                    if (ManNetwork.IsNetworked)
-                    {
-                        if (!ManNetwork.IsHost)// && tank != Singleton.playerTank)
+                        dirty = false;
+                        tank.blockman.CheckRecalcBlockBounds();
+                        lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
+                        if (lastTechExtents < 1)
                         {
-                            if (dirty)
-                            {
-                                dirty = false;
-                                tank.blockman.CheckRecalcBlockBounds();
-                                lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
-                                if (!PendingDamageCheck)
-                                    cachedBlockCount = tank.blockman.blockCount;
-                            }
-                            UpdateClientAIActions();
-                            return;
+                            Debug.LogError("lastTechExtents is below 1: " + lastTechExtents);
+                            lastTechExtents = 1;
                         }
-                        else if (dirty)
-                        {
-                            dirty = false;
-                            tank.blockman.CheckRecalcBlockBounds();
-                            lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
-                            tank.netTech.SaveTechData();
-                            if (!PendingDamageCheck)
-                                cachedBlockCount = tank.blockman.blockCount;
-                        }
-                        UpdateHostAIActions(KickStart.AIClockPeriod);
-                    }
-                    else
-                    {
-                        if (dirty)
-                        {
-                            dirty = false;
-                            tank.blockman.CheckRecalcBlockBounds();
-                            lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
-                            if (!PendingDamageCheck)
-                                cachedBlockCount = tank.blockman.blockCount;
-                        }
-                        UpdateHostAIActions(KickStart.AIClockPeriod);
+                        if (!PendingDamageCheck)
+                            cachedBlockCount = tank.blockman.blockCount;
                     }
                 }
                 catch (Exception e)
                 {
                     if (!errored)
                     {
-                        DebugTAC_AI.LogError("TACtical_AI: CRITICAL ERROR IN UpdateOperators!!! - " + e);
+                        DebugTAC_AI.LogError("TACtical_AI: CRITICAL ERROR IN UpdateLastTechExtentsIfNeeded()!!! - " + e);
                         errored = true;
+                    }
+                }
+            }
+
+            public Vector3 DodgeSphereCenter { get; private set; } = Vector3.zero;
+            /// <summary> World Rotation </summary>
+            public Vector3 SafeVelocity { get; private set; } = Vector3.zero;
+            public float DodgeSphereRadius { get; private set; } = 1;
+            public void ShowDebugThisFrame()
+            {
+                if (DebugRawTechSpawner.ShowDebugFeedBack && debugVisuals)
+                {
+                    try
+                    {
+                        Vector3 boundsC = tank.boundsCentreWorldNoCheck;
+                        Vector3 boundsCUp = tank.boundsCentreWorldNoCheck + (Vector3.up * lastTechExtents);
+                        DebugRawTechSpawner.DrawDirIndicatorCircle(boundsC + (Vector3.up * 128), Vector3.up, Vector3.forward, JobSearchRange, Color.blue);
+                        if (tank.IsAnchored && !CanAutoAnchor)
+                        {
+                            DebugRawTechSpawner.DrawDirIndicatorRecPrizExt(boundsC, Vector3.one * lastTechExtents, Color.yellow);
+                            if (lastEnemyGet != null && lastEnemyGet.isActive)
+                            {
+                                DebugRawTechSpawner.DrawDirIndicatorCircle(boundsCUp, Vector3.up, Vector3.forward, MaxCombatRange, new Color(1, 0.6f, 0.6f));
+                                DebugRawTechSpawner.DrawDirIndicatorCircle(boundsCUp, Vector3.up, Vector3.forward, MinCombatRange, Color.red);
+                                DebugRawTechSpawner.DrawDirIndicator(lastEnemyGet.tank.boundsCentreWorldNoCheck,
+                                    lastEnemyGet.tank.boundsCentreWorldNoCheck + Vector3.up * lastEnemyGet.GetCheapBounds(), Color.red);
+                            }
+                        }
+                        else
+                        {
+                            DebugRawTechSpawner.DrawDirIndicatorSphere(boundsC, lastTechExtents, Color.yellow);
+                            DebugRawTechSpawner.DrawDirIndicatorSphere(DodgeSphereCenter, DodgeSphereRadius, Color.gray);
+                            if (Attempt3DNavi)
+                            {
+                                DebugRawTechSpawner.DrawDirIndicatorSphere(boundsC, MaxObjectiveRange, Color.cyan);
+                                if (lastEnemyGet != null && lastEnemyGet.isActive)
+                                {
+                                    DebugRawTechSpawner.DrawDirIndicatorSphere(boundsC, MaxCombatRange, new Color(1, 0.6f, 0.6f));
+                                    DebugRawTechSpawner.DrawDirIndicatorSphere(boundsC, MinCombatRange, Color.red);
+                                    DebugRawTechSpawner.DrawDirIndicator(lastEnemyGet.tank.boundsCentreWorldNoCheck,
+                                        lastEnemyGet.tank.boundsCentreWorldNoCheck + Vector3.up * lastEnemyGet.GetCheapBounds(), Color.red);
+                                }
+                            }
+                            else
+                            {
+                                DebugRawTechSpawner.DrawDirIndicatorCircle(boundsCUp, Vector3.up, Vector3.forward, MaxObjectiveRange, Color.cyan);
+                                if (lastEnemyGet != null && lastEnemyGet.isActive)
+                                {
+                                    DebugRawTechSpawner.DrawDirIndicatorCircle(boundsCUp, Vector3.up, Vector3.forward, MaxCombatRange, new Color(1, 0.6f, 0.6f));
+                                    DebugRawTechSpawner.DrawDirIndicatorCircle(boundsCUp, Vector3.up, Vector3.forward, MinCombatRange, Color.red);
+                                    DebugRawTechSpawner.DrawDirIndicator(lastEnemyGet.tank.boundsCentreWorldNoCheck,
+                                        lastEnemyGet.tank.boundsCentreWorldNoCheck + Vector3.up * lastEnemyGet.GetCheapBounds(), Color.red);
+                                }
+                            }
+                        }
+                        if (lastPlayer != null && lastPlayer.isActive)
+                        {
+                            DebugRawTechSpawner.DrawDirIndicator(lastPlayer.tank.boundsCentreWorldNoCheck,
+                                lastPlayer.tank.boundsCentreWorldNoCheck + Vector3.up * lastPlayer.GetCheapBounds(), Color.white);
+                        }
+                        if (Obst != null)
+                        {
+                            float rad = 6;
+                            if (Obst.GetComponent<Visible>())
+                                rad = Obst.GetComponent<Visible>().Radius;
+                            DebugRawTechSpawner.DrawDirIndicator(Obst.position, Obst.position + Vector3.up * rad, Color.gray);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        DebugTAC_AI.Log("Error on Debug Draw " + e);
                     }
                 }
             }
 
 
             // AI Actions
-            private void UpdateHostAIActions(int AIClockPeriod)
+            // if (!OverrideAllControls), then { Directors -> Operations }
+            internal void OnUpdateHostAIDirectors()
             {
                 try
                 {
-                    switch (AIState)
+                    switch (AIAlign)
                     {
                         case AIAlignment.Player: // Player-Controlled techs
-                            if (OverrideAllControls)
-                                return;
-
-                            DirectorUpdateClock++;
-                            if (DirectorUpdateClock >= KickStart.AIDodgeCheapness)
-                            {
-                                UpdatePathfinding = true;
-                                DirectorUpdateClock = 0;
-                            }
-
-                            recentSpeed = GetSpeed();
-                            if (recentSpeed < 1)
-                                recentSpeed = 1;
-                            OperationsUpdateClock++;
-                            if (OperationsUpdateClock >= AIClockPeriod)
-                            {
-                                CheckEnemyErrorState();
-                                if (IsTryingToUnjam)
-                                    TryHandleObstruction(true, lastOperatorRange, false, true);
-                                else
-                                    RunAlliedOperations();
-                                OperationsUpdateClock = 0;
-                                if (EstTopSped < recentSpeed)
-                                    EstTopSped = recentSpeed;
-                            }
+                            UpdatePathfinding = true;
                             break;
                         case AIAlignment.NonPlayer: // Enemy / Enemy Base Team
                             if (KickStart.enablePainMode)
                             {
-                                if (OverrideAllControls)
-                                    return;
-                                if (Hibernate)
+                                if (!Hibernate)
                                 {
-                                    recentSpeed = GetSpeed();
-                                    if (recentSpeed < 1)
-                                        recentSpeed = 1;
-                                    OperationsUpdateClock++;
-                                    if (OperationsUpdateClock >= AIClockPeriod)
-                                    {
-                                        CheckEnemyErrorState();
-                                        if (IsTryingToUnjam)
-                                        {
-                                            TryHandleObstruction(true, lastOperatorRange, false, true);
-                                            var mind = GetComponent<EnemyMind>();
-                                            if (mind)
-                                                RCore.ScarePlayer(mind, this, tank);
-                                        }
-                                        else
-                                            RunEnemyOperations(true);
-                                        OperationsUpdateClock = 0;
-                                        if (EstTopSped < recentSpeed)
-                                            EstTopSped = recentSpeed;
-                                    }
-                                }
-                                else
-                                {
-                                    DirectorUpdateClock++;
-                                    if (DirectorUpdateClock >= KickStart.AIDodgeCheapness)
-                                    {
-                                        UpdatePathfinding = true;
-                                        DirectorUpdateClock = 0;
-                                    }
-                                    else
-                                        UpdatePathfinding = false;
-
-                                    recentSpeed = GetSpeed();
-                                    if (recentSpeed < 1)
-                                        recentSpeed = 1;
-                                    OperationsUpdateClock++;
-                                    if (OperationsUpdateClock >= AIClockPeriod)
-                                    {
-                                        CheckEnemyErrorState();
-                                        if (IsTryingToUnjam)
-                                        {
-                                            TryHandleObstruction(true, lastOperatorRange, false, true);
-                                            var mind = GetComponent<EnemyMind>();
-                                            if (mind)
-                                                RCore.ScarePlayer(mind, this, tank);
-                                        }
-                                        else
-                                            RunEnemyOperations();
-                                        OperationsUpdateClock = 0;
-                                        if (EstTopSped < recentSpeed)
-                                            EstTopSped = recentSpeed;
-                                    }
+                                    UpdatePathfinding = true;
                                 }
                             }
                             break;
@@ -4290,77 +5407,122 @@ namespace TAC_AI.AI
                     }
                 }
             }
+            internal void OnUpdateHostAIOperations()
+            {
+                try
+                {
+                    switch (AIAlign)
+                    {
+                        case AIAlignment.Player: // Player-Controlled techs
+                            CheckEnemyErrorState();
+                            if (IsTryingToUnjam)
+                            {
+                                TryHandleObstruction(true, lastOperatorRange, false, true, ref ControlOperator);
+                            }
+                            else
+                                RunAlliedOperations();
+                            if (EstTopSped < recentSpeed)
+                                EstTopSped = recentSpeed;
+                            break;
+                        case AIAlignment.NonPlayer: // Enemy / Enemy Base Team
+                            if (KickStart.enablePainMode)
+                            {
+                                if (Hibernate)
+                                {
+                                    CheckEnemyErrorState();
+                                    if (IsTryingToUnjam)
+                                    {
+                                        TryHandleObstruction(true, lastOperatorRange, false, true, ref ControlOperator);
+                                        var mind = GetComponent<EnemyMind>();
+                                        if (mind)
+                                            RCore.ScarePlayer(mind, this, tank);
+                                    }
+                                    else
+                                        RunEnemyOperations(true);
+                                    if (EstTopSped < recentSpeed)
+                                        EstTopSped = recentSpeed;
+                                }
+                                else
+                                {
+                                    CheckEnemyErrorState();
+                                    if (IsTryingToUnjam)
+                                    {
+                                        TryHandleObstruction(true, lastOperatorRange, false, true, ref ControlOperator);
+                                        var mind = GetComponent<EnemyMind>();
+                                        if (mind)
+                                            RCore.ScarePlayer(mind, this, tank);
+                                    }
+                                    else
+                                        RunEnemyOperations();
+                                    if (EstTopSped < recentSpeed)
+                                        EstTopSped = recentSpeed;
+                                }
+                            }
+                            break;
+                        default:// Static tech
+                            DriveVar = 0;
+                            RunStaticOperations();
+                            break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (!errored)
+                    {
+                        DebugTAC_AI.LogError("TACtical_AI: CRITICAL ERROR IN UpdateHostAIActions!!! - " + e);
+                        errored = true;
+                    }
+                }
+            }
 
             /// <summary>
             /// MULTIPLAYER AI NON-HOST
             /// </summary>
-            private void UpdateClientAIActions()
+            internal void OnUpdateClientAIDirectors()
             {
-                switch (AIState)
+                switch (AIAlign)
                 {
                     case AIAlignment.Static:// Static tech
                         DriveVar = 0;
                         break;
                     case AIAlignment.Player: // Player-Controlled techs
-                        if (OverrideAllControls)
-                            return;
-
-                        DirectorUpdateClock++;
-                        if (DirectorUpdateClock >= KickStart.AIDodgeCheapness)
-                        {
-                            UpdatePathfinding = true;
-                            DirectorUpdateClock = 0;
-                        }
-
-                        recentSpeed = GetSpeed();
-                        if (recentSpeed < 1)
-                            recentSpeed = 1;
-                        OperationsUpdateClock++;
-                        if (OperationsUpdateClock >= KickStart.AIClockPeriod)//Mathf.Max(25 / recentSpeed, 5)
-                        {
-                            // RunAlliedOperations(); // Do not call on client
-                            OperationsUpdateClock = 0;
-                            if (EstTopSped < recentSpeed)
-                                EstTopSped = recentSpeed;
-                        }
+                        UpdatePathfinding = true;
                         break;
                     case AIAlignment.NonPlayer: // Enemy / Enemy Base Team
-                        if (OverrideAllControls)
-                            return;
                         if (!Hibernate)
                         {
-                            DirectorUpdateClock++;
-                            if (DirectorUpdateClock >= KickStart.AIDodgeCheapness)
-                            {
-                                UpdatePathfinding = true;
-                                DirectorUpdateClock = 0;
-                            }
-                            else
-                                UpdatePathfinding = false;
-
-                            recentSpeed = GetSpeed();
-                            if (recentSpeed < 1)
-                                recentSpeed = 1;
-                            OperationsUpdateClock++;
-                            if (OperationsUpdateClock >= KickStart.AIClockPeriod)
-                            {
-                                // RunEnemyOperations();
-                                OperationsUpdateClock = 0;
-                                if (EstTopSped < recentSpeed)
-                                    EstTopSped = recentSpeed;
-                            }
+                            UpdatePathfinding = true;
                         }
                         break;
                 }
             }
 
+            internal void OnUpdateClientAIOperations()
+            {
+                switch (AIAlign)
+                {
+                    case AIAlignment.Static:// Static tech
+                        DriveVar = 0;
+                        break;
+                    case AIAlignment.Player: // Player-Controlled techs
+                        if (EstTopSped < recentSpeed)
+                            EstTopSped = recentSpeed;
+                        break;
+                    case AIAlignment.NonPlayer: // Enemy / Enemy Base Team
+                        if (!Hibernate)
+                        {
+                            if (EstTopSped < recentSpeed)
+                                EstTopSped = recentSpeed;
+                        }
+                        break;
+                }
+            }
 
             /// <summary>
             /// CALL when we change ANYTHING in the tech's AI.
             /// </summary>
             internal void OnTechTeamChange()
             {
-                Invoke("DelayedExtents", 0.1f);
                 dirtyAI = true;
                 PlayerAllowAutoAnchoring = !tank.IsAnchored;
             }
@@ -4374,6 +5536,7 @@ namespace TAC_AI.AI
             {
                 if (dirtyAI)
                 {
+                    dirtyAI = false;
                     var aI = tank.AI;
                     hasAI = aI.CheckAIAvailable();
 
@@ -4381,20 +5544,21 @@ namespace TAC_AI.AI
                     SuppressFiring(false);
                     try
                     {
+                        TankAIManager.UpdateTechTeam(tank);
                         if (ManNetwork.IsNetworked)
                         {   // Multiplayer
                             if (!ManNetwork.IsHost)// && tank != Singleton.playerTank)
                             {   // Is Client
                                 if (ManSpawn.IsPlayerTeam(tank.Team))
                                 {   //MP
-                                    if (hasAI|| (World.ManPlayerRTS.PlayerIsInRTS && tank.PlayerFocused))
+                                    if (hasAI || (ManPlayerRTS.PlayerIsInRTS && tank.PlayerFocused))
                                     {
                                         //Player-Allied AI
-                                        if (AIState != AIAlignment.Player)
+                                        if (AIAlign != AIAlignment.Player)
                                         {
                                             ResetAll(tank);
                                             RemoveEnemyMatters();
-                                            AIState = AIAlignment.Player;
+                                            AIAlign = AIAlignment.Player;
                                             RefreshAI();
                                             DebugTAC_AI.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go! (NonHostClient)");
                                         }
@@ -4402,21 +5566,22 @@ namespace TAC_AI.AI
                                     else
                                     {   // Static tech
                                         DriveVar = 0;
-                                        if (AIState != AIAlignment.Static)
+                                        if (AIAlign != AIAlignment.PlayerNoAI)
                                         {   // Reset and ready for static tech
-                                            DebugTAC_AI.Log("TACtical_AI: Static Tech " + tank.name + ": reset (NonHostClient)");
+                                            DebugTAC_AI.Log("TACtical_AI: PlayerNoAI Tech " + tank.name + ": reset (NonHostClient)");
                                             ResetAll(tank);
                                             RemoveEnemyMatters();
+                                            AIAlign = AIAlignment.PlayerNoAI;
                                         }
                                     }
                                 }
                                 else if (!tank.IsNeutral())
                                 {
                                     //Enemy AI
-                                    if (AIState != AIAlignment.NonPlayer)
+                                    if (AIAlign != AIAlignment.NonPlayer)
                                     {
                                         ResetAll(tank);
-                                        AIState = AIAlignment.NonPlayer;
+                                        AIAlign = AIAlignment.NonPlayer;
                                         DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " of Team " + tank.Team + ":  Ready to kick some Tech! (NonHostClient)");
                                         RCore.RandomizeBrain(this, tank);
                                     }
@@ -4424,11 +5589,12 @@ namespace TAC_AI.AI
                                 else
                                 {   // Static tech
                                     DriveVar = 0;
-                                    if (AIState != AIAlignment.Static)
+                                    if (AIAlign != AIAlignment.Static)
                                     {   // Reset and ready for static tech
                                         DebugTAC_AI.Log("TACtical_AI: Static Tech " + tank.name + ": reset (NonHostClient)");
                                         ResetAll(tank);
                                         RemoveEnemyMatters();
+                                        AIAlign = AIAlignment.Static;
                                     }
                                 }
                                 return;
@@ -4443,13 +5609,13 @@ namespace TAC_AI.AI
                                 if ((hasAI && !tank.PlayerFocused) || (World.ManPlayerRTS.PlayerIsInRTS && tank.PlayerFocused))
                                 {
                                     //Player-Allied AI
-                                    if (AIState != AIAlignment.Player)
+                                    if (AIAlign != AIAlignment.Player)
                                     {
                                         ResetAll(tank);
                                         RemoveEnemyMatters();
-                                        AIState = AIAlignment.Player;
+                                        AIAlign = AIAlignment.Player;
                                         RefreshAI();
-                                        if ((bool)TechMemor)
+                                        if ((bool)TechMemor && !GetComponent<BookmarkBuilder>())
                                             TechMemor.SaveTech();
                                         DebugTAC_AI.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
                                     }
@@ -4457,21 +5623,23 @@ namespace TAC_AI.AI
                                 else
                                 {   // Static tech
                                     DriveVar = 0;
-                                    if (AIState != AIAlignment.Static)
+                                    if (AIAlign != AIAlignment.PlayerNoAI)
                                     {   // Reset and ready for static tech
-                                        DebugTAC_AI.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
+                                        DebugTAC_AI.Log("TACtical_AI: PlayerNoAI Tech " + tank.name + ": reset");
                                         ResetAll(tank);
                                         RemoveEnemyMatters();
+                                        AIEBases.SetupBookmarkBuilder(this);
+                                        AIAlign = AIAlignment.PlayerNoAI;
                                     }
                                 }
                             }
                             else if (KickStart.enablePainMode && !tank.IsNeutral())
                             {
                                 //Enemy AI
-                                if (AIState != AIAlignment.NonPlayer)
+                                if (AIAlign != AIAlignment.NonPlayer)
                                 {
                                     ResetAll(tank);
-                                    AIState = AIAlignment.NonPlayer;
+                                    AIAlign = AIAlignment.NonPlayer;
                                     Enemy.RCore.RandomizeBrain(this, tank);
                                     DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " of Team " + tank.Team + ":  Ready to kick some Tech!");
                                 }
@@ -4481,12 +5649,13 @@ namespace TAC_AI.AI
                             else
                             {   // Static tech
                                 DriveVar = 0;
-                                if (AIState != AIAlignment.Static)
+                                if (AIAlign != AIAlignment.Static)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
                                     ResetAll(tank);
                                     RemoveEnemyMatters();
-                                    AIState = AIAlignment.Static;
+                                    AIEBases.SetupBookmarkBuilder(this);
+                                    AIAlign = AIAlignment.Static;
                                 }
                             }
                         }
@@ -4497,13 +5666,13 @@ namespace TAC_AI.AI
                                 if (hasAI || (World.ManPlayerRTS.PlayerIsInRTS && tank.PlayerFocused))
                                 {
                                     //Player-Allied AI
-                                    if (AIState != AIAlignment.Player)
+                                    if (AIAlign != AIAlignment.Player)
                                     {
                                         ResetAll(tank);
                                         RemoveEnemyMatters();
-                                        AIState = AIAlignment.Player;
+                                        AIAlign = AIAlignment.Player;
                                         RefreshAI();
-                                        if ((bool)TechMemor)
+                                        if ((bool)TechMemor && !GetComponent<BookmarkBuilder>())
                                             TechMemor.SaveTech();
                                         DebugTAC_AI.Log("TACtical_AI: Allied AI " + tank.name + ":  Checked up and good to go!");
                                     }
@@ -4511,34 +5680,37 @@ namespace TAC_AI.AI
                                 else
                                 {   // Static tech
                                     DriveVar = 0;
-                                    if (AIState != AIAlignment.Static)
+                                    if (AIAlign != AIAlignment.Static)
                                     {   // Reset and ready for static tech
                                         DebugTAC_AI.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
                                         ResetAll(tank);
                                         RemoveEnemyMatters();
-                                        AIState = AIAlignment.Static;
+                                        AIEBases.SetupBookmarkBuilder(this);
+                                        AIAlign = AIAlignment.Static;
                                     }
                                 }
                             }
                             else if (KickStart.enablePainMode && !tank.IsNeutral())
                             {   //MP is NOT supported!
                                 //Enemy AI
-                                if (AIState != AIAlignment.NonPlayer)
+                                if (AIAlign != AIAlignment.NonPlayer)
                                 {
                                     ResetAll(tank);
                                     DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " of Team " + tank.Team + ":  Ready to kick some Tech!");
-                                    AIState = AIAlignment.NonPlayer;
+                                    AIAlign = AIAlignment.NonPlayer;
                                     Enemy.RCore.RandomizeBrain(this, tank);
                                 }
                             }
                             else
                             {   // Static tech
                                 DriveVar = 0;
-                                if (AIState != AIAlignment.Static)
+                                if (AIAlign != AIAlignment.Static)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log("TACtical_AI: Static Tech " + tank.name + ": reset");
                                     ResetAll(tank);
                                     RemoveEnemyMatters();
+                                    AIEBases.SetupBookmarkBuilder(this);
+                                    AIAlign = AIAlignment.Static;
                                 }
                             }
                         }
@@ -4551,15 +5723,54 @@ namespace TAC_AI.AI
                             errored = true;
                         }
                     }
-
-                    dirtyAI = false;
                 }
+            }
+            private void TryRepairStatic()
+            {
+                BookmarkBuilder builder = GetComponent<BookmarkBuilder>();
+                if (builder)
+                {
+                    AILimitSettings.AutoRepair = true;
+                    AILimitSettings.UseInventory = true;
+                    if (TechMemor.IsNull())
+                    {
+                        builder.HookUp(this);
+                        DebugTAC_AI.Assert("TACtical_AI: Tech " + tank.name + "TryRepairStatic has a BookmarkBuilder but NO TechMemor!");
+                    }
+                    if (lastEnemyGet != null)
+                    {   // Combat repairs (combat mechanic)
+                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " RepairCombat");
+                        AIERepair.RepairStepper(this, tank, TechMemor, true, Combat: true);
+                    }
+                    else
+                    {   // Repairs in peacetime
+                        AIERepair.RepairStepper(this, tank, TechMemor);
+                    }
+                }
+                int blockC = tank.blockman.blockCount;
+                if (cachedBlockCount > blockC)
+                    DamageThreshold = (1f - (blockC / (float)cachedBlockCount)) * 100;
+                else
+                    cachedBlockCount = blockC;
             }
             private void TryRepairAllied()
             {
-                if (allowAutoRepair && (!tank.PlayerFocused || ManPlayerRTS.PlayerIsInRTS) && (KickStart.AllowAISelfRepair || tank.IsAnchored))
+                BookmarkBuilder builder = GetComponent<BookmarkBuilder>();
+                if (builder && TechMemor.IsNull())
                 {
-                    if (lastEnemy != null)
+                    builder.HookUp(this);
+                    DebugTAC_AI.Assert("TACtical_AI: Tech " + tank.name + "TryRepairAllied has a BookmarkBuilder but NO TechMemor!");
+                }
+                if (builder || (AutoRepair && (!tank.PlayerFocused || ManPlayerRTS.PlayerIsInRTS) && (KickStart.AllowAISelfRepair || tank.IsAnchored)))
+                {
+                    if (builder)
+                    {
+                        AISetSettings.AutoRepair = true;
+                        AILimitSettings.AutoRepair = true;
+                        AISetSettings.UseInventory = true;
+                        AILimitSettings.UseInventory = true;
+                    }
+                    if (lastEnemyGet != null)
                     {   // Combat repairs (combat mechanic)
                         //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " RepairCombat");
                         AIERepair.RepairStepper(this, tank, TechMemor, AdvancedAI, Combat: true);
@@ -4573,15 +5784,19 @@ namespace TAC_AI.AI
                             AIERepair.RepairStepper(this, tank, TechMemor);
                     }
                 }
-                else if (AdvancedAI)
-                {
-                    if (cachedBlockCount != 0)
-                        DamageThreshold = (1f - (tank.blockman.blockCount / (float)cachedBlockCount)) * 100;
-                    else
-                        cachedBlockCount = tank.blockman.blockCount;
-                }
+                int blockC = tank.blockman.blockCount;
+                if (cachedBlockCount > blockC)
+                    DamageThreshold = (1f - (blockC / (float)cachedBlockCount)) * 100;
+                else
+                    cachedBlockCount = blockC;
             }
 
+
+            private void RunStaticOperations()
+            {
+                if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck))
+                    TryRepairStatic();
+            }
 
             private void RunAlliedOperations()
             {
@@ -4593,9 +5808,10 @@ namespace TAC_AI.AI
 
                 if (!tank.IsAnchored && lastAIType == AITreeType.AITypes.Idle && ExpectAITampering)
                 {
-                    ForceAllAIsToEscort(true);
+                    ForceAllAIsToEscort(true, false);
                     ExpectAITampering = false;
                 }
+                UpdateCalcCrashAvoidenceSphere();
 
                 if (tank.PlayerFocused)
                 {
@@ -4604,8 +5820,9 @@ namespace TAC_AI.AI
                         ActionPause -= KickStart.AIClockPeriod;
                     if (KickStart.AllowStrategicAI)
                     {
+                        Attempt3DNavi = false;
 #if DEBUG
-                        if (ManPlayerRTS.PlayerIsInRTS && ManPlayerRTS.DevLockToCam)
+                        if (ManPlayerRTS.PlayerIsInRTS && ManPlayerRTS.DevCamLock == DebugCameraLock.LockTechToCam)
                         {
                             if (tank.rbody)
                             {
@@ -4614,11 +5831,12 @@ namespace TAC_AI.AI
                             }
                         }
 #endif
-                        if (World.ManPlayerRTS.autopilotPlayer)
+                        if (ManPlayerRTS.autopilotPlayer)
                         {
                             DetermineCombat();
                             if (RTSControlled)
                             {
+                                //DebugTAC_AI.Log("RTS PLAYER");
                                 RunRTSNavi(true);
                             }
                             else
@@ -4664,58 +5882,71 @@ namespace TAC_AI.AI
                 //updateCA = true;
                 if (ActionPause > 0)
                     ActionPause -= KickStart.AIClockPeriod;
+                UpdateCalcCrashAvoidenceSphere();
                 DetermineCombatEnemy();
                 if (light)
-                    RCore.RunLightEvilOp(this, tank);
+                    RCore.BeEvilLight(this, tank);
                 else
+                {
                     RCore.BeEvil(this, tank);
+                }
             }
-            private void RunRTSNavi(bool isPlayer = false)
+
+
+            private void RunRTSNavi(bool isPlayerTech = false)
             {   // Alternative Operator for RTS
                 if (!KickStart.AllowStrategicAI)
                     return;
 
-                Vector3 veloFlat = Vector3.zero;
-                if ((bool)tank.rbody)   // So that drifting is minimized
-                {
-                    veloFlat = tank.rbody.velocity;
-                    veloFlat.y = 0;
-                }
-
-                lastOperatorRange = (tank.boundsCentreWorldNoCheck + veloFlat - lastDestination).magnitude;
                 //ProceedToObjective = true;
+                EControlOperatorSet direct = GetDirectedControl();
                 if (DriverType == AIDriverType.Pilot)
                 {
+                    lastOperatorRange = (DodgeSphereCenter - lastDestinationCore).magnitude;
                     Attempt3DNavi = true;
-                    BGeneral.ResetValues(this);
+                    BGeneral.ResetValues(this, ref direct);
                     AvoidStuff = true;
 
-                    float range = (RangeToStopRush * 4) + lastTechExtents;
+                    float range = (MaxObjectiveRange * 4) + lastTechExtents;
                     // The range is nearly quadrupled here due to dogfighting conditions
-                    DriveDest = EDriveDest.ToLastDestination;
+                    direct.DriveDest = EDriveDest.ToLastDestination;
+                    Yield = AIEPathing.ObstructionAwarenessAny(DodgeSphereCenter, this, DodgeSphereRadius) || 
+                        AIEPathing.ObstructionAwarenessTerrain(DodgeSphereCenter, this, DodgeSphereRadius);
+
                     if (tank.wheelGrounded)
                     {
-                        if (!AutoHandleObstruction(lastOperatorRange, true, true))
+                        if (!AutoHandleObstruction(ref direct, lastOperatorRange, true, true))
                             SettleDown();
-                    }
-                    if (lastOperatorRange < (lastTechExtents * 2) + 5)
-                    {
-
-                    }
-                    else if (lastOperatorRange > range)
-                    {   // Far behind, must catch up
-                        BOOST = true; // boost in forwards direction towards objective
                     }
                     else
                     {
+                        if (lastOperatorRange < (lastTechExtents * 2) + 5)
+                        {
 
+                        }
+                        else if (lastOperatorRange > range)
+                        {   // Far behind, must catch up
+                            FullBoost = true; // boost in forwards direction towards objective
+                        }
+                        else
+                        {
+
+                        }
                     }
                 }
                 else
                 {
+                    float prevDist = lastOperatorRange;
+                    GetDistanceFromTask(lastDestinationCore);
+                    bool needsToSlowDown = IsOrbiting(lastDestinationCore, lastOperatorRange - prevDist);
+
                     Attempt3DNavi = DriverType == AIDriverType.Astronaut;
-                    BGeneral.ResetValues(this);
+                    BGeneral.ResetValues(this, ref direct);
                     AvoidStuff = true;
+                    Yield = needsToSlowDown || AIEPathing.ObstructionAwarenessAny(DodgeSphereCenter, this, DodgeSphereRadius) 
+                        || AIEPathing.ObstructionAwarenessSetPieceAny(DodgeSphereCenter, this, DodgeSphereRadius);
+
+                    direct.DriveToFacingTowards();
                     if (lastOperatorRange < (lastTechExtents * 2) + 32 && !ManPlayerRTS.HasMovementQueue(this))
                     {
                         //Things are going smoothly
@@ -4744,7 +5975,7 @@ namespace TAC_AI.AI
                         //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  RTS - Moving");
                         if (unanchorCountdown > 0)
                             unanchorCountdown--;
-                        if (AutoAnchor && PlayerAllowAutoAnchoring && !isPlayer && tank.Anchors.NumPossibleAnchors >= 1)
+                        if (AutoAnchor && PlayerAllowAutoAnchoring && !isPlayerTech && tank.Anchors.NumPossibleAnchors >= 1)
                         {
                             if (tank.Anchors.NumIsAnchored > 0)
                             {
@@ -4752,20 +5983,20 @@ namespace TAC_AI.AI
                                 UnAnchor();
                             }
                         }
-                        if (!AutoAnchor && !isPlayer && tank.IsAnchored)
+                        if (!AutoAnchor && !isPlayerTech && tank.IsAnchored)
                         {
                             BGeneral.RTSCombat(this, tank);
+                            SetDirectedControl(direct);
                             return;
                         }
-                        float driveVal = Mathf.Min(1, lastOperatorRange / 10);
-                        if (!IsTechMovingActual((EstTopSped * driveVal) / 6) && lastOperatorRange > 32)
+                        if (!IsTechMoving(EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                         {   //OBSTRUCTION MANAGEMENT
-                            Urgency += KickStart.AIClockPeriod / 2f;
-                            if (Urgency > 15)
-                            {
+                            //Urgency += KickStart.AIClockPeriod / 2f;
+                            //if (Urgency > 15)
+                            //{
                                 //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  DOOR STUCK");
-                                TryHandleObstruction(true, lastOperatorRange, false, true);
-                            }
+                                TryHandleObstruction(true, lastOperatorRange, false, true, ref direct);
+                            //}
                         }
                         else
                         {
@@ -4773,14 +6004,134 @@ namespace TAC_AI.AI
                             //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Output " + val + " | TopSpeed/2 " + (EstTopSped / 2) + " | TopSpeed/4 " + (EstTopSped / 4));
                             //Things are going smoothly
                             ForceSetDrive = true;
+                            float driveVal = Mathf.Min(1, lastOperatorRange / 10);
                             DriveVar = driveVal;
                             SettleDown();
                         }
                     }
                 }
+                SetDirectedControl(direct);
                 BGeneral.RTSCombat(this, tank);
             }
 
+            internal void RunRTSNaviEnemy(EnemyMind mind)
+            {   // Alternative Operator for RTS
+                //DebugTAC_AI.Log("RunRTSNaviEnemy - " + tank.name);
+                if (!KickStart.AllowStrategicAI)
+                {
+                    RTSControlled = false;
+                    return;
+                }
+
+                EControlOperatorSet direct = GetDirectedControl();
+                BGeneral.ResetValues(this, ref direct);
+                if (mind.EvilCommander == EnemyHandling.Airplane)
+                {
+                    lastOperatorRange = (DodgeSphereCenter - lastDestinationCore).magnitude;
+                    Attempt3DNavi = true;
+                    AvoidStuff = true;
+
+                    float range = (MaxObjectiveRange * 4) + lastTechExtents;
+                    // The range is quadrupled here due to dogfighting conditions
+                    direct.DriveDest = EDriveDest.ToLastDestination;
+                    Yield = AIEPathing.ObstructionAwarenessAny(DodgeSphereCenter, this, DodgeSphereRadius) || 
+                        AIEPathing.ObstructionAwarenessTerrain(DodgeSphereCenter, this, DodgeSphereRadius);
+
+                    if (tank.wheelGrounded)
+                    {
+                        if (!AutoHandleObstruction(ref direct, lastOperatorRange, true, true))
+                            SettleDown();
+                    }
+                    else
+                    {
+                        if (lastOperatorRange < (lastTechExtents * 2) + 5)
+                        {
+
+                        }
+                        else if (lastOperatorRange > range)
+                        {   // Far behind, must catch up
+                            FullBoost = true; // boost in forwards direction towards objective
+                        }
+                        else
+                        {
+
+                        }
+                    }
+                }
+                else
+                {
+                    float prevDist = lastOperatorRange;
+                    GetDistanceFromTask(lastDestinationCore);
+                    bool needsToSlowDown = IsOrbiting(lastDestinationCore, lastOperatorRange - prevDist);
+
+                    Attempt3DNavi = mind.EvilCommander == EnemyHandling.Starship;
+                    AvoidStuff = true;
+                    bool AutoAnchor = mind.CommanderSmarts >= EnemySmarts.Meh;
+                    Yield = needsToSlowDown || AIEPathing.ObstructionAwarenessAny(DodgeSphereCenter, this, DodgeSphereRadius) 
+                        || AIEPathing.ObstructionAwarenessSetPieceAny(DodgeSphereCenter, this, DodgeSphereRadius);
+
+                    if (lastOperatorRange < (lastTechExtents * 2) + 32 && !ManPlayerRTS.HasMovementQueue(this))
+                    {
+                        //Things are going smoothly
+                        SettleDown();
+                        ForceSetDrive = true;
+                        DriveVar = 0;
+                        PivotOnly = true;
+                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  RTS - resting");
+                        if (DelayedAnchorClock < 15)
+                            DelayedAnchorClock++;
+                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": " + AutoAnchor + " | " + PlayerAllowAnchoring + " | " + (tank.Anchors.NumPossibleAnchors >= 1) + " | " + (DelayedAnchorClock >= 15) + " | " + !DANGER);
+                        if (AutoAnchor && !AttackEnemy && tank.Anchors.NumPossibleAnchors >= 1 
+                            && DelayedAnchorClock >= 15 && CanAnchorSafely)
+                        {
+                            if (!tank.IsAnchored && anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
+                            {
+                                DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
+                                TryAnchor();
+                                anchorAttempts++;
+                            }
+                        }
+                    }
+                    else
+                    {   // Time to go!
+                        anchorAttempts = 0;
+                        DelayedAnchorClock = 0;
+                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  RTS - Moving");
+                        if (unanchorCountdown > 0)
+                            unanchorCountdown--;
+                        if (AutoAnchor && tank.Anchors.NumPossibleAnchors >= 1)
+                        {
+                            if (tank.Anchors.NumIsAnchored > 0)
+                            {
+                                unanchorCountdown = 15;
+                                UnAnchor();
+                            }
+                        }
+                        if (!AutoAnchor && tank.IsAnchored)
+                        {
+                            RGeneral.RTSCombat(this, tank, mind);
+                            SetDirectedControl(direct);
+                            return;
+                        }
+                        if (!IsTechMovingActual(EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                        {   //OBSTRUCTION MANAGEMENT
+                            TryHandleObstruction(true, lastOperatorRange, false, true, ref direct);
+                        }
+                        else
+                        {
+                            //var val = tank.rootBlockTrans.InverseTransformDirection(tank.rbody.velocity).z;
+                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Output " + val + " | TopSpeed/2 " + (EstTopSped / 2) + " | TopSpeed/4 " + (EstTopSped / 4));
+                            //Things are going smoothly
+                            ForceSetDrive = true;
+                            float driveVal = Mathf.Min(1, lastOperatorRange / 10);
+                            DriveVar = driveVal;
+                            SettleDown();
+                        }
+                    }
+                }
+                SetDirectedControl(direct);
+                RGeneral.RTSCombat(this, tank, mind);
+            }
 
             public void DelayedRepairUpdate()
             {   //OBSOLETE until further notice
@@ -4791,12 +6142,531 @@ namespace TAC_AI.AI
                 var AISettings = tank.GetComponent<AIBookmarker>();
                 if (AISettings.IsNotNull())
                     DestroyImmediate(AISettings);
-                var Builder = tank.GetComponent<BookmarkBuilder>();
-                if (Builder.IsNotNull())
-                    DestroyImmediate(Builder);
             }
-            
+            private void RemoveBookmarkBuilder()
+            {
+                BookmarkBuilder Builder = tank.GetComponent<BookmarkBuilder>();
+                if (Builder.IsNotNull())
+                    Builder.Finish(this);
+            }
 
+
+            // Weapons targeting
+            private static bool UseVanillaTargetFetching = false;
+            private float lastTargetGatherTime = 0;
+            private List<Tank> targetCache = new List<Tank>();
+            private List<Tank> GatherTechsInRange(float gatherRangeSqr)
+            {
+                if (lastTargetGatherTime > Time.time)
+                {
+                    return targetCache;
+                }
+                lastTargetGatherTime = Time.time + AIGlobals.TargetCacheRefreshInterval;
+                targetCache.Clear();
+                foreach (Tank cTank in TankAIManager.GetTargetTanks(tank.Team))
+                {
+                    if (cTank != tank && cTank.visible.isActive)
+                    {
+                        float dist = (cTank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude;
+                        if (dist < gatherRangeSqr)
+                        {
+                            targetCache.Add(cTank);
+                        }
+                    }
+                }
+                return targetCache;
+            }
+
+            /// <summary>
+            ///  Gets the enemy position based on current position and AI preferences
+            /// </summary>
+            /// <param name="inRange">value > 0</param>
+            /// <param name="pos">MAX 3</param>
+            /// <returns></returns>
+            public Visible FindEnemy(bool InvertBullyPriority, int pos = 1)
+            {
+                //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
+                //    return null; // We NO ATTACK
+                Visible target = lastEnemyGet;
+
+                // We begin the search
+                float TargetRangeSqr = MaxCombatRange * MaxCombatRange;
+                Vector3 scanCenter = tank.boundsCentreWorldNoCheck;
+
+                if (target?.tank)
+                {
+                    if (!target.isActive || !target.tank.IsEnemy(tank.Team))
+                    {
+                        //DebugTAC_AI.Log("Target lost");
+                        target = null;
+                    }
+                    else if (KeepEnemyFocus || NextFindTargetTime <= Time.time) // Carry on chasing the target
+                    {
+                        return target;
+                    }
+                    else if ((target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRangeSqr)
+                    {
+                        //DebugTAC_AI.Log("Target out of range");
+                        target = null;
+                    }
+                }
+
+                if (AttackMode == EAttackMode.Random)
+                {
+                    List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                    int max = techs.Count();
+                    int launchCount = UnityEngine.Random.Range(0, max);
+                    for (int step = 0; step < launchCount; step++)
+                    {
+                        Tank cTank = techs.ElementAt(step);
+                        if (cTank.IsEnemy(tank.Team) && cTank != tank && cTank.visible.isActive)
+                        {
+                            float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                            if (dist < TargetRangeSqr)
+                            {
+                                target = cTank.visible;
+                            }
+                        }
+                    }
+                    NextFindTargetTime = Time.time + AIGlobals.PestererSwitchDelay;
+                }
+                else if (AttackMode == EAttackMode.Strong)
+                {
+                    List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                    int launchCount = techs.Count();
+                    if (InvertBullyPriority)
+                    {
+                        int BlockCount = 0;
+                        for (int step = 0; step < launchCount; step++)
+                        {
+                            Tank cTank = techs.ElementAt(step);
+                            if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                            {
+                                float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                if (cTank.blockman.blockCount > BlockCount && dist < TargetRangeSqr)
+                                {
+                                    BlockCount = cTank.blockman.blockCount;
+                                    target = cTank.visible;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        int BlockCount = 262144;
+                        for (int step = 0; step < launchCount; step++)
+                        {
+                            Tank cTank = techs.ElementAt(step);
+                            if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                            {
+                                float dist = (cTank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude;
+                                if (cTank.blockman.blockCount < BlockCount && dist < TargetRangeSqr)
+                                {
+                                    BlockCount = cTank.blockman.blockCount;
+                                    target = cTank.visible;
+                                }
+                            }
+                        }
+                    }
+                    NextFindTargetTime = Time.time + AIGlobals.ScanDelay;
+                }
+                else
+                {
+                    NextFindTargetTime = Time.time + AIGlobals.ScanDelay;
+                    if (AttackMode == EAttackMode.Chase && target != null)
+                    {
+                        if (target.isActive)
+                            return target;
+                    }
+                    if (pos == 1 && UseVanillaTargetFetching)
+                        return tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+
+                    float TargRange2 = TargetRangeSqr;
+                    float TargRange3 = TargetRangeSqr;
+
+                    Visible target2 = null;
+                    Visible target3 = null;
+
+                    List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                    int launchCount = techs.Count();
+
+                    Tank cTank;
+                    float dist;
+                    int step;
+                    switch (pos)
+                    {
+                        case 2:
+                            for (step = 0; step < launchCount; step++)
+                            {
+                                cTank = techs.ElementAt(step);
+                                if (cTank != tank && cTank.IsEnemy(tank.Team))
+                                {
+                                    dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                    if (dist < TargetRangeSqr)
+                                    {
+                                        if (TargetRangeSqr < TargRange2)
+                                        {
+                                            TargRange2 = dist;
+                                            target2 = cTank.visible;
+                                        }
+                                        TargetRangeSqr = dist;
+                                        target = cTank.visible;
+                                    }
+                                    else if (dist < TargRange2)
+                                    {
+                                        TargRange2 = dist;
+                                        target2 = cTank.visible;
+                                    }
+                                }
+                            }
+                            if (pos == 2 && !(bool)target2)
+                                return target2;
+                            break;
+                        case 3:
+                            for (step = 0; step < launchCount; step++)
+                            {
+                                cTank = techs.ElementAt(step);
+                                if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                                {
+                                    dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                    if (dist < TargetRangeSqr)
+                                    {
+                                        if (TargetRangeSqr < TargRange2)
+                                        {
+                                            if (TargRange2 < TargRange3)
+                                            {
+                                                TargRange3 = dist;
+                                                target3 = cTank.visible;
+                                            }
+                                            TargRange2 = dist;
+                                            target2 = cTank.visible;
+                                        }
+                                        TargetRangeSqr = dist;
+                                        target = cTank.visible;
+                                    }
+                                    else if (dist < TargRange2)
+                                    {
+                                        if (TargRange2 < TargRange3)
+                                        {
+                                            TargRange3 = dist;
+                                            target3 = cTank.visible;
+                                        }
+                                        TargRange2 = dist;
+                                        target2 = cTank.visible;
+                                    }
+                                    else if (dist < TargRange3)
+                                    {
+                                        TargRange3 = dist;
+                                        target3 = cTank.visible;
+                                    }
+                                }
+                            }
+                            if (pos >= 3 && !(bool)target3)
+                                return target3;
+                            if (pos == 2 && !(bool)target2)
+                                return target2;
+                            break;
+                        default:
+                            for (step = 0; step < launchCount; step++)
+                            {
+                                cTank = techs.ElementAt(step);
+                                if (cTank != tank && cTank.IsEnemy(tank.Team))
+                                {
+                                    dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                    if (dist < TargetRangeSqr)
+                                    {
+                                        TargetRangeSqr = dist;
+                                        target = cTank.visible;
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
+                /*
+                if (target.IsNull())
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Tech " + Tank.name + " Could not find target with FindEnemy, resorting to defaults");
+                    return Tank.Vision.GetFirstVisibleTechIsEnemy(Tank.Team);
+                }
+                */
+                return target;
+            }
+
+            public Visible FindEnemyAir(bool InvertBullyPriority, int pos = 1)
+            {
+                //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
+                //    return null; // We NO ATTACK
+                Visible target = lastEnemyGet;
+
+                // We begin the search
+                float TargetRangeSqr = MaxCombatRange * MaxCombatRange;
+                Vector3 scanCenter = tank.boundsCentreWorldNoCheck;
+
+                if (target != null)
+                {
+                    if (!target.isActive || !target.tank.IsEnemy(tank.Team))
+                    {
+                        //DebugTAC_AI.Log("Target lost");
+                        target = null;
+                    }
+                    else if (KeepEnemyFocus || NextFindTargetTime <= Time.time) // Carry on chasing the target
+                    {
+                        return target;
+                    }
+                    else if ((target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRangeSqr)
+                    {
+                        //DebugTAC_AI.Log("Target out of range");
+                        target = null;
+                    }
+                }
+                float altitudeHigh = -256;
+
+                if (AttackMode == EAttackMode.Random)
+                {
+                    List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                    scanCenter = RoughPredictTarget(lastEnemyGet.tank);
+                    int launchCount = techs.Count();
+                    for (int step = 0; step < launchCount; step++)
+                    {
+                        Tank cTank = techs.ElementAt(step);
+                        if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                        {
+                            if (altitudeHigh < cTank.boundsCentreWorldNoCheck.y)
+                            {   // Priority is other aircraft
+                                if (AIEPathing.AboveHeightFromGround(cTank.boundsCentreWorldNoCheck))
+                                    altitudeHigh = AIEPathing.OffsetFromGroundA(cTank.boundsCentreWorldNoCheck, this).y;
+                                else
+                                    altitudeHigh = cTank.boundsCentreWorldNoCheck.y;
+                            }
+                            else
+                                continue;
+                            float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                            if (dist < TargetRangeSqr)
+                            {
+                                TargetRangeSqr = dist;
+                                target = cTank.visible;
+                            }
+                        }
+                    }
+                    NextFindTargetTime = Time.time + AIGlobals.PestererSwitchDelay;
+                }
+                else if (AttackMode == EAttackMode.Strong)
+                {
+                    List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                    int launchCount = techs.Count();
+                    if (InvertBullyPriority)
+                    {
+                        altitudeHigh = 2199;
+                        int BlockCount = 0;
+                        for (int step = 0; step < launchCount; step++)
+                        {
+                            Tank cTank = techs.ElementAt(step);
+                            if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                            {
+                                if (altitudeHigh > cTank.boundsCentreWorldNoCheck.y)
+                                {   // Priority is bases or lowest target
+                                    if (!AIEPathing.AboveHeightFromGround(cTank.boundsCentreWorldNoCheck))
+                                        altitudeHigh = AIEPathing.OffsetFromGroundA(cTank.boundsCentreWorldNoCheck, this).y;
+                                    else
+                                        altitudeHigh = cTank.boundsCentreWorldNoCheck.y;
+                                }
+                                else
+                                    continue;
+                                float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                if (cTank.blockman.blockCount > BlockCount && dist < TargetRangeSqr)
+                                {
+                                    BlockCount = cTank.blockman.blockCount;
+                                    target = cTank.visible;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        int BlockCount = 262144;
+                        for (int step = 0; step < launchCount; step++)
+                        {
+                            Tank cTank = techs.ElementAt(step);
+                            if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                            {
+                                if (altitudeHigh < cTank.boundsCentreWorldNoCheck.y)
+                                {   // Priority is other aircraft
+                                    if (AIEPathing.AboveHeightFromGround(cTank.boundsCentreWorldNoCheck))
+                                        altitudeHigh = AIEPathing.OffsetFromGroundA(cTank.boundsCentreWorldNoCheck, this).y;
+                                    else
+                                        altitudeHigh = cTank.boundsCentreWorldNoCheck.y;
+                                }
+                                else
+                                    continue;
+                                float dist = (cTank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude;
+                                if (cTank.blockman.blockCount < BlockCount && dist < TargetRangeSqr)
+                                {
+                                    BlockCount = cTank.blockman.blockCount;
+                                    target = cTank.visible;
+                                }
+                            }
+                        }
+                    }
+                    NextFindTargetTime = Time.time + AIGlobals.ScanDelay;
+                }
+                else
+                {
+                    NextFindTargetTime = Time.time + AIGlobals.ScanDelay;
+                    if (AttackMode == EAttackMode.Chase && target != null)
+                    {
+                        if (target.isActive)
+                            return target;
+                    }
+                    float TargRange2 = TargetRangeSqr;
+                    float TargRange3 = TargetRangeSqr;
+
+                    Visible target2 = null;
+                    Visible target3 = null;
+
+                    List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                    int launchCount = techs.Count();
+                    Tank cTank;
+                    float dist;
+                    int step;
+                    switch (pos)
+                    {
+                        case 2:
+                            for (step = 0; step < launchCount; step++)
+                            {
+                                cTank = techs.ElementAt(step);
+                                if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                                {
+                                    dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                    if (dist < TargetRangeSqr)
+                                    {
+                                        if (TargetRangeSqr < TargRange2)
+                                        {
+                                            TargRange2 = dist;
+                                            target2 = cTank.visible;
+                                        }
+                                        TargetRangeSqr = dist;
+                                        target = cTank.visible;
+                                    }
+                                    else if (dist < TargRange2)
+                                    {
+                                        TargRange2 = dist;
+                                        target2 = cTank.visible;
+                                    }
+                                }
+                            }
+                            if (pos == 2 && !(bool)target2)
+                                return target2;
+                            break;
+                        case 3:
+                            for (step = 0; step < launchCount; step++)
+                            {
+                                cTank = techs.ElementAt(step);
+                                if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                                {
+                                    dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                    if (dist < TargetRangeSqr)
+                                    {
+                                        if (TargetRangeSqr < TargRange2)
+                                        {
+                                            if (TargRange2 < TargRange3)
+                                            {
+                                                TargRange3 = dist;
+                                                target3 = cTank.visible;
+                                            }
+                                            TargRange2 = dist;
+                                            target2 = cTank.visible;
+                                        }
+                                        TargetRangeSqr = dist;
+                                        target = cTank.visible;
+                                    }
+                                    else if (dist < TargRange2)
+                                    {
+                                        if (TargRange2 < TargRange3)
+                                        {
+                                            TargRange3 = dist;
+                                            target3 = cTank.visible;
+                                        }
+                                        TargRange2 = dist;
+                                        target2 = cTank.visible;
+                                    }
+                                    else if (dist < TargRange3)
+                                    {
+                                        TargRange3 = dist;
+                                        target3 = cTank.visible;
+                                    }
+                                }
+                            }
+                            if (pos >= 3 && !(bool)target3)
+                                return target3;
+                            if (pos == 2 && !(bool)target2)
+                                return target2;
+                            break;
+                        default:
+                            for (step = 0; step < launchCount; step++)
+                            {
+                                cTank = techs.ElementAt(step);
+                                if (cTank.IsEnemy(tank.Team) && cTank != tank)
+                                {
+                                    dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
+                                    if (dist < TargetRangeSqr)
+                                    {
+                                        TargetRangeSqr = dist;
+                                        target = cTank.visible;
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
+                return target;
+            }
+
+            public Vector3 LeadTargetAiming(Visible targetTank)
+            {
+                if (AdvancedAI)   // Rough Target leading
+                {
+                    return RoughPredictTarget(targetTank.tank);
+                }
+                else
+                    return targetTank.tank.boundsCentreWorldNoCheck;
+            }
+
+            private const float MaxBoundsVelo = 350;
+            private static Vector3 lowMaxBoundsVelo = -new Vector3(MaxBoundsVelo, MaxBoundsVelo, MaxBoundsVelo);
+            private static Vector3 highMaxBoundsVelo = new Vector3(MaxBoundsVelo, MaxBoundsVelo, MaxBoundsVelo);
+            public Vector3 RoughPredictTarget(Tank targetTank)
+            {
+                if (targetTank.rbody.IsNotNull())
+                {
+                    var velo = targetTank.rbody.velocity;
+                    if (!velo.IsNaN() && lastCombatRange <= AIGlobals.EnemyExtendActionRange && !float.IsInfinity(velo.x)
+                        && !float.IsInfinity(velo.z) && !float.IsInfinity(velo.y))
+                    {
+                        return targetTank.boundsCentreWorldNoCheck + (velo.Clamp(lowMaxBoundsVelo, highMaxBoundsVelo) *
+                            (lastCombatRange * AIGlobals.TargetVelocityLeadPredictionMulti));
+                    }
+                }
+                return targetTank.boundsCentreWorldNoCheck;
+            }
+            private void UpdateCalcCrashAvoidenceSphere()
+            {
+                if (tank.rbody.IsNotNull())
+                {
+                    var velo = tank.rbody.velocity;
+                    if (!velo.IsNaN() && !float.IsInfinity(velo.x)
+                        && !float.IsInfinity(velo.z) && !float.IsInfinity(velo.y))
+                    {
+                        DodgeSphereCenter = tank.boundsCentreWorldNoCheck + velo.Clamp(lowMaxBoundsVelo, highMaxBoundsVelo);
+                        DodgeSphereRadius = lastTechExtents + Mathf.Clamp(recentSpeed / 2, 1, 63); // Strict
+                        SafeVelocity = tank.rbody.velocity;
+                        return;
+                    }
+                }
+                DodgeSphereCenter = tank.boundsCentreWorldNoCheck;
+                DodgeSphereRadius = 1;
+                SafeVelocity = Vector3.zero;
+            }
         }
     }
 }

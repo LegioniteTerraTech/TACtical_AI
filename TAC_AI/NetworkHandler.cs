@@ -197,7 +197,7 @@ namespace TAC_AI
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                find.tech.GetComponent<AIECore.TankAIHelper>().DirectRTSDest(reader.Position);
+                find.tech.GetHelperInsured().DirectRTSDest(reader.Position);
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientAcceptRTSCommand update, ordering tech " + find.name + " to " + reader.Position);
             }
             catch
@@ -212,7 +212,7 @@ namespace TAC_AI
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                find.tech.GetComponent<AIECore.TankAIHelper>().DirectRTSDest(reader.Position);
+                find.tech.GetHelperInsured().DirectRTSDest(reader.Position);
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerAcceptRTSCommand update, ordering tech " + find.name + " to " + reader.Position);
             }
             catch
@@ -238,7 +238,7 @@ namespace TAC_AI
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                find.tech.GetComponent<AIECore.TankAIHelper>().isRTSControlled = reader.RTSControl;
+                find.tech.GetHelperInsured().isRTSControlled = reader.RTSControl;
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientAcceptRTSControl update,  Tech " + find.name + "'s RTS control is " + reader.RTSControl);
             }
             catch
@@ -253,7 +253,7 @@ namespace TAC_AI
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                find.tech.GetComponent<AIECore.TankAIHelper>().isRTSControlled = reader.RTSControl;
+                find.tech.GetHelperInsured().isRTSControlled = reader.RTSControl;
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerAcceptRTSControl update, Tech " + find.name + "'s RTS control is " + reader.RTSControl);
             }
             catch
@@ -281,7 +281,7 @@ namespace TAC_AI
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
                 NetTech targeting = ManNetTechs.inst.FindTech(reader.targetNetTechID);
-                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                var helper = find.tech.GetHelperInsured();
                 helper.lastEnemy = targeting.tech.visible;
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientAcceptRTSAttack update,  tech " + find.name + "'s RTS target is " + targeting.tech.name);
             }
@@ -298,7 +298,7 @@ namespace TAC_AI
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
                 NetTech targeting = ManNetTechs.inst.FindTech(reader.targetNetTechID);
-                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                var helper = find.tech.GetHelperInsured();
                 helper.lastEnemy = targeting.tech.visible;
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerAcceptRTSAttack update,  tech " + find.name + "'s RTS target is " + targeting.tech.name);
             }
@@ -328,7 +328,7 @@ namespace TAC_AI
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                var helper = find.tech.GetHelperInsured();
                 helper.TrySetAITypeRemote(netMsg.GetSender(), reader.AIType, reader.AIDriving);
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnClientSetNewAIState update, tech " + find.name + " changing to " + helper.DediAI.ToString()
                     + " | Driver: " + helper.DriverType.ToString());
@@ -345,7 +345,7 @@ namespace TAC_AI
             try
             {
                 NetTech find = ManNetTechs.inst.FindTech(reader.netTechID);
-                var helper = find.tech.GetComponent<AIECore.TankAIHelper>();
+                var helper = find.tech.GetHelperInsured();
                 helper.TrySetAITypeRemote(netMsg.GetSender(), reader.AIType, reader.AIDriving);
                 DebugTAC_AI.LogNet("TACtical_AI: Received new OnServerSetNewAIState update, tech " + find.name + " changing to " + helper.DediAI.ToString() 
                     + " | Driver: " + helper.DriverType.ToString());

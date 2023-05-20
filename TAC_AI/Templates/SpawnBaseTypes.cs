@@ -31,6 +31,7 @@ namespace TAC_AI.Templates
         GSOHVYTankFactory,
         GSOAirbase,// To-Do [aircraft spawner]
         GSOStarport,// To-Do [Starfighter spawner]
+        GSOCorvetteGantry, //
         GSOMacrocosmGantry,// To-Do [heavy spaceship spawner]
         //-HQs
         GSOMilitaryBase,// To-Do
@@ -38,6 +39,7 @@ namespace TAC_AI.Templates
         // GeoCorp
         GCMiningRig,
         GCTerraBore,
+        GCLoaderLauncher,
         GCProspectorHub,// To-Do [Heavy Mining drone spawner]
         GCMiningLaser,
         GCDefTurret,
@@ -64,6 +66,7 @@ namespace TAC_AI.Templates
         HEArtyFactory,
         HEXLTankFactory,
         HEAircraftGarrison,
+        HEXLAircraftGarrison,
         //-HQs
         HECommandCentre,
 
@@ -102,6 +105,9 @@ namespace TAC_AI.Templates
         GSOTonyTeam,
         GSOHarvesterTech,
         GCHarvesterTech,
+        HEHarvesterTech,
+        BFHarvesterTech,
+        RRHarvesterTech,
 
         // Hybridz - will spawn if player is at every max grade corp and they are PAIN
         AttractServo,
@@ -181,6 +187,12 @@ namespace TAC_AI.Templates
         HEClatoe,
         HECroc,
         BFTrident,
+
+        // space arty
+        GSOSpaceArty,
+        VENSpaceArty,
+        HESpaceArty,
+        BFSpaceArty,
 
         //-----------
         // COMMUNITY

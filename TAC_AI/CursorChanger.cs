@@ -5,6 +5,7 @@ using System.IO;
 using System.Reflection;
 using UnityEngine;
 using TAC_AI.Templates;
+using TerraTechETCUtil;
 
 namespace TAC_AI
 {
@@ -32,6 +33,7 @@ namespace TAC_AI
             AIOrderProtect  6
             AIOrderScout    7
         */
+        public static CursorChangeHelper.CursorChangeCache Cache;
         public static bool AddedNewCursors = false;
         private static List<Texture2D> CursorTextureCache = new List<Texture2D>(8);
         /// <summary>
@@ -133,9 +135,13 @@ namespace TAC_AI
                 Texture2D tex;
                 try
                 {
+                    /*
                     tex = FileUtils.LoadTexture(FI.Find(delegate (FileInfo cand)
                     { return cand.Name == name + lodLevel + ".png"; }).ToString());
-                    CursorTextureCache.Add(tex);
+                    CursorTextureCache.Add(tex);*/
+                    tex = RawTechExporter.FetchTexture(name + lodLevel + ".png");
+                    if (tex == null)
+                        throw new NullReferenceException();
                 }
                 catch
                 {

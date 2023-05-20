@@ -21,8 +21,8 @@ namespace TAC_AI.AI
                 {
                     if (!tank.beam.IsActive)
                         tank.beam.EnableBeam(true);
-                    thisInst.BOOST = false;
-                    thisInst.FeatherBoost = false;
+                    thisInst.FullBoost = false;
+                    thisInst.LightBoost = false;
                     thisControl.BoostControlJets = false;
                     if (tank.rootBlockTrans.up.y > 0.95f)
                         thisInst.BeamTimeoutClock = 0;
@@ -38,7 +38,7 @@ namespace TAC_AI.AI
 
                 if (thisInst.MovementController is AIControllerAir pilot)
                 {   // Handoff all operations to AIEAirborne
-                    if (!pilot.Grounded || AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents))
+                    if (!pilot.Grounded || AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.lastTechExtents))
                     {   //Become a ground vehicle for now
                         if (tank.grounded && IsTechTippedOver(tank, thisInst))
                         {

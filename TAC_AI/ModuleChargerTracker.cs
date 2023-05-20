@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace TAC_AI
 {
-    public class ModuleChargerTracker : Module
+    public class ModuleChargerTracker : MonoBehaviour
     {
         TankBlock TankBlock;
         // Returns the position of itself in the world as a point the AI can pathfind to
@@ -67,7 +67,7 @@ namespace TAC_AI
                 }
                 DockingRequested = true;
                 Invoke("StopDocking", 2);
-                tank.GetComponent<AIECore.TankAIHelper>().AllowApproach(Approaching);
+                tank.GetHelperInsured().AllowApproach(Approaching);
             }
         }
         private void StopDocking()

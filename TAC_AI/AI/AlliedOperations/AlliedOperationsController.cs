@@ -18,132 +18,134 @@ namespace TAC_AI.AI.AlliedOperations
 
         public void Execute()
         {
-            if (this.helper.DriverType == AIDriverType.Stationary)
+            EControlOperatorSet direct = helper.GetDirectedControl();
+            if (helper.DriverType == AIDriverType.Stationary)
             {
-                switch (this.helper.DediAI)
+                switch (helper.DediAI)
                 {
                     /*
                     case AIType.Assault:
                         // Up your arsenal
-                        BBase.HoldSupport(this.helper, this.helper.tank);
-                        BGeneral.AidDefend(this.helper, this.helper.tank);
+                        BBase.HoldSupport(helper, helper.tank, ref direct);
+                        BGeneral.AidDefend(helper, helper.tank);
                         break;*/
                     default:
                         // I fight for my friends
-                        BBase.HoldProtect(this.helper, this.helper.tank);
-                        BGeneral.AidDefend(this.helper, this.helper.tank);
+                        BBase.HoldProtect(helper, helper.tank, ref direct);
+                        BGeneral.AidDefend(helper, helper.tank);
                         break;
                 }
             }
             else
             {
-                switch (this.helper.DediAI)
+                switch (helper.DediAI)
                 {
                     case AIType.Escort:
-                        switch (this.helper.DriverType)
+                        switch (helper.DriverType)
                         {
                             case AIDriverType.Tank:
                                 // We move to victory
-                                BEscort.MotivateMove(this.helper, this.helper.tank);
-                                BGeneral.AidDefend(this.helper, this.helper.tank);
+                                BGeneral.AidDefend(helper, helper.tank);
+                                BEscort.MotivateMove(helper, helper.tank, ref direct);
                                 break;
 
                             case AIDriverType.Astronaut:
                                 // Grace from Space
-                                BAstrotech.MotivateSpace(this.helper, this.helper.tank);
-                                BGeneral.AidDefend(this.helper, this.helper.tank);
+                                BGeneral.AidDefend(helper, helper.tank);
+                                BAstrotech.MotivateSpace(helper, helper.tank, ref direct);
                                 break;
 
                             case AIDriverType.Sailor:
                                 // Yarr
-                                BBuccaneer.MotivateBote(this.helper, this.helper.tank);
-                                BGeneral.AidDefend(this.helper, this.helper.tank);
+                                BGeneral.AidDefend(helper, helper.tank);
+                                BBuccaneer.MotivateBote(helper, helper.tank, ref direct);
                                 break;
 
                             case AIDriverType.Pilot:
                                 // Fly and doggyfight
-                                BAviator.MotivateFly(this.helper, this.helper.tank);
-                                BAviator.Dogfighting(this.helper, this.helper.tank);
+                                BAviator.Dogfighting(helper, helper.tank);
+                                BAviator.MotivateFly(helper, helper.tank, ref direct);
                                 break;
-                                /*
+
                             case AIDriverType.Stationary:
                                 // STAY and guard
-                                BBase.HoldPosition(this.helper, this.helper.tank);
-                                BGeneral.AidDefend(this.helper, this.helper.tank);
-                                break;*/
+                                BGeneral.AidDefend(helper, helper.tank);
+                                BBase.HoldSupport(helper, helper.tank, ref direct);
+                                break;
 
                             case AIDriverType.AutoSet:
                                 // Set ourselves up automatically
                                 DebugTAC_AI.Log("TACtical_AI: AIDriver is set to AutoSet, but this should have been handled beforehand!");
                                 DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
-                                this.helper.DriverType = AIDriverType.Tank;
+                                helper.DriverType = AIDriverType.Tank;
                                 break;
 
 
                             default:
-                                DebugTAC_AI.Log("TACtical_AI: AIDriver is set to an invalid state - " + this.helper.DriverType);
+                                DebugTAC_AI.Log("TACtical_AI: AIDriver is set to an invalid state - " + helper.DriverType);
                                 DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
-                                this.helper.DriverType = AIDriverType.Tank;
+                                helper.DriverType = AIDriverType.Tank;
                                 break;
                         }
                         break;
                     case AIType.Assault:
                         // Up your arsenal
-                        BAssassin.MotivateKill(this.helper, this.helper.tank);
-                        BAssassin.ShootToDestroy(this.helper, this.helper.tank);
+                        BAssassin.ShootToDestroy(helper, helper.tank);
+                        BAssassin.MotivateKill(helper, helper.tank, ref direct);
                         break;
 
                     case AIType.Aegis:
                         // I fight for my friends (priority resource techs pending)
-                        BAegis.MotivateProtect(this.helper, this.helper.tank);
-                        BGeneral.AidDefend(this.helper, this.helper.tank);
+                        BGeneral.AidDefend(helper, helper.tank);
+                        BAegis.MotivateProtect(helper, helper.tank, ref direct);
                         break;
 
                     case AIType.Prospector:
                         // We back in the mine
-                        BProspector.MotivateMine(this.helper, this.helper.tank);
-                        BGeneral.SelfDefend(this.helper, this.helper.tank);
+                        BGeneral.SelfDefend(helper, helper.tank);
+                        BProspector.MotivateMine(helper, helper.tank, ref direct);
                         break;
 
                     case AIType.Scrapper:
                         // Grab Scrape and sell
-                        BScrapper.MotivateFind(this.helper, this.helper.tank);
-                        BGeneral.SelfDefend(this.helper, this.helper.tank);
+                        BGeneral.SelfDefend(helper, helper.tank);
+                        BScrapper.MotivateFind(helper, helper.tank, ref direct);
                         break;
 
                     case AIType.Energizer:
                         // The thing that keeps going
-                        BEnergizer.MotivateCharge(this.helper, this.helper.tank);
-                        BGeneral.SelfDefend(this.helper, this.helper.tank);
+                        BGeneral.SelfDefend(helper, helper.tank);
+                        BEnergizer.MotivateCharge(helper, helper.tank, ref direct);
                         break;
 
                     case AIType.MTTurret:
                         // Load, Aim,    FIIIIIRRRRRRRRRRRRRRRRRRRRRRRRRRRE!!!
-                        BMultiTech.MTStatic(this.helper, this.helper.tank);
-                        //EMultiTech.FollowTurretBelow(this.helper, this.helper.tank);
-                        BMultiTech.BeamLockWithinBounds(this.helper, this.helper.tank); //lock rigidbody with closest non-MT Tech on build beam
-                        BMultiTech.MimicDefend(this.helper, this.helper.tank);
+                        BMultiTech.MimicDefend(helper, helper.tank);
+                        BMultiTech.MTStatic(helper, helper.tank, ref direct);
+                        //EMultiTech.FollowTurretBelow(helper, helper.tank, ref direct);
+                        BMultiTech.BeamLockWithinBounds(helper, helper.tank); //lock rigidbody with closest non-MT Tech on build beam
                         break;
 
                     case AIType.MTStatic:
                         // Defend and sit like good guard dog
-                        BMultiTech.MTStatic(this.helper, this.helper.tank);
-                        BMultiTech.BeamLockWithinBounds(this.helper, this.helper.tank); //lock rigidbody with closest non-MT Tech on build beam
-                        BMultiTech.MimicDefend(this.helper, this.helper.tank);
+                        BMultiTech.MimicDefend(helper, helper.tank);
+                        BMultiTech.MTStatic(helper, helper.tank, ref direct);
+                        BMultiTech.BeamLockWithinBounds(helper, helper.tank); //lock rigidbody with closest non-MT Tech on build beam
                         break;
 
                     case AIType.MTMimic:
                         // Copycat
-                        BMultiTech.MimicAllClosestAlly(this.helper, this.helper.tank);
+                        BMultiTech.MimicAllClosestAlly(helper, helper.tank, ref direct);
                         break;
 
                     default:
-                        DebugTAC_AI.Log("TACtical_AI: AIType is set to an invalid state - " + this.helper.DediAI);
+                        DebugTAC_AI.Log("TACtical_AI: AIType is set to an invalid state - " + helper.DediAI);
                         DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
-                        this.helper.DediAI = AIType.Escort;
+                        helper.DediAI = AIType.Escort;
                         break;
                 }
             }
+            helper.SetDirectedControl(direct);
         }
 
     }

@@ -39,10 +39,10 @@ namespace TAC_AI.AI
         }
 
         public Vector3 AimTarget = Vector3.zero;
-        public Vector2 SceneStayPos = Vector2.zero;
+        public WorldPosition SceneStayPos = WorldPosition.FromGameWorldPosition(Vector3.zero);
         public float HoldHeight = 0;
 
-        public Vector3 MovePosition => SceneStayPos.ToVector3XZ(HoldHeight);
+        public Vector3 PathPoint => SceneStayPos.ScenePosition.SetY(HoldHeight);
         public Vector2 IdleFacingDirect = Vector2.up;
 
         public void Initiate(Tank tank, AIECore.TankAIHelper helper, EnemyMind mind = null)
@@ -52,7 +52,7 @@ namespace TAC_AI.AI
             EnemyMind = mind;
 
             HoldHeight = tank.boundsCentreWorld.y;
-            SceneStayPos = tank.boundsCentreWorld.ToVector2XZ();
+            SceneStayPos = WorldPosition.FromScenePosition(tank.boundsCentreWorld);
             /*
             List<Tank> Techs = AIECore.TankAIManager.GetNonEnemyTanks(Tank.Team);
             Techs.Remove(tank);
@@ -67,7 +67,7 @@ namespace TAC_AI.AI
 
             helper.TryAnchor();
             if (!tank.IsAnchored)
-                helper.TryAnchor();
+                helper.TryReallyAnchor(true);
 
             DebugTAC_AI.Info("TACtical_AI: Added static AI for " + Tank.name);
         }
@@ -76,7 +76,7 @@ namespace TAC_AI.AI
             EnemyMind = mind;
         }
 
-        public void DriveDirector()
+        public void DriveDirector(ref EControlCoreSet core)
         {
             if (Helper == null)
             {
@@ -85,7 +85,7 @@ namespace TAC_AI.AI
                 return;
             }
 
-            if (Helper.AIState == AIAlignment.Player)// Allied
+            if (Helper.AIAlign == AIAlignment.Player)// Allied
             {
                 if (AICore == null)
                 {
@@ -93,15 +93,15 @@ namespace TAC_AI.AI
                     DebugTAC_AI.Assert(true, "TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
                     return;
                 }
-                AICore.DriveDirector();
+                AICore.DriveDirector(ref core);
             }
             else//ENEMY
             {
-                AICore.DriveDirectorEnemy(EnemyMind);
+                AICore.DriveDirectorEnemy(EnemyMind, ref core);
             }
         }
 
-        public void DriveDirectorRTS()
+        public void DriveDirectorRTS(ref EControlCoreSet core)
         {   // Ignore player movement commands but follow attack commands
             if (Helper == null)
             {
@@ -110,7 +110,7 @@ namespace TAC_AI.AI
                 return;
             }
 
-            if (Helper.AIState == AIAlignment.Player)// Allied
+            if (Helper.AIAlign == AIAlignment.Player)// Allied
             {
                 if (AICore == null)
                 {
@@ -118,27 +118,27 @@ namespace TAC_AI.AI
                     DebugTAC_AI.Assert(true, "TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
                     return;
                 }
-                AICore.DriveDirectorRTS();
+                AICore.DriveDirectorRTS(ref core);
             }
             else//ENEMY
             {
-                AICore.DriveDirectorEnemy(EnemyMind);
+                AICore.DriveDirectorEnemy(EnemyMind, ref core);
             }
         }
 
-        public void DriveMaintainer(TankControl thisControl)
+        public void DriveMaintainer(TankControl thisControl, ref EControlCoreSet core)
         {
             thisControl.m_Movement.m_USE_AVOIDANCE = false;
-            AICore.DriveMaintainer(thisControl, Helper, Tank);
+            AICore.DriveMaintainer(thisControl, Helper, Tank, ref core);
         }
 
         public void OnMoveWorldOrigin(IntVector3 move)
         {
-            SceneStayPos += (Vector2)move.ToVector2XZ();
+            //SceneStayPos += (Vector2)move.ToVector2XZ();
         }
         public Vector3 GetDestination()
         {
-            return SceneStayPos.ToVector3XZ(HoldHeight);
+            return PathPoint;
         }
 
         public void Recycle()

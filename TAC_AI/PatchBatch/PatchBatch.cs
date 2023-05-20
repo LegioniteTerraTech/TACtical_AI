@@ -84,6 +84,8 @@ namespace TAC_AI
 
         public override void Update()
         {
+            if (ManUI.inst.HasInitialised)
+                DebugTAC_AI.DoShowWarnings();
         }
     }
 #endif
@@ -142,6 +144,48 @@ namespace TAC_AI
                 return true;
             }
         }
+        // DEBUGGGGGGGGGGGGGG
+        /*
+        [HarmonyPatch(typeof(Debug))]
+        [HarmonyPatch("DrawLine", typeof(Vector3), typeof(Vector3), typeof(Color))]
+        internal static class OverrrideDRAW
+        {
+            private static bool Prefix(ref Vector3 start, ref Vector3 end, ref Color color)
+            {
+                DebugRawTechSpawner.DrawDirIndicator(start, end, color);
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(Gizmos))]
+        [HarmonyPatch("DrawSphere")]
+        internal static class OverrrideDRAW2
+        {
+            private static bool Prefix(ref Vector3 center, ref float radius)
+            {
+                DebugRawTechSpawner.DrawDirIndicatorSphere(center, radius, Color.blue);
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(Gizmos))]
+        [HarmonyPatch("DrawCube")]
+        internal static class OverrrideDRAW3
+        {
+            private static bool Prefix(ref Vector3 center, ref Vector3 size)
+            {
+                DebugRawTechSpawner.DrawDirIndicatorRecPriz(center, size, Color.magenta);
+                return false;
+            }
+        }
+        [HarmonyPatch(typeof(Gizmos))]
+        [HarmonyPatch("DrawLine")]
+        internal static class OverrrideDRAW4
+        {
+            private static bool Prefix(ref Vector3 from, ref Vector3 to)
+            {
+                DebugRawTechSpawner.DrawDirIndicator(from, to, Color.grey);
+                return false;
+            }
+        }*/
 #else
         [HarmonyPatch(typeof(Tank))]
         [HarmonyPatch("IsEnemy", typeof(int), typeof(int))]//

@@ -10,9 +10,13 @@ namespace TAC_AI
     {
         internal static bool LogAll = false;
         internal static bool ShouldLog = true;
-        internal static bool ShouldLogPathing = true;
+        internal static bool ShouldLogPathing = false;
         private static bool ShouldLogNet = true;
+#if DEBUG
+        private static bool LogDev = true;
+#else
         private static bool LogDev = false;
+#endif
 
         internal static void Info(string message)
         {
@@ -73,6 +77,38 @@ namespace TAC_AI
         internal static void Exception(string message)
         {
             throw new Exception("TACtical_AI: Exception - ", new Exception(message));
+        }
+        private static List<string> warning = new List<string>();
+        private static bool postStartup = false;
+        private static bool seriousError = false;
+        internal static void ErrorReport(string Warning)
+        {
+            warning.Add(Warning);
+            seriousError = true;
+        }
+        internal static void Warning(string Warning)
+        {
+            warning.Add(Warning);
+        }
+        internal static void DoShowWarnings()
+        {
+            if (warning.Any())
+            {
+                foreach (var item in warning)
+                {
+                    ManUI.inst.ShowErrorPopup("Adv.AI: " + item);
+                }
+                warning.Clear();
+                if (!postStartup && seriousError)
+                {
+                    if (TerraTechETCUtil.MassPatcher.CheckIfUnstable())
+                        ManUI.inst.ShowErrorPopup("Advanced AI: Error happened on Unstable Branch.  If the issue persists, switch back to Stable Branch.");
+                    else
+                        ManUI.inst.ShowErrorPopup("Advanced AI: Error happened during startup!  Advanced AI might not work correctly.");
+                }
+                seriousError = false;
+            }
+            postStartup = true;
         }
         internal static void FatalError()
         {

@@ -12,83 +12,83 @@ namespace TAC_AI.AI.AlliedOperations
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void HoldSupport(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void HoldSupport(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Base) what to do movement-wise
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = true;
-            thisInst.Retreat = true;    //Prevent the auto-driveaaaa
+            thisInst.ChaseThreat = false;    //Prevent the auto-driveaaaa
 
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
 
             thisInst.SetDistanceFromTaskUnneeded();
 
             thisInst.PivotOnly = true;
             thisInst.SettleDown();
-            if (thisInst.lastEnemy)
+            if (thisInst.lastEnemyGet)
             {
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
-                thisInst.Steer = true;
-                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                direct.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDir = EDriveFacing.Forwards;
+                direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
             }
             else
             {
                 if (thisInst.ActionPause <= 0)
                 {
                     thisInst.ActionPause = UnityEngine.Random.Range(50, 300);
-                    thisInst.DriveDest = EDriveDest.None;
-                    thisInst.Steer = false;
-                    thisInst.lastDestination = tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50));
+                    direct.DriveDest = EDriveDest.None;
+                    direct.DriveDir = EDriveFacing.Neutral;
+                    direct.lastDestination = tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50));
                 }
                 else if (thisInst.ActionPause < 160)
                 {
-                    thisInst.DriveDest = EDriveDest.None;
-                    thisInst.Steer = false;
+                    direct.DriveDest = EDriveDest.None;
+                    direct.DriveDir = EDriveFacing.Neutral;
                 }
                 else
                 {
-                    thisInst.DriveDest = EDriveDest.ToLastDestination;
-                    thisInst.Steer = true;
+                    direct.DriveDest = EDriveDest.ToLastDestination;
+                    direct.DriveDir = EDriveFacing.Forwards;
                 }
             }
         }
-        public static void HoldProtect(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void HoldProtect(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Base) what to do movement-wise
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = true;
-            thisInst.Retreat = true;    //Prevent the auto-driveaaaa
+            thisInst.ChaseThreat = false;    //Prevent the auto-driveaaaa
 
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
 
             thisInst.SetDistanceFromTaskUnneeded();
 
             thisInst.PivotOnly = true;
             thisInst.SettleDown();
-            if (thisInst.lastEnemy)
+            if (thisInst.lastEnemyGet)
             {
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
-                thisInst.Steer = true;
-                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                direct.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDir = EDriveFacing.Forwards;
+                direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
             }
             else
             {
                 if (thisInst.ActionPause <= 0)
                 {
                     thisInst.ActionPause = UnityEngine.Random.Range(50, 300);
-                    thisInst.DriveDest = EDriveDest.None;
-                    thisInst.Steer = false;
-                    thisInst.lastDestination = tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50));
+                    direct.DriveDest = EDriveDest.None;
+                    direct.DriveDir = EDriveFacing.Neutral;
+                    direct.lastDestination = tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50));
                 }
                 else if (thisInst.ActionPause < 160)
                 {
-                    thisInst.DriveDest = EDriveDest.None;
-                    thisInst.Steer = false;
+                    direct.DriveDest = EDriveDest.None;
+                    direct.DriveDir = EDriveFacing.Neutral;
                 }
                 else
                 {
-                    thisInst.DriveDest = EDriveDest.ToLastDestination;
-                    thisInst.Steer = true;
+                    direct.DriveDest = EDriveDest.ToLastDestination;
+                    direct.DriveDir = EDriveFacing.Forwards;
                 }
             }
         }

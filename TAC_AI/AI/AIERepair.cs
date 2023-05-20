@@ -11,23 +11,6 @@ using TerraTechETCUtil;
 
 namespace TAC_AI.AI
 {
-    [Serializable]
-    public class BlockMemory
-    {   // Save the blocks!
-        public string t = BlockTypes.GSOAIController_111.ToString(); //blocktype
-        public Vector3 p = Vector3.zero;
-        public OrthoRotation.r r = OrthoRotation.r.u000;
-
-        /// <summary>
-        /// get rid of floating point errors
-        /// </summary>
-        public void TidyUp()
-        {
-            p.x = Mathf.RoundToInt(p.x);
-            p.y = Mathf.RoundToInt(p.y);
-            p.z = Mathf.RoundToInt(p.z);
-        }
-    }
     /*
     [Serializable]
     public class BlockMemoryLegacy
@@ -101,11 +84,11 @@ namespace TAC_AI.AI
             public bool conveyorsBorked = false;
             public int ReserveSuperGrabs = 0;
             public Func<BlockTypes, bool> purchaseOp;
-            private BlockMemory templateCache;
+            private RawBlockMem templateCache;
 
-            private List<BlockMemory> SavedTech = new List<BlockMemory>();
+            private readonly List<RawBlockMem> SavedTech = new List<RawBlockMem>();
             public bool blockIntegrityDirty = true;
-            private Dictionary<BlockTypes, List<BlockMemory>> fastBlockLookup = new Dictionary<BlockTypes, List<BlockMemory>>();
+            private Dictionary<BlockTypes, List<RawBlockMem>> fastBlockLookup = new Dictionary<BlockTypes, List<RawBlockMem>>();
             private List<BlockTypes> MissingTypes = new List<BlockTypes>();
 
             // Handling this
@@ -131,11 +114,10 @@ namespace TAC_AI.AI
                 CancelInvoke();
                 tank.DetachEvent.Unsubscribe(Compromised);
                 thisInst.FinishedRepairEvent.Unsubscribe(OnFinishedBuilding);
-                gameObject.GetComponent<AIECore.TankAIHelper>().TechMemor = null;
                 DestroyImmediate(this);
             }
 
-            public void OnFinishedBuilding()
+            public void OnFinishedBuilding(AIECore.TankAIHelper unused)
             {
                 if (conveyorsBorked)
                 {
@@ -145,7 +127,7 @@ namespace TAC_AI.AI
             }
             public void Compromised(TankBlock removedBlock, Tank tank)
             {
-                if (thisInst.AIState == AIAlignment.Player)
+                if (thisInst.AIAlign == AIAlignment.Player)
                 {
                     if (!ManNetwork.IsNetworked)
                     {
@@ -162,7 +144,7 @@ namespace TAC_AI.AI
                     {
                         if (thisInst.lastPlayer)
                         {
-                            if (thisInst.lastEnemy && !thisInst.BoltsFired)// only save when not in combat Or exploding bolts
+                            if (thisInst.lastEnemyGet && !thisInst.BoltsFired)// only save when not in combat Or exploding bolts
                             {
                                 Invoke("SaveTech", 0.01f);
                                 return;
@@ -195,7 +177,7 @@ namespace TAC_AI.AI
 
                 foreach (TankBlock bloc in ToSave)
                 {
-                    BlockMemory mem = new BlockMemory
+                    RawBlockMem mem = new RawBlockMem
                     {
                         t = bloc.name,
                         p = bloc.cachedLocalPosition,
@@ -222,7 +204,7 @@ namespace TAC_AI.AI
                 SavedTech.Clear();
                 foreach (TankBlock bloc in overwrite)
                 {
-                    BlockMemory mem = new BlockMemory
+                    RawBlockMem mem = new RawBlockMem
                     {
                         t = bloc.name,
                         p = bloc.cachedLocalPosition,
@@ -241,7 +223,7 @@ namespace TAC_AI.AI
             private void ValidateTechIfNeeded()
             {
                 if (ManNetwork.IsNetworked)
-                    if (!TempManager.ValidateBlocksInTech(ref SavedTech))
+                    if (!TempManager.ValidateBlocksInTechAndPurgeIfNeeded(SavedTech))
                         DebugTAC_AI.Log("TACtical_AI: DesignMemory - Found illegal blocks for " + tank.name
                             + " and purged them from memory to prevent self-repair meltdown");
             }
@@ -256,32 +238,29 @@ namespace TAC_AI.AI
             private void BuildTechQuickLookup()
             {
                 fastBlockLookup.Clear();
-                List<BlockTypes> types = GetBlockTypesFromMemory();
-                foreach (var item in types)
+                foreach (var item in IterateBlockTypesFromMemory())
                 {
                     string Name = ManSpawn.inst.GetBlockPrefab(item).name;
-                    List<BlockMemory> LP = new List<BlockMemory>();
+                    List<RawBlockMem> newEntry = new List<RawBlockMem>();
 
                     int hash = Name.GetHashCode();
-                    List<BlockMemory> BM = SavedTech.FindAll(delegate (BlockMemory cand) { return cand.t.GetHashCode() == hash; });
-                    foreach (var position in BM)
+                    foreach (var position in SavedTech.FindAll(delegate (RawBlockMem cand) { return cand.t.GetHashCode() == hash; }))
                     {
-                        LP.Add(position);
+                        newEntry.Add(position);
                     }
-                    fastBlockLookup.Add(item, LP);
+                    fastBlockLookup.Add(item, newEntry);
                     //Debug.Info("TACtical_AI: BuildTechQuickLookup - processed " + LP.Count + " entries for " + item);
                 }
             }
 
 
-            public void MemoryToTech(List<BlockMemory> overwrite)
+            public void MemoryToTech(List<RawBlockMem> overwrite)
             {   // Loading a Tech from the BlockMemory
                 rejectSaveAttempts = true;
                 blockIntegrityDirty = true;
                 MissingTypes.Clear();
                 SavedTech.Clear();
-                List<BlockMemory> clean = new List<BlockMemory>();
-                foreach (BlockMemory mem in overwrite)
+                foreach (RawBlockMem mem in overwrite)
                 {
                     BlockTypes type = BlockIndexer.StringToBlockType(mem.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
@@ -291,9 +270,8 @@ namespace TAC_AI.AI
                     }
                     // get rid of floating point errors
                     mem.TidyUp();
-                    clean.Add(mem);
+                    SavedTech.Add(mem);
                 }
-                SavedTech = clean;
                 DebugTAC_AI.Log("TACtical_AI:  DesignMemory - Overwrote(MemoryToTech) " + tank.name);
                 //build AROUND the cab pls
                 //if (SavedTech.Count() > 1)
@@ -303,11 +281,11 @@ namespace TAC_AI.AI
             }
             public TankBlock TryFindProperRootBlock(List<TankBlock> ToSearch)
             {
-                return FindProperRootBlockExternal(ToSearch);
+                return RawTechTemplate.FindProperRootBlockExternal(ToSearch);
             }
-            public List<BlockMemory> TechToMemory()
+            public List<RawBlockMem> TechToMemory()
             {
-                return TechToMemoryExternal(tank);
+                return RawTechTemplate.TechToMemoryExternal(tank);
             }
 
             private void VerifyIntegrity()
@@ -321,10 +299,7 @@ namespace TAC_AI.AI
                     return;
                 }
                 MissingTypes.Clear();
-                List<BlockTypes> typesToRepair = GetBlockTypesFromMemory();
-                int typesToSearch = typesToRepair.Count();
-
-                foreach (BlockTypes repairCase in typesToRepair)
+                foreach (BlockTypes repairCase in IterateBlockTypesFromMemory())
                 {
                     int present = cBlocks.FindAll(delegate (TankBlock cand) { return repairCase == cand.BlockType; }).Count;
                     string Name = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(repairCase).name;
@@ -333,7 +308,7 @@ namespace TAC_AI.AI
                     if (mem2 > present)// are some blocks not accounted for?
                         MissingTypes.Add(repairCase);
                 }
-                DebugTAC_AI.Log("TACtical AI: VerifyIntegrity - Executed with " + MissingTypes.Count + " results");
+                DebugTAC_AI.Info("TACtical AI: VerifyIntegrity - Executed with " + MissingTypes.Count + " results");
                 blockIntegrityDirty = false;
             }
             private void VerifyIntegritySLOW()
@@ -348,8 +323,8 @@ namespace TAC_AI.AI
                 }
                 MissingTypes.Clear();
                 List<BlockTypes> typesToRepair = new List<BlockTypes>();
-                List<BlockMemory> mem = ReturnContents();
-                int toFilter = mem.Count();
+                List<RawBlockMem> mem = IterateReturnContents();
+                int toFilter = mem.Count;
                 List<string> filteredNames = new List<string>();
                 for (int step = 0; step < toFilter; step++)
                 {
@@ -367,7 +342,7 @@ namespace TAC_AI.AI
                     int present = cBlocks.FindAll(delegate (TankBlock cand) { return typesToRepair[step] == cand.BlockType; }).Count;
                     string Name = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(typesToRepair[step]).name;
 
-                    int mem2 = mem.FindAll(delegate (BlockMemory cand) { return Name == cand.t; }).Count;
+                    int mem2 = mem.FindAll(delegate (RawBlockMem cand) { return Name == cand.t; }).Count;
                     if (mem2 > present)// are some blocks not accounted for?
                         MissingTypes.Add(typesToRepair[step]);
                 }
@@ -412,31 +387,32 @@ namespace TAC_AI.AI
                 VerifyIntegrity();
                 return MissingTypes;
             }
-            public List<BlockTypes> GetBlockTypesFromMemory()
+            private static List<BlockTypes> typesBatchCache = new List<BlockTypes>();
+            private static List<BlockTypes> typesToRepair = new List<BlockTypes>();
+            public List<BlockTypes> IterateBlockTypesFromMemory()
             {
                 if (fastBlockLookup.Count > 0)
                 {
-                    List<BlockTypes> typesBatchCache = new List<BlockTypes>();
+                    typesBatchCache.Clear();
                     foreach (var item in fastBlockLookup)
                     {
                         typesBatchCache.Add(item.Key);
                     }
                     return typesBatchCache;
                 }
-                List<BlockMemory> mem = ReturnContents();
-                int toFilter = mem.Count();
-                List<string> filteredNames = new List<string>();
-                for (int step = 0; step < toFilter; step++)
+                List<RawBlockMem> mem = IterateReturnContents();
+                HashSet<string> namesDone = new HashSet<string>();
+                typesToRepair.Clear();
+                for (int step = 0; step < mem.Count; step++)
                 {
-                    filteredNames.Add(mem.ElementAt(step).t);
+                    string name = mem.ElementAt(step).t;
+                    if (!namesDone.Contains(name))
+                    {
+                        typesToRepair.Add(BlockIndexer.StringToBlockType(name));
+                        namesDone.Add(name);
+                    }
                 }
-                filteredNames = filteredNames.Distinct().ToList();
-                List<BlockTypes> typesToRepair = new List<BlockTypes>();
-                for (int step = 0; step < filteredNames.Count; step++)
-                {
-                    typesToRepair.Add(BlockIndexer.StringToBlockType(filteredNames.ElementAt(step)));
-                }
-                return typesToRepair.Distinct().ToList();
+                return typesToRepair;
             }
 
 
@@ -454,7 +430,7 @@ namespace TAC_AI.AI
                     return false;
                 if (KickStart.CommitDeathMode)
                 {
-                    if (UnityEngine.Random.Range(0, 500) < 150)
+                    if (UnityEngine.Random.Range(0, 2000) < 150)
                     {
                         //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " reclaim attempt success");
                         ReserveSuperGrabs++;
@@ -463,7 +439,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (UnityEngine.Random.Range(0, 500) < KickStart.Difficulty)
+                    if (UnityEngine.Random.Range(0, 2000) < KickStart.Difficulty)
                     {
                         //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " reclaim attempt success");
                         ReserveSuperGrabs++;
@@ -476,11 +452,11 @@ namespace TAC_AI.AI
             {
                 bool attemptW;
                 // if we are smrt, run heavier operation
-                List<BlockMemory> posBlocks = ReturnAllPositionsOfTypeSLOW(foundBlock.name);
+                List<RawBlockMem> posBlocks = ReturnAllPositionsOfTypeSLOW(foundBlock.name);
                 //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
-                    BlockMemory template = posBlocks.ElementAt(step2);
+                    RawBlockMem template = posBlocks.ElementAt(step2);
                     attemptW = QueueBlockAttach(template, foundBlock);
                     if (attemptW)
                     {
@@ -512,7 +488,7 @@ namespace TAC_AI.AI
                     }
 
                     thisInst.DropBlock();
-                    success = AIBlockAttachRequest(tank, templateCache, held);
+                    success = AIBlockAttachRequest(tank, templateCache, held, false);
 
                     if (success)
                     {
@@ -527,7 +503,7 @@ namespace TAC_AI.AI
                             ManSFX.inst.AttachInstanceToPosition(soundSteal[(int)held.BlockConnectionAudioType].PlayEvent(), held.centreOfMassWorld);
                         }
                     }
-                    if (tank.IsAnchored && thisInst.AIState == AIAlignment.NonPlayer)
+                    if (tank.IsAnchored && thisInst.AIAlign == AIAlignment.NonPlayer)
                     {
                         MakeMinersMineUnlimited();
                     }
@@ -543,7 +519,7 @@ namespace TAC_AI.AI
                 TryAttachHeldBlock();
                 CancelInvoke("TryAttachHeldBlock");
             }
-            public void AttachOperation(Visible block, BlockMemory mem, out Vector3 offsetVec)
+            public void AttachOperation(Visible block, RawBlockMem mem, out Vector3 offsetVec)
             {
                 if (templateCache != null)
                 {
@@ -560,7 +536,7 @@ namespace TAC_AI.AI
             // JSON
             public void TechToJSONLog()
             {   // Saving a Tech from the BlockMemory
-                List<BlockMemory> mem = TechToMemory();
+                List<RawBlockMem> mem = TechToMemory();
                 if (mem.Count == 0)
                     return;
                 SavedTech.Clear();
@@ -588,6 +564,8 @@ namespace TAC_AI.AI
             }
             public void JSONToTech(string toLoad)
             {   // Loading a Tech from the BlockMemory
+                if (toLoad.NullOrEmpty())
+                    throw new NullReferenceException("JSONToTech input field is null");
                 StringBuilder RAW = new StringBuilder();
                 foreach (char ch in toLoad)
                 {
@@ -596,20 +574,28 @@ namespace TAC_AI.AI
                         RAW.Append(ch);
                     }
                 }
-                List<BlockMemory> mem = new List<BlockMemory>();
+                List<RawBlockMem> mem = new List<RawBlockMem>();
                 StringBuilder blockCase = new StringBuilder();
                 string RAWout = RAW.ToString();
                 foreach (char ch in RAWout)
                 {
                     if (ch == '|')//new block
                     {
-                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                        try
+                        {
+                            mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
+                        }
+                        catch { DebugTAC_AI.Log("JSONToTech failed on entry " + mem.Count); }
                         blockCase.Clear();
                     }
                     else
                         blockCase.Append(ch);
                 }
-                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                try
+                {
+                    mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
+                }
+                catch { DebugTAC_AI.Log("JSONToTech failed on last entry"); }
                 //DebugTAC_AI.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
                 MemoryToTech(mem);
             }
@@ -624,19 +610,28 @@ namespace TAC_AI.AI
             public void SetupForNewTechConstruction(AIECore.TankAIHelper thisInst, string JSON)
             {
                 JSONToTech(JSON);
+                DebugTAC_AI.Log("TechMemor of " + tank.name + " has " + SavedTech.Count + " entries");
                 CheckGameTamperedWith(tank, this);
                 thisInst.PendingDamageCheck = true;
             }
 
             // Load operation
-            public List<BlockMemory> ReturnContents()
+            public List<RawBlockMem> ReturnContents()
+            {
+                return new List<RawBlockMem>(IterateReturnContents());
+            }
+            /// <summary>
+            /// creates no junk but DO NOT ALTER!!!
+            /// </summary>
+            /// <returns></returns>
+            internal List<RawBlockMem> IterateReturnContents()
             {
                 if (SavedTech.Count() == 0)
                 {
                     DebugTAC_AI.Log("TACtical_AI: INVALID TECH DATA STORED FOR TANK " + tank.name);
                     DebugTAC_AI.Log("TACtical_AI: " + StackTraceUtility.ExtractStackTrace());
                 }
-                return new List<BlockMemory>(SavedTech);
+                return SavedTech;
             }
 
             /// <summary>
@@ -645,10 +640,10 @@ namespace TAC_AI.AI
             /// </summary>
             /// <param name="blockGOName"></param>
             /// <returns></returns>
-            public List<BlockMemory> ReturnAllPositionsOfTypeSLOW(string blockGOName)
+            public List<RawBlockMem> ReturnAllPositionsOfTypeSLOW(string blockGOName)
             {
                 int hash = blockGOName.GetHashCode();
-                return SavedTech.FindAll(delegate (BlockMemory cand) { return cand.t.GetHashCode() == hash; });
+                return SavedTech.FindAll(delegate (RawBlockMem cand) { return cand.t.GetHashCode() == hash; });
             }
 
             /// <summary>
@@ -658,9 +653,9 @@ namespace TAC_AI.AI
             /// </summary>
             /// <param name="blockGOName"></param>
             /// <returns></returns>
-            public List<BlockMemory> ReturnAllPositionsOfMultipleTypes(List<BlockTypes> types)
+            public List<RawBlockMem> ReturnAllPositionsOfMultipleTypes(List<BlockTypes> types)
             {
-                List<int> hashes = new List<int>();
+                HashSet<int> hashes = new HashSet<int>();
                 foreach (var item in types)
                 {
                     try
@@ -669,19 +664,19 @@ namespace TAC_AI.AI
                     }
                     catch { }
                 }
-                return SavedTech.FindAll(delegate (BlockMemory cand) { return hashes.Contains(cand.t.GetHashCode()); });
+                return SavedTech.FindAll(delegate (RawBlockMem cand) { return hashes.Contains(cand.t.GetHashCode()); });
             }
 
-            public List<BlockMemory> ReturnAllPositionsOfType(BlockTypes blocktype)
+            private static readonly List<RawBlockMem> emptyMem = new List<RawBlockMem>();
+            public List<RawBlockMem> ReturnAllPositionsOfType(BlockTypes blocktype)
             {
-
-                if (fastBlockLookup.TryGetValue(blocktype, out List<BlockMemory> mems))
+                if (fastBlockLookup.TryGetValue(blocktype, out List<RawBlockMem> mems))
                 {
                     //Debug.Info("TACtical_AI:  DesignMemory - ReturnAllPositionsOfType " + tank.name + " looked for " + blocktype + " and found " + mems.Count);
                     return mems;
                 }
                 //Debug.Info("TACtical_AI:  DesignMemory - ReturnAllPositionsOfType " + tank.name + " looked for " + blocktype + " and found nothing");
-                return new List<BlockMemory>();
+                return emptyMem;
             }
 
             // Infinite money for enemy autominer bases - resources are limited
@@ -715,288 +710,18 @@ namespace TAC_AI.AI
             }
 
 
-            //External
-            /// <summary>
-            /// Mandatory for techs that have plans to be built over time by the building AI.
-            /// The first block being an anchored block will determine if the entire techs live or not
-            ///   on spawning. If this fails, there's a good chance the AI could have wasted money on it.
-            /// </summary>
-            /// <param name="ToSearch">The list of blocks to find the new root in</param>
-            /// <returns>The new Root block</returns>
-            public static TankBlock FindProperRootBlockExternal(List<TankBlock> ToSearch)
-            {
-                bool IsAnchoredAnchorPresent = false;
-                float close = 128 * 128;
-                TankBlock newRoot = ToSearch.First();
-                foreach (TankBlock bloc in ToSearch)
-                {
-                    Vector3 blockPos = bloc.CalcFirstFilledCellLocalPos();
-                    float sqrMag = blockPos.sqrMagnitude;
-                    if (bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
-                    {   // If there's an anchored anchor, then we base the root off of that
-                        //  It's probably a base
-                        IsAnchoredAnchorPresent = true;
-                        break;
-                    }
-                    if (sqrMag < close && (bloc.GetComponent<ModuleTechController>() || bloc.GetComponent<ModuleAIBot>()))
-                    {
-                        close = sqrMag;
-                        newRoot = bloc;
-                    }
-                }
-                if (IsAnchoredAnchorPresent)
-                {
-                    close = 128 * 128;
-                    foreach (TankBlock bloc in ToSearch)
-                    {
-                        Vector3 blockPos = bloc.CalcFirstFilledCellLocalPos();
-                        float sqrMag = blockPos.sqrMagnitude;
-                        if (sqrMag < close && bloc.GetComponent<ModuleAnchor>() && bloc.GetComponent<ModuleAnchor>().IsAnchored)
-                        {
-                            close = sqrMag;
-                            newRoot = bloc;
-                        }
-                    }
-                }
-                return newRoot;
-            }
-
-            /// <summary>
-            /// Mandatory for techs that have plans to be built over time by the building AI.
-            /// The first block being an anchored block will determine if the entire techs live or not
-            ///   on spawning. If this fails, there's a good chance the AI could have wasted money on it.
-            /// </summary>
-            /// <param name="ToSearch">The list of saved blocks to find the new root in</param>
-            /// <returns>The new Root block</returns>
-            public static TankPreset.BlockSpec FindProperRootBlockExternal(List<TankPreset.BlockSpec> ToSearch)
-            {
-                bool IsAnchoredAnchorPresent = false;
-                float close = 128 * 128;
-                TankPreset.BlockSpec newRoot = ToSearch.First();
-                foreach (TankPreset.BlockSpec blocS in ToSearch)
-                {
-                    TankBlock bloc = ManSpawn.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(blocS.block));
-                    Vector3 blockPos = blocS.position + new OrthoRotation((OrthoRotation.r)blocS.orthoRotation) * bloc.filledCells[0];
-                    if (bloc.GetComponent<ModuleAnchor>() && blocS.CheckIsAnchored())
-                    {
-                        IsAnchoredAnchorPresent = true;
-                        break;
-                    }
-                    float sqrMag = blockPos.sqrMagnitude;
-                    if (sqrMag < close && (bloc.GetComponent<ModuleTechController>() || bloc.GetComponent<ModuleAIBot>()))
-                    {
-                        close = sqrMag;
-                        newRoot = blocS;
-                    }
-                }
-                if (IsAnchoredAnchorPresent)
-                {
-                    close = 128 * 128;
-                    foreach (TankPreset.BlockSpec blocS in ToSearch)
-                    {
-                        TankBlock bloc = ManSpawn.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(blocS.block));
-                        Vector3 blockPos = blocS.position + new OrthoRotation((OrthoRotation.r)blocS.orthoRotation) * bloc.filledCells[0];
-                        float sqrMag = blockPos.sqrMagnitude;
-                        if (sqrMag < close && bloc.GetComponent<ModuleAnchor>() && blocS.CheckIsAnchored())
-                        {
-                            close = sqrMag;
-                            newRoot = blocS;
-                        }
-                    }
-                }
-                return newRoot;
-            }
-
-            /// <summary>
-            /// Mandatory for techs that have plans to be built over time by the building AI.
-            /// Since the first block placed ultimately determines the base rotation of the Tech
-            ///  (Arrow shown on Radar/minimap) we must be ABSOLUTELY SURE to build teh Tech in relation
-            ///   to that first block.
-            ///   Any alteration on the first block's rotation will have severe consequences in the long run.
-            ///   
-            /// Split techs on the other hand are mostly free from this issue.
-            /// </summary>
-            /// <param name="ToSearch">The list of blocks to find the new foot in</param>
-            /// <returns></returns>
-            public static List<BlockMemory> TechToMemoryExternal(Tank tank)
-            {
-                // This resaves the whole tech cab-forwards regardless of original rotation
-                //   It's because any solutions that involve the cab in a funny direction will demand unholy workarounds.
-                //   I seriously don't know why the devs didn't try it this way, perhaps due to lag reasons.
-                //   or the blocks that don't allow upright placement (just detach those lmao)
-                List<BlockMemory> output = new List<BlockMemory>();
-                List<TankBlock> ToSave = tank.blockman.IterateBlocks().ToList();
-                Vector3 coreOffset = Vector3.zero;
-                Quaternion coreRot;
-                TankBlock rootBlock = FindProperRootBlockExternal(ToSave);
-                if (rootBlock != null)
-                {
-                    if (rootBlock != ToSave.First())
-                    {
-                        ToSave.Remove(rootBlock);
-                        ToSave.Insert(0, rootBlock);
-                    }
-                    coreOffset = rootBlock.trans.localPosition;
-                    coreRot = rootBlock.trans.localRotation;
-                    tank.blockman.SetRootBlock(rootBlock);
-                }
-                else
-                    coreRot = new OrthoRotation(OrthoRotation.r.u000);
-
-                foreach (TankBlock bloc in ToSave)
-                {
-                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(bloc.BlockType))
-                        continue;
-                    Quaternion deltaRot = Quaternion.Inverse(coreRot);
-                    BlockMemory mem = new BlockMemory
-                    {
-                        t = bloc.name,
-                        p = deltaRot * (bloc.trans.localPosition - coreOffset)
-                    };
-                    // get rid of floating point errors
-                    mem.TidyUp();
-                    //Get the rotation
-                    mem.r = SetCorrectRotation(bloc.trans.localRotation, deltaRot).rot;
-                    if (!IsValidRotation(bloc, mem.r))
-                    {   // block cannot be saved - illegal rotation.
-                        DebugTAC_AI.Log("TACtical_AI:  DesignMemory - " + tank.name + ": could not save " + bloc.name + " in blueprint due to illegal rotation.");
-                        continue;
-                    }
-                    output.Add(mem);
-                }
-                DebugTAC_AI.Info("TACtical_AI:  DesignMemory - Saved " + tank.name + " to memory format");
-
-                return output;
-            }
-
-            /// <summary>
-            /// Mandatory for techs that have plans to be built over time by the building AI.
-            /// Since the first block placed ultimately determines the base rotation of the Tech
-            ///  (Arrow shown on Radar/minimap) we must be ABSOLUTELY SURE to build teh Tech in relation
-            ///   to that first block.
-            ///   Any alteration on the first block's rotation will have severe consequences in the long run.
-            ///   
-            /// Split techs on the other hand are mostly free from this issue.
-            /// </summary>
-            /// <param name="ToSearch">The list of blocks to find the new foot in</param>
-            /// <returns></returns>
-            public static List<BlockMemory> TechToMemoryExternal(TechData tank)
-            {
-                // This resaves the whole tech cab-forwards regardless of original rotation
-                //   It's because any solutions that involve the cab in a funny direction will demand unholy workarounds.
-                //   I seriously don't know why the devs didn't try it this way, perhaps due to lag reasons.
-                //   or the blocks that don't allow upright placement (just detach those lmao)
-                List<BlockMemory> output = new List<BlockMemory>();
-                List<TankPreset.BlockSpec> ToSave = tank.m_BlockSpecs;
-                Quaternion coreRot;
-                TankPreset.BlockSpec rootBlock = FindProperRootBlockExternal(ToSave);
-                if (rootBlock.m_BlockType != ToSave.First().m_BlockType)
-                {
-                    ToSave.Remove(rootBlock);
-                    ToSave.Insert(0, rootBlock);
-                }
-                Vector3 coreOffset = rootBlock.position;
-                coreRot = new OrthoRotation((OrthoRotation.r)rootBlock.orthoRotation);
-
-                foreach (TankPreset.BlockSpec blocS in ToSave)
-                {
-                    BlockTypes BT = BlockIndexer.StringToBlockType(blocS.block);
-                    TankBlock bloc = ManSpawn.inst.GetBlockPrefab(BT);
-                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(BT))
-                        continue;
-                    Quaternion deltaRot = Quaternion.Inverse(coreRot);
-                    BlockMemory mem = new BlockMemory
-                    {
-                        t = bloc.name,
-                        p = deltaRot * (blocS.position - coreOffset)
-                    };
-                    // get rid of floating point errors
-                    mem.TidyUp();
-                    //Get the rotation
-                    mem.r = SetCorrectRotation(new OrthoRotation((OrthoRotation.r)rootBlock.orthoRotation), deltaRot).rot;
-                    if (!IsValidRotation(bloc, mem.r))
-                    {   // block cannot be saved - illegal rotation.
-                        continue;
-                    }
-                    output.Add(mem);
-                }
-                return output;
-            }
-            public static string TechToJSONExternal(Tank tank)
-            {   // Saving a Tech from the BlockMemory
-                return MemoryToJSONExternal(TechToMemoryExternal(tank));
-            }
-            public static string MemoryToJSONExternal(List<BlockMemory> mem)
-            {   // Saving a Tech from the BlockMemory
-                if (mem.Count == 0)
-                    return null;
-                StringBuilder JSONTechRAW = new StringBuilder();
-                JSONTechRAW.Append(JsonUtility.ToJson(mem.First()));
-                for (int step = 1; step < mem.Count; step++)
-                {
-                    JSONTechRAW.Append("|");
-                    JSONTechRAW.Append(JsonUtility.ToJson(mem.ElementAt(step)));
-                }
-                string JSONTechRAWout = JSONTechRAW.ToString();
-                StringBuilder JSONTech = new StringBuilder();
-                foreach (char ch in JSONTechRAWout)
-                {
-                    if (ch == '"')
-                    {
-                        //JSONTech.Append("\\");
-                        JSONTech.Append(ch);
-                    }
-                    else
-                        JSONTech.Append(ch);
-                }
-                //DebugTAC_AI.Log("TACtical_AI: " + JSONTech.ToString());
-                return JSONTech.ToString();
-            }
-            public static List<BlockMemory> JSONToMemoryExternal(string toLoad)
-            {   // Loading a Tech from the BlockMemory
-                StringBuilder RAW = new StringBuilder();
-                foreach (char ch in toLoad)
-                {
-                    if (ch != '\\')
-                    {
-                        RAW.Append(ch);
-                    }
-                }
-                List<BlockMemory> mem = new List<BlockMemory>();
-                StringBuilder blockCase = new StringBuilder();
-                string RAWout = RAW.ToString();
-                foreach (char ch in RAWout)
-                {
-                    if (ch == '|')//new block
-                    {
-                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
-                        blockCase.Clear();
-                    }
-                    else
-                        blockCase.Append(ch);
-                }
-                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
-                //DebugTAC_AI.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
-                return mem;
-            }
-
             // EXPERIMENT
             public static void RebuildTechForwards(Tank tank)
             {
-                List<BlockMemory> mem = TechToMemoryExternal(tank);
+                List<RawBlockMem> mem = RawTechTemplate.TechToMemoryExternal(tank);
                 List<TankBlock> blocks = DitchAllBlocks(tank, true);
                 TurboconstructExt(tank, mem, blocks, false);
             }
             public static List<TankBlock> DitchAllBlocks(Tank tank, bool addToThisFrameLater)
             {
-                try
-                {
-                    List<TankBlock> blockCache = tank.blockman.IterateBlocks().ToList();
-                    tank.blockman.Disintegrate(true, addToThisFrameLater);
-                    return blockCache;
-                }
-                catch { }
-                return new List<TankBlock>();
+                List<TankBlock> blockCache = tank.blockman.IterateBlocks().ToList();
+                tank.blockman.Disintegrate(true, addToThisFrameLater);
+                return blockCache;
             }
 
 
@@ -1011,11 +736,11 @@ namespace TAC_AI.AI
             {
                 if (!KickStart.EnemiesHaveCreativeInventory)
                 {
-                    if (Enemy.RBases.TryMakePurchase(BlockType, tank.Team))
+                    float priceIsRight = Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(BlockType, true);
+                    if (Enemy.RLoadedBases.TryMakePurchase(BlockType, tank.Team))
                     {
                         DebugTAC_AI.Info("TACtical_AI: AI " + tank.name + ": bought " + BlockType
-                            + " from the shop for "
-                            + Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(BlockType, true));
+                            + " from the shop for " + priceIsRight);
 
                         if (!KickStart.MuteNonPlayerRacket)
                             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Buy);
@@ -1023,10 +748,18 @@ namespace TAC_AI.AI
                     }
                     else
                     {
+                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Could not afford " + BlockType
+                            + " from the shop for " + priceIsRight + " because ");
+                        if (Enemy.RLoadedBases.GetTeamFunder(tank.Team) == null)
+                            DebugTAC_AI.Log(" No team funder!");
+                        else
+                            DebugTAC_AI.Log(" Funds are " + Enemy.RLoadedBases.GetTeamFunder(tank.Team).BuildBucks + ", but cost is " +
+                                priceIsRight);
                         return false;
                     }
                 }
-                return true;
+                else
+                    return true;
             }
 
 
@@ -1034,10 +767,10 @@ namespace TAC_AI.AI
 
             //Controlling code that re-attaches loose blocks for AI techs.
             public BlockTypes lastAttached;
-            public bool QueueBlockAttach(BlockMemory template, TankBlock canidate, bool purchase = false)
+            public bool QueueBlockAttach(RawBlockMem template, TankBlock canidate, bool NeedPurchase = false)
             {
                 if (ManNetwork.IsNetworked)
-                    return AttemptBlockAttachImmediate(template, canidate, purchase);
+                    return AttemptBlockAttachImmediate(template, canidate, NeedPurchase);
 
                 if (!tank.visible.isActive || !canidate)
                 {
@@ -1050,7 +783,7 @@ namespace TAC_AI.AI
                 if (tank.CanAttachBlock(canidate, template.p, new OrthoRotation(template.r)))
                 {
                     //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
-                    if (!purchase || HandlePurchase())
+                    if (!NeedPurchase || HandlePurchase())
                     {
                         AttachOperation(canidate.visible, template, out _);
                         lastAttached = canidate.BlockType;
@@ -1059,14 +792,19 @@ namespace TAC_AI.AI
                     else
                     {
                         ranOutOfParts = true;
+                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Team " + tank.Team + " is out of parts!");
                         lastAttached = BlockTypes.GSOAIController_111;
                         return true;
                     }
                 }
                 else
+                {
+                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Could not attach block " +
+                   //     "- no available AP connections between block and Tech target coordinates!");
                     return false;
+                }
             }
-            public bool QueueBlockAttach(BlockMemory template, TankBlock canidate, out Vector3 offsetVec, bool purchase = false)
+            public bool QueueBlockAttach(RawBlockMem template, TankBlock canidate, out Vector3 offsetVec, bool purchase = false)
             {
                 offsetVec = Vector3.zero;
                 if (ManNetwork.IsNetworked)
@@ -1074,6 +812,7 @@ namespace TAC_AI.AI
 
                 if (!tank.visible.isActive || !canidate)
                 {
+                    DebugTAC_AI.Log("TACtical_AI: QueueBlockAttach Canidate is NotNull : " + canidate);
                     lastAttached = BlockTypes.GSOAIController_111;
                     return false;
                 }
@@ -1092,17 +831,20 @@ namespace TAC_AI.AI
                     else
                     {
                         ranOutOfParts = true;
+                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Team " + tank.Team + " is out of parts!");
                         lastAttached = BlockTypes.GSOAIController_111;
                         return true;
                     }
                 }
                 else
                 {
+                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Could not attach block " +
+                    //    "- no available AP connections between block and Tech target coordinates!");
                     lastAttached = BlockTypes.GSOAIController_111;
                     return false;
                 }
             }
-            public bool AttemptBlockAttachImmediate(BlockMemory template, TankBlock canidate, bool purchase = false)
+            public bool AttemptBlockAttachImmediate(RawBlockMem template, TankBlock canidate, bool purchase = false)
             {
                 lastAttached = BlockTypes.GSOAIController_111;
                 if (!tank.visible.isActive || !canidate)
@@ -1118,7 +860,7 @@ namespace TAC_AI.AI
                 RushAttachOpIfNeeded();
 
                 ranOutOfParts = false;
-                bool success = AIBlockAttachRequest(tank, template, canidate);
+                bool success = AIBlockAttachRequest(tank, template, canidate, false);
 
                 if (success)
                 {
@@ -1149,7 +891,7 @@ namespace TAC_AI.AI
             public List<TankBlock> FindBlocksNearbyTank()
             {
                 List<TankBlock> fBlocks = new List<TankBlock>();
-                foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, AIGlobals.MaxBlockGrabRange, new Bitfield<ObjectTypes>()))//new ObjectTypes[1]{ObjectTypes.Block})
+                foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, AIGlobals.MaxBlockGrabRange, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Block })))
                 {
                     if ((bool)foundBlock.block && foundBlock.GetComponent<WorldSpaceObject>().IsEnabled)
                     {
@@ -1181,12 +923,12 @@ namespace TAC_AI.AI
                         continue;
                     bool attemptW;
                     // if we are smrt, run heavier operation
-                    List<BlockMemory> posBlocks = ReturnAllPositionsOfType(BT);
+                    List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(BT);
                     int count = posBlocks.Count;
                     //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                     for (int step2 = 0; step2 < count; step2++)
                     {
-                        BlockMemory template = posBlocks.ElementAt(step2);
+                        RawBlockMem template = posBlocks.ElementAt(step2);
                         attemptW = QueueBlockAttach(template, foundBlock);
                         if (attemptW)
                         {
@@ -1216,12 +958,12 @@ namespace TAC_AI.AI
                     bool attemptW;
                     // if we are smrt, run heavier operation
 
-                    List<BlockMemory> posBlocks = ReturnAllPositionsOfType(BT);
+                    List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(BT);
                     int count = posBlocks.Count;
                     //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                     for (int step2 = 0; step2 < count; step2++)
                     {
-                        BlockMemory template = posBlocks.ElementAt(step2);
+                        RawBlockMem template = posBlocks.ElementAt(step2);
                         attemptW = AttemptBlockAttachImmediate(template, foundBlock);
                         if (attemptW)
                         {
@@ -1242,6 +984,7 @@ namespace TAC_AI.AI
             internal bool TrySpawnAndAttachBlockFromList(ref List<BlockTypes> typesMissing, bool playerInventory = false, bool purchase = false)
             {
                 int attachAttempts = typesMissing.Count();
+                //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Types Missing " + attachAttempts + " | playerInv " + playerInventory);
                 for (int step = 0; step < attachAttempts; step++)
                 {
                     BlockTypes bType = typesMissing.ElementAt(step);
@@ -1258,7 +1001,8 @@ namespace TAC_AI.AI
                     }
                     ranOutOfParts = false;
 
-                    TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (thisInst.lastTechExtents + 10)), Quaternion.identity, out bool worked);
+                    TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + 
+                        (Vector3.up * (thisInst.lastTechExtents + 10)), Quaternion.identity, out bool worked);
                     if (!worked)
                     {
                         DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");
@@ -1266,7 +1010,7 @@ namespace TAC_AI.AI
                     }
                     bool attemptW;
 
-                    List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
+                    List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(bType);
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
@@ -1280,7 +1024,7 @@ namespace TAC_AI.AI
                     //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                     for (int step2 = 0; step2 < count; step2++)
                     {
-                        BlockMemory template = posBlocks.ElementAt(step2);
+                        RawBlockMem template = posBlocks.ElementAt(step2);
                         attemptW = QueueBlockAttach(template, foundBlock, out Vector3 offsetVec, purchase);
                         if (attemptW)
                         {
@@ -1306,6 +1050,7 @@ namespace TAC_AI.AI
                     //Vector3 yeet = Vector3.forward * 450000;
                     //foundBlock.transform.position = yeet;
                 }
+                //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - ATTACH ATTEMPT FAILED!");
                 return false;
             }
 
@@ -1343,7 +1088,7 @@ namespace TAC_AI.AI
 
                     bool attemptW;
 
-                    List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
+                    List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(bType);
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
@@ -1363,7 +1108,7 @@ namespace TAC_AI.AI
                         }
                         for (int step2 = 0; step2 < count; step2++)
                         {
-                            BlockMemory template = posBlocks.ElementAt(step2);
+                            RawBlockMem template = posBlocks.ElementAt(step2);
                             attemptW = AttemptBlockAttachImmediate(template, foundBlock, purchase);
                             if (attemptW)
                             {
@@ -1417,7 +1162,7 @@ namespace TAC_AI.AI
                     }
                     bool attemptW;
 
-                    List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
+                    List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(bType);
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
@@ -1430,7 +1175,7 @@ namespace TAC_AI.AI
                     //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                     for (int step2 = 0; step2 < count; step2++)
                     {
-                        BlockMemory template = posBlocks.ElementAt(step2);
+                        RawBlockMem template = posBlocks.ElementAt(step2);
                         attemptW = QueueBlockAttach(template, foundBlock, out Vector3 offsetVec, purchase);
                         if (attemptW)
                         {
@@ -1501,7 +1246,7 @@ namespace TAC_AI.AI
                     }
                     ranOutOfParts = false;
 
-                    List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
+                    List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(bType);
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
@@ -1523,7 +1268,7 @@ namespace TAC_AI.AI
                         //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                         for (int step2 = 0; step2 < count; step2++)
                         {
-                            BlockMemory template = posBlocks.ElementAt(step2);
+                            RawBlockMem template = posBlocks.ElementAt(step2);
                             attemptW = AttemptBlockAttachImmediate(template, foundBlock, purchase);
                             if (attemptW)
                             {
@@ -1565,7 +1310,7 @@ namespace TAC_AI.AI
                 }
                 ranOutOfParts = false;
 
-                List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
+                List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(bType);
                 int count = posBlocks.Count();
                 if (count == 0)
                     return false;
@@ -1583,7 +1328,7 @@ namespace TAC_AI.AI
                 //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < count; step2++)
                 {
-                    BlockMemory template = posBlocks.ElementAt(step2);
+                    RawBlockMem template = posBlocks.ElementAt(step2);
                     attemptW = tank.CanAttachBlock(prefabBlock, template.p, new OrthoRotation(template.r));
                     if (attemptW)
                     {
@@ -1627,7 +1372,7 @@ namespace TAC_AI.AI
                 }
                 bool attemptW;
 
-                List<BlockMemory> posBlocks = ReturnAllPositionsOfType(bType);
+                List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(bType);
                 int count = posBlocks.Count();
                 if (count == 0)
                     return false;
@@ -1635,7 +1380,7 @@ namespace TAC_AI.AI
                 //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < count; step2++)
                 {
-                    BlockMemory template = posBlocks.ElementAt(step2);
+                    RawBlockMem template = posBlocks.ElementAt(step2);
                     attemptW = tank.CanAttachBlock(prefabBlock, template.p, new OrthoRotation(template.r));
                     if (attemptW)
                     {
@@ -1663,6 +1408,7 @@ namespace TAC_AI.AI
         {
 
             return true; // can't fetch proper context for some reason
+            /*
             Singleton.Manager<ManTechBuilder>.inst.ClearBlockRotationOverride(TB);
             OrthoRotation.r[] rots = Singleton.Manager<ManTechBuilder>.inst.GetBlockRotationOrder(TB);
             Singleton.Manager<ManTechBuilder>.inst.ClearBlockRotationOverride(TB);
@@ -1670,7 +1416,7 @@ namespace TAC_AI.AI
             {   // block cannot be saved - illegal rotation.
                 return false;
             }
-            return true;
+            return true;*/
         }
 
         public static OrthoRotation SetCorrectRotation(Quaternion blockRot, Quaternion changeRot)
@@ -1716,14 +1462,14 @@ namespace TAC_AI.AI
                     RAW.Append(ch);
                 }
             }
-            BlockMemory mem = new BlockMemory();
+            RawBlockMem mem = new RawBlockMem();
             string RAWout = RAW.ToString();
             StringBuilder blockCase = new StringBuilder();
             foreach (char ch in RAWout)
             {
                 if (ch == '|')//new block
                 {
-                    mem = JsonUtility.FromJson<BlockMemory>(blockCase.ToString());
+                    mem = JsonUtility.FromJson<RawBlockMem>(blockCase.ToString());
                     break;
                 }
                 else
@@ -1734,17 +1480,24 @@ namespace TAC_AI.AI
         }
 
 
-        public static bool AIBlockAttachRequest(Tank tank, BlockMemory template, TankBlock canidate)
+        public static bool AIBlockAttachRequest(Tank tank, RawBlockMem template, TankBlock canidate, bool mandatory)
         {
             bool success;
             //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
             if (!ManNetwork.inst.IsMultiplayer())
+            {
                 success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.p, new OrthoRotation(template.r));
+                if (!success && mandatory)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": RequestAttachBlock - Failed to attach " + canidate.name + " at " + template.p);
+                    throw new Exception("TACtical_AI: a block that SHOULD be attached was rejected!");
+                }
+            }
             else
                 success = BlockAttachNetworkOverride(tank, template, canidate);
             return success;
         }
-        private static bool BlockAttachNetworkOverride(Tank tank, BlockMemory template, TankBlock canidate)
+        private static bool BlockAttachNetworkOverride(Tank tank, RawBlockMem template, TankBlock canidate)
         {
             if (!ManNetwork.IsHost)
             {
@@ -1788,7 +1541,6 @@ namespace TAC_AI.AI
         // Player AI respective repair operations
         private static bool PreRepairPrep(Tank tank, DesignMemory TechMemor)
         {
-            List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             if (TechMemor.IsNull())
             {
                 DebugTAC_AI.Log("TACtical_AI: RepairLerp called with no valid DesignMemory!!!");
@@ -1796,8 +1548,8 @@ namespace TAC_AI.AI
                 TechMemor.Initiate();
                 return false;
             }
-            int savedBCount = TechMemor.ReturnContents().Count;
-            int cBCount = cBlocks.Count;
+            int savedBCount = TechMemor.IterateReturnContents().Count;
+            int cBCount = tank.blockman.IterateBlocks().Count();
             //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount < cBCount)
             {
@@ -1820,7 +1572,7 @@ namespace TAC_AI.AI
 
             if (TechMemor.TryAttachExistingBlockFromList(ref typesMissing, ref fBlocks))
                 return true;
-            if (thisInst.useInventory)
+            if (thisInst.UseInventory)
             {
                 //DebugTAC_AI.Log("TACtical AI: RepairLerp - Attempting to repair from inventory");
                 RawTechLoader.ResetSkinIDSet();
@@ -1835,7 +1587,7 @@ namespace TAC_AI.AI
 
             if (TechMemor.TryAttachExistingBlockFromListInst( ref typesMissing, ref fBlocks))
                 return true;
-            if (thisInst.useInventory)
+            if (thisInst.UseInventory)
             {
                 //DebugTAC_AI.Log("TACtical AI: RepairLerp - Attempting to repair from inventory");
                 RawTechLoader.ResetSkinIDSet();
@@ -1852,7 +1604,7 @@ namespace TAC_AI.AI
                 //List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
                 TechMemor.RushAttachOpIfNeeded();
                 if (RepairAttempts == 0)
-                    RepairAttempts = TechMemor.ReturnContents().Count();
+                    RepairAttempts = TechMemor.IterateReturnContents().Count();
 
                 AIECore.TankAIHelper help = TechMemor.thisInst;
 
@@ -1921,7 +1673,10 @@ namespace TAC_AI.AI
                         List<TankBlock> fBlocks = TechMemor.FindBlocksNearbyTank();
                         List<BlockTypes> typesMissing = TechMemor.GetMissingBlockTypes();
 
-                        RepairLerp(tank, TechMemor, thisInst, ref fBlocks, ref typesMissing);
+                        if (!RepairLerp(tank, TechMemor, thisInst, ref fBlocks, ref typesMissing))
+                        {
+                            //DebugTAC_AI.Log("TACtical_AI: AlliedRepairStepper - unknown error on RepairLerp for " + tank.name);
+                        } 
                         TechMemor.UpdateMissingBlockTypes(typesMissing);
                         thisInst.PendingDamageCheck = TechMemor.SystemsCheck();
                         //thisInst.AttemptedRepairs = 1;
@@ -1932,7 +1687,7 @@ namespace TAC_AI.AI
                     if (!thisInst.PendingDamageCheck && initialBlockCount != tank.blockman.blockCount)
                     {
                         DebugTAC_AI.Log("TACtical_AI: AlliedRepairStepper - Done for " + tank.name);
-                        thisInst.FinishedRepairEvent.Send();
+                        thisInst.FinishedRepairEvent.Send(thisInst);
                     }
                     //DebugTAC_AI.Log("TACtical AI: RepairStepper(" + tank.name + ") - Pending check: " + thisInst.PendingSystemsCheck);
                 }
@@ -1974,7 +1729,7 @@ namespace TAC_AI.AI
                 return false;
             var thisInst = tank.GetComponent<AIECore.TankAIHelper>();
             bool blocksNearby = false;
-            foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, (thisInst.RangeToChase / 4), new Bitfield<ObjectTypes>()))//new ObjectTypes[1]{ObjectTypes.Block})
+            foreach (Visible foundBlock in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(tank.boundsCentreWorldNoCheck, (thisInst.MaxCombatRange / 4), new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Block })))//new ObjectTypes[1]{ObjectTypes.Block})
             {
                 if (foundBlock.block.IsNotNull() && foundBlock.GetComponent<WorldSpaceObject>().IsEnabled)
                 {
@@ -1983,7 +1738,7 @@ namespace TAC_AI.AI
                         if (foundBlock.block.PreExplodePulse)
                             continue; //explode? no thanks
                                       //DebugTAC_AI.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
-                        if (TechMemor.ReturnContents().FindAll(delegate (BlockMemory cand) { return cand.t == foundBlock.block.name; }).Count() > 0)
+                        if (TechMemor.IterateReturnContents().FindAll(delegate (RawBlockMem cand) { return cand.t == foundBlock.block.name; }).Count() > 0)
                         {
                             blocksNearby = true;
                             break;
@@ -1991,15 +1746,15 @@ namespace TAC_AI.AI
                     }
                 }
             }
-            if (thisInst.AIState == AIAlignment.NonPlayer)
+            if (thisInst.AIAlign == AIAlignment.NonPlayer)
             {
                 var mind = tank.GetComponent<Enemy.EnemyMind>();
-                if ((mind.AllowRepairsOnFly || (thisInst.lastEnemy.IsNull())) && (blocksNearby || KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks))
+                if ((mind.AllowRepairsOnFly || (thisInst.lastEnemyGet.IsNull())) && (blocksNearby || KickStart.EnemiesHaveCreativeInventory || mind.AllowInvBlocks))
                 {
                     return true;
                 }
             }
-            else if (thisInst.AIState == AIAlignment.Player && (blocksNearby || thisInst.useInventory))
+            else if (thisInst.AIAlign == AIAlignment.Player && (blocksNearby || thisInst.UseInventory))
             {
                 return true;
             }
@@ -2027,6 +1782,7 @@ namespace TAC_AI.AI
                 if (Singleton.Manager<ManPlayer>.inst.InventoryIsUnrestricted)
                 {
                     //no need to return to infinite stockpile
+                    return true;
                 }
                 else
                 {
@@ -2109,9 +1865,9 @@ namespace TAC_AI.AI
         }
         internal static void Turboconstruct(Tank tank, DesignMemory TechMemor, bool fullyCharge = true)
         {
-            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.ReturnContents().Count());
+            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.IterateReturnContents().Count());
             int cBCount = tank.blockman.IterateBlocks().ToList().Count();
-            int RepairAttempts = TechMemor.ReturnContents().Count() - cBCount + 3;
+            int RepairAttempts = TechMemor.IterateReturnContents().Count() - cBCount + 3;
             if (TechMemor.IsNull())
             {
                 DebugTAC_AI.Log("TACtical_AI: TurboRepair called with no valid EnemyDesignMemory!!!");
@@ -2136,9 +1892,9 @@ namespace TAC_AI.AI
         }
         internal static void Turboconstruct(Tank tank, DesignMemory TechMemor, ref List<TankBlock> provided)
         {
-            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.ReturnContents().Count());
+            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.IterateReturnContents().Count());
             int cBCount = tank.blockman.IterateBlocks().ToList().Count();
-            int RepairAttempts = TechMemor.ReturnContents().Count() - cBCount + 3;
+            int RepairAttempts = TechMemor.IterateReturnContents().Count() - cBCount + 3;
             if (TechMemor.IsNull())
             {
                 DebugTAC_AI.Log("TACtical_AI: TurboRepair called with no valid EnemyDesignMemory!!!");
@@ -2161,7 +1917,7 @@ namespace TAC_AI.AI
         }
         internal static void TurboRepair(Tank tank, DesignMemory TechMemor, ref List<BlockTypes> typesMissing)
         {
-            int savedBCount = TechMemor.ReturnContents().Count;
+            int savedBCount = TechMemor.IterateReturnContents().Count;
             int cBCount = tank.blockman.IterateBlocks().ToList().Count;
             //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount != cBCount)
@@ -2174,7 +1930,7 @@ namespace TAC_AI.AI
         }
         internal static void TurboRepairSupplies(Tank tank, DesignMemory TechMemor, ref List<BlockTypes> typesMissing, ref List<TankBlock> provided)
         {
-            int savedBCount = TechMemor.ReturnContents().Count;
+            int savedBCount = TechMemor.IterateReturnContents().Count;
             int cBCount = tank.blockman.IterateBlocks().ToList().Count;
             //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount != cBCount)
@@ -2193,7 +1949,7 @@ namespace TAC_AI.AI
         /// </summary>
         /// <param name="tank"></param>
         /// <param name="TechMemor"></param>
-        public static void TurboconstructExt(Tank tank, List<BlockMemory> Mem, bool fullyCharge = true)
+        public static void TurboconstructExt(Tank tank, List<RawBlockMem> Mem, bool fullyCharge = true)
         {
             DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
             int cBCount = tank.blockman.IterateBlocks().ToList().Count();
@@ -2201,7 +1957,7 @@ namespace TAC_AI.AI
             try
             {
                 List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
-                List<BlockTypes> typesMissing = GetMissingBlockTypesExt(Mem, cBlocks);
+                List<BlockTypes> typesMissing = IterateMissingBlockTypesExt(Mem, cBlocks);
                 while (RepairAttempts > 0)
                 {
                     TurboRepairExt(tank, Mem, ref typesMissing);
@@ -2217,7 +1973,7 @@ namespace TAC_AI.AI
         /// </summary>
         /// <param name="tank"></param>
         /// <param name="TechMemor"></param>
-        public static void TurboconstructExt(Tank tank, List<BlockMemory> Mem, List<TankBlock> provided, bool fullyCharge = true)
+        public static void TurboconstructExt(Tank tank, List<RawBlockMem> Mem, List<TankBlock> provided, bool fullyCharge = true)
         {
             DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
             int cBCount = tank.blockman.IterateBlocks().ToList().Count();
@@ -2225,7 +1981,7 @@ namespace TAC_AI.AI
             try
             {
                 List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
-                List<BlockTypes> typesMissing = GetMissingBlockTypesExt(Mem, cBlocks);
+                List<BlockTypes> typesMissing = IterateMissingBlockTypesExt(Mem, cBlocks);
                 while (RepairAttempts > 0)
                 {
                     TurboRepairExt(tank, Mem, ref typesMissing, ref provided);
@@ -2242,7 +1998,7 @@ namespace TAC_AI.AI
         /// <param name="tank"></param>
         /// <param name="Mem"></param>
         /// <param name="typesMissing"></param>
-        public static void TurboRepairExt(Tank tank, List<BlockMemory> Mem, ref List<BlockTypes> typesMissing)
+        public static void TurboRepairExt(Tank tank, List<RawBlockMem> Mem, ref List<BlockTypes> typesMissing)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             int savedBCount = Mem.Count;
@@ -2256,7 +2012,7 @@ namespace TAC_AI.AI
             }
             return;
         }
-        public static void TurboRepairExt(Tank tank, List<BlockMemory> Mem, ref List<BlockTypes> typesMissing, ref List<TankBlock> provided)
+        public static void TurboRepairExt(Tank tank, List<RawBlockMem> Mem, ref List<BlockTypes> typesMissing, ref List<TankBlock> provided)
         {
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             int savedBCount = Mem.Count;
@@ -2270,9 +2026,10 @@ namespace TAC_AI.AI
             }
             return;
         }
-        public static List<BlockTypes> GetMissingBlockTypesExt(List<BlockMemory> Mem, List<TankBlock> cBlocks)
+        private static List<BlockTypes> typesToRepair = new List<BlockTypes>();
+        private static List<BlockTypes> typesMissing = new List<BlockTypes>();
+        public static List<BlockTypes> IterateMissingBlockTypesExt(List<RawBlockMem> Mem, List<TankBlock> cBlocks)
         {
-            List<BlockTypes> typesToRepair = new List<BlockTypes>();
             int toFilter = Mem.Count();
             List<string> filteredNames = new List<string>();
             for (int step = 0; step < toFilter; step++)
@@ -2286,20 +2043,21 @@ namespace TAC_AI.AI
             }
             //typesToRepair = typesToRepair.Distinct().ToList();
 
-            List<BlockTypes> typesMissing = new List<BlockTypes>();
+            typesMissing.Clear();
             int toFilter2 = typesToRepair.Count();
             for (int step = 0; step < toFilter2; step++)
             {
                 int present = cBlocks.FindAll(delegate (TankBlock cand) { return typesToRepair[step] == cand.BlockType; }).Count;
                 string Name = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(typesToRepair[step]).name;
 
-                int mem = Mem.FindAll(delegate (BlockMemory cand) { return Name == cand.t; }).Count;
+                int mem = Mem.FindAll(delegate (RawBlockMem cand) { return Name == cand.t; }).Count;
                 if (mem > present)// are some blocks not accounted for?
                     typesMissing.Add(typesToRepair[step]);
             }
+            typesToRepair.Clear();
             return typesMissing;
         }
-        private static bool TrySpawnAndAttachBlockFromListExt(Tank tank, List<BlockMemory> Mem, ref List<BlockTypes> typesMissing)
+        private static bool TrySpawnAndAttachBlockFromListExt(Tank tank, List<RawBlockMem> Mem, ref List<BlockTypes> typesMissing)
         {
             int attachAttempts = typesMissing.Count();
             for (int step = 0; step < attachAttempts; step++)
@@ -2316,7 +2074,7 @@ namespace TAC_AI.AI
                 bool attemptW;
 
                 int hash = foundBlock.name.GetHashCode();
-                List<BlockMemory> posBlocks = Mem.FindAll(delegate (BlockMemory cand) { return cand.t.GetHashCode() == hash;});
+                List<RawBlockMem> posBlocks = Mem.FindAll(delegate (RawBlockMem cand) { return cand.t.GetHashCode() == hash;});
                 if (posBlocks.Count == 0)
                 {
                     typesMissing.RemoveAt(step);
@@ -2327,7 +2085,7 @@ namespace TAC_AI.AI
                 //DebugTAC_AI.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
-                    BlockMemory template = posBlocks.ElementAt(step2);
+                    RawBlockMem template = posBlocks.ElementAt(step2);
                     attemptW = AttemptBlockAttachExt(tank, template, foundBlock);
                     if (attemptW)
                     {
@@ -2339,7 +2097,7 @@ namespace TAC_AI.AI
             }
             return false;
         }
-        public static bool TryAttachExistingBlockFromListExt(Tank tank, List<BlockMemory> mem, ref List<BlockTypes> typesMissing, ref List<TankBlock> foundBlocks, bool denySD = false)
+        public static bool TryAttachExistingBlockFromListExt(Tank tank, List<RawBlockMem> mem, ref List<BlockTypes> typesMissing, ref List<TankBlock> foundBlocks, bool denySD = false)
         {
             int attachAttempts = foundBlocks.Count();
             //DebugTAC_AI.Log("TACtical AI: RepairLerp - Found " + attachAttempts + " loose blocks to use");
@@ -2352,12 +2110,12 @@ namespace TAC_AI.AI
                 bool attemptW;
                 // if we are smrt, run heavier operation
                 int hash = foundBlock.name.GetHashCode();
-                List<BlockMemory> posBlocks = mem.FindAll(delegate (BlockMemory cand) { return cand.t.GetHashCode() == hash;});
+                List<RawBlockMem> posBlocks = mem.FindAll(delegate (RawBlockMem cand) { return cand.t.GetHashCode() == hash;});
                 int count = posBlocks.Count;
                 //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                 for (int step2 = 0; step2 < count; step2++)
                 {
-                    BlockMemory template = posBlocks.ElementAt(step2);
+                    RawBlockMem template = posBlocks.ElementAt(step2);
                     attemptW = AttemptBlockAttachExt(tank, template, foundBlock);
                     if (attemptW)
                     {
@@ -2372,10 +2130,10 @@ namespace TAC_AI.AI
             }
             return false;
         }
-        private static bool AttemptBlockAttachExt(Tank tank, BlockMemory template, TankBlock canidate)
+        private static bool AttemptBlockAttachExt(Tank tank, RawBlockMem template, TankBlock canidate)
         {
             //DebugTAC_AI.Log("TACtical_AI: (AttemptBlockAttachExt) AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
-            return AIBlockAttachRequest(tank, template, canidate);
+            return AIBlockAttachRequest(tank, template, canidate, false);
         }
 
 
@@ -2383,7 +2141,7 @@ namespace TAC_AI.AI
         private static void CheckGameTamperedWith(Tank tank, DesignMemory mem)
         {
             string blockCurrent = tank.blockman.GetBlockAtPosition(new IntVector3(0, 0, 0)).name;
-            string blockSaved = mem.ReturnContents().First().t;
+            string blockSaved = mem.IterateReturnContents().First().t;
             if (blockCurrent != blockSaved)
             {
                 DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Expected " + blockSaved + " at 0,0,0 local blockman, found " + (blockCurrent.NullOrEmpty() ? "NO BLOCK" : blockCurrent.ToString()) + " instead.");

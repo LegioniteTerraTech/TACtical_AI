@@ -16,7 +16,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             this.controller = (AIControllerStatic)controller;
             this.tank = tank;
-            controller.Helper.GroundOffsetHeight = controller.Helper.lastTechExtents + AIGlobals.GeneralAirGroundOffset;
+            controller.Helper.GroundOffsetHeight = controller.Helper.lastTechExtents + AIGlobals.GroundOffsetGeneralAir;
             //DebugTAC_AI.Log("TACtical_AI: StaticAICore - Init");
         }
 
@@ -25,7 +25,7 @@ namespace TAC_AI.AI.Movement.AICores
             throw new NotImplementedException(GetType().Name + " should not be calling AvoidAssist pathfinding");
         }
 
-        public bool DriveDirector()
+        public bool DriveDirector(ref EControlCoreSet core)
         {
             var help = controller.Helper;
             // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");
@@ -39,10 +39,9 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                     controller.HoldHeight = ManWorld.inst.ProjectToGround(tank.boundsCentreWorldNoCheck, true).y + (help.lastTechExtents * 2);
 
-                bool Combat = TryAdjustForCombat(true);
-                if (!Combat)
+                if (!TryAdjustForCombat(true, ref controller.AimTarget, ref core))
                 {
-                    controller.AimTarget = help.lastDestination;
+                    controller.AimTarget = help.lastDestinationCore;
                 }
             }
             catch (Exception e)
@@ -57,8 +56,8 @@ namespace TAC_AI.AI.Movement.AICores
                         DebugTAC_AI.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
                     DebugTAC_AI.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
                     DebugTAC_AI.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
-                    if ((bool)help.lastEnemy)
-                        DebugTAC_AI.Log("TACtical_AI: Target - " + help.lastEnemy.tank.name);
+                    if ((bool)help.lastEnemyGet)
+                        DebugTAC_AI.Log("TACtical_AI: Target - " + help.lastEnemyGet.tank.name);
                     DebugTAC_AI.Log("TACtical_AI: " + e);
                 }
                 catch
@@ -69,15 +68,14 @@ namespace TAC_AI.AI.Movement.AICores
             return true;
         }
 
-        public bool DriveDirectorRTS()
+        public bool DriveDirectorRTS(ref EControlCoreSet core)
         {
-            var help = controller.Helper;
-            DriveDirector();
+            DriveDirector(ref core);
             // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");DriveDirector()
             return true;
         }
 
-        public bool DriveDirectorEnemy(EnemyMind mind)
+        public bool DriveDirectorEnemy(EnemyMind mind, ref EControlCoreSet core)
         {
             var help = controller.Helper;
             if (mind.IsNull())
@@ -91,17 +89,15 @@ namespace TAC_AI.AI.Movement.AICores
             else
                 controller.HoldHeight = ManWorld.inst.ProjectToGround(tank.boundsCentreWorldNoCheck, true).y + (help.lastTechExtents * 2);
 
-
-            bool Combat = TryAdjustForCombatEnemy(mind);
-            if (!Combat)
+            if (!TryAdjustForCombatEnemy(mind, ref controller.AimTarget, ref core))
             {
                 controller.AimTarget = tank.boundsCentreWorldNoCheck + (controller.IdleFacingDirect * 200).ToVector3XZ(0);
             }
-            help.lastDestination = controller.MovePosition;
+            core.lastDestination = controller.PathPoint;
             return true;
         }
 
-        public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
             // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
             if (tank.Anchors.Fixed)
@@ -110,7 +106,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (tank.IsSkyAnchored)
             {   //3D movement
-                SkyMaintainer(thisControl);
+                SkyMaintainer(thisControl, ref core);
             }
             else //Land movement
             {
@@ -121,9 +117,9 @@ namespace TAC_AI.AI.Movement.AICores
 
                 Vector3 destDirect = controller.AimTarget - tank.boundsCentreWorldNoCheck;
                 thisControl.DriveControl = 0;
-                if (thisInst.Steer)
+                if (thisInst.DoSteerCore)
                 {
-                    if (VehicleUtils.Turner(thisControl, thisInst, destDirect, out float turnVal))
+                    if (VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core, out float turnVal))
                         thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
                 }
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, destDirect * thisInst.lastTechExtents, new Color(1, 0, 1));
@@ -131,7 +127,7 @@ namespace TAC_AI.AI.Movement.AICores
                 Vector3 InputLineVal = Vector3.zero;
                 if (!thisInst.techIsApproaching)
                 {
-                    InputLineVal = tank.rootBlockTrans.InverseTransformVector(tank.boundsCentreWorldNoCheck - controller.MovePosition);
+                    InputLineVal = tank.rootBlockTrans.InverseTransformVector(tank.boundsCentreWorldNoCheck - controller.PathPoint);
                     InputLineVal /= AIGlobals.StationaryMoveDampening;
                 }
 
@@ -162,7 +158,7 @@ namespace TAC_AI.AI.Movement.AICores
             return true;
         }
 
-        public void SkyMaintainer(TankControl thisControl)
+        public void SkyMaintainer(TankControl thisControl, ref EControlCoreSet core)
         {
             AIECore.TankAIHelper thisInst = controller.Helper;
             TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
@@ -170,7 +166,7 @@ namespace TAC_AI.AI.Movement.AICores
             float driveMultiplier = 0;
 
             //AI Steering Rotational
-            Vector3 distDiff = controller.SceneStayPos.ToVector3XZ(controller.HoldHeight) - tank.boundsCentreWorldNoCheck;
+            Vector3 distDiff = controller.PathPoint - tank.boundsCentreWorldNoCheck;
             Vector3 turnVal;
             Vector3 forwardFlat = tank.rootBlockTrans.forward;
             forwardFlat.y = 0;
@@ -240,12 +236,12 @@ namespace TAC_AI.AI.Movement.AICores
 
             thisInst.Navi3DDirect = Vector3.zero;
             thisInst.Navi3DUp = Vector3.up;
-            if (thisInst.Steer)
+            if (thisInst.DoSteerCore)
             {
                 control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
-                if (thisInst.lastEnemy.IsNotNull())
+                if (thisInst.lastEnemyGet.IsNotNull())
                 {
-                    thisInst.Navi3DDirect = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
+                    thisInst.Navi3DDirect = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
                 }
                 else
                 {
@@ -259,15 +255,15 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 driveVal;
             if (thisInst.techIsApproaching)
             {
-                driveVal = tank.rootBlockTrans.InverseTransformVector(controller.MovePosition - tank.boundsCentreWorldNoCheck).normalized;
+                driveVal = tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized;
             }
-            else if (thisInst.lastEnemy.IsNotNull() && !thisInst.IsMultiTech && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
+            else if (thisInst.lastEnemyGet.IsNotNull() && !thisInst.IsMultiTech && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
             {   //level alt with enemy
-                controller.HoldHeight = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck.y + 4;
-                driveVal = tank.rootBlockTrans.InverseTransformVector(controller.MovePosition - tank.boundsCentreWorldNoCheck).normalized;
+                controller.HoldHeight = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck.y + 4;
+                driveVal = tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized;
                 if (tank.IsFriendly() && thisInst.lastPlayer.IsNotNull())
                 {
-                    if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.RangeToChase / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
+                    if (thisInst.lastPlayer.tank.boundsCentreWorldNoCheck.y + (thisInst.MaxCombatRange / 3) < thisInst.tank.boundsCentreWorldNoCheck.y)
                         driveVal.y = -1;
                 }
                 else if (controller.HoldHeight + (thisInst.GroundOffsetHeight / 2) > thisInst.tank.boundsCentreWorldNoCheck.y)
@@ -285,18 +281,18 @@ namespace TAC_AI.AI.Movement.AICores
                 if (range < thisInst.MinimumRad - 1)
                 {
                     driveMultiplier = 1f;
-                    driveVal = tank.rootBlockTrans.InverseTransformVector(controller.MovePosition - tank.boundsCentreWorldNoCheck).normalized * 0.3f;
+                    driveVal = tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized * 0.3f;
                 }
                 else if (range > thisInst.MinimumRad + 1)
                 {
-                    driveVal = tank.rootBlockTrans.InverseTransformVector(controller.MovePosition - tank.boundsCentreWorldNoCheck).normalized;
-                    if (thisInst.DriveDir == EDriveFacing.Forwards || thisInst.DriveDir == EDriveFacing.Backwards)
+                    driveVal = tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized;
+                    if (core.DriveDir == EDriveFacing.Forwards || core.DriveDir == EDriveFacing.Backwards)
                         driveMultiplier = 1f;
                     else
                         driveMultiplier = 0.4f;
                 }
                 else
-                    driveVal = tank.rootBlockTrans.InverseTransformVector(controller.MovePosition - tank.boundsCentreWorldNoCheck).normalized;
+                    driveVal = tank.rootBlockTrans.InverseTransformVector(controller.PathPoint - tank.boundsCentreWorldNoCheck).normalized;
             }
 
             bool EmergencyUp = false;
@@ -338,7 +334,7 @@ namespace TAC_AI.AI.Movement.AICores
             // Prevent drifting
             Vector3 final = (driveVal * Mathf.Clamp(distDiff.magnitude / AIGlobals.StationaryMoveDampening, 0, 1) * driveMultiplier).Clamp01Box();
 
-            if (thisInst.DriveDir != EDriveFacing.Neutral)
+            if (core.DriveDir > EDriveFacing.Neutral)
             {
                 if (final.y.Approximately(0, 0.2f))
                     final.y = 0;
@@ -370,46 +366,43 @@ namespace TAC_AI.AI.Movement.AICores
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
             }
-            else if (thisInst.AttackEnemy && thisInst.lastEnemy)
+            else if (thisInst.AttackEnemy && thisInst.lastEnemyGet)
             {
-                if (thisInst.lastEnemy.tank.IsEnemy(tank.Team))
-                    Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.lastEnemy.centrePosition - tank.trans.position, new Color(0, 1, 1));
+                if (thisInst.lastEnemyGet.tank.IsEnemy(tank.Team))
+                    Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.lastEnemyGet.centrePosition - tank.trans.position, new Color(0, 1, 1));
             }
             controlGet.SetValue(tank.control, control3D);
         }
 
-        public bool TryAdjustForCombat(bool between)
+        public bool TryAdjustForCombat(bool between, ref Vector3 pos, ref EControlCoreSet core)
         {
             AIECore.TankAIHelper thisInst = controller.Helper;
             bool output = false;
-            if (thisInst.lastEnemy.IsNotNull())
+            if (thisInst.lastEnemyGet.IsNotNull())
             {
-                Vector3 targPos = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                Vector3 targPos = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
                 output = true;
-                thisInst.Steer = true;
                 thisInst.UpdateEnemyDistance(targPos);
 
-                thisInst.DriveDir = EDriveFacing.Forwards;
-                controller.AimTarget = targPos;
+                core.DriveDir = EDriveFacing.Forwards;
+                pos = targPos;
                 thisInst.MinimumRad = 0;
             }
             else
                 thisInst.IgnoreEnemyDistance();
             return output;
         }
-
-        public bool TryAdjustForCombatEnemy(EnemyMind mind)
+        public bool TryAdjustForCombatEnemy(EnemyMind mind, ref Vector3 pos, ref EControlCoreSet core)
         {
             AIECore.TankAIHelper thisInst = controller.Helper;
             bool output = false;
-            if (thisInst.lastEnemy.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)
+            if (thisInst.lastEnemyGet.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)
             {
                 output = true;
-                thisInst.Steer = true;
-                thisInst.UpdateEnemyDistance(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck);
+                thisInst.UpdateEnemyDistance(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
 
-                thisInst.DriveDir = EDriveFacing.Forwards;
-                controller.AimTarget = RCore.GetTargetCoordinates(tank, thisInst.lastEnemy, mind);
+                core.DriveDir = EDriveFacing.Forwards;
+                pos = RCore.GetTargetCoordinates(thisInst, thisInst.lastEnemyGet, mind);
             }
             else
                 thisInst.IgnoreEnemyDistance();
@@ -417,10 +410,11 @@ namespace TAC_AI.AI.Movement.AICores
         }
 
 
+
         private const float ignoreTurning = 0.875f;
         private const float MinThrottleToTurnFull = 0.75f;
         private const float MaxThrottleToTurnAccurate = 0.25f;
-        public static bool StaticTurner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, out float turnVal)
+        public static bool StaticTurner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, ref EControlCoreSet core, out float turnVal)
         {
             turnVal = 1;
             float forwards = Vector2.Dot(destinationVec.normalized.ToVector2XZ(), helper.tank.rootBlockTrans.forward.ToVector2XZ());
@@ -429,7 +423,7 @@ namespace TAC_AI.AI.Movement.AICores
                 return false;
             else
             {
-                if (helper.DriveDir == EDriveFacing.Perpendicular)
+                if (core.DriveDir == EDriveFacing.Perpendicular)
                 {
                     if (!(bool)helper.lastCloseAlly)
                     {

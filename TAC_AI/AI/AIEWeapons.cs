@@ -12,17 +12,17 @@ namespace TAC_AI.AI
             {
                 if (!tank.beam.IsActive)
                 {
-                    if (thisInst.AttackEnemy && thisInst.lastEnemy.IsNotNull())
+                    if (thisInst.AttackEnemy && thisInst.lastEnemyGet.IsNotNull())
                     {
                         thisInst.WeaponState = AIWeaponState.Enemy;
                         if (tank.IsAnchored)
                         {
-                            Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
+                            Vector3 aimTo = (thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                             float driveAngle = Vector3.Angle(aimTo, tank.rootBlockTrans.forward);
-                            if (Mathf.Abs(driveAngle) >= thisInst.AnchorAimDampening)
+                            if (Mathf.Abs(driveAngle) >= AIGlobals.AnchorAimDampening)
                                 FinalAim = 1;
                             else
-                                FinalAim = Mathf.Abs(driveAngle / thisInst.AnchorAimDampening);
+                                FinalAim = Mathf.Abs(driveAngle / AIGlobals.AnchorAimDampening);
                             thisControl.m_Movement.FaceDirection(tank, aimTo, FinalAim);//Face the music
                         }
                     }
@@ -51,11 +51,11 @@ namespace TAC_AI.AI
                 {   // sync to host tech
                     if (thisInst.lastCloseAlly.IsNotNull())
                     {
-                        if (thisInst.lastEnemy.IsNotNull())
+                        if (thisInst.lastEnemyGet.IsNotNull())
                         {
                             thisInst.ActiveAimState = AIWeaponState.Mimic;
-                            var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
-                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
+                            var targetTank = thisInst.lastEnemyGet.gameObject.GetComponent<Tank>();
+                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemyGet.gameObject.transform.position, targetTank.GetCheapBounds());
                             if (thisInst.FIRE_NOW)
                                 thisControl.m_Weapons.FireWeapons(tank);
                         }
@@ -96,11 +96,11 @@ namespace TAC_AI.AI
                 }
                 else if (thisInst.WeaponState == AIWeaponState.Enemy)
                 {
-                    if (thisInst.lastEnemy != null)
+                    if (thisInst.lastEnemyGet != null)
                     {
                         thisInst.ActiveAimState = AIWeaponState.Enemy;
-                        var targetTank = thisInst.lastEnemy.tank;
-                        thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, targetTank.GetCheapBounds());
+                        var targetTank = thisInst.lastEnemyGet.tank;
+                        thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemyGet.gameObject.transform.position, targetTank.GetCheapBounds());
                         if (thisInst.FIRE_NOW)
                             thisControl.m_Weapons.FireWeapons(tank);
                     }
@@ -109,5 +109,6 @@ namespace TAC_AI.AI
                     thisControl.m_Weapons.FireWeapons(tank);
             }
         }
+
     }
 }

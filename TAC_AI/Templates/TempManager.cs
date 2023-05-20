@@ -18,13 +18,13 @@ namespace TAC_AI.Templates
         /// <summary>
         /// Hosts active techs
         /// </summary>
-        public static Dictionary<SpawnBaseTypes, BaseTemplate> techBases;
+        public static Dictionary<SpawnBaseTypes, RawTechTemplate> techBases;
 
-        public static List<BaseTemplate> ExternalEnemyTechsLocal;
+        public static List<RawTechTemplate> ExternalEnemyTechsLocal;
 
-        public static List<BaseTemplate> ExternalEnemyTechsMods;
+        public static List<RawTechTemplate> ExternalEnemyTechsMods;
 
-        public static List<BaseTemplate> ExternalEnemyTechsAll;
+        public static List<RawTechTemplate> ExternalEnemyTechsAll;
 
 
         public static void ValidateAllStringTechs()
@@ -34,16 +34,16 @@ namespace TAC_AI.Templates
         }
         public static void ValidateAndAddAllInternalTechs(bool reloadPublic = true)
         {
-            List<KeyValuePair<SpawnBaseTypes, BaseTemplate>> preCompile = new List<KeyValuePair<SpawnBaseTypes, BaseTemplate>>();
+            List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
 
             preCompile.AddRange(CommunityStorage.ReturnAllCommunityStored(reloadPublic));
             preCompile.AddRange(TempStorage.techBasesPrefab);
 
 
-            Dictionary<SpawnBaseTypes, BaseTemplate> techBasesProcessing = preCompile.ToDictionary(x => x.Key, x => x.Value);
+            Dictionary<SpawnBaseTypes, RawTechTemplate> techBasesProcessing = preCompile.ToDictionary(x => x.Key, x => x.Value);
 
-            techBases = new Dictionary<SpawnBaseTypes, BaseTemplate>();
-            foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> pair in techBasesProcessing)
+            techBases = new Dictionary<SpawnBaseTypes, RawTechTemplate>();
+            foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in techBasesProcessing)
             {
                 if (ValidateBlocksInTech(ref pair.Value.savedTech, pair.Value))
                 {
@@ -66,9 +66,9 @@ namespace TAC_AI.Templates
             int tMCount = RawTechExporter.GetRawTechsCountExternalMods();
             if (tCount != lastExtLocalCount || lastExtModCount != tMCount || force)
             {
-                ExternalEnemyTechsLocal = new List<BaseTemplate>();
-                List<BaseTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
-                foreach (BaseTemplate raw in ExternalTechsRaw)
+                ExternalEnemyTechsLocal = new List<RawTechTemplate>();
+                List<RawTechTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
+                foreach (RawTechTemplate raw in ExternalTechsRaw)
                 {
                     if (ValidateBlocksInTech(ref raw.savedTech, raw))
                     {
@@ -83,9 +83,9 @@ namespace TAC_AI.Templates
                 lastExtLocalCount = tCount;
 
 
-                ExternalEnemyTechsMods = new List<BaseTemplate>();
+                ExternalEnemyTechsMods = new List<RawTechTemplate>();
                 ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechsExternalMods();
-                foreach (BaseTemplate raw in ExternalTechsRaw)
+                foreach (RawTechTemplate raw in ExternalTechsRaw)
                 {
                     if (ValidateBlocksInTech(ref raw.savedTech, raw))
                     {
@@ -100,10 +100,12 @@ namespace TAC_AI.Templates
                 lastExtModCount = tMCount;
 
 
-                ExternalEnemyTechsAll = new List<BaseTemplate>();
+                ExternalEnemyTechsAll = new List<RawTechTemplate>();
                 ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsLocal);
                 ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsMods);
                 DebugTAC_AI.Log("TACtical_AI: Pushed a total of " + ExternalEnemyTechsAll.Count + " to the external tech pool.");
+                DebugRawTechSpawner.Organize(ref ExternalEnemyTechsLocal);
+                DebugRawTechSpawner.Organize(ref ExternalEnemyTechsMods);
             }
         }
 
@@ -115,7 +117,7 @@ namespace TAC_AI.Templates
         /// <param name="basePrice"></param>
         /// <param name="greatestFaction"></param>
         /// <returns></returns>
-        public static bool ValidateBlocksInTech(ref string toLoad, BaseTemplate templateToCheck)
+        public static bool ValidateBlocksInTech(ref string toLoad, RawTechTemplate templateToCheck)
         {
             try
             {
@@ -127,7 +129,7 @@ namespace TAC_AI.Templates
                         RAW.Append(ch);
                     }
                 }
-                List<BlockMemory> mem = new List<BlockMemory>();
+                List<RawBlockMem> mem = new List<RawBlockMem>();
                 StringBuilder blockCase = new StringBuilder();
                 string RAWout = RAW.ToString();
                 FactionLevel greatestFaction = FactionLevel.GSO;
@@ -137,13 +139,13 @@ namespace TAC_AI.Templates
                     {
                         if (ch == '|')//new block
                         {
-                            mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                            mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
                             blockCase.Clear();
                         }
                         else
                             blockCase.Append(ch);
                     }
-                    mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                    mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
                 }
                 catch
                 {
@@ -159,7 +161,7 @@ namespace TAC_AI.Templates
                     return false;
                 }
                 int basePrice = 0;
-                foreach (BlockMemory bloc in mem)
+                foreach (RawBlockMem bloc in mem)
                 {
                     BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
@@ -169,7 +171,7 @@ namespace TAC_AI.Templates
                     }
 
                     FactionSubTypes FST = Singleton.Manager<ManSpawn>.inst.GetCorporation(type);
-                    FactionLevel FL = KickStart.GetFactionLevel(FST);
+                    FactionLevel FL = RawTechUtil.GetFactionLevel(FST);
                     if (FL >= FactionLevel.ALL)
                     {
                         if (ManMods.inst.IsModdedCorp(FST))
@@ -195,7 +197,7 @@ namespace TAC_AI.Templates
                 templateToCheck.blockCount = mem.Count;
 
                 // Rebuild in workable format
-                toLoad = AIERepair.DesignMemory.MemoryToJSONExternal(mem);
+                toLoad = RawTechTemplate.MemoryToJSONExternal(mem);
 
                 return valid;
             }
@@ -210,29 +212,28 @@ namespace TAC_AI.Templates
         /// returns true if ALL blocks in tech are valid
         /// </summary>
         /// <param name="toScreen"></param>
-        /// <param name="basePrice"></param>
         /// <returns></returns>
-        public static bool ValidateBlocksInTech(ref List<BlockMemory> toScreen)
+        public static bool ValidateBlocksInTechAndPurgeIfNeeded(List<RawBlockMem> toScreen)
         {
             try
             {
                 if (toScreen.Count == 0)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
+                    DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTechAndPurgeIfNeeded - FAILED as no blocks were present!");
                     return false;
                 }
-                List<BlockMemory> validated = new List<BlockMemory>();
                 bool valid = true;
-                foreach (BlockMemory bloc in toScreen)
+                for (int step = toScreen.Count - 1; step > -1; step++)
                 {
+                    RawBlockMem bloc = toScreen[step];
                     BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type))
                     {
                         valid = false;
+                        toScreen.RemoveAt(step);
                         continue;
                     }
                     bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
-                    validated.Add(bloc);
                 }
                 return valid;
             }
@@ -255,7 +256,7 @@ namespace TAC_AI.Templates
                     RAW.Append(ch);
                 }
             }
-            List<BlockMemory> mem = new List<BlockMemory>();
+            List<RawBlockMem> mem = new List<RawBlockMem>();
             StringBuilder blockCase = new StringBuilder();
             string RAWout = RAW.ToString();
             try
@@ -264,13 +265,13 @@ namespace TAC_AI.Templates
                 {
                     if (ch == '|')//new block
                     {
-                        mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                        mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
                         blockCase.Clear();
                     }
                     else
                         blockCase.Append(ch);
                 }
-                mem.Add(JsonUtility.FromJson<BlockMemory>(blockCase.ToString()));
+                mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
             }
             catch
             {
@@ -279,7 +280,7 @@ namespace TAC_AI.Templates
             }
             bool valid = true;
             int cabHash = ManSpawn.inst.GetBlockPrefab(BlockTypes.GSOCockpit_111).name.GetHashCode();
-            foreach (BlockMemory bloc in mem)
+            foreach (RawBlockMem bloc in mem)
             {
                 BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
                 if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) || (type == BlockTypes.GSOCockpit_111 && bloc.t.GetHashCode() != cabHash))
@@ -291,7 +292,7 @@ namespace TAC_AI.Templates
             }
 
             // Rebuild in workable format
-            toLoad = AIERepair.DesignMemory.MemoryToJSONExternal(mem);
+            toLoad = RawTechTemplate.MemoryToJSONExternal(mem);
 
             return valid;
         }

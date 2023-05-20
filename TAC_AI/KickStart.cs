@@ -9,6 +9,7 @@ using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
+using TAC_AI.AI.Movement;
 using SafeSaves;
 using TerraTechETCUtil;
 
@@ -105,9 +106,9 @@ namespace TAC_AI
         public static bool AllowAISelfRepair = true;
         internal static bool AllowEnemiesToStartBases { get { return MaxEnemyBaseLimit != 0; } }
         internal static bool AllowEnemyBaseExpand { get { return MaxBasesPerTeam != 0; } }
-        public static int LandEnemyOverrideChance { 
+        public static int LandEnemyOverrideChance {
             get { return LandEnemyOverrideChanceSav; }
-            internal set { LandEnemyOverrideChanceSav = value; } 
+            internal set { LandEnemyOverrideChanceSav = value; }
         }
 #if STEAM
         public static int LandEnemyOverrideChanceSav = 20;
@@ -139,6 +140,9 @@ namespace TAC_AI
         internal static bool isBlockInjectorPresent = false;
         internal static bool isPopInjectorPresent = false;
         internal static bool isAnimeAIPresent = false;
+
+        internal static bool isConfigHelperPresent = false;
+        internal static bool isNativeOptionsPresent = false;
 
 
         // Set ingame
@@ -191,13 +195,14 @@ namespace TAC_AI
                     return int.MaxValue; // allow EVERYTHING
                 if (Singleton.playerTank.IsNotNull())
                 {
-                    lastPlayerTechPrice = RawTechExporter.GetBBCost(Singleton.playerTank);
+                    lastPlayerTechPrice = RawTechTemplate.GetBBCost(Singleton.playerTank);
                 }
                 int priceMax = (int)((((float)(Difficulty + 50) / 100) + 0.5f) * lastPlayerTechPrice);
                 // Easiest results in 50% max player cost spawns, Hardest results in 250% max player cost spawns, Regular is is 150% max player cost spawns.
                 return Mathf.Max(lastPlayerTechPrice / 2, priceMax);
             }
         }
+        public static bool AllowSniperSpawns { get { return LowerDifficulty >= 50; } }
 
         public static bool CanUseMenu { get { return !ManPauseGame.inst.IsPaused; } }
 
@@ -238,13 +243,21 @@ namespace TAC_AI
             get
             {
                 float outValue = -100;
-                try { 
+                try
+                {
                     if (isWaterModPresent)
-                        outValue = WaterMod.QPatch.WaterHeight; 
-                } 
-                catch { }
+                        outValue = GetWaterHeightCanCrash();
+                }
+                catch (Exception)
+                {
+                    //outValue = -100;
+                }
                 return outValue;
             }
+        }
+        public static float GetWaterHeightCanCrash()
+        {
+            return WaterMod.QPatch.WaterHeight;
         }
         public static Harmony harmonyInstance = new Harmony("legionite.tactical_ai");
         private static bool hasPatched = false;
@@ -254,17 +267,27 @@ namespace TAC_AI
 
         public static bool VALIDATE_MODS()
         {
-            if (!LookForMod("NLogManager"))
-            {
-                isSteamManaged = false;
-            }
-            else
-                isSteamManaged = true;
+            isSteamManaged = LookForMod("NLogManager");
 
             if (!LookForMod("0Harmony"))
             {
-                DebugTAC_AI.FatalError("This mod NEEDS Harmony to function!  Please subscribe to it on the Steam Workshop");
+                DebugTAC_AI.ErrorReport("This mod NEEDS Harmony to function!  Please subscribe to it on the Steam Workshop");
                 return false;
+            }
+
+            isConfigHelperPresent = LookForMod("ConfigHelper");
+            isNativeOptionsPresent = LookForMod("0Nuterra.NativeOptions");
+            if (isConfigHelperPresent && !isNativeOptionsPresent)
+            {
+                DebugTAC_AI.Warning("ConfigHelper is active but NativeOptions is missing! You need both to use ingame settings.");
+            }
+            if (!isConfigHelperPresent && isNativeOptionsPresent)
+            {
+                DebugTAC_AI.Warning("NativeOptions is active but ConfigHelper is missing! You need both to use ingame settings.");
+            }
+            if (!isSteamManaged && (isConfigHelperPresent || isNativeOptionsPresent))
+            {
+                DebugTAC_AI.Warning("Ingame settings requires launching from TTSMM (with 0LogManager) to insure success");
             }
 
             if (LookForMod("RandomAdditions"))
@@ -338,10 +361,15 @@ namespace TAC_AI
             {
                 try
                 {
-                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(GlobalPatches), "TACtical_AI");
-                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(ManagerPatches), "TACtical_AI");
-                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(UIPatches), "TACtical_AI");
-                    MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(ModulePatches), "TACtical_AI");
+                    if (!MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(GlobalPatches), "TACtical_AI"))
+                        DebugTAC_AI.ErrorReport("Error on patching GlobalPatches");
+                    if (!MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(ManagerPatches), "TACtical_AI"))
+                        DebugTAC_AI.ErrorReport("Error on patching ManagerPatches");
+                    if (!MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(UIPatches), "TACtical_AI"))
+                        DebugTAC_AI.ErrorReport("Error on patching UIPatches");
+                    if (!MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(ModulePatches), "TACtical_AI"))
+                        DebugTAC_AI.ErrorReport("Error on patching ModulePatches");
+
                     harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
                     DebugTAC_AI.Log("TACtical_AI: Patched");
                     hasPatched = true;
@@ -350,6 +378,7 @@ namespace TAC_AI
                 {
                     DebugTAC_AI.Log("TACtical_AI: Error on patch");
                     DebugTAC_AI.Log(e);
+                    DebugTAC_AI.ErrorReport("Error on patching base game");
                 }
             }
         }
@@ -363,7 +392,10 @@ namespace TAC_AI
                 ManSafeSaves.RegisterSaveSystem(assemble);
                 HasHookedUpToSafeSaves = true;
             }
-            catch { DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem"); }
+            catch { 
+                DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem");
+                DebugTAC_AI.ErrorReport("Error on hooking to SafeSaves");
+            }
         }
 
         public static void MainOfficialInit()
@@ -387,7 +419,7 @@ namespace TAC_AI
             AIECore.TankAIManager.Initiate();
             GUIAIManager.Initiate();
             RawTechExporter.Initiate();
-            RBases.BaseFunderManager.Initiate();
+            RLoadedBases.BaseFunderManager.Initiate();
             ManEnemyWorld.Initiate();
             SpecialAISpawner.Initiate();
             GUIEvictionNotice.Initiate();
@@ -398,16 +430,10 @@ namespace TAC_AI
             SpecialAISpawner.DetermineActiveOnModeType();
             AIECore.TankAIManager.inst.CorrectBlocksList();
 
-            try
-            {
-                KickStartOptions.PushExtModOptionsHandling();
-            }
-            catch (Exception e)
-            {
-                DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
-                DebugTAC_AI.Log(e);
-            }
+            InitSettings();
 
+            if (!isPopInjectorPresent)
+                OverrideEnemyMax();
 #if STEAM
             EnableBetterAI = true;
 #endif
@@ -439,7 +465,7 @@ namespace TAC_AI
             RawTechExporter.Initiate();
             yield return 0.40f;
 
-            RBases.BaseFunderManager.Initiate();
+            RLoadedBases.BaseFunderManager.Initiate();
             yield return 0.48f;
 
             ManEnemyWorld.Initiate();
@@ -458,18 +484,57 @@ namespace TAC_AI
             AIECore.TankAIManager.inst.CorrectBlocksList();
             yield return 0.95f;
 
-            try
-            {
-                KickStartOptions.PushExtModOptionsHandling();
-            }
-            catch (Exception e)
-            {
-                DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
-                DebugTAC_AI.Log(e);
-            }
+            InitSettings();
             yield return 1f;
 
             EnableBetterAI = true;
+        }
+        private static bool launched = false;
+        public static void InitSettings()
+        {
+            if (launched)
+                return;
+            launched = true;
+            if (isNativeOptionsPresent && isConfigHelperPresent)
+            {
+                try
+                {
+                    KickStartConfigHelper.PushExtModConfigHandling();
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
+                    DebugTAC_AI.Log(e);
+                    DebugTAC_AI.ErrorReport("Error on hooks with ConfigHelper/NativeOptions");
+                }
+            }
+            else if (isNativeOptionsPresent)
+            {
+                try
+                {
+                    KickStartNativeOptions.PushExtModOptionsHandling();
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Error on NativeOptions setup");
+                    DebugTAC_AI.Log(e);
+                    DebugTAC_AI.ErrorReport("Error on hooks with NativeOptions");
+                }
+            }
+            else if (isConfigHelperPresent)
+            {
+                try
+                {
+                    KickStartConfigHelper.PushExtModConfigHandlingConfigOnly();
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Error on ConfigHelper setup");
+                    DebugTAC_AI.Log(e);
+                    DebugTAC_AI.ErrorReport("Error on hooks with ConfigHelper");
+                }
+            }
+
         }
 
         public static void DeInitCheck()
@@ -482,6 +547,8 @@ namespace TAC_AI
 
         public static void DeInitALL()
         {
+            float timeStart = Time.realtimeSinceStartup;
+            DebugTAC_AI.Log("TAC_AI: Doing mod DeInit. Garbage Cleanup... current " + GC.GetTotalMemory(false));
             EnableBetterAI = false;
             if (hasPatched)
             {
@@ -504,7 +571,7 @@ namespace TAC_AI
             // DE-INIT ALL
             SpecialAISpawner.DeInitiate();
             ManEnemyWorld.DeInit();
-            RBases.BaseFunderManager.DeInit();
+            RLoadedBases.BaseFunderManager.DeInit();
             RawTechExporter.DeInit();
             GUIAIManager.DeInit();
             AIECore.TankAIManager.DeInit();
@@ -515,6 +582,10 @@ namespace TAC_AI
                 HasHookedUpToSafeSaves = false;
             }
             catch { }
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            DebugTAC_AI.Log("TAC_AI: Garbage Cleanup finished with " + GC.GetTotalMemory(false) + " remaining.");
+            DebugTAC_AI.Log("TAC_AI: Operation took " + (Time.realtimeSinceStartup - timeStart) + " seconds.");
         }
 
 #else
@@ -634,7 +705,7 @@ namespace TAC_AI
             }
             return false;
         }
-       
+
 
         /// <summary>
         /// Only call for cases where we want only vanilla corps!
@@ -751,77 +822,26 @@ namespace TAC_AI
             return type;
         }
 
-        public static FactionLevel GetFactionLevel(FactionSubTypes FST)
-        {
-            switch (FST)
-            {
-                case FactionSubTypes.NULL:
-                case FactionSubTypes.GSO:
-                case FactionSubTypes.SPE:
-                    return FactionLevel.GSO;
-                case FactionSubTypes.GC:
-                    return FactionLevel.GC;
-                case FactionSubTypes.EXP:
-                    return FactionLevel.EXP;
-                case FactionSubTypes.VEN:
-                    return FactionLevel.VEN;
-                case FactionSubTypes.HE:
-                    return FactionLevel.HE;
-                case FactionSubTypes.BF:
-                    return FactionLevel.BF;
-                default:
-                    return FactionLevel.MOD;
-            }
-        }
     }
 
-    public class KickStartOptions
+    public class KickStartConfigHelper
     {
-        // NativeOptions Parameters
-        public static OptionKey retreatHotkey;
-        public static OptionKey commandHotKey;
-        public static OptionKey commandBoltsHotKey;
-        public static OptionKey groupSelectKey;
-        public static OptionKey modeSelectKey;
-        public static OptionToggle commandClassic;
-        public static OptionToggle betterAI;
-        public static OptionToggle aiSelfRepair;
-        public static OptionRange dodgePeriod;
-        public static OptionRange aiUpkeepRefresh; //AIClockPeriod
-        public static OptionToggle muteNonPlayerBuildRacket;
-        public static OptionToggle allowOverLevelBlocksDrop;
-        public static OptionToggle exportReadableRAW;
-        public static OptionToggle displayEvents;
-        public static OptionToggle painfulEnemies;
-        public static OptionRange diff;
-        public static OptionRange landEnemyChangeChance;
-        public static OptionRange blockRecoveryChance;
-        public static OptionToggle permitEradication;
-        public static OptionToggle infEnemySupplies;
-        public static OptionRange enemyExpandLim;
-        public static OptionRange enemyAirSpawn;
-        public static OptionToggle enemySeaSpawn;
-        public static OptionToggle playerMadeTechsOnly;
-        public static OptionRange enemyBaseCount;
-        public static OptionRange enemyMaxCount;
-        public static OptionToggle ragnarok;
-        public static OptionToggle enemyStrategic;
-        public static OptionToggle enemyMiners;
-        public static OptionToggle useKeypadForGroups;
-        public static OptionToggle enemyBaseCulling;
-
-        private static bool launched = false;
-
-        internal static void PushExtModOptionsHandling()
+        internal static void PushExtModConfigHandlingConfigOnly()
         {
-            if (launched)
-                return;
-            launched = true;
+            KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
+
+            PushExtModConfigSetup();
+
+            OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
+        }
+        internal static ModConfig PushExtModConfigSetup()
+        {
             ModConfig thisModConfig = new ModConfig();
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "RetreatHotkeySav");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
             thisModConfig.BindConfig<KickStart>(null, "AIClockPeriodSet");
+            thisModConfig.BindConfig<AIEPathMapper>(null, "PathRequestsToCalcPerFrame");
             thisModConfig.BindConfig<KickStart>(null, "MuteNonPlayerRacket");
             thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
             thisModConfig.BindConfig<KickStart>(null, "DisplayEnemyEvents");
@@ -853,15 +873,70 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "MultiSelectKeySav");
             thisModConfig.BindConfig<KickStart>(null, "ModeSelectKeySav");
 
-
-            if (!KickStart.isPopInjectorPresent)
-                KickStart.OverrideEnemyMax();
-
             KickStart.RetreatHotkey = (KeyCode)KickStart.RetreatHotkeySav;
             KickStart.CommandHotkey = (KeyCode)KickStart.CommandHotkeySav;
             KickStart.CommandBoltsHotkey = (KeyCode)KickStart.CommandBoltsHotkeySav;
             KickStart.MultiSelect = (KeyCode)KickStart.MultiSelectKeySav;
+            return thisModConfig;
+        }
+        internal static void PushExtModConfigHandling()
+        {
+            KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
 
+            var thisModConfig = PushExtModConfigSetup();
+            try
+            {
+                KickStartNativeOptions.PushExtModOptionsHandling(thisModConfig);
+            }
+            catch (Exception e)
+            {
+                throw new Exception("PushExtModOptionsHandling within PushExtModConfigHandling hit exception - ", e);
+            }
+            finally
+            {
+                OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
+            }
+        }
+    }
+
+    public class KickStartNativeOptions
+    {
+        // NativeOptions Parameters
+        public static OptionKey retreatHotkey;
+        public static OptionKey commandHotKey;
+        public static OptionKey commandBoltsHotKey;
+        public static OptionKey groupSelectKey;
+        public static OptionKey modeSelectKey;
+        public static OptionToggle commandClassic;
+        public static OptionToggle betterAI;
+        public static OptionToggle aiSelfRepair;
+        public static OptionRange dodgePeriod;
+        public static OptionRange aiUpkeepRefresh; //AIClockPeriod
+        public static OptionRange aiPathing;
+        public static OptionToggle muteNonPlayerBuildRacket;
+        public static OptionToggle allowOverLevelBlocksDrop;
+        public static OptionToggle exportReadableRAW;
+        public static OptionToggle displayEvents;
+        public static OptionToggle painfulEnemies;
+        public static OptionRange diff;
+        public static OptionRange landEnemyChangeChance;
+        public static OptionRange blockRecoveryChance;
+        public static OptionToggle permitEradication;
+        public static OptionToggle infEnemySupplies;
+        public static OptionRange enemyExpandLim;
+        public static OptionRange enemyAirSpawn;
+        public static OptionToggle enemySeaSpawn;
+        public static OptionToggle playerMadeTechsOnly;
+        public static OptionRange enemyBaseCount;
+        public static OptionRange enemyMaxCount;
+        public static OptionToggle ragnarok;
+        public static OptionToggle enemyStrategic;
+        public static OptionToggle enemyMiners;
+        public static OptionToggle useKeypadForGroups;
+        public static OptionToggle enemyBaseCulling;
+
+        internal static void PushExtModOptionsHandling()
+        {
             var TACAI = KickStart.ModName + " - A.I. Settings";
 #if !STEAM  // Because this toggle is reserved for the loading and unloading of the mod in STEAM release
             betterAI = new OptionToggle("<b>Enable Mod</b>", TACAI, KickStart.EnableBetterAI);
@@ -875,10 +950,15 @@ namespace TAC_AI
             });
             aiSelfRepair = new OptionToggle("Allow Mobile A.I.s to Build", TACAI, KickStart.AllowAISelfRepair);
             aiSelfRepair.onValueSaved.AddListener(() => { KickStart.AllowAISelfRepair = aiSelfRepair.SavedValue; });
-            dodgePeriod = new OptionRange("A.I. Dodge Processing Laziness", TACAI, KickStart.AIDodgeCheapness, 1, 61, 5);
-            dodgePeriod.onValueSaved.AddListener(() => { KickStart.AIDodgeCheapness = (int)dodgePeriod.SavedValue; });
+            dodgePeriod = new OptionRange("A.I. Dodge Processing Laziness", TACAI, KickStart.AIDodgeCheapness - 1, 0, 60, 5);
+            dodgePeriod.onValueSaved.AddListener(() => { KickStart.AIDodgeCheapness = (int)dodgePeriod.SavedValue + 1; });
             aiUpkeepRefresh = new OptionRange("A.I. Awareness Update Laziness", TACAI, KickStart.AIClockPeriodSet, 5, 50, 5);
             aiUpkeepRefresh.onValueSaved.AddListener(() => { KickStart.AIClockPeriodSet = (short)aiUpkeepRefresh.SavedValue; });
+            aiPathing = new OptionRange("A.I. Pathfinding Speed", TACAI, AIEPathMapper.PathRequestsToCalcPerFrame, 0, 6, 1);
+            aiPathing.onValueSaved.AddListener(() => { 
+                AIEPathMapper.PathRequestsToCalcPerFrame = (int)aiPathing.SavedValue;
+            });
+
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, KickStart.MuteNonPlayerRacket);
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { KickStart.MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; });
             exportReadableRAW = new OptionToggle("Export .JSON instead of .RAWTECH", TACAI, RawTechExporter.ExportJSONInsteadOfRAWTECH);
@@ -890,13 +970,10 @@ namespace TAC_AI
                 KickStart.AllowStrategicAI = enemyStrategic.SavedValue;
                 if (KickStart.AllowStrategicAI)
                 {
-                    ManEnemyWorld.Initiate();
-                    ManEnemyWorld.LateInitiate();
                     ManPlayerRTS.DelayedInitiate();
                 }
                 else
                 {
-                    ManEnemyWorld.DeInit();
                 }
             });
             commandHotKey = new OptionKey("Enable RTS Overlay Hotkey", TACAIRTS, KickStart.CommandHotkey);
@@ -928,7 +1005,7 @@ namespace TAC_AI
             useKeypadForGroups = new OptionToggle("Enable Keypad for Grouping - Check Num Lock", TACAIRTS, KickStart.UseNumpadForGrouping);
             useKeypadForGroups.onValueSaved.AddListener(() => { KickStart.UseNumpadForGrouping = useKeypadForGroups.SavedValue; });
 
-            var TACAIEnemies = KickStart.ModName + " - Non-Player Techs [NPT] General";
+            var TACAIEnemies = KickStart.ModName + " - Non-Player Techs (NPT) General";
             painfulEnemies = new OptionToggle("<b>Enable Advanced NPTs</b>", TACAIEnemies, KickStart.enablePainMode);
             painfulEnemies.onValueSaved.AddListener(() => { KickStart.enablePainMode = painfulEnemies.SavedValue; });
             diff = new OptionRange("NPT Difficulty [Easy-Medium-Hard]", TACAIEnemies, KickStart.difficulty, -50, 150, 25);
@@ -964,7 +1041,7 @@ namespace TAC_AI
 
             if (!KickStart.isPopInjectorPresent)
             {
-                var TACAIEnemiesPop = KickStart.ModName + " - Non-Player Techs [NPT] Spawning";
+                var TACAIEnemiesPop = KickStart.ModName + " - Non-Player Techs (NPT) Spawning";
                 enemyMaxCount = new OptionRange("Max NPT Techs Loaded [6-32]", TACAIEnemiesPop, KickStart.AIPopMaxLimit, 6, 32, 1);
                 enemyMaxCount.onValueSaved.AddListener(() =>
                 {
@@ -984,7 +1061,7 @@ namespace TAC_AI
                         KickStart.AllowAirEnemiesToSpawn = true;
                     }
                 });
-                enemySeaSpawn = new OptionToggle("NPT Ship Spawning", TACAIEnemiesPop, KickStart.AllowSeaEnemiesToSpawn);
+                enemySeaSpawn = new OptionToggle("NPT Ship Spawning (Need Water Mod)", TACAIEnemiesPop, KickStart.AllowSeaEnemiesToSpawn);
                 enemySeaSpawn.onValueSaved.AddListener(() => { KickStart.AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; });
                 playerMadeTechsOnly = new OptionToggle("Disable Built-In Spawn Pool (\"Raw Techs\" Folder Only)", TACAIEnemiesPop, KickStart.TryForceOnlyPlayerSpawns);
                 playerMadeTechsOnly.onValueSaved.AddListener(() => { KickStart.TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; });
@@ -997,12 +1074,10 @@ namespace TAC_AI
                     OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
                 });
             }
-            KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
             if (KickStart.EnemyBlockDropChance == 0)
             {
                 Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
             }
-            OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
 
             if (KickStart.AirEnemiesSpawnRate == 0)
                 KickStart.AllowAirEnemiesToSpawn = false;
@@ -1011,12 +1086,15 @@ namespace TAC_AI
                 SpecialAISpawner.AirSpawnInterval = 60 / KickStart.AirEnemiesSpawnRate;
                 KickStart.AllowAirEnemiesToSpawn = true;
             }
-            NativeOptionsMod.onOptionsSaved.AddListener(() => { thisModConfig.WriteConfigJsonFile(); });
-
         }
 
+        internal static void PushExtModOptionsHandling(ModConfig thisModConfig)
+        {
+            PushExtModOptionsHandling();
+            if (thisModConfig != null)
+                NativeOptionsMod.onOptionsSaved.AddListener(() => { thisModConfig.WriteConfigJsonFile(); });
+        }
     }
-
     public static class TankExtentions
     {
         public static bool IsTeamFounder(this TechData tank)
@@ -1082,35 +1160,32 @@ namespace TAC_AI
         }
         public static float GetCheapBounds(this Tank tank)
         {
-            AIECore.TankAIHelper help = tank.GetComponent<AIECore.TankAIHelper>();
-            if (!help)
-            {
-                help = tank.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe();
-            }
-            return help.lastTechExtents;
+            return tank.GetHelperInsured().lastTechExtents;
         }
+        private static List<FactionTypesExt> toSortCache = new List<FactionTypesExt>();
         public static FactionTypesExt GetMainCorpExt(this Tank tank)
         {
-            List<FactionTypesExt> toSort = new List<FactionTypesExt>();
             foreach (TankBlock BlocS in tank.blockman.IterateBlocks())
             {
-                toSort.Add(GetBlockCorpExt(BlocS.BlockType));
+                toSortCache.Add(GetBlockCorpExt(BlocS.BlockType));
             }
-            toSort = SortCorps(toSort);
-            FactionTypesExt final = toSort.First();
+            toSortCache = SortCorps(toSortCache);
+            FactionTypesExt final = toSortCache.First();
+            toSortCache.Clear();
 
             //DebugTAC_AI.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp");
             return final;
         }
         public static FactionTypesExt GetMainCorpExt(this TechData tank)
         {
-            List<FactionTypesExt> toSort = new List<FactionTypesExt>();
             foreach (TankPreset.BlockSpec BlocS in tank.m_BlockSpecs)
             {
-                toSort.Add(GetBlockCorpExt(BlocS.m_BlockType));
+                toSortCache.Add(GetBlockCorpExt(BlocS.m_BlockType));
             }
-            toSort = SortCorps(toSort);
-            return toSort.First();//(FactionTypesExt)tank.GetMainCorporations().First();
+            toSortCache = SortCorps(toSortCache);
+            var first = toSortCache.First();
+            toSortCache.Clear();
+            return first;//(FactionTypesExt)tank.GetMainCorporations().First();
         }
         internal static FactionTypesExt GetBlockCorpExt(BlockTypes BT)
         {
@@ -1136,21 +1211,22 @@ namespace TAC_AI
 
             return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
         }
+
+        private static readonly List<KeyValuePair<int, FactionTypesExt>> sorter = new List<KeyValuePair<int, FactionTypesExt>>();
         private static List<FactionTypesExt> SortCorps(List<FactionTypesExt> unsorted)
         {
             List<FactionTypesExt> distinct = unsorted.Distinct().ToList();
-            List<KeyValuePair<int, FactionTypesExt>> sorted = new List<KeyValuePair<int, FactionTypesExt>>();
             foreach (FactionTypesExt FTE in distinct)
             {
                 int countOut = unsorted.FindAll(delegate (FactionTypesExt cand) { return cand == FTE; }).Count();
-                sorted.Add(new KeyValuePair<int, FactionTypesExt>(countOut, FTE));
+                sorter.Add(new KeyValuePair<int, FactionTypesExt>(countOut, FTE));
             }
-            sorted = sorted.OrderByDescending(x => x.Key).ToList();
             distinct.Clear();
-            foreach (KeyValuePair<int, FactionTypesExt> intBT in sorted)
+            foreach (KeyValuePair<int, FactionTypesExt> intBT in sorter.OrderByDescending(x => x.Key))
             {
                 distinct.Add(intBT.Value);
             }
+            sorter.Clear();
             return distinct;
         }
 
@@ -1198,7 +1274,7 @@ namespace TAC_AI
             if (tank.blockman.blockCount != 0)
             {
                 tempCache.Clear();
-                tank.blockman.TryAddBlock(TB, posOnTechGrid, rotOnTech, tempCache);
+                tank.blockman.TryGetBlockAttachments(TB, posOnTechGrid, rotOnTech, tempCache);
                 return tempCache.Count != 0;
             }
             return false;

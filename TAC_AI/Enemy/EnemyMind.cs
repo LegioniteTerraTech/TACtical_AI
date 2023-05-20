@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using UnityEngine;
+using TerraTechETCUtil;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Movement.AICores;
 using TAC_AI.AI.Enemy.EnemyOperations;
-using UnityEngine;
 
 
 namespace TAC_AI.AI.Enemy
@@ -19,9 +20,43 @@ namespace TAC_AI.AI.Enemy
         public AIERepair.DesignMemory TechMemor => AIControl.TechMemor;
 
         // Set on spawn
-        public EnemyHandling EvilCommander = EnemyHandling.Wheeled; // What kind of vehicle is this Enemy?
+        private EnemyHandling evilCommander = EnemyHandling.Wheeled; // What kind of vehicle is this Enemy?
+        public EnemyHandling EvilCommander 
+        { 
+            get => evilCommander;
+            set 
+            {
+                switch (value)
+                {
+                    case EnemyHandling.Chopper:
+                    case EnemyHandling.Airplane:
+                        AIControl.DriverType = AIDriverType.Pilot;
+                        break;
+                    case EnemyHandling.Starship:
+                        AIControl.DriverType = AIDriverType.Astronaut;
+                        break;
+                    case EnemyHandling.Naval:
+                        AIControl.DriverType = AIDriverType.Sailor;
+                        break;
+                    case EnemyHandling.SuicideMissile:
+                        AIControl.DriverType = AIDriverType.Pilot;
+                        break;
+                    case EnemyHandling.Stationary:
+                        AIControl.DriverType = AIDriverType.Stationary;
+                        break;
+                    default:
+                        AIControl.DriverType = AIDriverType.Tank;
+                        break;
+                }
+                evilCommander = value;
+            }
+        }
         public EnemyAttitude CommanderMind = EnemyAttitude.Default; // What the Enemy does if there's no threats around.
-        public EnemyAttack CommanderAttack = EnemyAttack.Circle;    // The way the Enemy acts if there's a threat.
+        public EAttackMode CommanderAttack
+        {     // The way the Enemy acts if there's a threat.
+            get => AIControl.AttackMode;
+            set { AIControl.AttackMode = value; }
+        }
         public EnemySmarts CommanderSmarts = EnemySmarts.Default;   // The extent the Enemy will be "self-aware"
         public EnemyBolts CommanderBolts = EnemyBolts.Default;      // When the Enemy should press X.
         public EnemyStanding CommanderAlignment = EnemyStanding.Enemy;// How to handle attacks
@@ -31,12 +66,24 @@ namespace TAC_AI.AI.Enemy
         public bool AllowRepairsOnFly = false;  // If we are feeling extra evil
         public bool InvertBullyPriority = false;// Shoot the big techs instead
         public bool AllowInvBlocks = false;     // Can this tech spawn blocks from inventory?
-        public bool LikelyMelee = false;        // Can we melee?
+        public bool LikelyMelee        // Can we melee?
+        {     // The way the Enemy acts if there's a threat.
+            get => AIControl.FullMelee;
+            set { AIControl.FullMelee = value; }
+        }
 
         public bool SolarsAvail = false;        // Do we currently have solar panels
         public bool Hurt = false;               // Are we damaged?
-        public int Range = AIGlobals.DefaultEnemyRange;// Aggro range
-        public int TargetLockDuration = 0;      // Updates to wait before target swatching
+        public float MaxCombatRange// Aggro range
+        {
+            get => AIControl.MaxCombatRange;
+            set => AIControl.AILimitSettings.ChaseRange = value;
+        }
+        public float MinCombatRange
+        {
+            get => AIControl.MinCombatRange;
+            set => AIControl.AILimitSettings.CombatRange = value;
+        }
         public Vector3 sceneStationaryPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
 
         internal bool BuildAssist = false;
@@ -68,7 +115,7 @@ namespace TAC_AI.AI.Enemy
             EnemyOpsController = new EnemyOperationsController(this);
             AIControl.MovementController.UpdateEnemyMind(this);
             AIControl.AvoidStuff = true;
-            AIControl.PursuingTarget = false;
+            AIControl.EndPursuit();
             BoltsQueued = 0;
             try
             {
@@ -123,19 +170,19 @@ namespace TAC_AI.AI.Enemy
                 if (AIControl.Provoked == 0)
                 {
                     AIControl.lastEnemy = dingus.SourceTank.visible;
-                    GetRevengeOn(AIControl.lastEnemy);
-                    if (Tank.IsAnchored && Tank.GetComponent<RBases.EnemyBaseFunder>())
+                    GetRevengeOn(AIControl.lastEnemyGet);
+                    if (Tank.IsAnchored && Tank.GetComponent<RLoadedBases.EnemyBaseFunder>())
                     {
                         // Execute remote orders to allied units - Attack that threat!
-                        RBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemy, RequestSeverity.AllHandsOnDeck);
+                        RLoadedBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemyGet, RequestSeverity.AllHandsOnDeck);
                     }
                     else if (CommanderSmarts > EnemySmarts.Mild)
                     {
                         // Execute remote orders to allied units - Attack that threat!
                         if (AIGlobals.IsNeutralBaseTeam(Tank.Team))
-                            RBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemy, RequestSeverity.Warn);
+                            RLoadedBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemyGet, RequestSeverity.Warn);
                         else
-                            RBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemy, RequestSeverity.ThinkMcFly);
+                            RLoadedBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemyGet, RequestSeverity.ThinkMcFly);
                     }
                 }
                 AIControl.Provoked = AIGlobals.ProvokeTime;
@@ -196,7 +243,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public void OnFinishedRepairs()
+        public void OnFinishedRepairs(AIECore.TankAIHelper unused)
         {
             try
             {
@@ -208,7 +255,7 @@ namespace TAC_AI.AI.Enemy
                     {
                         Tank.SetName(Tank.name.Replace(" ⟰", ""));
                         RCore.RandomizeBrain(AIControl, Tank);
-                        AIControl.AIState = AIAlignment.NonPlayer;
+                        AIControl.AIAlign = AIAlignment.NonPlayer;
                         DebugTAC_AI.Log("TACtical_AI: (Rechecking blocks) Enemy AI " + Tank.name + " of Team " + Tank.Team + ":  Ready to kick some Tech!");
                         BuildAssist = false;
                     }
@@ -219,12 +266,12 @@ namespace TAC_AI.AI.Enemy
 
         public void GetRevengeOn(Visible target = null, bool forced = false)
         {
-            if (!AIControl.PursuingTarget && (forced || CommanderAttack != EnemyAttack.Coward))
+            if (!AIControl.KeepEnemyFocus && (forced || CommanderAttack != EAttackMode.Safety))
             {
                 if (forced)
                 {
-                    if (CommanderAttack == EnemyAttack.Coward) // no time for chickens
-                        CommanderAttack = EnemyAttack.Grudge;
+                    if (CommanderAttack == EAttackMode.Safety) // no time for chickens
+                        CommanderAttack = EAttackMode.Chase;
 
                     switch (CommanderMind)
                     {
@@ -236,492 +283,31 @@ namespace TAC_AI.AI.Enemy
                             break;
                     }
                 }
-                if ((bool)target)
-                {
-                    if ((bool)target.tank)
-                    {
-                        AIControl.AvoidStuff = true;
-                        AIControl.lastEnemy = target;
-                        AIControl.lastDestination = target.tank.boundsCentreWorldNoCheck;
-                    }
-                }
-                if (Range == AIGlobals.DefaultEnemyRange)
-                {
-                    Range = 500;
-                }
-                AIControl.PursuingTarget = true;
+                AIControl.SetPursuit(target);
             }
         }
         public void EndAggro()
         {
-            if (AIControl.PursuingTarget)
+            if (AIControl.KeepEnemyFocus)
             {
                 if (Tank.blockman.IterateBlockComponents<ModuleItemHolderBeam>().Count() != 0)
                     CommanderMind = EnemyAttitude.Miner;
-                else if (AIECore.FetchClosestBlockReceiver(Tank.boundsCentreWorldNoCheck, Range, out _, out _, Tank.Team))
+                else if (AIECore.FetchClosestBlockReceiver(Tank.boundsCentreWorldNoCheck, MaxCombatRange, out _, out _, Tank.Team))
                     CommanderMind = EnemyAttitude.Junker;
-                if (Range == 500)
-                {
-                    Range = AIGlobals.DefaultEnemyRange;
-                }
-                AIControl.PursuingTarget = false;
+                AIControl.EndPursuit();
             }
         }
 
-        public bool InRangeOfTargetEnemy()
+        public bool InMaxCombatRangeOfTarget()
         {
             switch (CommanderAttack)
             {
-                case EnemyAttack.Spyper:
-                    return AIControl.InRangeOfTarget(AIGlobals.SpyperMaxRange);
+                case EAttackMode.Ranged:
+                    return AIControl.InRangeOfTarget(AIGlobals.SpyperMaxCombatRange);
                 default:
-                    return AIControl.InRangeOfTarget(Range);
+                    return AIControl.InRangeOfTarget(MaxCombatRange);
             }
         }
-
-        /// <summary>
-        ///  Gets the enemy position based on current position and AI preferences
-        /// </summary>
-        /// <param name="inRange">value > 0</param>
-        /// <param name="pos">MAX 3</param>
-        /// <returns></returns>
-        public Visible FindEnemy(float inRange = 0, int pos = 1)
-        {
-            //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
-            //    return null; // We NO ATTACK
-            Visible target = AIControl.lastEnemy;
-
-            // We begin the search
-            if (CommanderAttack == EnemyAttack.Spyper) inRange = AIGlobals.SpyperMaxRange;
-            else if (inRange <= 0) inRange = Range;
-            float TargetRange = inRange * inRange;
-            Vector3 scanCenter = Tank.boundsCentreWorldNoCheck;
-
-            if (target?.tank)
-            {
-                if (!target.isActive || !target.tank.IsEnemy(Tank.Team) || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRange)
-                {
-                    //DebugTAC_AI.Log("Target lost");
-                    target = null;
-                }
-                else if (AIControl.PursuingTarget) // Carry on chasing the target
-                {
-                    return target;
-                }
-                else if (TargetLockDuration >= 0)
-                {
-                    TargetLockDuration -= KickStart.AIClockPeriod;
-                    return target;
-                }
-            }
-
-            List<Tank> techs = Singleton.Manager<ManTechs>.inst.CurrentTechs.ToList();
-            if (CommanderAttack == EnemyAttack.Pesterer)
-            {
-                int max = techs.Count();
-                int launchCount = UnityEngine.Random.Range(0, max);
-                for (int step = 0; step < launchCount; step++)
-                {
-                    Tank cTank = techs.ElementAt(step);
-                    if (cTank.IsEnemy(Tank.Team) && cTank != Tank && cTank.visible.isActive)
-                    {
-                        float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                        if (dist < TargetRange)
-                        {
-                            target = cTank.visible;
-                        }
-                    }
-                }
-                TargetLockDuration = AIGlobals.PestererSwitchDelay;
-            }
-            else if (CommanderAttack == EnemyAttack.Bully)
-            {
-                int launchCount = techs.Count();
-                if (InvertBullyPriority)
-                {
-                    int BlockCount = 0;
-                    for (int step = 0; step < launchCount; step++)
-                    {
-                        Tank cTank = techs.ElementAt(step);
-                        if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                        {
-                            float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                            if (cTank.blockman.blockCount > BlockCount && dist < TargetRange)
-                            {
-                                BlockCount = cTank.blockman.blockCount;
-                                target = cTank.visible;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    int BlockCount = 262144;
-                    for (int step = 0; step < launchCount; step++)
-                    {
-                        Tank cTank = techs.ElementAt(step);
-                        if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                        {
-                            float dist = (cTank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).sqrMagnitude;
-                            if (cTank.blockman.blockCount < BlockCount && dist < TargetRange)
-                            {
-                                BlockCount = cTank.blockman.blockCount;
-                                target = cTank.visible;
-                            }
-                        }
-                    }
-                }
-                TargetLockDuration = AIGlobals.ScanDelay;
-            }
-            else
-            {
-                TargetLockDuration = AIGlobals.ScanDelay;
-                if (CommanderAttack == EnemyAttack.Grudge && target != null)
-                {
-                    if (target.isActive)
-                        return target;
-                }
-                if (pos == 1)
-                    return Tank.Vision.GetFirstVisibleTechIsEnemy(Tank.Team);
-
-                float TargRange2 = TargetRange;
-                float TargRange3 = TargetRange;
-
-                Visible target2 = null;
-                Visible target3 = null;
-
-                int launchCount = techs.Count();
-
-                Tank cTank;
-                float dist;
-                int step;
-                switch (pos)
-                {
-                    case 2:
-                        for (step = 0; step < launchCount; step++)
-                        {
-                            cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                            {
-                                dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                                if (dist < TargetRange)
-                                {
-                                    if (TargetRange < TargRange2)
-                                    {
-                                        TargRange2 = dist;
-                                        target2 = cTank.visible;
-                                    }
-                                    TargetRange = dist;
-                                    target = cTank.visible;
-                                }
-                                else if (dist < TargRange2)
-                                {
-                                    TargRange2 = dist;
-                                    target2 = cTank.visible;
-                                }
-                            }
-                        }
-                        if (pos == 2 && !(bool)target2)
-                            return target2;
-                        break;
-                    case 3:
-                        for (step = 0; step < launchCount; step++)
-                        {
-                            cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                            {
-                                dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                                if (dist < TargetRange)
-                                {
-                                    if (TargetRange < TargRange2)
-                                    {
-                                        if (TargRange2 < TargRange3)
-                                        {
-                                            TargRange3 = dist;
-                                            target3 = cTank.visible;
-                                        }
-                                        TargRange2 = dist;
-                                        target2 = cTank.visible;
-                                    }
-                                    TargetRange = dist;
-                                    target = cTank.visible;
-                                }
-                                else if (dist < TargRange2)
-                                {
-                                    if (TargRange2 < TargRange3)
-                                    {
-                                        TargRange3 = dist;
-                                        target3 = cTank.visible;
-                                    }
-                                    TargRange2 = dist;
-                                    target2 = cTank.visible;
-                                }
-                                else if (dist < TargRange3)
-                                {
-                                    TargRange3 = dist;
-                                    target3 = cTank.visible;
-                                }
-                            }
-                        }
-                        if (pos >= 3 && !(bool)target3)
-                            return target3;
-                        if (pos == 2 && !(bool)target2)
-                            return target2;
-                        break;
-                    default:
-                        for (step = 0; step < launchCount; step++)
-                        {
-                            cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                            {
-                                dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                                if (dist < TargetRange)
-                                {
-                                    TargetRange = dist;
-                                    target = cTank.visible;
-                                }
-                            }
-                        }
-                        break;
-                }
-            }
-            /*
-            if (target.IsNull())
-            {
-                DebugTAC_AI.Log("TACtical_AI: Tech " + Tank.name + " Could not find target with FindEnemy, resorting to defaults");
-                return Tank.Vision.GetFirstVisibleTechIsEnemy(Tank.Team);
-            }
-            */
-            return target;
-        }
-
-        public Visible FindEnemyAir(float inRange = 0, int pos = 1)
-        {
-            //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
-            //    return null; // We NO ATTACK
-            Visible target = AIControl.lastEnemy;
-
-            // We begin the search
-            if (CommanderAttack == EnemyAttack.Spyper) inRange = AIGlobals.SpyperMaxRange;
-            else if (inRange <= 0) inRange = 350;
-            float TargetRange = inRange * inRange;
-            Vector3 scanCenter = Tank.boundsCentreWorldNoCheck;
-
-            if (target != null)
-            {
-                if (!target.isActive || !target.tank.IsEnemy(Tank.Team) || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRange)
-                {
-                    //DebugTAC_AI.Log("Target lost");
-                    target = null;
-                }
-                else if (AIControl.PursuingTarget) // Carry on chasing the target
-                {
-                    return target;
-                }
-                else if (TargetLockDuration >= 0)
-                {
-                    TargetLockDuration -= KickStart.AIClockPeriod;
-                    return target;
-                }
-            }
-            float altitudeHigh = -256;
-
-            List<Tank> techs = AIECore.TankAIManager.GetTargetTanks(Tank.Team);
-            if (CommanderAttack == EnemyAttack.Pesterer)
-            {
-                scanCenter = AirplaneUtils.ForeAiming(Tank.visible);
-                int launchCount = techs.Count();
-                for (int step = 0; step < launchCount; step++)
-                {
-                    Tank cTank = techs.ElementAt(step);
-                    if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                    {
-                        if (altitudeHigh < cTank.boundsCentreWorldNoCheck.y)
-                        {   // Priority is other aircraft
-                            if (AIEPathing.AboveHeightFromGround(cTank.boundsCentreWorldNoCheck))
-                                altitudeHigh = AIEPathing.OffsetFromGroundA(cTank.boundsCentreWorldNoCheck, AIControl).y;
-                            else
-                                altitudeHigh = cTank.boundsCentreWorldNoCheck.y;
-                        }
-                        else
-                            continue;
-                        float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                        if (dist < TargetRange)
-                        {
-                            TargetRange = dist;
-                            target = cTank.visible;
-                        }
-                    }
-                }
-            }
-            else if (CommanderAttack == EnemyAttack.Bully)
-            {
-                int launchCount = techs.Count();
-                if (InvertBullyPriority)
-                {
-                    altitudeHigh = 2199;
-                    int BlockCount = 0;
-                    for (int step = 0; step < launchCount; step++)
-                    {
-                        Tank cTank = techs.ElementAt(step);
-                        if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                        {
-                            if (altitudeHigh > cTank.boundsCentreWorldNoCheck.y)
-                            {   // Priority is bases or lowest target
-                                if (!AIEPathing.AboveHeightFromGround(cTank.boundsCentreWorldNoCheck))
-                                    altitudeHigh = AIEPathing.OffsetFromGroundA(cTank.boundsCentreWorldNoCheck, AIControl).y;
-                                else
-                                    altitudeHigh = cTank.boundsCentreWorldNoCheck.y;
-                            }
-                            else
-                                continue;
-                            float dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                            if (cTank.blockman.blockCount > BlockCount && dist < TargetRange)
-                            {
-                                BlockCount = cTank.blockman.blockCount;
-                                target = cTank.visible;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    int BlockCount = 262144;
-                    for (int step = 0; step < launchCount; step++)
-                    {
-                        Tank cTank = techs.ElementAt(step);
-                        if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                        {
-                            if (altitudeHigh < cTank.boundsCentreWorldNoCheck.y)
-                            {   // Priority is other aircraft
-                                if (AIEPathing.AboveHeightFromGround(cTank.boundsCentreWorldNoCheck))
-                                    altitudeHigh = AIEPathing.OffsetFromGroundA(cTank.boundsCentreWorldNoCheck, AIControl).y;
-                                else
-                                    altitudeHigh = cTank.boundsCentreWorldNoCheck.y;
-                            }
-                            else
-                                continue;
-                            float dist = (cTank.boundsCentreWorldNoCheck - Tank.boundsCentreWorldNoCheck).sqrMagnitude;
-                            if (cTank.blockman.blockCount < BlockCount && dist < TargetRange)
-                            {
-                                BlockCount = cTank.blockman.blockCount;
-                                target = cTank.visible;
-                            }
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (CommanderAttack == EnemyAttack.Grudge && target != null)
-                {
-                    if (target.isActive)
-                        return target;
-                }
-                float TargRange2 = TargetRange;
-                float TargRange3 = TargetRange;
-
-                Visible target2 = null;
-                Visible target3 = null;
-
-                int launchCount = techs.Count();
-                Tank cTank;
-                float dist;
-                int step;
-                switch (pos)
-                {
-                    case 2:
-                        for (step = 0; step < launchCount; step++)
-                        {
-                            cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                            {
-                                dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                                if (dist < TargetRange)
-                                {
-                                    if (TargetRange < TargRange2)
-                                    {
-                                        TargRange2 = dist;
-                                        target2 = cTank.visible;
-                                    }
-                                    TargetRange = dist;
-                                    target = cTank.visible;
-                                }
-                                else if (dist < TargRange2)
-                                {
-                                    TargRange2 = dist;
-                                    target2 = cTank.visible;
-                                }
-                            }
-                        }
-                        if (pos == 2 && !(bool)target2)
-                            return target2;
-                        break;
-                    case 3:
-                        for (step = 0; step < launchCount; step++)
-                        {
-                            cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                            {
-                                dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                                if (dist < TargetRange)
-                                {
-                                    if (TargetRange < TargRange2)
-                                    {
-                                        if (TargRange2 < TargRange3)
-                                        {
-                                            TargRange3 = dist;
-                                            target3 = cTank.visible;
-                                        }
-                                        TargRange2 = dist;
-                                        target2 = cTank.visible;
-                                    }
-                                    TargetRange = dist;
-                                    target = cTank.visible;
-                                }
-                                else if (dist < TargRange2)
-                                {
-                                    if (TargRange2 < TargRange3)
-                                    {
-                                        TargRange3 = dist;
-                                        target3 = cTank.visible;
-                                    }
-                                    TargRange2 = dist;
-                                    target2 = cTank.visible;
-                                }
-                                else if (dist < TargRange3)
-                                {
-                                    TargRange3 = dist;
-                                    target3 = cTank.visible;
-                                }
-                            }
-                        }
-                        if (pos >= 3 && !(bool)target3)
-                            return target3;
-                        if (pos == 2 && !(bool)target2)
-                            return target2;
-                        break;
-                    default:
-                        for (step = 0; step < launchCount; step++)
-                        {
-                            cTank = techs.ElementAt(step);
-                            if (cTank.IsEnemy(Tank.Team) && cTank != Tank)
-                            {
-                                dist = (cTank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude;
-                                if (dist < TargetRange)
-                                {
-                                    TargetRange = dist;
-                                    target = cTank.visible;
-                                }
-                            }
-                        }
-                        break;
-                }
-                TargetLockDuration = AIGlobals.ScanDelay;
-            }
-            return target;
-        }
-
 
     }
 }

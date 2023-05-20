@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TerraTechETCUtil;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy.EnemyOperations;
 
@@ -13,7 +14,7 @@ namespace TAC_AI.AI.Enemy
     {
         const float RANDRange = 125;
 
-        public static bool LollyGag(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool holdGround = false)
+        public static bool LollyGag(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct, bool holdGround = false)
         {
             bool isRegenerating = false;
             if (mind.Hurt)// && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10)
@@ -31,12 +32,12 @@ namespace TAC_AI.AI.Enemy
                             }
                             else
                             {   //Try to find new spot
-                                DefaultIdle(thisInst, tank, mind);
+                                DefaultIdle(thisInst, tank, mind, ref direct);
                             }
                         }
-                        else if (!holdGround && AIECore.FetchChargedChargers(tank, mind.Range, out Transform posTrans, out _, tank.Team))
+                        else if (!holdGround && AIECore.FetchChargedChargers(tank, mind.MaxCombatRange, out Transform posTrans, out _, tank.Team))
                         {
-                            thisInst.lastDestination = posTrans.position;
+                            direct.lastDestination = posTrans.position;
                             return true;
                         }
                         if (thisInst.GetEnergyPercent() > 0.9f)
@@ -58,10 +59,6 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs < 3)
                     {
-                        bool venPower = false;
-                        if (mind.MainFaction == FactionTypesExt.VEN) venPower = true;
-                        thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
-                        //thisInst.AttemptedRepairs++;
                         DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
                         return true;
                     }
@@ -100,29 +97,29 @@ namespace TAC_AI.AI.Enemy
             //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
-                thisInst.lastDestination = mind.sceneStationaryPos;
+                direct.lastDestination = mind.sceneStationaryPos;
             else
             {
                 switch (mind.CommanderMind)
                 {
                     case EnemyAttitude.Default: // do dumb stuff
-                        DefaultIdle(thisInst, tank, mind);
+                        DefaultIdle(thisInst, tank, mind, ref direct);
                         break;
                     case EnemyAttitude.Homing:  // Get nearest tech regardless of max combat range and attack them
-                        HomingIdle(thisInst, tank, mind);
+                        HomingIdle(thisInst, tank, mind, ref direct);
                         break;
                     case EnemyAttitude.Miner:   // mine resources
-                        RMiner.MineYerOwnBusiness(thisInst, tank, mind);
+                        RMiner.MineYerOwnBusiness(thisInst, tank, mind, ref direct);
                         break;
                     case EnemyAttitude.NPCBaseHost: // mine resources - will run off to do missions later
-                        RMiner.MineYerOwnBusiness(thisInst, tank, mind);
+                        RMiner.MineYerOwnBusiness(thisInst, tank, mind, ref direct);
                         break;
                     case EnemyAttitude.Boss:        // Tidy base - will run off to do missions later
-                        RScavenger.Scavenge(thisInst, tank, mind);
+                        RScavenger.Scavenge(thisInst, tank, mind, ref direct);
                         break;
                     //The case below I still have to think of a reason for them to do the things
                     case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
-                        RScavenger.Scavenge(thisInst, tank, mind);
+                        RScavenger.Scavenge(thisInst, tank, mind, ref direct);
                         break;
                 }
             }
@@ -137,33 +134,64 @@ namespace TAC_AI.AI.Enemy
                 thisInst.anchorAttempts = 0;
             }
         }
+        public static bool CanRetreat(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {
+            if (!tank.IsAnchored && mind.Hurt)// && thisInst.lastDestination.Approximately(tank.boundsCentreWorldNoCheck, 10)
+            {
+                if (mind.CommanderSmarts >= EnemySmarts.Meh)
+                {
+                    if (thisInst.CanStoreEnergy() && thisInst.GetEnergyPercent() < AIGlobals.BatteryRetreatPercent)
+                    {
+                        if (mind.SolarsAvail && !Singleton.Manager<ManTimeOfDay>.inst.NightTime)
+                            return true;
+                        else if (AIECore.FetchChargedChargers(tank, mind.MaxCombatRange, out _, out _, tank.Team))
+                            return true;
+                    }
+                }
+                if (mind.CommanderSmarts == EnemySmarts.Smrt)
+                {
+                    if (thisInst.DamageThreshold < AIGlobals.RetreatBelowTechDamageThreshold)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return AIECore.RetreatingTeams.Contains(tank.Team);
+        }
 
 
         // Handle being bored AIs
-        public static void DefaultIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void DefaultIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             if (thisInst.ActionPause == 1)
             {
-                thisInst.lastDestination = GetRANDPos(tank);
+                direct.lastDestination = GetRANDPos(tank);
                 thisInst.ActionPause = 0;
             }
             else if (thisInst.ActionPause == 0)
                 thisInst.ActionPause = 60;
             if (thisInst.ActionPause > 15)
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDest = EDriveDest.ToLastDestination;
             else
-                thisInst.DriveDest = EDriveDest.None;
+                direct.DriveDest = EDriveDest.None;
         }
-        public static void HomingIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void HomingIdle(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //Try find next target to assault
             try
             {
-                thisInst.lastEnemy = mind.FindEnemy(inRange: AIGlobals.EnemyExtendActionRange);
-                if (thisInst.lastEnemy)
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                var target = thisInst.FindEnemy(mind.InvertBullyPriority);
+                if (target)
+                    direct.lastDestination = target.tank.boundsCentreWorldNoCheck;
                 else
-                    DefaultIdle(thisInst, tank, mind);
+                    DefaultIdle(thisInst, tank, mind, ref direct);
+                /*
+                thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority, inRange: AIGlobals.EnemyExtendActionRange);
+                if (thisInst.lastEnemyGet)
+                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                else
+                    DefaultIdle(thisInst, tank, mind, ref direct);
+                */
             }
             catch { }//No tanks available
         }
@@ -189,8 +217,8 @@ namespace TAC_AI.AI.Enemy
             // Determines the weapons actions and aiming of the AI - Sub-Neutral (Coward)
             //if (mind.CommanderAttack == EnemyAttack.Coward)
             //{
-                thisInst.lastEnemy = mind.FindEnemy();
-                thisInst.AttackEnemy = false;
+            thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
+            thisInst.AttackEnemy = false;
             //}
         }
 
@@ -202,18 +230,18 @@ namespace TAC_AI.AI.Enemy
         /// <param name="mind"></param>
         public static void Monitor(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
-            RBases.EnemyBaseFunder funds = RBases.GetTeamFunder(tank.Team);
+            RLoadedBases.EnemyBaseFunder funds = RLoadedBases.GetTeamFunder(tank.Team);
             if (funds != null)
             {
-                if ((funds.Tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude > AIGlobals.MinimumMonitorSpacingSqr)
+                if ((funds.Tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude > AIGlobals.MaximumNeutralMonitorSqr)
                     thisInst.lastEnemy = null;  // Stop following this far from base
                 else
-                    thisInst.lastEnemy = mind.FindEnemy();
+                    thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
             }
             else
-                thisInst.lastEnemy = mind.FindEnemy();
-            if (thisInst.lastEnemy)
-                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
+            if (thisInst.lastEnemyGet)
+                thisInst.SetPursuit(thisInst.lastEnemyGet);
             thisInst.AttackEnemy = false;
         }
 
@@ -227,12 +255,15 @@ namespace TAC_AI.AI.Enemy
         public static void BaseAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             // Determines the weapons actions and aiming of the AI
-            thisInst.lastEnemy = mind.FindEnemy();
-            if (thisInst.lastEnemy != null)
+            var lastEnemyC = thisInst.lastEnemy;
+            thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
+            //DebugTAC_AI.Log("Base " + tank.name + " has enemy: " + thisInst.lastEnemy.IsNotNull() + " prev " + lastEnemyC.IsNotNull());
+            if (thisInst.lastEnemyGet != null)
             {
                 thisInst.AttackEnemy = true;
             }
-            thisInst.AttackEnemy = false;
+            else
+                thisInst.AttackEnemy = false;
         }
 
         /// <summary>
@@ -243,10 +274,14 @@ namespace TAC_AI.AI.Enemy
         public static void AidAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             // Determines the weapons actions and aiming of the AI
-            thisInst.lastEnemy = mind.FindEnemy();
-            if (thisInst.lastEnemy != null)
+            var lastEnemyC = thisInst.lastEnemy;
+            thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
+            //DebugTAC_AI.Log("Tech " + tank.name + " has enemy: " + thisInst.lastEnemy.IsNotNull() + " prev " + lastEnemyC.IsNotNull()
+            //    + " | Range " + thisInst.MaxCombatRange);
+            if (thisInst.lastEnemyGet != null)
             {
                 //Fire even when retreating - the AI's life depends on this!
+                thisInst.AttackEnemy = true;
                 if (thisInst.lastOperatorRange < AIGlobals.MaxRangeFireAll)
                 {
                     thisInst.AttackEnemy = true;
@@ -265,10 +300,12 @@ namespace TAC_AI.AI.Enemy
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             thisInst.AttackEnemy = false;
-            thisInst.lastEnemy = mind.FindEnemy();
-            if (thisInst.lastEnemy != null)
+            var lastEnemyC = thisInst.lastEnemy;
+            thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
+            //DebugTAC_AI.Log("Sniper " + tank.name + " has enemy: " + thisInst.lastEnemy.IsNotNull() + " prev " + lastEnemyC.IsNotNull());
+            if (thisInst.lastEnemyGet != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
+                Vector3 aimTo = (thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.WeaponDelayClock += KickStart.AIClockPeriod;
                 if (thisInst.Attempt3DNavi)
                 {
@@ -318,6 +355,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
+
         /// <summary>
         /// Prioritize removal of obsticles over attacking enemy
         /// </summary>
@@ -332,6 +370,28 @@ namespace TAC_AI.AI.Enemy
             }
             else
                 thisInst.AttackEnemy = true;
+        }
+
+
+        /// <summary>
+        /// Stay focused on first target if the unit is order to focus-fire
+        /// </summary>
+        /// <param name="thisInst"></param>
+        /// <param name="tank"></param>
+        public static void RTSCombat(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        {
+            // Determines the weapons actions and aiming of the AI
+            if (thisInst.lastEnemyGet != null)
+            {   // focus fire like Grudge
+                thisInst.AttackEnemy = true;
+                if (!thisInst.lastEnemyGet.isActive)
+                    thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
+            }
+            else
+            {
+                thisInst.AttackEnemy = false;
+                thisInst.lastEnemy = thisInst.FindEnemy(mind.InvertBullyPriority);
+            }
         }
 
         /// <summary>
@@ -352,7 +412,7 @@ namespace TAC_AI.AI.Enemy
                 }
             }
             thisInst.DANGER = false;
-            thisInst.lastEnemy = mind.FindEnemy();
+            thisInst.lastEnemySet = mind.FindEnemy();
         }*/
     }
 }

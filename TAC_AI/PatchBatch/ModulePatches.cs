@@ -167,21 +167,21 @@ namespace TAC_AI
                         {
                             if (KickStart.DisplayEnemyEvents)
                                 AIGlobals.PopupNeutralInfo(moneyGain, pos);
-                            RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                            RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                             return false;
                         }
                         else if (AIGlobals.IsFriendlyBaseTeam(team))
                         {
                             if (KickStart.DisplayEnemyEvents)
                                 AIGlobals.PopupAllyInfo(moneyGain, pos);
-                            RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                            RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                             return false;
                         }
                         else
                         {
                             if (KickStart.DisplayEnemyEvents)
                                 AIGlobals.PopupEnemyInfo(moneyGain, pos);
-                            RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                            RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                         }
                     }
                 }
@@ -220,19 +220,19 @@ namespace TAC_AI
                                     {
                                         if (KickStart.DisplayEnemyEvents)
                                             AIGlobals.PopupNeutralInfo(moneyGain, pos);
-                                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                                        RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                                     }
                                     else if (AIGlobals.IsFriendlyBaseTeam(team))
                                     {
                                         if (KickStart.DisplayEnemyEvents)
                                             AIGlobals.PopupAllyInfo(moneyGain, pos);
-                                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                                        RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                                     }
                                     else
                                     {
                                         if (KickStart.DisplayEnemyEvents)
                                             AIGlobals.PopupEnemyInfo(moneyGain, pos);
-                                        RBases.TryAddMoney(sellGain, __instance.block.tank.Team);
+                                        RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                                     }
                                 }
                             }
@@ -270,23 +270,24 @@ namespace TAC_AI
                     //DebugTAC_AI.Log("TACtical_AI: AIEnhanced enabled");
                     try
                     {
-                        var tank = __instance.transform.root.GetComponent<Tank>();
-                        var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
-                        if (tankAIHelp)
+                        var tank = __instance.block.tank;
+                        if (tank)
                         {
-                            bool ExertControl = tankAIHelp.ControlTech(__instance.block.tank.control);
-
-                            if (ExertControl)
+                            var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
+                            if (tankAIHelp)
                             {
-                                __result = true;
-                                return false;
+                                if (tankAIHelp.ControlTech(__instance.block.tank.control))
+                                {
+                                    __result = true;
+                                    return false;
+                                }
                             }
                         }
                         // else it's still initiating
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Failure on handling AI addition!");
+                        DebugTAC_AI.Log("TACtical_AI: AIECore.TankAIHelper.ControlTech() - Failure on handling AI!");
                         DebugTAC_AI.Log(e);
                     }
                 }

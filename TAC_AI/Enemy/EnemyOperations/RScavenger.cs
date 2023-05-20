@@ -13,23 +13,25 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
     public static class RScavenger
     {
 
-        public static void Scavenge(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void Scavenge(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = mind.EvilCommander == EnemyHandling.Starship || mind.EvilCommander == EnemyHandling.Airplane || mind.EvilCommander == EnemyHandling.Chopper;
-
-            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestination);
+            
+            float prevDist = thisInst.lastOperatorRange;
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestinationCore);
+            bool needsToSlowDown = thisInst.IsOrbiting(thisInst.lastDestinationCore, dist - prevDist);
             bool hasMessaged = false;
             thisInst.AvoidStuff = true;
 
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
 
-            if (mind.CommanderSmarts >= EnemySmarts.Mild && thisInst.lastEnemy != null)
+            if (mind.CommanderSmarts >= EnemySmarts.Mild && thisInst.lastEnemyGet != null)
             {   //RUN!!!!!!!!
                 if (!thisInst.foundBase)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, mind.MaxCombatRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
                     if (!thisInst.foundBase)
                     {
                         mind.CommanderMind = EnemyAttitude.Default;
@@ -43,7 +45,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 }
                 else if (thisInst.theBase == null)
                 {
-                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                    thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck, mind.MaxCombatRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                     if (!thisInst.foundBase)
                     {
                         mind.CommanderMind = EnemyAttitude.Default;
@@ -66,10 +68,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (thisInst.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  GET OUT OF THE WAY!  (dest base)");
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                 }
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Aaaah enemy!  Running back to base!");
-                thisInst.DriveDest = EDriveDest.ToBase;
+                direct.DriveDest = EDriveDest.ToBase;
                 return;
             }
 
@@ -115,7 +117,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             //DebugTAC_AI.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
             if (thisInst.CollectedTarget || thisInst.ActionPause > 10)
             {   // BRANCH - Return to base
-                thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, mind.Range + AIGlobals.FindBaseExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, mind.MaxCombatRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
@@ -125,8 +127,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         mind.CommanderMind = EnemyAttitude.Default;
                         return; // There's no base! 
                     }
-                    thisInst.lastDestination = thisInst.theBase.boundsCentreWorld;
-                    dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
+                    direct.lastDestination = thisInst.theBase.boundsCentreWorld;
+                    dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestinationCore).magnitude;
                 }
                 thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                 thisInst.ForceSetDrive = true;
@@ -167,7 +169,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
                         thisInst.AvoidStuff = false;
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false, ref direct);
                     }
                     else if (thisInst.recentSpeed < 8)
                     {
@@ -190,7 +192,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                     }
                     else
                     {
@@ -198,15 +200,19 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
                         //thisInst.Yield = true;
                         thisInst.SettleDown();
+                        if (needsToSlowDown)
+                            thisInst.Yield = true;
                     }
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                 }
+                else if (needsToSlowDown)
+                    thisInst.Yield = true;
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
-                thisInst.DriveDest = EDriveDest.ToBase;
+                direct.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
@@ -220,7 +226,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, mind.Range, out thisInst.theResource);
+                    thisInst.foundGoal = AIECore.FetchLooseBlocks(tank.rootBlockTrans.position, mind.MaxCombatRange, out thisInst.theResource);
                     if (!thisInst.foundGoal)
                     {
                         mind.CommanderMind = EnemyAttitude.Default;
@@ -229,9 +235,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Found a block...");
-                        thisInst.lastDestination = thisInst.theResource.centrePosition;
-                        thisInst.DriveDest = EDriveDest.ToBase;
-                        BScrapper.StopByBase(thisInst, tank, dist, ref hasMessaged);
+                        direct.lastDestination = thisInst.theResource.centrePosition;
+                        direct.DriveDest = EDriveDest.ToBase;
+                        BScrapper.StopByBase(thisInst, tank, dist, ref hasMessaged, ref direct);
                         return;
                     }
                 }
@@ -263,7 +269,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 else if (thisInst.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                 }
                 else if (dist <= spacing)
                 {
@@ -273,12 +279,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     thisInst.HoldBlock(thisInst.theResource);
                     thisInst.SettleDown();
                 }
+                else if (needsToSlowDown)
+                    thisInst.Yield = true;
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to scavenge at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.DriveDest = EDriveDest.ToMine;
+                direct.DriveDest = EDriveDest.ToMine;
                 thisInst.foundBase = false;
             }
         }
-
-
     }
 }

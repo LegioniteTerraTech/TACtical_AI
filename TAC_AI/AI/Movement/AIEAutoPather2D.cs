@@ -5,112 +5,27 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using TerraTechETCUtil;
+using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Movement
 {
-    public interface IPathfindable
-    {
-        /// <summary>
-        /// Should we try actively pathfinding?
-        /// Should ONLY be set by SetAutoPathfinding()!
-        /// </summary>
-        bool AutoPathfind { get; set; }
-        /// <summary>
-        /// Handled automatically.  DO NOT TOUCH!
-        /// </summary>
-        AIEAutoPather2D Pathfinder { get; set; }
-        /// <summary>
-        /// How we should handle water pathfinding
-        /// </summary>
-        WaterPathing WaterPathing { get; set; }
-        /// <summary>
-        /// The precision of the pathing grid.  Smaller Techs should have smaller values.
-        /// </summary>
-        float PathingPrecision { get; set; }
-        /// <summary>
-        /// The max allowed difficulty of the pathing when finding a route.  The more capable, the higher this is.
-        /// </summary>
-        byte MaxPathDifficulty { get; set; }
-
-        Vector3 CurrentPosition();
-        Vector3 GetTargetDestination();
-        void OnFinishedPathfinding(List<WorldPosition> pos);
-    }
-    public static class IPathfindableExtensions
-    {
-        public static void SetAutoPathfinding(this IPathfindable pathable, bool active)
-        {
-            if (active != pathable.AutoPathfind)
-            {
-                pathable.AutoPathfind = active;
-                if (active)
-                    AIEPathMapper.autoPathers.Add(pathable);
-                else
-                    AIEPathMapper.autoPathers.Remove(pathable);
-            }
-        }
-        public static bool StartPathfind(this IPathfindable pathable)
-        {
-            return AIEAutoPather2D.DoPathfinding(ref pathable);
-        }
-        public static void StopPathfinding(this IPathfindable pathable)
-        {
-            AIEAutoPather2D.CancelPathfinding(ref pathable);
-        }
-    }
-
     /// <summary>
     /// Acts as the slow, non-immedeate pathfinding for land and sea AIs.
     /// </summary>
-    public class AIEAutoPather2D
+
+    public class AIEAutoPather2D : AIEAutoPather
     {
-        public const int WrongHeadingDifficultyAddition = 6;
-        public const int ObsticleDifficultyAddition = 16;
-        public const float TerrainSlopePenaltyMulti = 8f;
-        public const int maxDeadEndsTillFail = 8;
-        public const float maxPathedTillFailDistMulti = 4f;
-
-        public static int PathingIterationsPerCall = 1;
-        public static int PathfindBeyondDistBox = 12;
-
-        public WaterPathing waterPath;
-        public byte maxDiff;
-        public float MoveGridScale;
-        private bool Finished = false;
-        private readonly IPathfindable PathingUnit;
         private IntVector2 CurPos;
-        public byte CurAlt;
         private IntVector2 StartPos;
         private IntVector2 EndPos;
-        private WorldPosition Center;
-        private readonly List<IntVector2> PathRoute = new List<IntVector2>();
+        private List<IntVector2> PathRoute = new List<IntVector2>();
         private readonly HashSet<IntVector2> pathed = new HashSet<IntVector2>();
-        private int deadEnds = 0;
-        private readonly Event<AIEAutoPather2D> resultsPasser = new Event<AIEAutoPather2D>();
-        private int maxPathedTillFail;
 
-        private AIEAutoPather2D(IPathfindable pathable, Vector3 startPos, Vector3 endPos)
+        private AIEAutoPather2D(IPathfindable pathable, Vector3 startPos, Vector3 endPos) : base(pathable)
         {
-            PathingUnit = pathable;
-            maxDiff = (byte)Mathf.Clamp(pathable.MaxPathDifficulty, 1, AIEPathMapper.maxAltByte - 1);
-            MoveGridScale = pathable.PathingPrecision;
-            Center = WorldPosition.FromScenePosition((startPos + endPos) / 2);
+            Recalc_Internal(startPos, endPos);
 
-            StartPos = ToLocal(startPos);
-            EndPos = ToLocal(endPos);
-            CurPos = StartPos;
-            pathed.Add(CurPos);
-            waterPath = pathable.WaterPathing;
-            maxPathedTillFail = Mathf.CeilToInt((startPos - endPos).magnitude * maxPathedTillFailDistMulti);
-
-            AIEPathMapper.RegisterPather(GetWorldPathEnd(), this);
-        }
-
-        internal static bool IsFarEnough(Vector3 start, Vector3 end)
-        {
-            Vector3 pos = start - end;
-            return pos.x > PathfindBeyondDistBox || pos.x < -PathfindBeyondDistBox
-                 || pos.z > PathfindBeyondDistBox || pos.z < -PathfindBeyondDistBox;
+            AIEPathMapper.RegisterPather(this);
         }
 
         /// <summary>
@@ -120,165 +35,385 @@ namespace TAC_AI.AI.Movement
         /// <param name="startPos"></param>
         /// <param name="destPos"></param>
         /// <returns></returns>
-        internal static bool DoPathfinding(ref IPathfindable pathable)
+        public static bool DoPathfinding(ref IPathfindable pathable)
         {
+            if (pathable == null)
+                throw new NullReferenceException("AIAutoPather - PathingUnit was null on DoPathfinding call!");
+
             Vector3 startPos = pathable.CurrentPosition();
             Vector3 destPos = pathable.GetTargetDestination();
+
             // Check if we should just rely on immedeate pathing
             if (!IsFarEnough(startPos, destPos))
                 return false;
             var pathfinder = pathable.Pathfinder;
             if (pathfinder == null)
                 pathable.Pathfinder = new AIEAutoPather2D(pathable, startPos, destPos);
+            else if (!(pathable.Pathfinder is AIEAutoPather2D))
+            {
+                DebugTAC_AI.Log("AIAutoPather - Switching to 2D...");
+                pathable.StopPathfinding();
+                pathable.Pathfinder = new AIEAutoPather2D(pathable, startPos, destPos);
+            }
             else
             {
-                if (pathable == null)
-                    throw new NullReferenceException("AIAutoPather - PathingUnit was null on DoPathfinding call!");
-
                 // Check if we should recalc it
-                if (IsFarEnough(pathfinder.ToSceneNoHeightCheck(pathfinder.EndPos), destPos))
+                if (IsFarEnough(pathfinder.EndPosWP.ScenePosition, destPos) || (pathfinder.IsFinished && !pathfinder.Success &&
+                    IsFarEnough(pathfinder.StartPosWP.ScenePosition, startPos)))
+                {
+                    //DebugTAC_AI.Log("AIAutoPather - RECALC Called.");
                     pathfinder.Recalc(startPos, destPos);
-            }
-            return true;
-        }
-        internal static bool CancelPathfinding(ref IPathfindable pathable)
-        {
-            if (pathable.Pathfinder != null)
-            {
-                Debug.Log("AIAutoPather - Cancelled pathfinding.");
-                pathable.Pathfinder.Finished = true;
-                pathable.Pathfinder = null;
+                }
             }
             return true;
         }
 
-        private void Recalc()
+
+        private void RecalcManual()
         {
             if (PathingUnit != null)
                 Recalc(PathingUnit.CurrentPosition(), PathingUnit.GetTargetDestination());
         }
-        private void Recalc(Vector3 startPos, Vector3 endPos)
+        public override void Recalc(Vector3 startPosScene, Vector3 endPosScene)
         {
+            Recalc_Internal(startPosScene, endPosScene);
+            base.Recalc(startPosScene, endPosScene);
+        }
+        private void Recalc_Internal(Vector3 startPos, Vector3 endPos)
+        {
+            PathingUnit.OnFinishedPathfinding(null);
             PathRoute.Clear();
             pathed.Clear();
             maxDiff = (byte)Mathf.Clamp(PathingUnit.MaxPathDifficulty, 1, AIEPathMapper.maxAltByte - 1);
-            MoveGridScale = PathingUnit.PathingPrecision;
-            Center = WorldPosition.FromScenePosition((startPos + endPos) / 2);
-
-            StartPos = ToLocal(startPos);
-            EndPos = ToLocal(endPos);
-            CurPos = StartPos;
-            pathed.Add(CurPos);
+            MoveGridScale = Mathf.Max(PathingUnit.PathingPrecision, 1);
+            DebugTAC_AI.Assert(PathingUnit.PathingPrecision < 1,
+                "AIEAutoPather expects PathingPrecision to be greater than one but got "
+                + PathingUnit.PathingPrecision + " instead");
+            StartPosWP = WorldPosition.FromScenePosition(startPos);
+            CenterPos = WorldPosition.FromScenePosition((startPos + endPos) / 2);
+            EndPosWP = WorldPosition.FromScenePosition(endPos);
             waterPath = PathingUnit.WaterPathing;
-            maxPathedTillFail = Mathf.CeilToInt((startPos - endPos).magnitude * maxPathedTillFailDistMulti);
 
-            if (Finished)
-                AIEPathMapper.RegisterPather(GetWorldPathEnd(), this);
+            CurAlt = AIEPathMapper.GetAlt(startPos, false);
+            startPos = FindIdealStart(startPos);
+            StartPos = ToLocal(startPos);
+            CurAlt = AIEPathMapper.GetAlt(startPos, false);
+            CurPos = StartPos;
+            EndPos = ToLocal(endPos);
+            pathed.Add(CurPos);
+            Finished = false;
+            Success = false;
+            float mag = (startPos - endPos).magnitude / MoveGridScale;
+            DebugTAC_AI.Assert(float.IsNaN(mag) || mag < 0,
+                "AIEAutoPather magnitude is " + (float.IsNaN(mag) ? "NaN" : "Negative"));
+            if (mag > int.MaxValue / maxPathedTillFailDistMulti)
+                DebugTAC_AI.Exception("AIEAutoPather magnitude is too big, points given are "
+                    + startPos + " vs " + endPos);
+            maxDeadEndsTillFail = Mathf.CeilToInt(mag * maxDeadEndsTillFailMulti);
+            maxPathedTillFail = Mathf.CeilToInt(mag * maxPathedTillFailDistMulti);
+            DebugTAC_AI.Info("AIEAutoPather.Recalc_Internal() - MoveGridScale" + MoveGridScale +" |  maxPathedTillFail: " + maxPathedTillFail);
+        }
+        private List<IntVector2> iterateAround4 = IterateAroundExpand(6);
+        private Vector3 FindIdealStart(Vector3 Initial)
+        {
+            IntVector2 loc = ToLocal(Initial);
+            IntVector2 posC;
+            try
+            {
+                switch (waterPath)
+                {
+                    case WaterPathing.AvoidWater:
+                        if (CalcAvoidWater(loc) <= maxDiff)
+                            return Initial;
+                        else
+                        {
+                            foreach (var item in iterateAround4)
+                            {
+                                posC = loc + item;
+                                try
+                                {
+                                    if (CalcAvoidWater(posC, loc) <= maxDiff)
+                                        return ToSceneHeightFast(posC);
+                                }
+                                catch (TileNotLoadedException) { }
+                            }
+                            DebugTAC_AI.Log("AIAutoPather - Failed to FindIdealStart(Land) at " + loc + ", alt " + AIEPathMapper.GetAltitudeCached(Initial));
+                            return Initial;
+                        }
+                    case WaterPathing.StayInWater:
+                        if (CalcWaterOnly(loc) <= maxDiff)
+                            return Initial;
+                        else
+                        {
+                            foreach (var item in iterateAround4)
+                            {
+                                posC = loc + item;
+                                try
+                                {
+                                    if (CalcWaterOnly(posC, loc) <= maxDiff)
+                                        return ToSceneHeightFast(posC);
+                                }
+                                catch (TileNotLoadedException) { }
+                            }
+                            DebugTAC_AI.Log("AIAutoPather - Failed to FindIdealStart(Water) at " + loc + ", alt " + AIEPathMapper.GetAltitudeCached(Initial));
+                            return Initial;
+                        }
+                    default:
+                        if (CalcAll(loc) <= maxDiff)
+                            return Initial;
+                        else
+                        {
+                            foreach (var item in iterateAround4)
+                            {
+                                posC = loc + item;
+                                try
+                                {
+                                    if (CalcAll(posC, loc) <= maxDiff)
+                                        return ToSceneHeightFast(posC);
+                                }
+                                catch (TileNotLoadedException) { }
+                            }
+                            DebugTAC_AI.Log("AIAutoPather - Failed to FindIdealStart(All) at " + loc + ", alt " + AIEPathMapper.GetAltitudeCached(Initial));
+                            return Initial;
+                        }
+                }
+            }
+            catch (TileNotLoadedException)
+            {
+                DebugTAC_AI.Log("AIAutoPather - Failed to FindIdealStart(All) - tile the tech is in is not loaded?!?");
+                return Initial;
+            }
         }
 
+
+
+        private static List<IntVector2> IterateAroundExpand(int rad)
+        {
+            HashSet<IntVector2> pos = new HashSet<IntVector2> { IntVector2.zero };
+            HashSet<IntVector2> posPre = new HashSet<IntVector2> { IntVector2.zero };
+            for (int step = 0; step < rad; step++)
+            {
+                var next = new HashSet<IntVector2>(posPre);
+                posPre.Clear();
+                foreach (var item in next)
+                {
+                    foreach (var item2 in iterationsStr)
+                    {
+                        var coord = item2 + item;
+                        if (!pos.Contains(coord))
+                        {
+                            pos.Add(coord);
+                            posPre.Add(coord);
+                        }
+                    }
+                }
+            }
+            return pos.ToList();
+        }
+        private static List<IntVector2> iterationsAll = new List<IntVector2>
+        {
+            new IntVector2(-1,-1),
+            new IntVector2(-1,0),
+            new IntVector2(-1,1),
+            new IntVector2(0,-1),
+            new IntVector2(0,1),
+            new IntVector2(1,-1),
+            new IntVector2(1,0),
+            new IntVector2(1,1),
+        };
+
+        private static List<IntVector2> iterationsStr = new List<IntVector2>
+        {
+            new IntVector2(-1,0),
+            new IntVector2(0,-1),
+            new IntVector2(0,1),
+            new IntVector2(1,0),
+        };
+        private static List<IntVector2> iterationsDia = new List<IntVector2>
+        {
+            new IntVector2(-1,-1),
+            new IntVector2(-1,1),
+            new IntVector2(1,-1),
+            new IntVector2(1,1),
+        };
+        internal void PrintError(List<KeyValuePair<byte, IntVector2>> toCheckAlt)
+        {
+            try
+            {
+                KeyValuePair<byte, IntVector2> best = toCheckAlt.OrderBy(x => x.Key).First();
+                Vector3 posScene = ToSceneNoHeightCheck(best.Value);
+                DebugTAC_AI.Log("AIAutoPather - Type " + waterPath.ToString() + " | CurAlt is " + CurAlt + " vs best alt " + AIEPathMapper.GetAlt(posScene, false) +
+                    " | Max Difficulty " + maxDiff + " vs best possible " + best.Key + " | Obst " + AIEPathMapper.HasObst(posScene));
+                PrintErrorInfoCoord(best.Value, best.Key);
+                DebugTAC_AI.Log("OTHERS:");
+                foreach (var item in toCheckAlt)
+                {
+                    if (item.Value != best.Value)
+                    {
+                        DebugTAC_AI.Log(item.Value + " alt " + AIEPathMapper.GetAlt(posScene, false) + " | diff " + best.Key +
+                            " | obst " + AIEPathMapper.HasObst(posScene));
+                        PrintErrorInfoCoord(item.Value, item.Key);
+                    }
+                }
+            }
+            catch { DebugTAC_AI.Log("PrintError no ENTRIES to report."); }
+        }
+        internal void PrintErrorInfoCoord(IntVector2 chunk, byte end)
+        {
+            Vector3 posV = ToSceneHeightFast(chunk);
+            byte init = AIEPathMapper.GetDifficultyNoWater(posV, this);
+            byte heading = CalcHeadingDiff(chunk, CurPos);
+            byte obstActive = CalcActiveObst(posV);
+            //DebugTAC_AI.Log("PrintErrorInfoCoord - " + posV +  " | initial: " + init + " | heading: " + heading + " | obst: " + obstActive + 
+            //    " | total: " + end);
+        }
+
+
+        private static List<KeyValuePair<byte, IntVector2>> toCheck = new List<KeyValuePair<byte, IntVector2>>();
+        private static List<KeyValuePair<byte, IntVector2>> toCheckAlt = new List<KeyValuePair<byte, IntVector2>>();
+        private static List<KeyValuePair<byte, IntVector2>> toCheckExtra = new List<KeyValuePair<byte, IntVector2>>();
+        private static List<KeyValuePair<byte, IntVector2>> toCheckExtra2 = new List<KeyValuePair<byte, IntVector2>>();
         /// <summary>
-        /// 
+        /// For each call, paths each tile every call PathingIterationsPerCall times
         /// </summary>
         /// <returns>True if calcing, false when finished</returns>
-        internal bool CalcRoute()
+        public override bool CalcRoute()
         {
             if (PathingUnit == null)
+            {
+                DebugTAC_AI.Log("AIAutoPather - Failed since PathingUnit is null");
                 return false;
-            List<KeyValuePair<byte, IntVector2>> toCheck = new List<KeyValuePair<byte, IntVector2>>();
+            }
+            if (Finished)
+            {
+                Finished = false;
+                DebugTAC_AI.Log("AIAutoPather - Stopped updating.");
+                PathingUnit.OnFinishedPathfinding(null);
+                return false;
+            }
+            toCheck.Clear();
+            toCheckAlt.Clear();
             IntVector2 posC;
             byte diff;
+            bool nearbyObst = false;
             for (int step = 0; step < PathingIterationsPerCall; step++)
             {
                 switch (waterPath)
                 {
                     case WaterPathing.AvoidWater:
-                        posC = CurPos + new IntVector2(1, 0);
-                        if (!pathed.Contains(posC))
+                        foreach (var item in iterationsStr)
                         {
-                            diff = CalcWater(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            posC = CurPos + item;
+                            if (!pathed.Contains(posC))
+                            {
+                                diff = CalcAvoidWater(posC, CurPos);
+                                PrintErrorInfoCoord(posC, diff);
+                                if (diff <= maxDiff)
+                                    toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                else
+                                    nearbyObst = true;
+                                toCheckAlt.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            }
                         }
-                        posC = CurPos + new IntVector2(-1, 0);
-                        if (!pathed.Contains(posC))
+                        if (!nearbyObst)
                         {
-                            diff = CalcWater(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
-                        }
-                        posC = CurPos + new IntVector2(0, 1);
-                        if (!pathed.Contains(posC))
-                        {
-                            diff = CalcWater(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
-                        }
-                        posC = CurPos + new IntVector2(0, -1);
-                        if (!pathed.Contains(posC))
-                        {
-                            diff = CalcWater(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            toCheckExtra.Clear();
+                            toCheckExtra2.Clear();
+                            foreach (var item in iterationsDia)
+                            {
+                                posC = CurPos + item;
+                                if (!pathed.Contains(posC))
+                                {
+                                    diff = CalcAvoidWater(posC, CurPos);
+                                    PrintErrorInfoCoord(posC, diff);
+                                    if (diff <= maxDiff)
+                                        toCheckExtra.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                    else
+                                        nearbyObst = true;
+                                    toCheckExtra2.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                }
+                            }
+                            if (!nearbyObst)
+                            {
+                                toCheck.AddRange(toCheckExtra);
+                                toCheckAlt.AddRange(toCheckExtra2);
+                            }
                         }
                         break;
                     case WaterPathing.AllowWater:
-                        posC = CurPos + new IntVector2(1, 0);
-                        if (!pathed.Contains(posC))
+                        foreach (var item in iterationsStr)
                         {
-                            diff = CalcDiff(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            posC = CurPos + item;
+                            if (!pathed.Contains(posC))
+                            {
+                                diff = CalcAll(posC, CurPos);
+                                if (diff <= maxDiff)
+                                    toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                else
+                                    nearbyObst = true;
+                                toCheckAlt.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            }
                         }
-                        posC = CurPos + new IntVector2(-1, 0);
-                        if (!pathed.Contains(posC))
+                        if (!nearbyObst)
                         {
-                            diff = CalcDiff(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
-                        }
-                        posC = CurPos + new IntVector2(0, 1);
-                        if (!pathed.Contains(posC))
-                        {
-                            diff = CalcDiff(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
-                        }
-                        posC = CurPos + new IntVector2(0, -1);
-                        if (!pathed.Contains(posC))
-                        {
-                            diff = CalcDiff(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            toCheckExtra.Clear();
+                            toCheckExtra2.Clear();
+                            foreach (var item in iterationsDia)
+                            {
+                                posC = CurPos + item;
+                                if (!pathed.Contains(posC))
+                                {
+                                    diff = CalcAll(posC, CurPos);
+                                    if (diff <= maxDiff)
+                                        toCheckExtra.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                    else
+                                        nearbyObst = true;
+                                    toCheckExtra2.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                }
+                            }
+                            if (!nearbyObst)
+                            {
+                                toCheck.AddRange(toCheckExtra);
+                                toCheckAlt.AddRange(toCheckExtra2);
+                            }
                         }
                         break;
                     case WaterPathing.StayInWater:
-                        posC = CurPos + new IntVector2(1, 0);
-                        if (!pathed.Contains(posC))
+                        foreach (var item in iterationsStr)
                         {
-                            diff = CalcWaterOnly(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            posC = CurPos + item;
+                            if (!pathed.Contains(posC))
+                            {
+                                diff = CalcWaterOnly(posC, CurPos);
+                                if (diff <= maxDiff)
+                                    toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                else
+                                    nearbyObst = true;
+                                toCheckAlt.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            }
                         }
-                        posC = CurPos + new IntVector2(-1, 0);
-                        if (!pathed.Contains(posC))
+                        if (!nearbyObst)
                         {
-                            diff = CalcWaterOnly(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
-                        }
-                        posC = CurPos + new IntVector2(0, 1);
-                        if (!pathed.Contains(posC))
-                        {
-                            diff = CalcWaterOnly(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
-                        }
-                        posC = CurPos + new IntVector2(0, -1);
-                        if (!pathed.Contains(posC))
-                        {
-                            diff = CalcWaterOnly(posC, CurPos);
-                            if (diff <= maxDiff)
-                                toCheck.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                            toCheckExtra.Clear();
+                            toCheckExtra2.Clear();
+                            foreach (var item in iterationsDia)
+                            {
+                                posC = CurPos + item;
+                                if (!pathed.Contains(posC))
+                                {
+                                    diff = CalcWaterOnly(posC, CurPos);
+                                    if (diff <= maxDiff)
+                                        toCheckExtra.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                    else
+                                        nearbyObst = true;
+                                    toCheckExtra2.Add(new KeyValuePair<byte, IntVector2>(diff, posC));
+                                }
+                            }
+                            if (!nearbyObst)
+                            {
+                                toCheck.AddRange(toCheckExtra);
+                                toCheckAlt.AddRange(toCheckExtra2);
+                            }
                         }
                         break;
                 }
@@ -286,72 +421,120 @@ namespace TAC_AI.AI.Movement
 
                 if (toCheck.Count == 0)
                 {
-                    if (deadEnds == maxDeadEndsTillFail)
+                    if (deadEnds >= maxDeadEndsTillFail)
                     {
-                        Debug.Assert(true, "AIAutoPather - Failed since maxDeadEndsTillFail was reached");
-                        resultsPasser.Send(this);
-                        resultsPasser.EnsureNoSubscribers();
+                        if (endPrematureDebug)
+                        {
+                            DebugTAC_AI.Assert("AIAutoPather - Failed since maxDeadEndsTillFail [" + maxDeadEndsTillFail + "] was reached");
+                            PrintError(toCheckAlt);
+                        }
+                        PathingUnit.OnFinishedPathfinding(null);
                         return false;
                     }
-                    PathRoute.RemoveAt(PathRoute.Count - 2);
-                    CurPos = PathRoute.Last();
-                    deadEnds++;
+                    if (PathRoute.Count > 1)
+                    {
+                        PathRoute.RemoveAt(PathRoute.Count - 1);
+                        CurPos = PathRoute.Last();
+                        CurAlt = AIEPathMapper.GetAlt(ToSceneNoHeightCheck(CurPos), false);
+                        deadEnds++;
+                    }
+                    else
+                    {
+                        if (endPrematureDebug)
+                        {
+                            DebugTAC_AI.Log("AIAutoPather - Failed since dead end and no previous routes at " + CurPos + ", alt " + CurAlt);
+                            PrintError(toCheckAlt);
+                        }
+                        PathingUnit.OnFinishedPathfinding(null);
+                        return false;
+                    }
                 }
                 else
                 {
                     KeyValuePair<byte, IntVector2> best = toCheck.OrderBy(x => x.Key).First();
                     CurPos = best.Value;
-                    if (best.Key == 1)
-                        AIGlobals.PopupAllyInfo(pathed.Count.ToString(), WorldPosition.FromScenePosition(ManWorld.inst.ProjectToGround(ToSceneNoHeightCheck(CurPos), true)));
-                    else if (best.Key == AIEPathMapper.maxAltByte)
-                        AIGlobals.PopupEnemyInfo(pathed.Count.ToString(), WorldPosition.FromScenePosition(ManWorld.inst.ProjectToGround(ToSceneNoHeightCheck(CurPos), true)));
-                    else
-                        AIGlobals.PopupNeutralInfo(pathed.Count.ToString() + " | " + best.Key, WorldPosition.FromScenePosition(ManWorld.inst.ProjectToGround(ToSceneNoHeightCheck(CurPos), true)));
-                    pathed.Add(CurPos);
-                    if (AIEPathMapper.pathRequests.TryGetValue(GetWorldPathEnd(), out List<AIEAutoPather2D> pathB))
+                    CurAlt = AIEPathMapper.GetAlt(ToSceneNoHeightCheck(CurPos), false);
+                    if (SpamNumbers)
                     {
-                        AIEAutoPather2D path2 = pathB.First();
-                        if (path2.pathed.Contains(Center.ScenePosition.ToVector2XZ() + ((Vector2)EndPos * MoveGridScale)))
-                        {
-                            path2.resultsPasser.Subscribe(WaitForResults);
-                            Debug.Log("AIAutoPather - Encountered existing main path and will wait for it to finish to reuse results from it.");
-                            return false;
-                        }
+                        if (best.Key < BaseDifficulty + (WrongHeadingDifficultyAddition * 2))
+                            AIGlobals.PopupAllyInfo(pathed.Count.ToString(), WorldPosition.FromScenePosition(ToSceneHeightFast(CurPos)));
+                        else if (best.Key == AIEPathMapper.maxAltByte)
+                            AIGlobals.PopupEnemyInfo(pathed.Count.ToString(), WorldPosition.FromScenePosition(ToSceneHeightFast(CurPos)));
+                        else
+                            AIGlobals.PopupNeutralInfo(pathed.Count.ToString() + " | " + best.Key, WorldPosition.FromScenePosition(ToSceneHeightFast(CurPos)));
                     }
-                    if (pathed.Count == maxPathedTillFail)
+                    pathed.Add(CurPos);
+                    if (pathed.Count >= maxPathedTillFail)
                     {
-                        Debug.Assert(true, "AIAutoPather - Failed since maxPathedTillFail was reached");
-                        resultsPasser.Send(this);
-                        resultsPasser.EnsureNoSubscribers();
+                        if (endPrematureDebug)
+                        {
+                            DebugTAC_AI.Assert(true, "AIAutoPather - Failed since maxPathedTillFail [" + maxPathedTillFail + "] was reached");
+                            PrintError(toCheckAlt);
+                        }
+                        PathingUnit.OnFinishedPathfinding(null);
                         return false;
                     }
                     PathRoute.Add(CurPos);
-
-                    if (CurPos == EndPos)
+                    bool byEnd = false;
+                    if (CurPos != EndPos)
                     {
-                        TryShorten();
+                        foreach (var item in iterationsAll)
+                        {
+                            if (EndPos + item == CurPos)
+                            {
+                                byEnd = true;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                        byEnd = true;
+                    if (byEnd)
+                    {
+                        TryShorten(ref PathRoute);
                         Finished = true;
-                        Debug.Log("AIAutoPather - Success with " + PathRoute.Count + " points and " + pathed.Count + " attempts.");
-                        PathingUnit.OnFinishedPathfinding(GetPath());
-                        resultsPasser.Send(this);
-                        resultsPasser.EnsureNoSubscribers();
+                        Success = true;
+                        DebugTAC_AI.LogPathing("AIAutoPather - Success with " + PathRoute.Count + " points and " + pathed.Count + " attempts.");
+                        GetPath(submitCache);
+                        PathingUnit.OnFinishedPathfinding(submitCache);
+                        submitCache.Clear();
                         return false;
+                    }
+                    else if (PathRoute.Count >= MinPointsToConsiderEarlyRoute && PathingUnit.IsRunningLowOnPathPoints())
+                    {
+                        PushSomeToPather();
+                        return true;
                     }
                 }
                 toCheck.Clear();
             }
+            //DebugTAC_AI.Log("AIAutoPather - Pathing attempt with " + pathed.Count);
             return true;
         }
 
-        internal byte GetDiff(byte alt)
+        private static List<IntVector2> partialCache = new List<IntVector2>();
+        private static List<WorldPosition> submitCache = new List<WorldPosition>();
+        private void PushSomeToPather()
         {
-            return (byte)Mathf.Clamp(Mathf.FloorToInt(Mathf.Abs(alt - CurAlt) * TerrainSlopePenaltyMulti), 0, 128);
+            for (int step2 = 0; step2 < PointsToSendEarlyRoute; step2++)
+            {
+                var posD = PathRoute[0];
+                PathRoute.RemoveAt(0);
+                partialCache.Add(posD);
+            }
+            //StartPos = PathRoute.Last();
+            TryShorten(ref partialCache);
+            DebugTAC_AI.LogPathing("AIAutoPather - Partial path with " + partialCache.Count + " points and " + pathed.Count + " attempts so far.");
+            GetPathEarly(partialCache, submitCache);
+            partialCache.Clear();
+            PathingUnit.OnPartialPathfinding(submitCache);
+            submitCache.Clear();
         }
         private void WaitForResults(AIEAutoPather2D pathMain)
         {
             if (!pathMain.Finished)
             {
-                Recalc();
+                RecalcManual();
             }
             else
             {
@@ -363,97 +546,269 @@ namespace TAC_AI.AI.Movement
                     pathed.Add(pathMain.PathRoute[indexStep]);
                 }
                 CurPos = pathMain.PathRoute.Last();
-                Debug.Log("AIAutoPather - Merged routes with same destination at " + indexCopycat + " points of it's total " + pathMain.PathRoute.Count + " points.");
+                DebugTAC_AI.Log("AIAutoPather - Merged routes with same destination at " + indexCopycat + " points of it's total " + pathMain.PathRoute.Count + " points.");
 
-                TryShorten();
+                TryShorten(ref PathRoute);
                 Finished = true;
-                Debug.Log("AIAutoPather - Success with " + PathRoute.Count + " points and " + pathed.Count + " attempts.");
-                PathingUnit.OnFinishedPathfinding(GetPath());
+                Success = true;
+                DebugTAC_AI.Log("AIAutoPather - Success with " + PathRoute.Count + " points and " + pathed.Count + " attempts.");
+                GetPath(submitCache);
+                PathingUnit.OnFinishedPathfinding(submitCache);
+                submitCache.Clear();
             }
         }
 
         private Vector3 ToSceneNoHeightCheck(IntVector2 local)
         {
-            return ((Vector2)local * MoveGridScale).ToVector3XZ() + Center.ScenePosition;
+            return ((Vector2)local * MoveGridScale).ToVector3XZ() + CenterPos.ScenePosition;
         }
-        private IntVector2 GetWorldPathEnd()
+        private Vector3 ToSceneHeightFast(IntVector2 local)
         {
-            return new IntVector2(ToSceneNoHeightCheck(EndPos).ToVector2XZ() / PathfindBeyondDistBox);
+            Vector3 posNoHeight = ToSceneNoHeightCheck(local);
+            return posNoHeight.SetY(AIEPathMapper.GetAltitudeCached(posNoHeight));
         }
         private IntVector2 ToLocal(Vector3 pos)
         {
-            return (pos.ToVector2XZ() - Center.ScenePosition.ToVector2XZ()) / MoveGridScale;
+            return (pos.ToVector2XZ() - CenterPos.ScenePosition.ToVector2XZ()) / MoveGridScale;
         }
 
-        private byte CalcDiff(IntVector2 pos, IntVector2 posCur)
+        public override byte GetDifficultyFromAlt(byte alt)
         {
-            int diff = AIEPathMapper.GetDifficulty(Center.ScenePosition + (Vector3)pos.ToVector3XZ() * MoveGridScale, this);
-            diff += Mathf.FloorToInt(-(Vector2.Dot(pos - posCur, EndPos - posCur) - 1) * WrongHeadingDifficultyAddition);
-            if (ManVisible.inst.VisiblesTouchingRadius(ToSceneNoHeightCheck(pos), MoveGridScale, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })).Any())
-                diff += ObsticleDifficultyAddition;
+            int modifier;
+            if (alt > CurAlt)
+                modifier = Mathf.FloorToInt(Mathf.Max(0, alt - CurAlt) * (TerrainSlopeClimbPenaltyMulti / MoveGridScale));
+            else
+                modifier = Mathf.FloorToInt(Mathf.Max(0, CurAlt - alt) * (TerrainSlopeFallPenaltyMulti / MoveGridScale));
+            return (byte)Mathf.Clamp(modifier + BaseDifficulty, 0, 128);
+        }
+        private byte CalcHeadingDiff(IntVector2 posNext, IntVector2 posCur)
+        {
+            Vector2 idealHeading = ((Vector2)(posNext - posCur)).normalized;
+            Vector2 currHeading = ((Vector2)(EndPos - posCur)).normalized;
+            return (byte)Mathf.FloorToInt(-((Vector2.Dot(idealHeading, currHeading) - 1) * WrongHeadingDifficultyAdditionHalf));
+        }
+        private byte CalcActiveObst(Vector3 posScene)
+        {
+            foreach (var item in ManVisible.inst.VisiblesTouchingRadius(posScene, MoveGridScale,
+                new Bitfield<ObjectTypes>(new ObjectTypes[2] { ObjectTypes.Scenery, ObjectTypes.Vehicle })))
+            {
+                if (item.isActive)
+                {
+                    if (item.tank)
+                    {
+                        if (item.tank.IsAnchored)
+                        {
+                            //DebugTAC_AI.Log("CalcActiveObst - Obstructed by Anchored Tech " + item.tank.name + " at " + posScene);
+                            return ObsticleDifficultyAddition;
+                        }
+                    }
+                    else
+                    {
+                        //DebugTAC_AI.Log("CalcActiveObst - Obstructed by Scenery at " + posScene);
+                        return ObsticleDifficultyAddition;
+                    }
+                }
+            }
+            return 0;
+        }
+        private byte CalcAll(IntVector2 pos, IntVector2 posCur)
+        {
+            //int diff = AIEPathMapper.GetDifficultyWaterInv(Center.ScenePosition + (Vector3)pos.ToVector3XZ() * MoveGridScale, this);
+            Vector3 posV = ToSceneNoHeightCheck(pos);
+            int diff = AIEPathMapper.GetDifficulty(posV, this);
+            diff += CalcHeadingDiff(pos, posCur);
+            diff += CalcActiveObst(posV);
             return (byte)Mathf.Clamp(diff, 1, AIEPathMapper.maxAltByte);
         }
-        private byte CalcWater(IntVector2 pos, IntVector2 posCur)
+        private byte CalcAll(IntVector2 pos)
         {
-            int diff = AIEPathMapper.GetDifficultyWater(Center.ScenePosition + (Vector3)pos.ToVector3XZ() * MoveGridScale, this);
-            diff += Mathf.FloorToInt(-(Vector2.Dot(pos - posCur, EndPos - posCur) - 1) * WrongHeadingDifficultyAddition);
-            if (ManVisible.inst.VisiblesTouchingRadius(ToSceneNoHeightCheck(pos), MoveGridScale, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })).Any())
-                diff += ObsticleDifficultyAddition;
+            //int diff = AIEPathMapper.GetDifficultyWaterInv(Center.ScenePosition + (Vector3)pos.ToVector3XZ() * MoveGridScale, this);
+            Vector3 posV = ToSceneHeightFast(pos);
+            int diff = AIEPathMapper.GetDifficulty(posV, this);
+            diff += CalcActiveObst(posV);
+            return (byte)Mathf.Clamp(diff, 1, AIEPathMapper.maxAltByte);
+        }
+        private byte CalcAvoidWater(IntVector2 pos, IntVector2 posCur)
+        {
+            Vector3 posV = ToSceneHeightFast(pos);
+            //DebugTAC_AI.Log("Pos" + pos + ", scene " + posV + " alt - " + CurAlt + " vs " + AIEPathMapper.GetAlt(posV));
+            byte diff = AIEPathMapper.GetDifficultyNoWater(posV, this);
+            //DebugTAC_AI.Log("byte - " + diff);
+            diff += CalcHeadingDiff(pos, posCur);
+            //DebugTAC_AI.Log("byte - " + diff);
+            diff += CalcActiveObst(posV);
+            //DebugTAC_AI.Assert("Clamp failed on byte as " + diff + " vs " + Mathf.Clamp(diff, 0, AIEPathMapper.maxAltByte));
+            return (byte)Mathf.Clamp(diff, 1, AIEPathMapper.maxAltByte);
+        }
+        private byte CalcAvoidWater(IntVector2 pos)
+        {
+            Vector3 posV = ToSceneHeightFast(pos);
+            int diff = AIEPathMapper.GetDifficultyNoWater(posV, this);
+            diff += CalcActiveObst(posV);
             return (byte)Mathf.Clamp(diff, 1, AIEPathMapper.maxAltByte);
         }
         private byte CalcWaterOnly(IntVector2 pos, IntVector2 posCur)
         {
-            int diff = AIEPathMapper.GetDifficultyWaterInv(Center.ScenePosition + (Vector3)pos.ToVector3XZ() * MoveGridScale, this);
-            diff += Mathf.FloorToInt(-(Vector2.Dot(pos - posCur, EndPos - posCur) - 1) * WrongHeadingDifficultyAddition);
-            if (ManVisible.inst.VisiblesTouchingRadius(ToSceneNoHeightCheck(pos), MoveGridScale, new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery })).Any())
-                diff += ObsticleDifficultyAddition;
+            Vector3 posV = ToSceneHeightFast(pos);
+            int diff = AIEPathMapper.GetDifficultyWater(posV, this);
+            diff += CalcHeadingDiff(pos, posCur);
+            diff += CalcActiveObst(posV);
             return (byte)Mathf.Clamp(diff, 1, AIEPathMapper.maxAltByte);
         }
-        private List<WorldPosition> GetPath()
+        private byte CalcWaterOnly(IntVector2 pos)
+        {
+            Vector3 posV = ToSceneHeightFast(pos);
+            int diff = AIEPathMapper.GetDifficultyWater(posV, this);
+            diff += CalcActiveObst(posV);
+            return (byte)Mathf.Clamp(diff, 1, AIEPathMapper.maxAltByte);
+        }
+        public override bool CanGetPath(int minCount = 0)
+        {
+            return PathRoute.Count > minCount;
+        }
+        public override void GetPath(List<WorldPosition> cache, bool GetAccurateAlt = false)
         {
             if (PathRoute.Count == 0)
-                throw new Exception("AIAutoPather - GetPath returned no valid points for pathfinding");
-            List<WorldPosition> path = new List<WorldPosition>();
-            foreach (var item in PathRoute)
             {
-                path.Add(WorldPosition.FromScenePosition(ManWorld.inst.ProjectToGround(ToSceneNoHeightCheck(item), true)));
+                return;
+                //return new List<WorldPosition>() { WorldPosition.FromScenePosition(EndPosWP.ScenePosition + (Vector3.up * 2)) };
             }
-            return path;
+            //throw new Exception("AIAutoPather - GetPath returned no valid points for pathfinding");
+            if (GetAccurateAlt)
+            {
+                foreach (var item in PathRoute)
+                {
+                    cache.Add(WorldPosition.FromScenePosition(ManWorld.inst.ProjectToGround(ToSceneNoHeightCheck(item), true) + (Vector3.up * 2)));
+                }
+            }
+            else
+            {
+                foreach (var item in PathRoute)
+                {
+                    cache.Add(WorldPosition.FromScenePosition(ToSceneHeightFast(item) + (Vector3.up * 2)));
+                }
+            }
+            foreach (var item in cache)
+            {
+                DebugTAC_AI.Assert(item.ScenePosition.IsNaN(), "GetPath RETURNED NaN");
+            }
+        }
+        public void GetPathEarly(List<IntVector2> pathIn, List<WorldPosition> cache, bool GetAccurateAlt = false)
+        {
+            if (pathIn.Count == 0)
+            {
+                //return new List<WorldPosition>() { WorldPosition.FromScenePosition(
+                //    ((Vector2)GetWorldPathEnd()).ToVector3XZ(CenterPos.ScenePosition.y) + (Vector3.up * 2)) };
+                return;
+            }
+            if (GetAccurateAlt)
+            {
+                foreach (var item in pathIn)
+                {
+                    cache.Add(WorldPosition.FromScenePosition(ManWorld.inst.ProjectToGround(ToSceneNoHeightCheck(item), true) + (Vector3.up * 2)));
+                }
+            }
+            else
+            {
+                foreach (var item in pathIn)
+                {
+                    cache.Add(WorldPosition.FromScenePosition(ToSceneHeightFast(item) + (Vector3.up * 2)));
+                }
+            }
+            foreach (var item in cache)
+            {
+                DebugTAC_AI.Assert(item.ScenePosition.IsNaN(), "GetPathEarly RETURNED NaN");
+            }
         }
 
-        private void TryShorten()
+        public override bool CanContinue()
+        {
+            if (PathRoute.Count >= MinPointsToConsiderEarlyRoute && PathingUnit.IsRunningLowOnPathPoints())
+            {
+                PushSomeToPather();
+                return true;
+            }
+            IntVector2 pos = WorldPosition.FromScenePosition(ToSceneNoHeightCheck(CurPos)).TileCoord;
+            IntVector2 min = pos - IntVector2.one;
+            IntVector2 max = pos + IntVector2.one;
+            foreach (var item in ManWorld.inst.TileManager.IterateTiles(min, max))
+            {
+                if (item == null)
+                    return false;
+            }
+            return true;
+        }
+
+        private static Dictionary<IntVector2, int> posssss = new Dictionary<IntVector2, int>();
+        private void TryShorten(ref List<IntVector2> PathRoute)
         {
             if (PathRoute.Count == 0)
-                throw new Exception("AIAutoPather - TryShorten returned no valid points for pathfinding");
+            {
+                return;
+                //throw new Exception("AIAutoPather - TryShorten returned no valid points for pathfinding");
+            }
             int removed = 1;
+            // Remove loopbacks
+            int index = 0;
+            posssss.Clear();
+            foreach (var item in PathRoute)
+            {
+                posssss.Add(item, index);
+                index++;
+            }
+            for (int step = 4; step < PathRoute.Count; step++)
+            {
+                IntVector2 posCheck = PathRoute[step];
+                foreach (var item in iterationsAll)
+                {
+                    var pos = posCheck + item;
+                    if (posssss.TryGetValue(pos, out int indexGet) && indexGet < step - 1)
+                    {
+                        for (int step2 = indexGet + 1; step2 < step; step2++)
+                        {
+                            PathRoute.RemoveAt(indexGet + 1);
+                            step--;
+                            removed++;
+                        }
+                        posssss.Clear();
+                        index = 0;
+                        foreach (var item2 in PathRoute)
+                        {
+                            posssss.Add(item2, index);
+                            index++;
+                        }
+                    }
+                }
+            }
             // Remove straight extra points
             for (int step = 0; step < PathRoute.Count - 2; step++)
             {
-                if (((Vector2)(PathRoute[step] - PathRoute[step + 2])).sqrMagnitude == 2)
+                IntVector2 posCheck = PathRoute[step];
+                IntVector2 posNext = PathRoute[step + 1];
+                IntVector2 moveDelta = posNext - posCheck;
+                int ChainRemoveStep = 0;
+                while (step < PathRoute.Count - 2 && PathRoute[step + 2] - PathRoute[step + 1] == moveDelta 
+                    && MaxPointsInLineToRemove > ChainRemoveStep)
                 {
                     PathRoute.RemoveAt(step + 1);
                     removed++;
+                    ChainRemoveStep++;
                 }
             }
+            /*
             // Remove corner bend points and longer straights
-            for (int step = 0; step < PathRoute.Count - 4; step++)
+            for (int step = 2; step < PathRoute.Count; step++)
             {
-                if (((Vector2)(PathRoute[step] - PathRoute[step + 2])).sqrMagnitude == 4)
+                if (((Vector2)(PathRoute[step] - PathRoute[step - 2])).sqrMagnitude == 16) // 4 * 4
                 {
-                    PathRoute.RemoveAt(step + 1);
+                    PathRoute.RemoveAt(step - 1);
                     removed++;
                 }
-            }
+            }*/
             PathRoute.RemoveAt(0);
-            Debug.Log("AIAutoPather - TryShorten has removed " + removed + " entries");
+            //DebugTAC_AI.Log("AIAutoPather - TryShorten has removed " + removed + " entries");
             //throw new NotImplementedException("AIAutoPather - TryShorten is incomplete");
         }
 
-    }
-    public enum WaterPathing
-    {
-        AvoidWater,
-        AllowWater,
-        StayInWater
     }
 }

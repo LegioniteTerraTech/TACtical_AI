@@ -9,60 +9,23 @@ namespace TAC_AI.AI.Enemy
     // Sets up all important AI statistics based on AI core
     internal static class RWeapSetup
     {
-        private static readonly FieldInfo deals = typeof(WeaponRound).GetField("m_Damage", BindingFlags.NonPublic | BindingFlags.Instance),
-            bDPS = typeof(BeamWeapon).GetField("m_DamagePerSecond", BindingFlags.NonPublic | BindingFlags.Instance),
-            burn = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static FieldInfo deals => EWeapSetup.deals;
+        private static FieldInfo bDPS => EWeapSetup.bDPS;
+        private static FieldInfo burn => EWeapSetup.burn;
+
 
         // Bully-like
-        private const int OHKOCapableDamage = 1750;
+        private const int OHKOCapableDamage = EWeapSetup.OHKOCapableDamage;
 
         // Spyper AI
-        private const int SnipeVelo = 140;
-        private const int RangedRange = 75;
+        private const int SnipeVelo = EWeapSetup.SnipeVelo;
+        private const int RangedRange = EWeapSetup.RangedRange;
 
         // Circle AI
-        private const int CircleRange = 170;
-        private const int MinCircleSpeed = 140;
+        private const int CircleRange = EWeapSetup.CircleRange;
+        private const int MinCircleSpeed = EWeapSetup.MinCircleSpeed;
 
-        public static bool HasArtilleryWeapon(BlockManager BM)
-        {
-            FireData FD;
-            foreach (var item in BM.IterateBlockComponents<ModuleWeaponGun>())
-            {
-                FD = item.GetComponent<FireData>();
-                if ((int)item.GetComponent<TankBlock>().BlockType > Enum.GetValues(typeof(BlockTypes)).Length)
-                {
-                    if (FD && FD.m_MuzzleVelocity >= SnipeVelo)
-                    {
-                        var bullet = FD.m_BulletPrefab;
-                        if (bullet)
-                        {
-                            return true;
-                        }
-                    }
-                }
-                else
-                {
-                    switch (item.GetComponent<TankBlock>().BlockType)
-                    {
-                        case BlockTypes.GSOMegatonLong_242:
-                        case BlockTypes.GSOBigBertha_845:
-                        //case BlockTypes.VENRPGLauncher_122: // More of a kiting weapon
-                        case BlockTypes.HE_Mortar_232:
-                        case BlockTypes.HE_Cannon_Naval_826:
-                        case BlockTypes.HE_Cruise_Missile_51_121:
-                        case BlockTypes.HE_CannonBattleship_216:
-                        case BlockTypes.BF_MissilePod_323:
-                        case BlockTypes.EXP_Cannon_Repulsor_444:
-                        case BlockTypes.EXP_MissilePod_424:
-                            return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        public static EnemyAttack GetAttackStrat(Tank tank, EnemyMind mind)
+        public static EAttackMode GetAttackStrat(Tank tank, EnemyMind mind)
         {
             bool smolTech = false;
             if (KickStart.isTweakTechPresent && tank.blockman.blockCount <= AIGlobals.SmolTechBlockThreshold)
@@ -70,7 +33,7 @@ namespace TAC_AI.AI.Enemy
                 smolTech = true;
             }
 
-            EnemyAttack attack = EnemyAttack.Grudge;
+            EAttackMode attack = EAttackMode.Chase;
             int strongWeaps = 0; // Weapons with damage surpassing 1750
             int rangedWeaps = 0; // Weapons with velocity >= 140 or can shoot further than 75
             int circleWeaps = 0; // Weapons with horizontal aiming range >= 170 and aiming speed of at least 60
@@ -239,133 +202,133 @@ namespace TAC_AI.AI.Enemy
             {
                 case EnemyHandling.Stationary: // NEVER use circle on a static defense
                     if (isStrong && (isMelee || isFast || Forwards))
-                        attack = EnemyAttack.Bully;
+                        attack = EAttackMode.Strong;
                     else if ((isStrong || Forwards) && isRanged && !isMelee)
-                        attack = EnemyAttack.Spyper;
+                        attack = EAttackMode.Ranged;
                     else if (isFast && (isRaider || isStrong))
-                        attack = EnemyAttack.Pesterer;
+                        attack = EAttackMode.Random;
                     break;
                 case EnemyHandling.Airplane: // Try use our height and speed to our advantage
                     if (smolTech)
                     {
                         if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                         else if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                         else if ((isStrong || Forwards) && isRanged)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                     }
                     else
                     {
                         if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                         else if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                         else if((isStrong || Forwards) && isRanged)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                     }
                     break;
                 case EnemyHandling.Chopper: // Try use our height to our advantage
                     if (smolTech)
                     {
                         if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                         else if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                     }
                     else
                     {
                         if ((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                         else if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                         else if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                     }
                     break;
                 case EnemyHandling.Starship: // Abuse the crab out of our absurd mobility
                     if (smolTech)
                     {
                         if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                         else if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                     }
                     else
                     {
                         if (isStrong && (isMelee || isFast || Forwards))
                         {
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                             mind.InvertBullyPriority = true; // Probably can rip a new one
                         }
                         else if((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper; // Most large Spaceships feature a large forwards weapons array
+                            attack = EAttackMode.Ranged; // Most large Spaceships feature a large forwards weapons array
                         else if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                     }
                     break;
                 case EnemyHandling.Naval: // Abuse the sea
                     if (smolTech)
                     {
                         if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                         else if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                         else if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                     }
                     else
                     {
                         if ((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                         else if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                         else if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                     }
                     break;
                 default:    // Likely Ground
                     if (smolTech)
                     {
                         if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                         else if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                         else if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                     }
                     else
                     {
                         if (!Forwards)
-                            attack = EnemyAttack.Circle;
+                            attack = EAttackMode.Circle;
                         else if (isFast && (isRaider || isStrong))
-                            attack = EnemyAttack.Pesterer;
+                            attack = EAttackMode.Random;
                         else if ((isStrong || Forwards) && isRanged && !isMelee)
-                            attack = EnemyAttack.Spyper;
+                            attack = EAttackMode.Ranged;
                         else if (isStrong && (isMelee || isFast || Forwards))
-                            attack = EnemyAttack.Bully;
+                            attack = EAttackMode.Strong;
                     }
                     break;
             }

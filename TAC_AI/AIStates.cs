@@ -9,6 +9,7 @@ namespace TAC_AI
     public enum AIAlignment
     {
         Static,
+        PlayerNoAI,
         Player,
         NonPlayer,
         Neutral,
@@ -31,5 +32,16 @@ namespace TAC_AI
         Driving,
         NonPlayer,
         Neutral,
+    }
+
+    public enum NP_Types
+    {
+        Player,
+        NonNPT,
+        Friendly,
+        Neutral,
+        NonAggressive,
+        SubNeutral,
+        Enemy,
     }
 }

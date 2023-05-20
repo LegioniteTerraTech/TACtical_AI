@@ -27,7 +27,7 @@ namespace TAC_AI
 				chunks = (ChunkTypes[])mineOut.GetValue(produce);
 				flags = (ModuleItemProducer.OperateConditionFlags)minerOp.GetValue(produce);
 				minerOp.SetValue(produce, ModuleItemProducer.OperateConditionFlags.Anchored);
-				mineOut.SetValue(produce, RBases.TryGetBiomeResource(transform.position));
+				mineOut.SetValue(produce, RLoadedBases.TryGetBiomeResource(transform.position));
 
 				cached = true;
 
@@ -35,7 +35,7 @@ namespace TAC_AI
                 try
                 {
                     Tank tank = transform.root.GetComponent<Tank>();
-                    AIECore.TankAIHelper help = transform.root.GetComponent<AIECore.TankAIHelper>();
+                    AIECore.TankAIHelper help = tank.GetHelperInsured();
                     tank.FixupAnchors(true);
                     if (tank.IsAnchored)
                         tank.Anchors.UnanchorAll(true);

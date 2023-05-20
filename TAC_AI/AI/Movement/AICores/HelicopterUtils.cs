@@ -11,8 +11,11 @@ namespace TAC_AI.AI.Movement.AICores
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        public static void AngleTowardsUp(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 positionToMoveTo, Vector3 positionToLookAt, bool ForceAccend = false)
+        public static void AngleTowardsUp(TankControl thisControl, AIControllerAir pilot, 
+            Vector3 positionToMoveTo, Vector3 positionToLookAt, ref EControlCoreSet core, bool ForceAccend = false)
         {
+            AIECore.TankAIHelper thisInst = pilot.Helper;
+            Tank tank = pilot.Tank;
             //AI Steering Rotational
             TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(thisControl);
             Vector3 turnVal;
@@ -24,18 +27,23 @@ namespace TAC_AI.AI.Movement.AICores
                 isInControl = upVal >= 0.1f;
             }
             else
-                isInControl = upVal > 0.35f;
-            DeterminePitchRoll(tank, pilot, positionToMoveTo, positionToLookAt, thisInst, !isInControl, isInControl);
-            Vector3 forwardFlat = thisInst.Navi3DDirect;
-            forwardFlat.y = 0;
+                isInControl = upVal > 0.425f;
+            DeterminePitchRoll(tank, pilot, positionToMoveTo, positionToLookAt, thisInst, !isInControl, isInControl, ref core);
+            Vector3 fwdDelta;
             if (ForceAccend || !isInControl)
             {
-                turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+                Vector3 forwardFlat = thisInst.Navi3DDirect;
+                forwardFlat.y = 0;
+                forwardFlat.Normalize();
+                fwdDelta = tank.rootBlockTrans.InverseTransformDirection(forwardFlat);
+                turnVal = Quaternion.LookRotation(fwdDelta, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
             }
             else
             {
-                turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DUp)).eulerAngles;
+                fwdDelta = tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DDirect);
+                turnVal = Quaternion.LookRotation(fwdDelta, tank.rootBlockTrans.InverseTransformDirection(thisInst.Navi3DUp)).eulerAngles;
             }
+            bool needsTurnControl = fwdDelta.z < 0.65f;
 
             //Convert turnVal to runnable format
 
@@ -67,16 +75,19 @@ namespace TAC_AI.AI.Movement.AICores
 
 
             // stop pitching if the main prop is trying to force us into the ground
-            if (tank.rbody.velocity.y < -2)
+            if (tank.rbody.velocity.y < -6)
                 turnVal.y = 0;
 
 
             //Turn our work in to process
             control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
 
+            // -----------------------------------------------------------------------------------------------
+            // -----------------------------------------------------------------------------------------------
+            // -----------------------------------------------------------------------------------------------
             // DRIVE
             float xOffset = 0;
-            if (thisInst.DriveDir == EDriveFacing.Perpendicular && thisInst.lastEnemy != null)
+            if (core.DriveDir == EDriveFacing.Perpendicular && thisInst.lastEnemyGet != null)
             {
                 if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x > 0)
                     xOffset = 0.4f;
@@ -85,7 +96,11 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             Vector3 DriveVar = tank.rootBlockTrans.InverseTransformVector(-tank.rbody.velocity) / pilot.PropLerpValue;
-            DriveVar.x = Mathf.Clamp(DriveVar.x + xOffset, -1, 1);
+            float xFactor = fwdDelta.z - 0.65f;
+            if (needsTurnControl)
+                DriveVar.x = 0;
+            else
+                DriveVar.x = Mathf.Clamp(DriveVar.x + xOffset, -1, 1) * xFactor;
             DriveVar.z = Mathf.Clamp(DriveVar.z , -1, 1);
             DriveVar.y = 0;
             if (isInControl)
@@ -95,14 +110,16 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     // Do nothing and let the inertia dampener kick in
                 }
-                else if (thisInst.IsMovingFromDest)
+                else if (thisInst.IsDirectedMovingFromDest)
                 {
-                    DriveVar.x = -nudge.x;
+                    if (!needsTurnControl)
+                        DriveVar.x = -nudge.x * xFactor;
                     DriveVar.z = -nudge.z;
                 }
-                else if (thisInst.IsMovingToDest)
+                else if (thisInst.IsDirectedMovingToDest)
                 {
-                    DriveVar.x = nudge.x;
+                    if (!needsTurnControl)
+                        DriveVar.x = nudge.x * xFactor;
                     DriveVar.z = nudge.z;
                 }
             }
@@ -110,9 +127,13 @@ namespace TAC_AI.AI.Movement.AICores
             DriveVar.y = pilot.CurrentThrottle;
 
             // DEBUG FOR DRIVE ERRORS
-            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, positionToLookAt - tank.boundsCentreWorldNoCheck, new Color(0, 1, 1));
-            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, (tank.rootBlockTrans.TransformPoint(DriveVar) - tank.trans.position) * thisInst.lastTechExtents, new Color(0, 0, 1));
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, positionToMoveTo - tank.boundsCentreWorldNoCheck, new Color(0, 1, 1));
+            if (ForceAccend || !isInControl)
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, (tank.rootBlockTrans.TransformPoint(DriveVar) - tank.trans.position) * thisInst.lastTechExtents, new Color(1, 1, 0));
+            else
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, (tank.rootBlockTrans.TransformPoint(DriveVar) - tank.trans.position) * thisInst.lastTechExtents, new Color(0, 0, 1));
             Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, thisInst.Navi3DUp * pilot.Helper.lastTechExtents, new Color(1, 0, 0));
+            Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 3, thisInst.Navi3DDirect * pilot.Helper.lastTechExtents, new Color(1, 1, 1));
 
 
             //Turn our work in to processing
@@ -120,7 +141,8 @@ namespace TAC_AI.AI.Movement.AICores
             control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
             controlGet.SetValue(tank.control, control3D);
         }
-        public static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestPosWorld, Vector3 LookPosWorld, AIECore.TankAIHelper thisInst, bool avoidCrash = false, bool PointAtTarget = false)
+        public static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestPosWorld, Vector3 LookPosWorld, 
+            AIECore.TankAIHelper thisInst, bool avoidCrash, bool PointAtTarget, ref EControlCoreSet core)
         {
             float pitchDampening = 64 * thisInst.lastTechExtents;
             Vector3 Heading;
@@ -139,13 +161,14 @@ namespace TAC_AI.AI.Movement.AICores
             if (!PointAtTarget)
             {   // Try balance
                 fFlat.y = 0;
+                fFlat.Normalize();
 
                 // Rotors on some chopper designs were acting funky and cutting out due to pitch so I disabled pitching
                 if (pilot.LowerEngines || avoidCrash)
                     fFlat.y = 0;
-                else if (thisInst.IsMovingFromDest)
+                else if (thisInst.IsDirectedMovingFromDest)
                     fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed)) + 0.15f, -0.25f, 0.25f);
-                else if (thisInst.IsMovingToDest)
+                else if (thisInst.IsDirectedMovingToDest)
                     fFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed)) - 0.15f, -0.25f, 0.25f);
                 else
                     fFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z / (pitchDampening / pilot.SlowestPropLerpSpeed), -0.25f, 0.25f);
@@ -161,12 +184,13 @@ namespace TAC_AI.AI.Movement.AICores
                 rFlat = tank.rootBlockTrans.right;
             else
                 rFlat = -tank.rootBlockTrans.right.SetY(0).normalized;
-            if (thisInst.DriveDir == EDriveFacing.Perpendicular)
+            if (core.DriveDir == EDriveFacing.Perpendicular)
             {   // orbit while firing
-                if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x >= 0)
-                    rFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x / (pitchDampening / pilot.SlowestPropLerpSpeed)) - 0.15f, -0.25f, 0.25f);
+                float veloX = tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x;
+                if (veloX >= 0)
+                    rFlat.y = Mathf.Clamp((veloX / (pitchDampening / pilot.SlowestPropLerpSpeed)) - 0.15f, -0.25f, 0.25f);
                 else
-                    rFlat.y = Mathf.Clamp((tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x / (pitchDampening / pilot.SlowestPropLerpSpeed)) + 0.15f, -0.25f, 0.25f);
+                    rFlat.y = Mathf.Clamp((veloX / (pitchDampening / pilot.SlowestPropLerpSpeed)) + 0.15f, -0.25f, 0.25f);
             }
             else
                 rFlat.y = Mathf.Clamp(tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).x / (pitchDampening / pilot.SlowestPropLerpSpeed), -0.25f, 0.25f);
@@ -180,7 +204,7 @@ namespace TAC_AI.AI.Movement.AICores
         public static float ModerateUpwardsThrust(Tank tank, AIECore.TankAIHelper thisInst, AIControllerAir pilot, Vector3 targetHeight, bool ForceUp = false)
         {
             pilot.LowerEngines = false;
-            float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 2)) + AIGlobals.ChopperOperatingExtraHeight;
+            float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 4)) + AIGlobals.ChopperOperatingExtraPower;
             //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " thrust = " + final + " | velocity " + tank.rbody.velocity);
             if (ForceUp)
             {
@@ -210,19 +234,20 @@ namespace TAC_AI.AI.Movement.AICores
                 final = -0.1f;
             //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " thrustFinal = " + final);
 
-            if (final > 1.25f && pilot.BoostBias.y > 0.6f)
-                thisInst.BOOST = true;
+            if (final > 1.25f && pilot.BoostBias.y > 0.65f)
+                thisInst.FullBoost = true;
             else
-                thisInst.BOOST = thisInst.lastOperatorRange > AIGlobals.GroundAttackStagingDist / 3;
+                thisInst.FullBoost = thisInst.lastOperatorRange > AIGlobals.GroundAttackStagingDist / 3;
 
             return Mathf.Clamp(final, -0.1f, 1);
         }
-        public static void UpdateThrottleCopter(AIControllerAir pilot, AIECore.TankAIHelper thisInst, TankControl control)
+        public static void UpdateThrottleCopter(TankControl control, AIControllerAir pilot)
         {
+            AIECore.TankAIHelper thisInst = pilot.Helper;
             control.BoostControlProps = false;
             if (pilot.NoProps)
             {
-                if (pilot.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(pilot.Tank.boundsCentreWorldNoCheck, pilot.Helper.GroundOffsetHeight) && !pilot.Tank.beam.IsActive)
+                if (pilot.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.GroundOffsetHeight) && !pilot.Tank.beam.IsActive)
                     control.BoostControlJets = true;
                 else
                     control.BoostControlJets = false;
@@ -235,7 +260,7 @@ namespace TAC_AI.AI.Movement.AICores
                     control.BoostControlJets = false;
                 }
                 else
-                    control.BoostControlJets = thisInst.BOOST;
+                    control.BoostControlJets = thisInst.FullBoost;
             }
             pilot.CurrentThrottle = Mathf.Clamp(pilot.MainThrottle, 0, 1);
         }

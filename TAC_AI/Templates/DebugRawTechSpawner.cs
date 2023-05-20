@@ -7,6 +7,8 @@ using System.Reflection;
 using UnityEngine;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI;
+using TAC_AI.AI.Movement;
+using TAC_AI.World;
 using System.IO;
 using Newtonsoft.Json;
 using TerraTechETCUtil;
@@ -14,16 +16,22 @@ using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 {
+    internal enum DebugMenus
+    {
+        Prefabs,
+        Local,
+        DebugLog,
+    }
     internal class DebugRawTechSpawner : MonoBehaviour
     {
         private static readonly bool Enabled = true;
 
-        internal static bool IsCurrentlyEnabled = false;
+        internal static bool CanOpenDebugSpawnMenu = false;
+        private static DebugMenus menu = DebugMenus.Prefabs;
 
         private static Vector3 PlayerLoc = Vector3.zero;
         private static Vector3 PlayerFow = Vector3.forward;
-        private static bool isCurrentlyOpen = false;
-        private static bool isPrefabs = false;
+        private static bool UIIsCurrentlyOpen = false;
         private static bool toggleDebugLock = false;
         private static bool InstantLoad = false;
         internal static bool DevCheatNoAttackPlayer = false;
@@ -54,13 +62,13 @@ namespace TAC_AI.Templates
         }
         public static void ShouldBeActive()
         {
-            IsCurrentlyEnabled = CheckValidMode();
+            CanOpenDebugSpawnMenu = CheckValidMode();
         }
 
 
         public static bool IsOverMenu()
         {
-            if (isCurrentlyOpen && KickStart.CanUseMenu)
+            if (UIIsCurrentlyOpen && KickStart.CanUseMenu)
             {
                 Vector3 Mous = Input.mousePosition;
                 Mous.y = Display.main.renderingHeight - Mous.y;
@@ -73,15 +81,19 @@ namespace TAC_AI.Templates
         {
             private void OnGUI()
             {
-                if (isCurrentlyOpen && KickStart.CanUseMenu)
+                if (UIIsCurrentlyOpen && KickStart.CanUseMenu)
                 {
-                    if (!isPrefabs)
+                    switch (menu)
                     {
-                        HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, "<b>Debug Local Spawns</b>");
-                    }
-                    else
-                    {
-                        HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPreset, "<b>Debug Prefab Spawns</b>");
+                        case DebugMenus.Prefabs:
+                            HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPreset, "<b>Debug Prefab Spawns</b>");
+                            break;
+                        case DebugMenus.Local:
+                            HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, "<b>Debug Local Spawns</b>");
+                            break;
+                        default:
+                            HotWindow = GUILayout.Window(RawTechSpawnerID, HotWindow, GUIHandlerDebug, "<b>Debug Mod Info</b>");
+                            break;
                     }
                 }
             }
@@ -96,6 +108,26 @@ namespace TAC_AI.Templates
         private static List<FactionTypesExt> openedFactions = new List<FactionTypesExt>();
 
 
+        private static void GUIHandlerDebug(int ID)
+        {
+            HotWindow.height = MaxWindowHeight + 80;
+            HotWindow.width = MaxWindowWidth + 60;
+            scrolll = GUILayout.BeginScrollView(scrolll);
+            GUILayout.BeginHorizontal();
+            GUILayout.BeginVertical(GUILayout.Width(HotWindow.width / 2));
+            AIECore.TankAIManager.GUIManaged.GUIGetTotalManaged();
+            SpecialAISpawner.GUIManaged.GUIGetTotalManaged();
+            AIEPathMapper.GUIManaged.GUIGetTotalManaged();
+            GUILayout.EndVertical();
+            GUILayout.BeginVertical();
+            ManPlayerRTS.GUIGetTotalManaged();
+            ManEnemyWorld.GUIManaged.GUIGetTotalManaged();
+            ManEnemySiege.GUIGetTotalManaged();
+            GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+            GUILayout.EndScrollView();
+            GUI.DragWindow();
+        }
         private static void GUIHandlerPlayer(int ID)
         {
             bool clicked = false;
@@ -105,7 +137,7 @@ namespace TAC_AI.Templates
             bool MaxExtensionY = false;
             int index = 0;
 
-            List<BaseTemplate> listTemp;
+            List<RawTechTemplate> listTemp;
             if (ShowLocal)
                 listTemp = TempManager.ExternalEnemyTechsLocal;
             else
@@ -173,7 +205,6 @@ namespace TAC_AI.Templates
 
             HoriPosOff += ButtonWidth;
 
-
             if (ShowLocal)
             {
                 if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle ALL for Mod</b></color>"))
@@ -190,11 +221,68 @@ namespace TAC_AI.Templates
                     }
                     catch { }
                 }
+                HoriPosOff += ButtonWidth;
+                if (HoriPosOff >= MaxWindowWidth)
+                {
+                    HoriPosOff = 0;
+                    VertPosOff += 30;
+                    MaxExtensionX = true;
+                    if (VertPosOff >= MaxWindowHeight)
+                        MaxExtensionY = true;
+                }
+                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * 2, 30), redStart + "Bundle Active Player Techs for Mod</b></color>"))
+                {
+                    try
+                    {
+                        List<RawTechTemplate> temps = new List<RawTechTemplate>();
+                        HashSet<string> names = new HashSet<string>();
+                        foreach (var item in ManTechs.inst.IteratePlayerTechs())
+                        {
+                            if (!item.PlayerFocused && item.name != null && !names.Contains(item.name))
+                            {
+                                names.Add(item.name);
+                                var TD = new TechData();
+                                TD.SaveTech(item, false, false);
+                                temps.Add(new RawTechTemplate(TD));
+                            }
+                        }
+                        OrganizeDeploy(ref temps);
+
+                        RawTechExporter.ValidateEnemyFolder();
+                        string export = RawTechExporter.RawTechsDirectory + RawTechExporter.up + "Bundled";
+                        Directory.CreateDirectory(export);
+
+                        RawTechExporter.MakeExternalRawTechListFile(export + RawTechExporter.up + "RawTechs.RTList", listTemp);
+                    }
+                    catch { }
+                }
+
+                HoriPosOff += ButtonWidth;
+                HoriPosOff += ButtonWidth;
+                if (HoriPosOff >= MaxWindowWidth)
+                {
+                    HoriPosOff = 0;
+                    VertPosOff += 30;
+                    MaxExtensionX = true;
+                    if (VertPosOff >= MaxWindowHeight)
+                        MaxExtensionY = true;
+                }
+            }
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "CLEAR TRACKED</b></color>"))
+            {
+                DestroyAllInvalidVisibles();
             }
 
             HoriPosOff += ButtonWidth;
-
-
             if (HoriPosOff >= MaxWindowWidth)
             {
                 HoriPosOff = 0;
@@ -205,21 +293,6 @@ namespace TAC_AI.Templates
             }
 
 #if DEBUG
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "CLEAR TRACKED</b></color>"))
-            {
-                RemoveOrphanTrackedVisibles();
-            }
-
-            HoriPosOff += ButtonWidth;
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
-
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "LOCAL TO COM</b></color>"))
             {
                 try
@@ -238,7 +311,7 @@ namespace TAC_AI.Templates
 
                     List<string> basetypeNames = new List<string>();
                     StringBuilder SB = new StringBuilder();
-                    foreach (BaseTemplate BT in listTemp)
+                    foreach (RawTechTemplate BT in listTemp)
                     {
                         string nameBaseType = BT.techName.Replace(" ", "");
                         basetypeNames.Add(nameBaseType);
@@ -250,7 +323,7 @@ namespace TAC_AI.Templates
                         SB.Clear();
                         foreach (BasePurpose BP in BT.purposes)
                             SB.Append("BasePurpose." + BP.ToString() + ", ");
-                        toWrite.Add("    purposes = new List<BasePurpose>{ " + SB.ToString() + "},");
+                        toWrite.Add("    purposes = new HashSet<BasePurpose>{ " + SB.ToString() + "},");
                         SB.Clear();
                         toWrite.Add("    deployBoltsASAP = " + BT.purposes.Contains(BasePurpose.NotStationary).ToString().ToLower() + ",");
                         toWrite.Add("    environ = " + (BT.faction == FactionTypesExt.GT).ToString().ToLower() + ",");
@@ -299,9 +372,9 @@ namespace TAC_AI.Templates
                     string export = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
                     if (!Directory.Exists(export))
                         Directory.CreateDirectory(export);
-                    Dictionary<SpawnBaseTypes, BaseTemplate> BTs = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, BaseTemplate>>(CommunityCluster.FetchPublicFromFile());
+                    Dictionary<SpawnBaseTypes, RawTechTemplate> BTs = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, RawTechTemplate>>(CommunityCluster.FetchPublicFromFile());
                     CommunityCluster.Organize(ref BTs);
-                    Dictionary<int, BaseTemplate> BTsInt = BTs.ToList().ToDictionary(x => (int)x.Key, x => x.Value);
+                    Dictionary<int, RawTechTemplate> BTsInt = BTs.ToList().ToDictionary(x => (int)x.Key, x => x.Value);
                     File.WriteAllText(export + RawTechExporter.up + "batchEdit.json", JsonConvert.SerializeObject(BTsInt, Formatting.Indented, RawTechExporter.JSONDEV));
                 }
                 catch (Exception e) {
@@ -389,7 +462,7 @@ namespace TAC_AI.Templates
                 try
                 {
                     List<int> exists = new List<int>();
-                    foreach (BaseTemplate bt in TempManager.techBases.Values)
+                    foreach (RawTechTemplate bt in TempManager.techBases.Values)
                     {
                         exists.Add(bt.techName.GetHashCode());
                     }
@@ -397,7 +470,7 @@ namespace TAC_AI.Templates
                     int count = listTemp.Count();
                     for (int step = 0; step < count; step++)
                     {
-                        BaseTemplate BT = listTemp[step];
+                        RawTechTemplate BT = listTemp[step];
                         if (exists.Contains(BT.techName.GetHashCode()))
                         {
                             listTemp.Remove(BT);
@@ -423,7 +496,7 @@ namespace TAC_AI.Templates
                 if (VertPosOff >= MaxWindowHeight)
                     MaxExtensionY = true;
             }
-
+            /*
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE MISSING</b></color>"))
             {
                 try
@@ -431,7 +504,7 @@ namespace TAC_AI.Templates
                     int count = listTemp.Count();
                     for (int step = 0; step < count; step++)
                     {
-                        BaseTemplate BT = listTemp[step];
+                        RawTechTemplate BT = listTemp[step];
                         if (BT.IsMissingBlocks())
                         {
                             listTemp.Remove(BT);
@@ -444,7 +517,7 @@ namespace TAC_AI.Templates
                     DebugTAC_AI.Log("-----------------------------------------------------------");
                 }
                 catch { }
-            }
+            }*/
 
             HoriPosOff += ButtonWidth;
             
@@ -514,7 +587,7 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    BaseTemplate temp = listTemp[step];
+                    RawTechTemplate temp = listTemp[step];
                     if (HoriPosOff >= MaxWindowWidth)
                     {
                         HoriPosOff = 0;
@@ -575,7 +648,10 @@ namespace TAC_AI.Templates
                 HotWindow.width = HoriPosOff + 60;
             if (clicked)
             {
-                SpawnTechLocal(listTemp, index);
+                if (Input.GetKey(KeyCode.Backspace))
+                    RemoveTechLocal(index);
+                else
+                    SpawnTechLocal(listTemp, index);
             }
 
             GUI.DragWindow();
@@ -592,6 +668,7 @@ namespace TAC_AI.Templates
             scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width - 20, HotWindow.height -40), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
             {
+                DebugTAC_AI.Log("TACtical AI: RemoveAllEnemies - CALLED");
                 RemoveAllEnemies();
             }
             HoriPosOff += ButtonWidth;
@@ -635,7 +712,7 @@ namespace TAC_AI.Templates
 #endif
             FactionTypesExt currentFaction = FactionTypesExt.NULL;
             string disp;
-            foreach (KeyValuePair<SpawnBaseTypes, BaseTemplate> temp in TempManager.techBases)
+            foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> temp in TempManager.techBases)
             {
                 if (HoriPosOff >= MaxWindowWidth)
                 {
@@ -732,11 +809,20 @@ namespace TAC_AI.Templates
             GUI.DragWindow();
         }
 
-        public static void SpawnTechLocal(List<BaseTemplate> temps, int index)
+        public static void RemoveTechLocal(int index)
+        {
+            Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
+
+            if (ShowLocal)
+                TempManager.ExternalEnemyTechsLocal.RemoveAt(index);
+            else
+               TempManager.ExternalEnemyTechsMods.RemoveAt(index);
+        }
+        public static void SpawnTechLocal(List<RawTechTemplate> temps, int index)
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
 
-            BaseTemplate val = temps[index];
+            RawTechTemplate val = temps[index];
             Tank tank = null;
 
             if (val.purposes.Contains(BasePurpose.NotStationary))
@@ -820,7 +906,7 @@ namespace TAC_AI.Templates
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
 
-            if (TempManager.techBases.TryGetValue(type, out BaseTemplate val))
+            if (TempManager.techBases.TryGetValue(type, out RawTechTemplate val))
             {
                 Tank tank = null;
                 if (val.purposes.Contains(BasePurpose.NotStationary))
@@ -910,16 +996,15 @@ namespace TAC_AI.Templates
         {
             try
             {
-                int techCount = Singleton.Manager<ManTechs>.inst.CurrentTechs.Count();
-                for (int step = 0; step < techCount; step++)
+                List<Tank> toRemove = new List<Tank>();
+                foreach (var item in Singleton.Manager<ManTechs>.inst.IterateTechsWhere(x => x.visible.isActive &&
+                (AIGlobals.IsBaseTeam(x.Team) || x.IsPopulation) && x.name != "DPS Target"))
                 {
-                    Tank tech = Singleton.Manager<ManTechs>.inst.CurrentTechs.ElementAt(step);
-                    if ((AIGlobals.IsBaseTeam(tech.Team) || tech.Team == -1 || tech.Team == 1) && tech.visible.isActive && tech.name != "DPS Target")
-                    {
-                        SpecialAISpawner.Purge(tech);
-                        techCount--;
-                        step--;
-                    }
+                    toRemove.Add(item);
+                }
+                foreach (var tech in toRemove)
+                {
+                    SpecialAISpawner.Purge(tech);
                 }
             }
             catch { }
@@ -985,19 +1070,19 @@ namespace TAC_AI.Templates
 
         public static void LaunchSubMenuClickable()
         {
-            if (!isCurrentlyOpen)
+            if (!UIIsCurrentlyOpen)
             {
                 RawTechExporter.ReloadExternal();
                 DebugTAC_AI.Log("TACtical_AI: Opened Raw Techs Debug menu!");
-                isCurrentlyOpen = true;
+                UIIsCurrentlyOpen = true;
                 GUIWindow.SetActive(true);
             }
         }
         public static void CloseSubMenuClickable()
         {
-            if (isCurrentlyOpen)
+            if (UIIsCurrentlyOpen)
             {
-                isCurrentlyOpen = false;
+                UIIsCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
                 DebugTAC_AI.Log("TACtical_AI: Closed Raw Techs Debug menu!");
@@ -1007,39 +1092,49 @@ namespace TAC_AI.Templates
 
         private void Update()
         {
-            if (IsCurrentlyEnabled)
+            if (CanOpenDebugSpawnMenu)
             {
                 if (Input.GetKey(KeyCode.LeftControl))
                 {
                     if (Input.GetKey(KeyCode.Y))
                     {
                         toggleDebugLock = false;
-                        isPrefabs = false;
+                        menu = DebugMenus.Local;
                         LaunchSubMenuClickable();
                     }
                     else if (Input.GetKey(KeyCode.U))
                     {
                         toggleDebugLock = false;
-                        isPrefabs = true;
+                        menu = DebugMenus.Prefabs;
                         LaunchSubMenuClickable();
                     }
-                    else if (Input.GetKeyDown(KeyCode.Minus))
+                    else if (Input.GetKeyDown(KeyCode.Backspace))
                     {
-                        if (isPrefabs == false || !toggleDebugLock)
+                        if (menu == DebugMenus.DebugLog || !toggleDebugLock)
                         {
                             toggleDebugLock = !toggleDebugLock;
                         }
-                        isPrefabs = false;
+                        menu = DebugMenus.DebugLog;
+                        if (toggleDebugLock)
+                            LaunchSubMenuClickable();
+                    }
+                    else if (Input.GetKeyDown(KeyCode.Minus))
+                    {
+                        if (menu == DebugMenus.Local || !toggleDebugLock)
+                        {
+                            toggleDebugLock = !toggleDebugLock;
+                        }
+                        menu = DebugMenus.Local;
                         if (toggleDebugLock)
                             LaunchSubMenuClickable();
                     }
                     else if (Input.GetKeyDown(KeyCode.Equals))
                     {
-                        if (isPrefabs == true || !toggleDebugLock)
+                        if (menu == DebugMenus.Prefabs || !toggleDebugLock)
                         {
                             toggleDebugLock = !toggleDebugLock;
                         }
-                        isPrefabs = true;
+                        menu = DebugMenus.Prefabs;
                         if (toggleDebugLock)
                             LaunchSubMenuClickable();
                     }
@@ -1072,6 +1167,37 @@ namespace TAC_AI.Templates
             else
             {
                 CloseSubMenuClickable();
+                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Plus))
+                    DestroyAllInvalidVisibles();
+            }
+        }
+
+        internal static void DestroyAllInvalidVisibles()
+        {
+            foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
+            {
+                if (item == null)
+                    continue;
+                if (item.ObjectType == ObjectTypes.Vehicle)
+                {
+                    if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
+                    {
+                        if (item.wasDestroyed || item.visible == null)
+                        {
+                            if (AIGlobals.IsBaseTeam(item.TeamID))
+                            {
+                                DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                ManVisible.inst.StopTrackingVisible(item.ID);
+                            }
+                            else
+                                DebugTAC_AI.Log("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                        }
+                        else
+                            DebugTAC_AI.Log("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                    }
+                    else
+                        DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                }
             }
         }
 
@@ -1082,6 +1208,32 @@ namespace TAC_AI.Templates
 #else
         internal static bool ShowDebugFeedBack = false;
 #endif
+        private static GameObject DirPrefab = null;
+        private static void InsureDirPrefab()
+        {
+            if (DirPrefab != null)
+                return;
+            DirPrefab = Instantiate(new GameObject("DebugLine"), null, false);
+            var trans = DirPrefab.transform;
+            trans.rotation = Quaternion.identity;
+            trans.position = Vector3.zero;
+            trans.localScale = Vector3.one;
+
+            var lr = trans.GetComponent<LineRenderer>();
+            if (!(bool)lr)
+            {
+                lr = DirPrefab.AddComponent<LineRenderer>();
+                lr.material = new Material(Shader.Find("Sprites/Default"));
+                lr.positionCount = 2;
+                lr.startWidth = 0.5f;
+                lr.useWorldSpace = false;
+            }
+            lr.startColor = Color.green;
+            lr.endColor = Color.green;
+            Vector3[] vecs = new Vector3[2] { Vector3.zero, Vector3.up };
+            lr.SetPositions(vecs);
+            DirPrefab.SetActive(false);
+        }
         /// <summary>
         /// endPosGlobal is GLOBAL ROTATION in relation to local tech.
         /// </summary>
@@ -1091,7 +1243,7 @@ namespace TAC_AI.Templates
         /// <param name="color"></param>
         internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobalSpaceOffset, Color color)
         {
-            if (!ShowDebugFeedBack || !IsCurrentlyEnabled)
+            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
                 return;
             GameObject gO;
             var line = obj.transform.Find("DebugLine " + num);
@@ -1117,6 +1269,136 @@ namespace TAC_AI.Templates
             lr.SetPositions(vecs);
             Destroy(gO, Time.deltaTime);
         }
+        public static void DrawDirIndicator(Vector3 startPos, Vector3 endPos, Color color, float decayTime = 0)
+        {
+            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
+                return;
+            InsureDirPrefab();
+            GameObject gO;
+            gO = Instantiate(DirPrefab, null);
+
+            var lr = gO.GetComponent<LineRenderer>();
+            lr.startColor = color;
+            lr.endColor = color;
+            gO.transform.position = startPos;
+            Vector3[] vecs = new Vector3[2] { Vector3.zero, gO.transform.InverseTransformPoint(endPos) };
+            lr.SetPositions(vecs);
+            gO.SetActive(true);
+            Destroy(gO, (decayTime <= 0) ? Time.deltaTime : decayTime);
+            //DebugTAC_AI.Log("SPAWN DrawDirIndicator(World)");
+        }
+        private const int circleEdgeCount = 32;
+        public static void DrawDirIndicatorCircle(Vector3 center, Vector3 normal, Vector3 flat, float radius, Color color, float decayTime = 0)
+        {
+            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
+                return;
+            InsureDirPrefab();
+            GameObject gO;
+            gO = Instantiate(DirPrefab, null);
+
+            var lr = gO.GetComponent<LineRenderer>();
+            lr.startColor = color;
+            lr.endColor = color;
+            gO.transform.position = center;
+            gO.transform.rotation = Quaternion.identity;
+            lr.positionCount = circleEdgeCount + 1;
+            Vector3[] vecs = new Vector3[circleEdgeCount + 1];
+            for (int step = 0; step <= circleEdgeCount; step++)
+            {
+                vecs[step] = Quaternion.AngleAxis(360 * ((float)step / circleEdgeCount), normal) * flat * radius;
+            }
+            lr.SetPositions(vecs);
+            gO.SetActive(true);
+            Destroy(gO, (decayTime <= 0) ? Time.deltaTime : decayTime);
+            //DebugTAC_AI.Log("SPAWN DrawDirIndicator(World)");
+        }
+        public static void DrawDirIndicatorSphere(Vector3 center, float radius, Color color, float decayTime = 0)
+        {
+            DrawDirIndicatorCircle(center, Vector3.up, Vector3.forward, radius, color, decayTime);
+            DrawDirIndicatorCircle(center, Vector3.right, Vector3.forward, radius, color, decayTime);
+            DrawDirIndicatorCircle(center, Vector3.forward, Vector3.up, radius, color, decayTime);
+        }
+        public static void DrawDirIndicatorRecPriz(Vector3 center, Vector3 size, Color color, float decayTime = 0)
+        {
+            Vector3 sizeCons = size / 2;
+            Vector3 fruCorner = new Vector3(sizeCons.x, sizeCons.y, sizeCons.z);
+            Vector3 frdCorner = new Vector3(sizeCons.x, -sizeCons.y, sizeCons.z);
+            Vector3 rruCorner = new Vector3(sizeCons.x, sizeCons.y, -sizeCons.z);
+            Vector3 rrdCorner = new Vector3(sizeCons.x, -sizeCons.y, -sizeCons.z);
+            Vector3 fluCorner = new Vector3(-sizeCons.x, sizeCons.y, sizeCons.z);
+            Vector3 fldCorner = new Vector3(-sizeCons.x, -sizeCons.y, sizeCons.z);
+            Vector3 rluCorner = new Vector3(-sizeCons.x, sizeCons.y, -sizeCons.z);
+            Vector3 rldCorner = new Vector3(-sizeCons.x, -sizeCons.y, -sizeCons.z);
+
+            DrawDirIndicator(center + fruCorner, center + frdCorner, color, decayTime);
+            DrawDirIndicator(center + fluCorner, center + fldCorner, color, decayTime);
+            DrawDirIndicator(center + fruCorner, center + fluCorner, color, decayTime);
+            DrawDirIndicator(center + frdCorner, center + fldCorner, color, decayTime);
+
+            DrawDirIndicator(center + fruCorner, center + rruCorner, color, decayTime);
+            DrawDirIndicator(center + fluCorner, center + rluCorner, color, decayTime);
+            DrawDirIndicator(center + frdCorner, center + rrdCorner, color, decayTime);
+            DrawDirIndicator(center + fldCorner, center + rldCorner, color, decayTime);
+
+            DrawDirIndicator(center + rruCorner, center + rrdCorner, color, decayTime);
+            DrawDirIndicator(center + rluCorner, center + rldCorner, color, decayTime);
+            DrawDirIndicator(center + rruCorner, center + rluCorner, color, decayTime);
+            DrawDirIndicator(center + rrdCorner, center + rldCorner, color, decayTime);
+        }
+        public static void DrawDirIndicatorRecPriz(Vector3 center, Quaternion rotation, Vector3 size, Color color, float decayTime = 0)
+        {
+            Vector3 sizeCons = size / 2;
+            Vector3 fruCorner = rotation * new Vector3(sizeCons.x, sizeCons.y, sizeCons.z);
+            Vector3 frdCorner = rotation * new Vector3(sizeCons.x, -sizeCons.y, sizeCons.z);
+            Vector3 rruCorner = rotation * new Vector3(sizeCons.x, sizeCons.y, -sizeCons.z);
+            Vector3 rrdCorner = rotation * new Vector3(sizeCons.x, -sizeCons.y, -sizeCons.z);
+            Vector3 fluCorner = rotation * new Vector3(-sizeCons.x, sizeCons.y, sizeCons.z);
+            Vector3 fldCorner = rotation * new Vector3(-sizeCons.x, -sizeCons.y, sizeCons.z);
+            Vector3 rluCorner = rotation * new Vector3(-sizeCons.x, sizeCons.y, -sizeCons.z);
+            Vector3 rldCorner = rotation * new Vector3(-sizeCons.x, -sizeCons.y, -sizeCons.z);
+
+            DrawDirIndicator(center + fruCorner, center + frdCorner, color, decayTime);
+            DrawDirIndicator(center + fluCorner, center + fldCorner, color, decayTime);
+            DrawDirIndicator(center + fruCorner, center + fluCorner, color, decayTime);
+            DrawDirIndicator(center + frdCorner, center + fldCorner, color, decayTime);
+
+            DrawDirIndicator(center + fruCorner, center + rruCorner, color, decayTime);
+            DrawDirIndicator(center + fluCorner, center + rluCorner, color, decayTime);
+            DrawDirIndicator(center + frdCorner, center + rrdCorner, color, decayTime);
+            DrawDirIndicator(center + fldCorner, center + rldCorner, color, decayTime);
+
+            DrawDirIndicator(center + rruCorner, center + rrdCorner, color, decayTime);
+            DrawDirIndicator(center + rluCorner, center + rldCorner, color, decayTime);
+            DrawDirIndicator(center + rruCorner, center + rluCorner, color, decayTime);
+            DrawDirIndicator(center + rrdCorner, center + rldCorner, color, decayTime);
+        }
+        public static void DrawDirIndicatorRecPrizExt(Vector3 center, Vector3 extents, Color color, float decayTime = 0)
+        {
+            Vector3 fruCorner = new Vector3(extents.x, extents.y, extents.z);
+            Vector3 frdCorner = new Vector3(extents.x, -extents.y, extents.z);
+            Vector3 rruCorner = new Vector3(extents.x, extents.y, -extents.z);
+            Vector3 rrdCorner = new Vector3(extents.x, -extents.y, -extents.z);
+            Vector3 fluCorner = new Vector3(-extents.x, extents.y, extents.z);
+            Vector3 fldCorner = new Vector3(-extents.x, -extents.y, extents.z);
+            Vector3 rluCorner = new Vector3(-extents.x, extents.y, -extents.z);
+            Vector3 rldCorner = new Vector3(-extents.x, -extents.y, -extents.z);
+
+            DrawDirIndicator(center + fruCorner, center + frdCorner, color, decayTime);
+            DrawDirIndicator(center + fluCorner, center + fldCorner, color, decayTime);
+            DrawDirIndicator(center + fruCorner, center + fluCorner, color, decayTime);
+            DrawDirIndicator(center + frdCorner, center + fldCorner, color, decayTime);
+
+            DrawDirIndicator(center + fruCorner, center + rruCorner, color, decayTime);
+            DrawDirIndicator(center + fluCorner, center + rluCorner, color, decayTime);
+            DrawDirIndicator(center + frdCorner, center + rrdCorner, color, decayTime);
+            DrawDirIndicator(center + fldCorner, center + rldCorner, color, decayTime);
+
+            DrawDirIndicator(center + rruCorner, center + rrdCorner, color, decayTime);
+            DrawDirIndicator(center + rluCorner, center + rldCorner, color, decayTime);
+            DrawDirIndicator(center + rruCorner, center + rluCorner, color, decayTime);
+            DrawDirIndicator(center + rrdCorner, center + rldCorner, color, decayTime);
+        }
+
         private static bool CheckValidMode()
         {
 #if DEBUG
@@ -1154,14 +1436,14 @@ namespace TAC_AI.Templates
             }
         }
 
-        internal static void Organize(ref List<BaseTemplate> list)
+        internal static void Organize(ref List<RawTechTemplate> list)
         {
             list = list.OrderBy(x => x.terrain)
                 .ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary))
                 .ThenBy(x => x.purposes.Contains(BasePurpose.NANI))
                 .ThenBy(x => x.techName).ToList();
         }
-        internal static void OrganizeDeploy(ref List<BaseTemplate> list)
+        internal static void OrganizeDeploy(ref List<RawTechTemplate> list)
         {
             list = list.OrderBy(x => x.faction).ThenBy(x => x.terrain)
                 .ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary))

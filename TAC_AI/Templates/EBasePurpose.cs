@@ -43,6 +43,7 @@ namespace TAC_AI.Templates
         AttractTech,    // Reserved for Attract (or an endgame spawn)
         NoWeapons,      // unarmed
         Fallback,       // run out of other options
+        Sniper,          // Lock to harder difficulties
         NANI,           // Incomprehensibly powerful Tech spawn
     }
 }

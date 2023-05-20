@@ -78,7 +78,7 @@ namespace TAC_AI
                 }
                 DockingRequested = true;
                 Invoke("StopDocking", 2);
-                tank.GetComponent<AIECore.TankAIHelper>().AllowApproach(Approaching);
+                tank.GetHelperInsured().AllowApproach(Approaching);
             }
         }
         private void StopDocking()

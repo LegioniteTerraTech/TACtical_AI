@@ -6,6 +6,7 @@ using System.Reflection;
 using System.IO;
 using UnityEngine;
 using Newtonsoft.Json;
+using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 {
@@ -16,7 +17,7 @@ namespace TAC_AI.Templates
         {
             try
             {
-                ClusterF = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, BaseTemplate>>(FetchPublicFromFile());
+                ClusterF = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, RawTechTemplate>>(FetchPublicFromFile());
             }
             catch { }
         }
@@ -53,8 +54,8 @@ namespace TAC_AI.Templates
 
         internal static string GetLocalToPublic()
         {
-            Dictionary<string, BaseTemplate> ClusterOut = new Dictionary<string, BaseTemplate>();
-            foreach (BaseTemplate BT in TempManager.ExternalEnemyTechsLocal)
+            Dictionary<string, RawTechTemplate> ClusterOut = new Dictionary<string, RawTechTemplate>();
+            foreach (RawTechTemplate BT in TempManager.ExternalEnemyTechsLocal)
             {
                 try
                 {
@@ -69,8 +70,8 @@ namespace TAC_AI.Templates
 
         internal static void DeployUncompressed(string location)
         {
-            Dictionary<string, BaseTemplate> dict = JsonConvert.DeserializeObject<Dictionary<string, BaseTemplate>>(File.ReadAllText(location));
-            Dictionary<SpawnBaseTypes, BaseTemplate> dictSorted = new Dictionary<SpawnBaseTypes, BaseTemplate>();
+            Dictionary<string, RawTechTemplate> dict = JsonConvert.DeserializeObject<Dictionary<string, RawTechTemplate>>(File.ReadAllText(location));
+            Dictionary<SpawnBaseTypes, RawTechTemplate> dictSorted = new Dictionary<SpawnBaseTypes, RawTechTemplate>();
             bool needsToAddToSpawnBaseTypes = false;
             foreach (var item in dict)
             {
@@ -94,7 +95,7 @@ namespace TAC_AI.Templates
         }
 
 
-        internal static void Organize(ref Dictionary<SpawnBaseTypes, BaseTemplate> dict)
+        internal static void Organize(ref Dictionary<SpawnBaseTypes, RawTechTemplate> dict)
         {
             dict = dict.OrderBy(x => x.Value.faction).ThenBy(x => x.Value.terrain)
                 .ThenBy(x => x.Value.purposes.Contains(BasePurpose.NotStationary))
@@ -103,7 +104,7 @@ namespace TAC_AI.Templates
         }
 
 
-        internal static Dictionary<SpawnBaseTypes, BaseTemplate> ClusterF = new Dictionary<SpawnBaseTypes, BaseTemplate>();
+        internal static Dictionary<SpawnBaseTypes, RawTechTemplate> ClusterF = new Dictionary<SpawnBaseTypes, RawTechTemplate>();
 
 
     }

@@ -11,31 +11,31 @@ namespace TAC_AI.AI.AlliedOperations
     {
         //Same a escort code, because the BEscort code supports 3D!
         // we just need to re-define how far above ground we should be
-        public static void MotivateSpace(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MotivateSpace(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the ship (Escort) what to do movement-wise
             thisInst.lastPlayer = thisInst.GetPlayerTech();
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = true;
 
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
             thisInst.AvoidStuff = true;
 
             if (thisInst.lastPlayer == null)
                 return;
             float dist = thisInst.GetDistanceFromTask(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck, thisInst.lastPlayer.GetCheapBounds());
-            float range = thisInst.RangeToStopRush + thisInst.lastTechExtents;
+            float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents;
 
             bool hasMessaged = false;
 
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
 
-            if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
+            if ((bool)thisInst.lastEnemyGet && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
                 }
                 return;
             }
@@ -44,7 +44,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 thisInst.DelayedAnchorClock = 0;
                 AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
-                thisInst.DriveDest = EDriveDest.FromLastDestination;
+                direct.DriveAwayFacingTowards();
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
                 if (thisInst.unanchorCountdown > 0)
@@ -62,7 +62,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Departing!");
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -79,7 +79,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist >= range + playerExt)
             {
                 thisInst.DelayedAnchorClock = 0;
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1f;
 
@@ -109,7 +109,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //FARRR behind! BOOSTERS NOW!
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
                     thisInst.AvoidStuff = false;
-                    thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
+                    thisInst.FullBoost = true; // WE ARE SOO FAR BEHIND
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 15)
@@ -119,7 +119,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.AvoidStuff = false;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1;
-                    thisInst.FeatherBoost = true;
+                    thisInst.LightBoost = true;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 5 && thisInst.recentSpeed < 6)
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.AlliedOperations
                 bool goingTooSlow = !thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend);
                 if (dist >= range + playerExt + 10 && goingTooSlow)
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
                 }
                 else if (goingTooSlow)
                 {
@@ -192,30 +192,30 @@ namespace TAC_AI.AI.AlliedOperations
             }
         }
 
-        public static void SpaceDriver(AIECore.TankAIHelper thisInst, Tank tank, Visible followThis)
+        public static void SpaceDriver(AIECore.TankAIHelper thisInst, Tank tank, Visible followThis, ref EControlOperatorSet direct)
         {
             //The Handler that tells the ship (Escort) what to do movement-wise
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = true;
 
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
             thisInst.AvoidStuff = true;
 
             if (followThis == null)
                 return;
             float dist = thisInst.GetDistanceFromTask(followThis.tank.boundsCentreWorldNoCheck, followThis.GetCheapBounds());
-            float range = (thisInst.RangeToStopRush * 3) + thisInst.lastTechExtents;
+            float range = (thisInst.MaxObjectiveRange * 3) + thisInst.lastTechExtents;
             // The range is tripled here due to flight conditions
             bool hasMessaged = false;
 
             float playerExt = followThis.GetCheapBounds();
 
-            if ((bool)thisInst.lastEnemy && !thisInst.Retreat)
+            if ((bool)thisInst.lastEnemyGet && !thisInst.Retreat)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
                 }
                 return;
             }
@@ -224,7 +224,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 thisInst.DelayedAnchorClock = 0;
                 AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
-                thisInst.DriveDest = EDriveDest.FromLastDestination;
+                direct.DriveAwayFacingTowards();
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1;
                 if (thisInst.unanchorCountdown > 0)
@@ -242,7 +242,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 // Time to go!
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Departing!");
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.anchorAttempts = 0; thisInst.DelayedAnchorClock = 0;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -259,7 +259,7 @@ namespace TAC_AI.AI.AlliedOperations
             else if (dist >= range + playerExt)
             {
                 thisInst.DelayedAnchorClock = 0;
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDest = EDriveDest.ToLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = 1f;
 
@@ -289,7 +289,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //FARRR behind! BOOSTERS NOW!
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
                     thisInst.AvoidStuff = false;
-                    thisInst.BOOST = true; // WE ARE SOO FAR BEHIND
+                    thisInst.FullBoost = true; // WE ARE SOO FAR BEHIND
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 15)
@@ -299,7 +299,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.AvoidStuff = false;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1;
-                    thisInst.FeatherBoost = true;
+                    thisInst.LightBoost = true;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 else if (thisInst.Urgency > 5 && thisInst.recentSpeed < 6)
@@ -316,7 +316,7 @@ namespace TAC_AI.AI.AlliedOperations
                 bool goingTooSlow = !thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend);
                 if (dist >= range + playerExt + 10 && goingTooSlow)
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
                 }
                 else if (goingTooSlow)
                 {

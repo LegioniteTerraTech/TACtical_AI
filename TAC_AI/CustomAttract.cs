@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using UnityEngine;
+using TerraTechETCUtil;
 using TAC_AI.Templates;
 
 namespace TAC_AI
@@ -297,9 +298,9 @@ namespace TAC_AI
                             break;
 
                         case AttractType.Harvester: // Peaceful harvesting
-                            RawTechLoader.SpawnSpecificTech(tanksToConsider[0], Vector3.forward, team1, new List<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting });
+                            RawTechLoader.SpawnSpecificTech(tanksToConsider[0], Vector3.forward, team1, new HashSet<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting });
                             Tank first = ManTechs.inst.IterateTechs().FirstOrDefault();
-                            RawTechLoader.SpawnSpecificTech(spawn, Vector3.forward, team1, new List<BasePurpose> { BasePurpose.Harvesting, BasePurpose.HasReceivers });
+                            RawTechLoader.SpawnSpecificTech(spawn, Vector3.forward, team1, new HashSet<BasePurpose> { BasePurpose.Harvesting, BasePurpose.HasReceivers });
                             rTime.SetValue(__instance, Time.time + __instance.resetTime);
                             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
                             SetupTechCam(first);
@@ -349,7 +350,7 @@ namespace TAC_AI
 
                                     Vector3 forward = (KickStart.SpecialAttractPos - posSea).normalized;
                                     Vector3 position = posSea;// - (forward * 10);
-                                    position = AI.Movement.AIEPathing.ForceOffsetToSea(position);
+                                    position = AI.Movement.AIEPathing.SnapOffsetToSea(position);
 
                                     if (!RawTechLoader.SpawnAttractTech(position, forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Sea))
                                         RawTechLoader.SpawnAttractTech(position,  forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space);

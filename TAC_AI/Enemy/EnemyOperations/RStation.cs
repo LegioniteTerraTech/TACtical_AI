@@ -9,10 +9,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 {
     public static class RStation
     {
-        public static void HoldPosition(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void AttackWham(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
 
 
             thisInst.Attempt3DNavi = true;
@@ -20,9 +20,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             float dist = thisInst.GetDistanceFromTask2D(mind.sceneStationaryPos);
 
-            if (thisInst.lastEnemy == null)
+            if (thisInst.lastEnemyGet == null)
             {
-                RGeneral.LollyGag(thisInst, tank, mind, true);
+                // Bases cannot LollyGag
+                //RGeneral.LollyGag(thisInst, tank, mind, ref direct, true);
                 return;
             }
             RGeneral.Engadge(thisInst, tank, mind);
@@ -30,9 +31,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             if (dist > 6)
             {
                 //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
-                thisInst.Steer = true;
-                thisInst.lastDestination = mind.sceneStationaryPos;
+                direct.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDir = EDriveFacing.Forwards;
+                direct.lastDestination = mind.sceneStationaryPos;
                 if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.75f)
                 {   //Move back because we have GONE TOO FAR BACKWARDS
                     thisInst.ForceSetDrive = true;
@@ -45,10 +46,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else
             {
-                thisInst.DriveDest = EDriveDest.ToLastDestination;
-                thisInst.Steer = true;
+                direct.DriveDest = EDriveDest.ToLastDestination;
+                direct.DriveDir = EDriveFacing.Forwards;
                 thisInst.PivotOnly = true;
-                thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
             }
         }
     }

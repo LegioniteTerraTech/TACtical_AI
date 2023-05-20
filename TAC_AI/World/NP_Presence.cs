@@ -1,0 +1,950 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using UnityEngine;
+using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
+using TAC_AI.Templates;
+
+namespace TAC_AI.World
+{
+    public enum AITeamMode
+    {
+        Idle,
+        Retreating,
+        Defending,
+        Attacking,
+        SiegingPlayer,
+    }
+    public enum AIFounderMode
+    {
+        HomeIdle,
+        HomeReturn,
+        HomeDefend,
+        VendorGo,
+        VendorBuy,
+        VendorMission,
+        OtherAttack,
+        ScriptWait,
+    }
+    // The enemy base in world-relations
+    public class NP_Presence
+    {
+        public int team = AIGlobals.EnemyBaseTeamsStart;
+        public int Team => team;
+        private bool canSiege = false;
+        private float lastAttackedTimestep = 0;
+        public NP_BaseUnit MainBase = null;
+        public HashSet<NP_BaseUnit> EBUs = new HashSet<NP_BaseUnit>();
+        public HashSet<NP_TechUnit> ETUs = new HashSet<NP_TechUnit>();
+        private HashSet<NP_TechUnit> Fighting = new HashSet<NP_TechUnit>();
+        public bool IsFighting => Fighting.Any();
+        private AITeamMode teamMode = AITeamMode.Idle;
+        public AITeamMode TeamMode => teamMode;
+        public bool attackStarted = false;
+        public IntVector2 homeTile => MainBase != null ? MainBase.tilePos : 
+            WorldPosition.FromGameWorldPosition(Singleton.cameraTrans.position).TileCoord;
+        private IntVector2 lastAttackTile;
+        public IntVector2 attackTile => lastAttackTile;
+        private IntVector2 lastEventTile;
+        public HashSet<IntVector2> tilesHasOwnTechs = new HashSet<IntVector2>();
+        public HashSet<IntVector2> scannedPositions = new HashSet<IntVector2>();
+        public HashSet<IntVector2> scannedEnemyTiles = new HashSet<IntVector2>();
+        public Visible lastTarget
+        {
+            get {
+                if (lastTargetUpdateCount == 0)
+                    return null;
+                return _lastTarget; 
+            }
+            set { 
+                _lastTarget = value;
+                lastTargetUpdateCount = ManEnemyWorld.OperatorTicksKeepTarget; 
+            }
+        }
+        private Visible _lastTarget = null;
+        private int lastTargetUpdateCount = 0;
+
+        internal NP_TechUnit teamFounder;
+        private Tank teamFounderActive;
+        private AIFounderMode founderMode = AIFounderMode.HomeIdle;
+        private int lastFounderStopUpdateTicks = 0;
+
+
+        public NP_Presence(int Team, bool canLaunchSieges)
+        {
+            team = Team;
+            canSiege = canLaunchSieges;
+        }
+
+        /// <summary>
+        /// Returns false if the team should be removed
+        /// </summary>
+        /// <returns></returns>
+        public bool UpdateOperatorRTS()
+        {
+            if (Team == SpecialAISpawner.trollTeam)
+            {
+                HandleTraderTrolls();
+                return EBUs.Count > 0 || ETUs.Count > 0;
+            }
+            if (GlobalMakerBaseCount() == 0)
+            {
+                DebugTAC_AI.Info("TACtical_AI: UpdateGrandCommandRTS - Team " + Team + " has no production bases");
+                return EBUs.Count > 0 || ETUs.Count > 0; // NO SUCH TEAM EXISTS (no base!!!)
+            }
+            PresenceDebug("TACtical_AI: UpdateGrandCommandRTS - Turn for Team " + Team);
+            attackStarted = false;
+            if (lastFounderStopUpdateTicks > 0)
+                lastFounderStopUpdateTicks--;
+            //PresenceDebug("TACtical_AI: UpdateGrandCommandRTS - Updating for team " + Team);
+            TryGetFounderUnloaded(out teamFounder);
+            HandleUnitRecon();
+            HandleCombat();
+            HandleUnitMoving();
+            UpdateRevenue();
+            UnloadedBases.TryUnloadedBaseOperations(this);
+            HandleRepairs();
+            HandleRecharge();
+            UnloadedBases.GetSetTeamMainBase(this);
+            if (MainBase != null)
+            {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
+                PresenceDebugDEV("TACtical_AI: UpdateGrandCommandRTS - Team final funds " + MainBase.BuildBucks);
+            }
+            return EBUs.Count > 0 || ETUs.Count > 0;
+        }
+
+        public bool UpdateOperator()
+        {
+            if (Team == SpecialAISpawner.trollTeam)
+            {
+                HandleTraderTrolls();
+                return EBUs.Count > 0 || ETUs.Count > 0;
+            }
+            if (GlobalMakerBaseCount() == 0)
+            {
+                DebugTAC_AI.Info("TACtical_AI: UpdateGrandCommand - Team " + Team + " has no production bases");
+                return false; // NO SUCH TEAM EXISTS (no base!!!)
+            }
+            PresenceDebug("TACtical_AI: UpdateGrandCommand - Turn for Team " + Team);
+            attackStarted = false;
+            //PresenceDebug("TACtical_AI: UpdateGrandCommand - Updating for team " + Team);
+            UnloadedBases.PoolTeamMoney(this);
+            UnloadedBases.GetSetTeamMainBase(this);
+
+            if (MainBase != null)
+                UnloadedBases.PurgeIfNeeded(this, MainBase);
+            return EBUs.Count > 0 || ETUs.Count > 0;
+        }
+
+        public void UpdateMaintainer(float timeDelta)
+        {
+            // The techs move every UpdateMoveDelay seconds
+            //DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld - UpdateMaintainer, num fighting " + Fighting.Count());
+            foreach (var item in Fighting)
+            {
+                item.MovementSceneDelta(timeDelta);
+            }
+        }
+
+        internal void ChangeTeamOfAllTechsUnloaded(int newTeam)
+        {
+            team = newTeam;
+            foreach (var item in EBUs)
+            {
+                if (item.tech != null)
+                    item.tech.m_TeamID = team;
+            }
+            foreach (var item in ETUs)
+            {
+                if (item.tech != null)
+                    item.tech.m_TeamID = team;
+            }
+        }
+
+
+        // Checks
+        public bool HasMobileETUs()
+        {
+            return ETUs.ToList().Exists(delegate (NP_TechUnit cand) { return cand.MoveSpeed > 12; });
+        }
+        public bool ShouldReturnToBase()
+        {
+            return teamMode == AITeamMode.Retreating || teamMode == AITeamMode.Defending;
+        }
+
+        // Founder
+        /// <summary>
+        /// Don't use for end-of task sets
+        /// </summary>
+        /// <param name="initial"></param>
+        /// <param name="anon"></param>
+        /// <returns></returns>
+        public static bool CanSwitchState(AIFounderMode initial, AIFounderMode anon)
+        {
+            switch (initial)
+            {
+                case AIFounderMode.HomeIdle:
+                case AIFounderMode.VendorGo:
+                case AIFounderMode.VendorBuy:
+                    return true;
+                case AIFounderMode.HomeReturn:
+                    if (anon == AIFounderMode.VendorGo)
+                        return false;
+                    return true;
+                case AIFounderMode.HomeDefend:
+                    if (anon == AIFounderMode.HomeIdle)
+                        return true;
+                    return false;
+                case AIFounderMode.VendorMission:
+                case AIFounderMode.ScriptWait:
+                    return false;
+                case AIFounderMode.OtherAttack:
+                    switch (anon)
+                    {
+                        case AIFounderMode.HomeIdle:
+                        case AIFounderMode.HomeReturn:
+                        case AIFounderMode.VendorGo:
+                        case AIFounderMode.VendorBuy:
+                        case AIFounderMode.VendorMission:
+                        case AIFounderMode.OtherAttack:
+                            return false;
+                        case AIFounderMode.HomeDefend:
+                        case AIFounderMode.ScriptWait:
+                            return true;
+                        default:
+                            throw new Exception("TACtical_AI: EnemyPresence.CanSwitchState anon variable is invalid " + anon.ToString());
+                    }
+                default:
+                    throw new Exception("TACtical_AI: EnemyPresence.CanSwitchState initial variable is invalid " + initial.ToString());
+            }
+        }
+        /// <summary>
+        /// WORK IN PROGRESS - returns false if it failed
+        /// </summary>
+        /// <param name="ETU"></param>
+        /// <param name="techsMoving"></param>
+        private bool DoFounderMovement(NP_TechUnit ETU, ref bool techsMoving)
+        {
+            AIFounderMode takeAction;
+            switch (teamMode)
+            {
+                case AITeamMode.Retreating:
+                case AITeamMode.Defending:
+                    takeAction = AIFounderMode.HomeDefend;
+                    break;
+                case AITeamMode.Attacking:
+                    takeAction = AIFounderMode.OtherAttack;
+                    break;
+                default:
+                    takeAction = AIFounderMode.HomeIdle;
+                    break;
+            }
+            if (takeAction != AIFounderMode.HomeIdle && CanSwitchState(founderMode, takeAction))
+            {
+                founderMode = takeAction;
+                // Base is under attack
+                if (ManEnemyWorld.StrategicMoveQueue(ETU, lastEventTile, OnUnitReachDestinationBase, out bool fail))
+                {
+                    PresenceDebug(" Founder " + ETU.Name.ToString() + " is moving to tile " + lastEventTile + " to do " + founderMode);
+                    techsMoving = true;
+                }
+                if (fail)
+                    return false;
+            }
+            else
+            {   // Do random things
+                SetFounderDestination(ETU, ref techsMoving);
+            }
+            return true;
+        }
+        /// <summary>
+        /// WORK IN PROGRESS
+        /// </summary>
+        /// <param name="ETU"></param>
+        /// <param name="techsMoving"></param>
+        private void SetFounderDestination(NP_TechUnit ETU, ref bool techsMoving)
+        {
+            if (MainBase == null || lastFounderStopUpdateTicks > 0)
+                return;
+            if (CanSwitchState(founderMode, AIFounderMode.VendorGo))
+            {
+                founderMode = AIFounderMode.VendorGo;
+                PresenceDebug(" Founder " + ETU.Name.ToString() + " is moving to tile " + lastEventTile + " to do " + founderMode);
+                if (ManWorld.inst.TryFindNearestVendorPos(MainBase.WorldPos.GameWorldPosition, out var vendorPosWorld))
+                {
+                    if (ManEnemyWorld.StrategicMoveQueue(ETU, WorldPosition.FromGameWorldPosition(vendorPosWorld).TileCoord,
+                        OnFounderReachVendor, out bool fail))
+                    {
+                        techsMoving = true;
+                    }
+                    return;
+                }
+            }
+            else if (founderMode == AIFounderMode.VendorBuy)
+            {
+                founderMode = AIFounderMode.HomeReturn;
+                if (ManEnemyWorld.StrategicMoveQueue(ETU, MainBase.tilePos, OnFounderReachVendor, out bool fail))
+                {
+                    techsMoving = true;
+                }
+            }
+            else if (CanSwitchState(founderMode, AIFounderMode.HomeIdle))
+            {
+                founderMode = AIFounderMode.HomeIdle;
+                if (ManEnemyWorld.StrategicMoveQueue(ETU, MainBase.tilePos, OnFounderReachVendor, out bool fail))
+                {
+                    techsMoving = true;
+                }
+            }
+        }
+        private void OnFounderReachVendor(TileMoveCommand TMC, bool pathSuccess, bool activeScene)
+        {
+            if (pathSuccess)
+            {
+                founderMode = AIFounderMode.VendorBuy;
+                lastFounderStopUpdateTicks = 6;
+                if (activeScene)
+                {
+                    if (ManWorld.inst.TryFindNearestVendorPos(MainBase.WorldPos.GameWorldPosition, out var vendorPosWorld))
+                    {
+                        if (TryGetFounderActive(out teamFounderActive))
+                        {
+                            var helper = teamFounderActive.GetHelperInsured();
+                            helper.DirectRTSDest(WorldPosition.FromGameWorldPosition(vendorPosWorld).ScenePosition);
+                            helper.SetRTSState(true);
+                        }
+                    }
+                }
+            }
+            else
+                founderMode = AIFounderMode.HomeReturn;
+        }
+
+        // Special
+        private void HandleTraderTrolls()
+        {
+            int count = ETUs.Count;
+            for (int step = 0; step < count;)
+            {
+                try
+                {
+                    NP_TechUnit ETUcase = ETUs.ElementAt(step);
+                    if ((ETUcase.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(ManEnemyWorld.EnemyBaseCullingExtents))
+                    {
+                        UnloadedBases.RemoteRemove(ETUcase);
+                        count--;
+                    }
+                    else
+                        step++;
+                }
+                catch { }
+            }
+        }
+
+        private void HandleRepairs()
+        {
+            NP_BaseUnit funds = UnloadedBases.GetSetTeamMainBase(this);
+
+            float healMulti;
+            if (WasInCombat())
+                healMulti = ManEnemyWorld.OperatorTickDelay / Mathf.Max(AIERepair.eDelayCombat, 1);
+            else
+                healMulti = ManEnemyWorld.OperatorTickDelay / Mathf.Max(AIERepair.eDelaySafe, 1);
+
+            int numHealed = 0;
+            if (funds != null)
+            {
+                foreach (NP_BaseUnit EBU in EBUs)
+                {
+                    try
+                    {
+                        if (EBU.Health < EBU.MaxHealth)
+                        {
+                            if (funds.BuildBucks > ManEnemyWorld.HealthRepairCost * healMulti)
+                            {
+                                funds.BuildBucks -= (int)(ManEnemyWorld.HealthRepairCost * healMulti);
+                                EBU.Health = Math.Min(EBU.MaxHealth, EBU.Health + (int)(ManEnemyWorld.HealthRepairRate * healMulti));
+                                numHealed++;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                foreach (NP_TechUnit ETU in ETUs)
+                {
+                    try
+                    {
+                        if (ETU.Health < ETU.MaxHealth)
+                        {
+                            if (funds.BuildBucks > ManEnemyWorld.HealthRepairCost * healMulti)
+                            {
+                                funds.BuildBucks -= (int)(ManEnemyWorld.HealthRepairCost * healMulti);
+                                ETU.Health = Math.Min(ETU.MaxHealth, ETU.Health + (int)(ManEnemyWorld.HealthRepairRate * healMulti));
+                                numHealed++;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+                if (numHealed > 0)
+                {
+                    //PresenceDebug("HandleRepairs Team " + Team + " repaired " + numHealed + "Techs");
+                }
+            }
+        }
+        private void HandleRecharge()
+        {
+            long excessEnergy = 0;
+            foreach (var item in EBUs)
+            {
+                excessEnergy += item.Generate(ManEnemyWorld.OperatorTickDelay, !ManTimeOfDay.inst.NightTime);
+            }
+            PresenceDebugDEV("HandleRecharge - Generated " + excessEnergy + " energy");
+            if (MainBase != null && excessEnergy > 0)
+            {
+                foreach (var item in ManEnemyWorld.GetUnloadedTechsInTile(MainBase.tilePos))
+                {
+                    if (item.teamInst == this)
+                    {
+                        item.Recharge(ref excessEnergy);
+                        if (excessEnergy <= 0)
+                            return;
+                    }
+                }
+            }
+            PresenceDebugDEV("HandleRecharge - Remaining " + excessEnergy + " energy");
+        }
+
+
+        public void SetAttackMode(IntVector2 tilePos, Visible target = null)
+        {
+            //PresenceDebug("Enemy team " + Team + " has found target");
+            attackStarted = true;
+            teamMode = AITeamMode.Attacking;
+            lastAttackTile = tilePos;
+            lastTarget = target;
+        }
+        public void SetSiegeMode(IntVector2 tilePos)
+        {
+            //PresenceDebug("Enemy team " + Team + " has found target");
+            attackStarted = true;
+            teamMode = AITeamMode.SiegingPlayer;
+            lastAttackTile = tilePos;
+            lastTarget = null;
+        }
+        public void SetDefendMode(IntVector2 tilePos)
+        {
+            //PresenceDebug("Enemy team " + Team + " has found target");
+            teamMode = AITeamMode.Defending;
+            lastAttackTile = tilePos;
+        }
+        public void ResetModeToIdle()
+        {
+            teamMode = AITeamMode.Idle;
+            NP_BaseUnit mainBase = UnloadedBases.GetSetTeamMainBase(this);
+            if (mainBase != null)
+            {
+                lastAttackTile = mainBase.tilePos;
+            }
+        }
+
+
+        // Recon
+        private void HandleUnitRecon()
+        {
+            scannedPositions.Clear();
+            UnloadedBases.GetSetTeamMainBase(this);
+            if (MainBase != null)
+            {
+                UnloadedBases.GetScannedTilesAroundTech(MainBase); // This happens first - home defense is more important
+
+                tilesHasOwnTechs.Clear();
+                foreach (NP_TechUnit ETU in ETUs)
+                {
+                    try
+                    {
+                        if (!tilesHasOwnTechs.Contains(ETU.tilePos))
+                            tilesHasOwnTechs.Add(ETU.tilePos);
+                    }
+                    catch { }
+                }
+                foreach (NP_TechUnit ETU in EBUs)
+                {
+                    try
+                    {
+                        if (!tilesHasOwnTechs.Contains(ETU.tilePos))
+                            tilesHasOwnTechs.Add(ETU.tilePos);
+                    }
+                    catch { }
+                }
+                if (!attackStarted)
+                {
+                    foreach (var item in tilesHasOwnTechs)
+                    {
+                        UnloadedBases.GetScannedTilesAtCoord(this, item);
+                    }
+                    if (UnloadedBases.SearchPatternCacheSort(this, MainBase.tilePos, scannedEnemyTiles, out var posEnemy))
+                        SetAttackMode(posEnemy);
+                }
+                else if (teamMode == AITeamMode.Idle)
+                {
+                    if (UnloadedBases.SearchPatternCacheNoSort(this, scannedEnemyTiles, out var posEnemy))
+                        SetDefendMode(posEnemy);
+                }
+            }
+        }
+
+
+        // Combat
+        private void HandleCombat()
+        {
+            Fighting.Clear();
+            float damageTime = (float)ManEnemyWorld.OperatorTickDelay / ManEnemyWorld.ExpectedDPSDelitime;
+            //PresenceDebug("HandleCombat found " + tilesHasTechs.Count + " tiles with Techs");
+            foreach (IntVector2 TT in tilesHasOwnTechs)
+            {
+                if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileCentreScene(TT)))
+                {
+                    //PresenceDebug("HandleCombat found the tile to be active!?");
+                    continue; // tile loaded
+                }
+                //PresenceDebug("HandleCombat Trying to test for combat");
+                List<NP_TechUnit> techsCache = ManEnemyWorld.GetUnloadedTechsInTile(TT);
+                if (techsCache.Count == 0)
+                {
+                    //PresenceDebug("TACtical_AI: EnemyPresence(ASSERT) - HandleCombat called the tile, but THERE'S NO TECHS IN THE TILE!");
+                    continue;
+                }
+                List<NP_TechUnit> Allies = techsCache.FindAll(delegate (NP_TechUnit cand) { return Tank.IsFriendly(cand.tech.m_TeamID, Team); });
+                List<NP_TechUnit> Enemies = techsCache.FindAll(delegate (NP_TechUnit cand) { return Tank.IsEnemy(cand.tech.m_TeamID, Team); });
+                int damageTurn = DistributeDamageThisTurn(TT, Allies, damageTime, Enemies);
+                if (damageTurn != 0)
+                    ReportCombat("-- This Turn Total: " + damageTurn + " --");
+            }
+            if (AIECore.RetreatingTeams.Contains(team))
+            {
+                if (AIECore.TankAIManager.GetTeamTanks(team).Any())
+                    teamMode = AITeamMode.Retreating;
+                else
+                {
+                    AIECore.TeamRetreat(team, false, true);
+                    teamMode = AITeamMode.Idle;
+                }
+            }
+        }
+        public int DistributeDamageThisTurn(IntVector2 TT, List<NP_TechUnit> Allied, float damageTime, List<NP_TechUnit> Enemies)
+        {
+            if (Allied.Count == 0 || Enemies.Count == 0)
+                return 0;
+            ReportCombat("Combat underway at " + TT + " | " + Team + " vs " + Enemies.First().tech.m_TeamID);
+            OnCombat();
+            int allyIndex = 0;
+            int damageTotal = 0;
+            Enemies.Shuffle();
+            for (int evilIndex = 0; evilIndex < Enemies.Count && allyIndex < Allied.Count; evilIndex++)
+            {
+                NP_TechUnit target = Enemies[evilIndex];
+                int damageWave = 1;
+                int attacksThisFrame = UnityEngine.Random.Range(1, Allied.Count - allyIndex);
+                ReportCombat("Team " + Team + " is firing at Target " + target.Name + " with " + attacksThisFrame + " Techs!");
+                for (int step = 0; step < attacksThisFrame; step++)
+                {
+                    int damageUnit;
+                    var Ally = Allied[allyIndex];
+                    if (Ally is NP_BaseUnit)
+                    {
+                        damageUnit = Mathf.CeilToInt(Ally.AttackPower * ManEnemyWorld.BaseAccuraccy);
+                        ReportCombat("  Base " + Ally.Name + " - Power [" + damageUnit + "], Accuraccy[" + ManEnemyWorld.BaseAccuraccy + "]");
+                    }
+                    else
+                    {
+                        float mobileAcc = ManEnemyWorld.MobileAccuraccy - (ManEnemyWorld.MobileSpeedAccuraccyReduction * Ally.MoveSpeed);
+                        damageUnit = Mathf.CeilToInt(Ally.AttackPower * mobileAcc);
+                        ReportCombat("  Unit " + Ally.Name + " - Power [" + damageUnit + "], Accuraccy[" + mobileAcc + "]");
+                        Fighting.Add(Ally);
+                    }
+                    allyIndex++;
+                    damageWave += damageUnit;
+                }
+                float EvasionEnemy;
+                if (target is NP_BaseUnit)
+                    EvasionEnemy = ManEnemyWorld.BaseEvasion;
+                else
+                    EvasionEnemy = target.MoveSpeed * ManEnemyWorld.MobileSpeedToEvasion;
+                if (EvasionEnemy < 1)
+                    EvasionEnemy = 1;
+                else
+                    EvasionEnemy = UnityEngine.Random.Range(1, EvasionEnemy);
+                ReportCombat("-- Enemy Dodge Roll: " + EvasionEnemy + " --");
+                damageWave = Mathf.CeilToInt((Math.Max(5 * attacksThisFrame, damageWave) * damageTime) / EvasionEnemy);
+                ReportCombat("-- TotalRecalc: " + damageWave + " --");
+                damageTotal += damageWave;
+                if (target.TakeDamage(damageWave))
+                {
+                    try
+                    {
+                        ReportCombat("Enemy " + target.Name + " has been destroyed!");
+                        if (target is NP_BaseUnit EBU)
+                        {
+                            var lootGain = UnloadedBases.EmergencyMoveMoney(EBU);
+                            if (lootGain > 0)
+                            {
+                                if (UnloadedBases.GetSetTeamMainBase(this) != null)
+                                    MainBase.BuildBucks = MainBase.BuildBucks + lootGain;
+                            }
+                        }
+                    }
+                    catch { }
+                    UnloadedBases.RemoteDestroy(target);
+                }
+            }
+            return damageTotal;
+        }
+
+
+
+        // Movement
+        private void HandleUnitMoving()
+        {
+            UnloadedBases.GetSetTeamMainBase(this);
+            if (MainBase == null)
+            {   // Attack the player
+                MoveAllETUsNoMainBase();
+            }
+            else
+            {   // Manage Base operations
+                switch (teamMode)
+                {
+                    case AITeamMode.Retreating:
+                    case AITeamMode.Defending:
+                        lastEventTile = homeTile;
+                        if (!MoveAllETUs())
+                            PresenceDebug("   No movement this turn.");
+                        break;
+                    case AITeamMode.Attacking:
+                        lastEventTile = lastAttackTile;
+                        if (!MoveAllETUs())
+                            PresenceDebug("   No movement this turn.");
+                        break;
+                    case AITeamMode.SiegingPlayer:
+                        lastEventTile = lastAttackTile;
+                        if (!MoveAllETUs())
+                            PresenceDebug("   No movement this turn.");
+                        break;
+                    case AITeamMode.Idle:
+                    default:
+                        lastEventTile = homeTile;
+                        if (canSiege && UnloadedBases.IsPlayerWithinProvokeDist(MainBase.tilePos))
+                        {
+                            PresenceDebug("This team can attack your base!  Threshold: " + ETUs.Count + " / " + (KickStart.EnemyTeamTechLimit / 2f));
+                            var player = Singleton.playerTank;
+                            if (player && ManEnemySiege.LaunchSiege(this))
+                            {
+                                SetSiegeMode(ManWorld.inst.TileManager.SceneToTileCoord(player.boundsCentreWorldNoCheck));
+                            }
+                        }
+                        break;
+                }
+                PresenceDebugDEV("Main Base is " + MainBase.Name + " at " + MainBase.tilePos);
+                PresenceDebugDEV("- TeamMode: " + teamMode + ",  EventTile: " + lastEventTile);
+            }
+        }
+        private void MoveAllETUsNoMainBase()
+        {
+            //PresenceDebug("Team " + Team + " does not have a base allocated yet");
+            int count = ETUs.Count;
+            for (int step = 0; step < count; step++)
+            {
+                NP_TechUnit ETU = ETUs.ElementAt(step);
+                if (ETU.MoveSpeed < 10)
+                    continue;
+                IntVector2 playerCoord = WorldPosition.FromGameWorldPosition(Singleton.cameraTrans.position).TileCoord;
+                if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileCentreScene(ETU.tilePos)))
+                {
+                    if (!ETU.isMoving)
+                    {
+                        ManEnemyWorld.StrategicMoveQueue(ETU, playerCoord, OnUnitReachDestinationNoBase, out bool fail);
+                        if (fail)
+                        {
+                            ETUs.Remove(ETU);
+                            step--;
+                            count--;
+                        }
+                    }
+                    else
+                        PresenceDebug("Unit " + ETU.Name + " is moving");
+                }
+            }
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="eventTile"></param>
+        /// <returns>True if a tech is moving</returns>
+        private bool MoveAllETUs()
+        {
+            bool techsMoving = false;
+            int count = ETUs.Count;
+            StringBuilder moving = new StringBuilder();
+            StringBuilder startedMove = new StringBuilder();
+            for (int step = 0; step < count; step++)
+            {
+                NP_TechUnit ETU = ETUs.ElementAt(step);
+                if (ETU.tilePos == lastEventTile)
+                    continue;
+                if (!ETU.isMoving)
+                {
+                    if (ETU.isFounder)
+                    {
+                        if (!DoFounderMovement(ETU, ref techsMoving))
+                        {
+                            ETUs.Remove(ETU);
+                            step--;
+                            count--;
+                        }
+                    }
+                    else
+                    {
+                        if (ManEnemyWorld.StrategicMoveQueue(ETU, lastEventTile, OnUnitReachDestinationBase, out bool fail))
+                        {
+                            startedMove.Append(ETU.Name + ", ");
+                            techsMoving = true;
+                        }
+                        if (fail)
+                        {
+                            ETUs.Remove(ETU);
+                            step--;
+                            count--;
+                        }
+                    }
+                }
+                else
+                {
+                    moving.Append(ETU.Name + ", ");
+                    techsMoving = true;
+                }
+            }
+            if (startedMove.Length > 0)
+            {
+                PresenceDebug("   Unit(s) " + startedMove.ToString() + " have started moving to tile " + lastEventTile);
+            }
+            if (moving.Length > 0)
+            {
+                PresenceDebug("   Unit(s) " + moving.ToString() + " are moving");
+            }
+            return techsMoving;
+        }
+
+        private void OnUnitReachDestinationNoBase(TileMoveCommand TMC, bool pathSuccess, bool activeScene)
+        {
+            if (pathSuccess && activeScene)
+            {
+                if (TMC.TryGetActiveTank(out var tank) && Singleton.playerTank)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: OnUnitReachDestinationNoBase for " + tank.name);
+                    var helper = tank.GetHelperInsured();
+                    helper.DirectRTSDest(Singleton.playerTank.boundsCentreWorldNoCheck);
+                    helper.SetRTSState(true);
+                }
+            }
+        }
+        private void OnUnitReachDestinationBase(TileMoveCommand TMC, bool pathSuccess, bool activeScene)
+        {
+            if (pathSuccess && activeScene)
+            {
+                if (TMC.TryGetActiveTank(out var tank))
+                {
+                    var inst = tank.GetHelperInsured();
+                    var mind = inst.GetComponent<EnemyMind>();
+                    if (mind != null && lastTarget != null && lastTarget.isActive)
+                    {
+                        DebugTAC_AI.Log("TACtical_AI: OnUnitReachDestinationBase for " + tank.name);
+                        mind.GetRevengeOn(lastTarget);
+                    }
+                }
+            }
+        }
+
+
+        // Funding
+        public void UpdateRevenue()
+        {
+            foreach (NP_BaseUnit EBU in EBUs)
+            {
+                if (Singleton.Manager<ManVisible>.inst.GetTrackedVisible(EBU.ID) == null)
+                {
+                    EBU.BuildBucks += EBU.revenue + ManEnemyWorld.ExpansionIncome;
+                }
+            }
+            NP_BaseUnit mainBase = UnloadedBases.GetSetTeamMainBase(this);
+
+            if (mainBase != null)
+            {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
+                mainBase.BuildBucks += ManEnemyWorld.PassiveHQBonusIncome * ManEnemyWorld.OperatorTickDelay;
+                if (AIGlobals.TurboAICheat)
+                {
+                    mainBase.BuildBucks += 25000 * ManEnemyWorld.OperatorTickDelay;
+                }
+            }
+        }
+        public bool AddBuildBucks(int add)
+        {
+            NP_BaseUnit EBU = UnloadedBases.GetSetTeamMainBase(this);
+            if (EBU != null)
+            {
+                EBU.BuildBucks += add;
+                return true;
+            }
+            return false;
+        }
+
+
+        // MISC
+        public void PresenceDebug(string thing)
+        {
+#if DEBUG
+            DebugTAC_AI.Log(thing);
+#endif
+        }
+        public void PresenceDebugDEV(string thing)
+        {
+#if DEBUG
+            DebugTAC_AI.Log(thing);
+#endif
+        }
+        public static void ReportCombat(string thing)
+        {
+#if DEBUG
+            DebugTAC_AI.Log("TACtical_AI: EnemyPresence - " + thing);
+#endif
+            ManEnemyWorld.AddToCombatLog(thing);
+        }
+        public bool WasInCombat()
+        {
+            return lastAttackedTimestep > Time.time;
+        }
+        public void OnCombat()
+        {
+            lastAttackedTimestep = Time.time + (ManEnemyWorld.OperatorTickDelay * 2);
+            if (teamMode == AITeamMode.Idle)
+                teamMode = AITeamMode.Attacking;
+        }
+
+        public int BuildBucks()
+        {
+            int count = 0;
+            foreach (NP_BaseUnit EBU in EBUs)
+            {
+                count += EBU.BuildBucks;
+            }
+            return count;
+        }
+
+        public bool TryGetFounderUnloaded(out NP_TechUnit ETUFounder)
+        {
+            ETUFounder = null;
+            if (teamFounder != null && !teamFounder.IsNullOrTechMissing())
+            {
+                ETUFounder = teamFounder;
+                return true;
+            }
+            else
+            {
+                foreach (var item in ETUs)
+                {
+                    if (!item.IsNullOrTechMissing())
+                    {
+                        TechData tech = item.tech.m_TechData;
+                        if (tech.IsTeamFounder())
+                        {
+                            teamFounder = item;
+                            ETUFounder = item;
+                            break;
+                        }
+                    }
+                }
+                if (teamFounder != null && !teamFounder.IsNullOrTechMissing())
+                {
+                    ETUs.Remove(teamFounder);
+                    return true;
+                }
+                return false;
+            }
+        }
+        public bool TryGetFounderActive(out Tank founderActive)
+        {
+            founderActive = null;
+            if (teamFounderActive != null)
+            {
+                founderActive = teamFounderActive;
+                return true;
+            }
+            else
+            {
+                foreach (var item in ManTechs.inst.IterateTechs())
+                {
+                    if (item.Team == Team && item.IsTeamFounder())
+                    {
+                        teamFounderActive = item;
+                        founderActive = item;
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
+
+        public bool HasANYTechs()
+        {
+            return EBUs.Count > 0 || ETUs.Count > 0 || RLoadedBases.TeamActiveMobileTechCount(Team) > 0 || RLoadedBases.TeamActiveAnyBaseCount(Team) > 0;
+        }
+        public int GlobalTotalTechCount()
+        {
+            return GlobalMakerBaseCount() + GlobalMobileTechCount();
+        }
+        public int GlobalMakerBaseCount()
+        {
+            return EBUs.Count + RLoadedBases.TeamActiveMakerBaseCount(Team);
+        }
+        public int GlobalMobileTechCount()
+        {
+            //DebugTAC_AI.Assert("GlobalMobileTechCount " + (ETUs.Count + RBases.TeamActiveMobileTechCount(Team)));
+            return ETUs.Count + RLoadedBases.TeamActiveMobileTechCount(Team);
+        }
+
+        public int GlobalTeamCost()
+        {
+            int teamValue = 0;
+            foreach (var item in ETUs)
+            {
+                try
+                {
+                    teamValue += item.tech.m_TechData.GetValue();
+                }
+                catch { }
+            }
+            foreach (var item in EBUs)
+            {
+                try
+                {
+                    teamValue += item.tech.m_TechData.GetValue();
+                }
+                catch { }
+            }
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item.Team == Team)
+                {
+                    try
+                    {
+                        teamValue += item.GetValue();
+                    }
+                    catch { }
+                }
+            }
+            return teamValue;
+        }
+    }
+}

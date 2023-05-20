@@ -11,6 +11,9 @@ namespace TAC_AI.AI.Movement.AICores
 {
     internal class AirplaneUtils
     {
+        private const float UprightBankNudgeMultiplierFighter = 0.5f;
+        private const float UprightBankNudgeMultiplierSlow = 0.75f;
+
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
         public static void UTurn(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot)
@@ -51,8 +54,8 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (pilot.PerformUTurn == 3)
             {   // Aim back at target
-                AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
-                if (Vector3.Dot((pilot.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.2f)
+                AngleTowards(thisControl, thisInst, tank, pilot, pilot.PathPointSet);
+                if (Vector3.Dot((pilot.PathPointSet - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.2f)
                 {
                     pilot.ErrorsInUTurn = 0;
                     pilot.PerformUTurn = 0;
@@ -61,10 +64,10 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
         }
-        public static Vector3 DetermineRoll(Tank tank, AIControllerAir pilot, Vector3 Navi3DDirect, bool forceUp)
+        public static Vector3 DetermineRoll(Tank tank, AIControllerAir pilot, Vector3 Navi3DDirect, bool forceUp, out float nudgeTargPosUp)
         {
             //Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
-
+            nudgeTargPosUp = 0;
 
             if (forceUp)
                 return Vector3.up;
@@ -108,6 +111,7 @@ namespace TAC_AI.AI.Movement.AICores
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, false);
                         rFlat.y = -pilot.RollStrength / 2;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
+                        nudgeTargPosUp = UprightBankNudgeMultiplierSlow;
                     }
                     else if (Heading.x < 0f)
                     { // We roll to aim at target
@@ -115,6 +119,7 @@ namespace TAC_AI.AI.Movement.AICores
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, false);
                         rFlat.y = pilot.RollStrength / 2;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
+                        nudgeTargPosUp = UprightBankNudgeMultiplierSlow;
                     }
                 }
             }
@@ -128,6 +133,7 @@ namespace TAC_AI.AI.Movement.AICores
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, true);
                         rFlat.y = -pilot.RollStrength;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
+                        nudgeTargPosUp = UprightBankNudgeMultiplierFighter;
                     }
                     else if (Heading.x < 0f)
                     { // We roll to aim at target
@@ -135,6 +141,7 @@ namespace TAC_AI.AI.Movement.AICores
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, true);
                         rFlat.y = pilot.RollStrength;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
+                        nudgeTargPosUp = UprightBankNudgeMultiplierFighter;
                     }
                 }
             }
@@ -152,12 +159,12 @@ namespace TAC_AI.AI.Movement.AICores
             bool EmergencyUp = false;
             if (pilot.LargeAircraft)
             {
-                if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock, AIGlobals.AircraftGroundOffset))
+                if (!AIEPathing.AboveHeightFromGround(pilot.Helper.DodgeSphereCenter, AIGlobals.GroundOffsetAircraft))
                 {
                     EmergencyUp = true;
                 }
             }
-            else if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck + pilot.deltaMovementClock, thisInst.lastTechExtents + 2))
+            else if (!AIEPathing.AboveHeightFromGround(pilot.Helper.DodgeSphereCenter, thisInst.lastTechExtents + 2))
             {
                 EmergencyUp = true;
             }
@@ -173,13 +180,27 @@ namespace TAC_AI.AI.Movement.AICores
                 insureUpright.y = -AIGlobals.AircraftMaxDive;
             }
             else if (Vector3.Dot(insureUpright, root.forward) < 0 && !pilot.ForcePitchUp)
-            {   // Level when turning far
+            {   
+                // Try deal with turns well exceeding 90 degrees
+                Vector3 clamped = root.InverseTransformVector(insureUpright);
+                if (clamped.z < 0)
+                {
+                    clamped.y = 0;
+                    clamped.z = 0;
+                }
+                insureUpright = root.TransformVector(clamped);
+                // Level when turning far
                 insureUpright = insureUpright.SetY(0).normalized;
                 insureUpright.y = 0.1f;
             }
             thisInst.Navi3DDirect = insureUpright.normalized;
           
-            thisInst.Navi3DUp = DetermineRoll(tank, pilot, thisInst.Navi3DDirect, EmergencyUp);
+            thisInst.Navi3DUp = DetermineRoll(tank, pilot, thisInst.Navi3DDirect, EmergencyUp, out float upNudge);
+            if (thisInst.Navi3DDirect.y > -0.35f)
+            {
+                thisInst.Navi3DDirect.y += upNudge;
+                thisInst.Navi3DDirect = thisInst.Navi3DDirect.normalized;
+            }
 
             // We must make the controls local to the cab to insure predictable performance
             Vector3 ForwardsLocal = root.InverseTransformDirection(thisInst.Navi3DDirect);
@@ -273,7 +294,7 @@ namespace TAC_AI.AI.Movement.AICores
                         float ExtAvoid = thisInst.MinimumRad;
                         if (thisInst.lastPlayer.IsNotNull())
                             ExtAvoid = thisInst.lastPlayer.GetCheapBounds();
-                        float Extremes = ExtAvoid + thisInst.lastTechExtents + AIGlobals.ExtraSpace;
+                        float Extremes = ExtAvoid + thisInst.lastTechExtents + AIGlobals.PathfindingExtraSpace;
                         float throttleToSet = 1;
                         float foreTarg = tank.rootBlockTrans.InverseTransformPoint(target).z;
 
@@ -286,20 +307,20 @@ namespace TAC_AI.AI.Movement.AICores
                             if (pilot.NoProps)
                             {
                                 if (!pilot.ForcePitchUp && foreTarg > Extremes && tank.rbody.velocity.y > -10 && Vector3.Dot((target - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
-                                    thisInst.BOOST = true;
+                                    thisInst.FullBoost = true;
                                 else
-                                    thisInst.BOOST = false;
+                                    thisInst.FullBoost = false;
                             }
                             else
                             {
                                 if (!pilot.ForcePitchUp && throttleToSet > 1.25f && tank.rbody.velocity.y > -10 && Vector3.Dot((target - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
-                                    thisInst.BOOST = true;
+                                    thisInst.FullBoost = true;
                                 else
-                                    thisInst.BOOST = false;
+                                    thisInst.FullBoost = false;
                             }
                         }
                         else
-                            thisInst.BOOST = false;
+                            thisInst.FullBoost = false;
                         return;
                     }
                 }
@@ -325,16 +346,16 @@ namespace TAC_AI.AI.Movement.AICores
                         if (pilot.NoProps)
                         {
                             if (!pilot.ForcePitchUp && foreTarg > Extremes && tank.rbody.velocity.y > -10 && Vector3.Dot((target.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
-                                thisInst.BOOST = true;
+                                thisInst.FullBoost = true;
                             else
-                                thisInst.BOOST = false;
+                                thisInst.FullBoost = false;
                         }
                         else
                         {
                             if (!pilot.ForcePitchUp && throttleToSet > 1.25f && tank.rbody.velocity.y > -10 && Vector3.Dot((target.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6)
-                                thisInst.BOOST = true;
+                                thisInst.FullBoost = true;
                             else
-                                thisInst.BOOST = false;
+                                thisInst.FullBoost = false;
                         }
                         return;
                     }
@@ -345,13 +366,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             //DebugTAC_AI.Log("TACtical_AI: throttle is already " + pilot.AdvisedThrottle);
         }
-        public static Vector3 ForeAiming(Visible target)
-        {
-            if (target.tank.rbody.IsNull())
-                return target.tank.boundsCentreWorldNoCheck;
-            else
-                return target.tank.rbody.velocity + target.tank.boundsCentreWorldNoCheck;
-        }
+       
         public static Vector3 TryGetVelocityOffset(Tank tank, AIControllerAir pilot)
         {
             if (tank.rbody.IsNotNull())
@@ -361,32 +376,31 @@ namespace TAC_AI.AI.Movement.AICores
 
         public static void PreventCollisionWithGround(AIControllerAir pilot, float groundOffset, bool unresponsiveAir)
         {
-            Vector3 deltaAim = pilot.deltaMovementClock + pilot.Helper.tank.boundsCentreWorldNoCheck;
             float groundOffsetF = groundOffset; //pilot.AerofoilSluggishness
             if (unresponsiveAir)
             {
-                if (!AIEPathing.AboveHeightFromGround(deltaAim, groundOffsetF + pilot.Helper.lastTechExtents))
+                if (!AIEPathing.AboveHeightFromGround(pilot.Helper.DodgeSphereCenter, groundOffsetF + pilot.Helper.lastTechExtents))
                 {
-                    DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(deltaAim), "PreventCollisionWithGround called while height is too high");
+                    //DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(deltaAim), "PreventCollisionWithGround called while height is too high");
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " -  deltaMovementClock = " + pilot.deltaMovementClock + " | slugishness = " + pilot.AerofoilSluggishness + " | deltaAim y " + deltaAim.y + " | vs " + groundOffsetF);
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " - GOING UP (HVY)");
                     pilot.ForcePitchUp = true;
-                    pilot.ProcessedDest.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
-                    pilot.ProcessedDest += Vector3.up * (pilot.ProcessedDest - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
+                    pilot.PathPointSet.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
+                    pilot.PathPointSet += Vector3.up * (pilot.PathPointSet - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
                 }
             }
             else
             {
-                if (!AIEPathing.AboveHeightFromGround(deltaAim, groundOffsetF))
+                if (!AIEPathing.AboveHeightFromGround(pilot.Helper.DodgeSphereCenter, groundOffsetF))
                 {
-                    DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(deltaAim), "PreventCollisionWithGround called while height is too high");
-                    pilot.ProcessedDest = AIEPathing.ModerateMaxAlt(pilot.ProcessedDest, pilot.Helper);
+                    //DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(deltaAim), "PreventCollisionWithGround called while height is too high");
+                    pilot.PathPointSet = AIEPathing.ModerateMaxAlt(pilot.PathPointSet, pilot.Helper);
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " -  deltaMovementClock = " + pilot.deltaMovementClock.y + " | slugishness = " + pilot.AerofoilSluggishness + " | deltaAim y " + deltaAim.y + " | vs " + groundOffsetF + 
                     //    " | tech: " + pilot.Helper.tank.trans.position);
                     //DebugTAC_AI.Log(pilot.Helper.tank.name + " - GOING UP");
                     pilot.ForcePitchUp = true;
-                    pilot.ProcessedDest.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
-                    pilot.ProcessedDest += Vector3.up * (pilot.ProcessedDest - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
+                    pilot.PathPointSet.y = pilot.Helper.tank.boundsCentreWorldNoCheck.y;
+                    pilot.PathPointSet += Vector3.up * (pilot.PathPointSet - pilot.Helper.tank.boundsCentreWorldNoCheck).ToVector2XZ().magnitude * 4;
                 }
             }
         }
@@ -400,7 +414,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             Vector3 right;
-            if (tank.rootBlockTrans.forward.y <= -0.8f && tank.rootBlockTrans.forward.y >= 0.8f)
+            if (tank.rootBlockTrans.forward.y >= -0.8f && tank.rootBlockTrans.forward.y <= 0.8f)
             {
                 right = Vector3.Cross(Vector3.up, tank.rootBlockTrans.forward.SetY(0).normalized).SetY(0).normalized;
                 DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 7, right * 24, new Color(1,1, 0, 1));

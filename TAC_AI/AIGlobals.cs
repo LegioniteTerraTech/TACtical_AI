@@ -29,32 +29,47 @@ namespace TAC_AI
         public const int MaxEradicatorTechs = 2;
         public const int MaxBlockLimitAttract = 128;
 
-        public const float MinimumBaseSpacing = 450;
-        public const float MinimumMonitorSpacingSqr = 75^2;//175
-
         // GENERAL AI PARAMETERS
-        public const float RTSAirGroundOffset = 24;
-        public const float GeneralAirGroundOffset = 10;
-        public const float AircraftGroundOffset = 22;
-        public const float ChopperGroundOffset = 12;
+        public const float TargetVelocityLeadPredictionMulti = 0.01f; // for projectiles of speed 100
         public const float StationaryMoveDampening = 6;
-        public const float SafeAnchorDist = 50f;     // enemy too close to anchor
         public const int TeamRangeStart = 256;
         public const short NetAIClockPeriod = 30;
 
+        public const float TargetCacheRefreshInterval = 1.5f;  // Seconds until we try to gather enemy Techs within range
+
+        // Elevation
+        public const float GroundOffsetGeneralAir = 10;
+        public const float GroundOffsetRTSAir = 24;
+        public const float GroundOffsetAircraft = 22;
+        public const float GroundOffsetChopper = 13.5f;
+        public const float GroundOffsetCrashWarnChopper = 11.5f;
+
+        // Anchors
+        public const float SafeAnchorDist = 50f;     // enemy too close to anchor
+        /// <summary> How much do we dampen anchor movements by? </summary>
+        public const int AnchorAimDampening = 45;
         public const short AlliedAnchorAttempts = 12;
         public const short NPTAnchorAttempts = 12;
+
+        // Unjamming
+        public const int UnjamUpdateStart = 120;
+        public const int UnjamUpdateTicks = 120;
+        public const int UnjamUpdateEndDelay = 20;
+
+        public const int UnjamUpdateDrop = UnjamUpdateStart + UnjamUpdateTicks;
+        public const int UnjamUpdateEnd = UnjamUpdateDrop + UnjamUpdateEndDelay;
+
 
 
         // Pathfinding
         public const float AIPathingSuccessRad = 2.4f; // How far should the tech radius from the path point to consider finishing the path point?
-        public const float AIPathingSuccessRadPrecise = 1.8f; // How far should the tech radius from the path point to consider finishing the path point?
+        public const float AIPathingSuccessRadPrecise = 1.2f; // How far should the tech radius from the path point to consider finishing the path point?
 
-        public const int ExtraSpace = 6;  // Extra pathfinding space
+        public const int PathfindingExtraSpace = 6;  // Extra pathfinding space
         public const float DefaultDodgeStrengthMultiplier = 1.75f;  // The motivation in trying to move away from a tech in the way
         public const float AirborneDodgeStrengthMultiplier = 0.4f;  // The motivation in trying to move away from a tech in the way
-        public const float FindItemExtension = 50;
-        public const float FindBaseExtension = 500;
+        public const float FindItemScanRangeExtension = 50;
+        public const float FindBaseScanRangeExtension = 500;
         public const int ReverseDelay = 60;
         public const float PlayerAISpeedPanicDividend = 6;
         public const float EnemyAISpeedPanicDividend = 9;
@@ -76,7 +91,7 @@ namespace TAC_AI
         public const float AirMaxYaw = 0.2f; // 0 - 1 (float)
         public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
 
-        public const float ChopperOperatingExtraHeight = 0.38f;
+        public const float ChopperOperatingExtraPower = 1.38f;
         public const float ChopperChillFactorMulti = 30f;
 
         public const float HovershipHorizontalDriveMulti = 1.25f;
@@ -91,6 +106,7 @@ namespace TAC_AI
 
 
         // Item Handling
+        public const float MinimumCloseInSpeed = 1.6f;      // If we are closing in on our target slower than this (with wrong heading), we drive slowly
         public const float BlockAttachDelay = 0.75f;        // How long until we actually attach the block when playing the placement animation
         public const float MaxBlockGrabRange = 47.5f;       // Less than player range to compensate for precision
         public const float MaxBlockGrabRangeAlt = 5;        // Lowered range to allow scrap magnets to have a chance
@@ -102,48 +118,63 @@ namespace TAC_AI
         // Charger Parameters
         public const float minimumChargeFractionToConsider = 0.75f;
 
-
-        // ENEMY AI PARAMETERS
-        // Active Enemy AI Techs
-        public const int DefaultEnemyRange = 150;
-        public const int TileFringeDist = 96;
-
+        // Combat Parameters
+        public const float MaxRangeFireAll = 125;   // WEAPON AIMING RANGE
 
         // Combat target switching
         public const int ProvokeTime = 200;         // Roughly around 200/40 = 5 seconds
         public const int ProvokeTimeShort = 80;
         public const int DamageAlertThreshold = 45;// Above this damage we react to the threat
-        public const int ScanDelay = 20;            // Frames until we try to find a appropreate target
-        public const int PestererSwitchDelay = 500; // Frames before Pesterers find a new random target
+        public const float ScanDelay = 0.5f;        // Seconds until we try to find a appropreate target
+        public const float PestererSwitchDelay = 12.5f; // Seconds before Pesterers find a new random target
 
-        // Sight ranges
-        public const float MaxRangeFireAll = 125;   // WEAPON AIMING RANGE
-        public const int BaseFounderRange = 60;     // 
-        public const int BossMaxRange = 250;        // 
-        public const float SpyperMaxRange = 450;    // 
 
-        // Combat Spacing Ranges
-        public const float SpacingRange = 12;
-        public const float SpacingRangeSpyper = 64;
+
+        // ENEMY AI PARAMETERS
+        // Active Enemy AI Techs
+        public const int DefaultEnemyScanRange = 150;
+        public const int TileFringeDist = 96;
+        public const float BatteryRetreatPercent = 0.25f;
+
+        // Attack Detection/Chase ranges
+        public const int DefaultEnemyMaxCombatRange = 150;
+        public const int PassiveMaxCombatRange = 75;
+        public const int BaseFounderMaxCombatRange = 60;     // 
+        public const int BossMaxCombatRange = 250;        // 
+        public const int InvaderMaxCombatRange = 250;        // 
+        public const float SpyperMaxCombatRange = 450;    // 
+
+        // Combat Minimum Spacing Ranges
+        public const float MinCombatRangeDefault = 12;
+        public const float MinCombatRangeSpyper = 64;
+        public const float SpacingRangeSpyperAir = 82;
         public const float SpacingRangeAircraft = 24;
         public const float SpacingRangeChopper = 12;
         public const float SpacingRangeHoverer = 18;
 
-        // Enemy Base Checks
+        // Non-Player Base Checks
+        public static bool StartingBasesAreAirdropped = true;
+        public const float EnemyBaseMakerChance = 25;
+        public const float StartBaseMinSpacing = 450;
         public static bool AllowInfAutominers = true;
-        public const int MinimumBBRequired = 10000; // Before expanding
-        public const int MinimumStoredBeforeTryBribe = 100000;
-        public const float BribePenalty = 1.5f;
+        public static bool NoBuildWhileInCombat = true;
+        public const int MinimumBBToTryExpand = 10000; // Before expanding
+        public const int MinimumBBToTryBribe = 100000;
+        public const float BribeMulti = 1.5f;
         public const int BaseExpandChance = 65;//18;
-        public const int MinResourcesReqToCollect = 50;
+        public const int MinResourcesReqToCollect = 12;
         public const int EnemyBaseMiningMaxRange = 250;
         public const int EnemyExtendActionRange = 500 + 32; //the extra 32 to account for tech sizes
+        public const float RetreatBelowTechDamageThreshold = 50;
+        public const float RetreatBelowTeamDamageThreshold = 30;
 
         public const int MPEachBaseProfits = 250;
         public const float RaidCooldownTimeSecs = 1200;
         public const int IgnoreBaseCullingTilesFromOrigin = 8388607;
 
+        public const float MaximumNeutralMonitorSqr = 75 ^ 2;//175
 
+        // Colors
         internal static Color PlayerColor = new Color(0.5f, 0.75f, 0.95f, 1);
         // ENEMY BASE TEAMS
         internal static Color EnemyColor = new Color(0.95f, 0.1f, 0.1f, 1);
@@ -172,7 +203,7 @@ namespace TAC_AI
 
         internal static bool TurboAICheat
         {
-            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace); }
+            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.Backspace); }
         }
 
 
@@ -201,6 +232,26 @@ namespace TAC_AI
         {
             return (team >= BaseTeamsStart && team <= BaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
         }
+        public static NP_Types GetNPTTeamType(int team)
+        {
+            if (team == ManPlayer.inst.PlayerTeam)
+                return NP_Types.Player;
+            else if (IsBaseTeam(team))
+            {
+                if (IsEnemyBaseTeam(team))
+                    return NP_Types.Enemy;
+                else if (IsNeutralBaseTeam(team))
+                    return NP_Types.Neutral;
+                else if (IsNonAggressiveTeam(team))
+                    return NP_Types.NonAggressive;
+                else if (IsSubNeutralBaseTeam(team))
+                    return NP_Types.SubNeutral;
+                else
+                    return NP_Types.Friendly;
+            }
+            else
+                return NP_Types.NonNPT;
+        }
 
         public static bool IsEnemyBaseTeam(int team)
         {
@@ -223,9 +274,10 @@ namespace TAC_AI
             return team >= FriendlyBaseTeamsStart && team <= FriendlyBaseTeamsEnd;
         }
 
-        public static int GetRandomBaseTeam()
+
+        public static int GetRandomBaseTeam(bool forceValidTeam = false)
         {
-            if (DebugRawTechSpawner.IsCurrentlyEnabled)
+            if (DebugRawTechSpawner.CanOpenDebugSpawnMenu && !forceValidTeam)
             {
                 bool shift = Input.GetKey(KeyCode.LeftShift);
                 bool ctrl = Input.GetKey(KeyCode.LeftControl);

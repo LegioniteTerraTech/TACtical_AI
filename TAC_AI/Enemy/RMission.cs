@@ -70,7 +70,7 @@ namespace TAC_AI.AI.Enemy
             {   // The GSO Missile Turret
                 mind.AllowRepairsOnFly = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderAttack = EAttackMode.Strong;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.Mild;
                 DidFire = true;
@@ -80,7 +80,7 @@ namespace TAC_AI.AI.Enemy
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderAttack = EAttackMode.Strong;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 DidFire = true;
@@ -90,7 +90,7 @@ namespace TAC_AI.AI.Enemy
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderAttack = EAttackMode.Strong;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 DidFire = true;
@@ -100,7 +100,7 @@ namespace TAC_AI.AI.Enemy
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
                 mind.EvilCommander = EnemyHandling.Starship;
-                mind.CommanderAttack = EnemyAttack.Pesterer;
+                mind.CommanderAttack = EAttackMode.Random;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 RCore.AutoSetIntelligence(mind, tank);
                 DidFire = true;
@@ -111,7 +111,7 @@ namespace TAC_AI.AI.Enemy
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Bully;
+                mind.CommanderAttack = EAttackMode.Strong;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderBolts = EnemyBolts.AtFull;
@@ -122,7 +122,7 @@ namespace TAC_AI.AI.Enemy
                 mind.AllowRepairsOnFly = true;
                 mind.InvertBullyPriority = true;
                 mind.EvilCommander = EnemyHandling.SuicideMissile;
-                mind.CommanderAttack = EnemyAttack.Grudge;
+                mind.CommanderAttack = EAttackMode.Chase;
                 mind.CommanderMind = EnemyAttitude.Homing;
                 mind.CommanderSmarts = EnemySmarts.IntAIligent;
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
@@ -133,7 +133,7 @@ namespace TAC_AI.AI.Enemy
                 mind.AIControl.Hibernate = true;
                 mind.StartedAnchored = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
-                mind.CommanderAttack = EnemyAttack.Coward;
+                mind.CommanderAttack = EAttackMode.Safety;
                 mind.CommanderMind = EnemyAttitude.Default;
                 mind.CommanderSmarts = EnemySmarts.Default;
                 mind.CommanderBolts = EnemyBolts.MissionTrigger;
@@ -161,7 +161,7 @@ namespace TAC_AI.AI.Enemy
         {
             string name = tank.name;
             // Don't worry the bases are sorted based on if they are valid or not
-            bool DidFire = RBases.SetupBaseAI(thisInst, tank, mind);
+            bool DidFire = RLoadedBases.SetupBaseAI(thisInst, tank, mind);
             if (!(bool)tank)
                 return true;
             tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree1);
@@ -172,13 +172,11 @@ namespace TAC_AI.AI.Enemy
                 if (name.Contains('Ω'))
                 {   // Base host NPC
                     mind.CommanderMind = EnemyAttitude.NPCBaseHost;
-                    mind.Range = AIGlobals.BaseFounderRange;
                     DidFire = true;
                 }
                 else if (name.Contains('⦲'))
                 {   // Boss
                     mind.CommanderMind = EnemyAttitude.Boss;
-                    mind.Range = AIGlobals.BossMaxRange;
                     DidFire = true;
                 }
                 else if (SpecificNameCases(thisInst, tank, mind))
@@ -193,7 +191,7 @@ namespace TAC_AI.AI.Enemy
                         {   // setup for runner 
                             mind.AllowRepairsOnFly = true;
                             mind.EvilCommander = EnemyHandling.Wheeled;
-                            mind.CommanderAttack = EnemyAttack.Coward;
+                            mind.CommanderAttack = EAttackMode.Safety;
                             mind.CommanderMind = EnemyAttitude.Homing;
                             RCore.AutoSetIntelligence(mind, tank);
                             DidFire = true;
@@ -202,7 +200,7 @@ namespace TAC_AI.AI.Enemy
                         {   // setup for Sumo 
                             mind.AllowRepairsOnFly = false;
                             mind.EvilCommander = EnemyHandling.Wheeled;
-                            mind.CommanderAttack = EnemyAttack.Grudge;
+                            mind.CommanderAttack = EAttackMode.Chase;
                             mind.CommanderMind = EnemyAttitude.Homing;
                             mind.CommanderSmarts = EnemySmarts.IntAIligent;
                             DidFire = true;
@@ -214,12 +212,12 @@ namespace TAC_AI.AI.Enemy
                             RCore.BlockSetEnemyHandling(tank, mind);
                             if (KickStart.Difficulty > 100)// in Soviet GSO, Invader come to you
                             {
-                                mind.CommanderAttack = EnemyAttack.Spyper;
+                                mind.CommanderAttack = EAttackMode.Ranged;
                                 mind.CommanderMind = EnemyAttitude.Invader;
                             }
                             else
                             {
-                                mind.CommanderAttack = EnemyAttack.Grudge;
+                                mind.CommanderAttack = EAttackMode.Chase;
                                 mind.CommanderMind = EnemyAttitude.Invader;
                             }
                             RCore.AutoSetIntelligence(mind, tank);

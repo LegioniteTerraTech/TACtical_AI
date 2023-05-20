@@ -22,32 +22,38 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             AIECore.TankAIHelper thisInst = Mind.AIControl;
             Tank tank = thisInst.tank;
 
+            EControlOperatorSet direct = thisInst.GetDirectedControl();
+
             switch (this.Mind.EvilCommander)
             {
                 case EnemyHandling.Wheeled:
-                    RWheeled.TryAttack(thisInst, tank, Mind);
+                    RWheeled.AttackVroom(thisInst, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Airplane:
-                    RAircraft.TryFly(thisInst, tank, Mind);
+                    RAircraft.AttackWoosh(thisInst, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Chopper:
-                    RChopper.TryFly(thisInst, tank, Mind);
+                    RChopper.AttackShwa(thisInst, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Starship:
-                    RStarship.TryAttack(thisInst, tank, Mind);
+                    RStarship.AttackZoom(thisInst, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Naval:
-                    RNaval.TryAttack(thisInst, tank, Mind);
+                    RNaval.AttackWhish(thisInst, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.SuicideMissile:
                     // IDK, May make this obsolete and just use plane AI for this instead.
-                    RSuicideMissile.RamTillDeath(thisInst, tank, Mind);
+                    RCrashMissile.AttackCrash(thisInst, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Stationary:
-                    RGeneral.AimAttack(thisInst, tank, Mind);
-                    RStation.HoldPosition(thisInst, tank, Mind);
+                    RStation.AttackWham(thisInst, tank, Mind, ref direct);
                     break;
             }
+            if (thisInst.Retreat)
+            {
+                RCore.GetRetreatLocation(thisInst, tank, Mind, ref direct);
+            }
+            thisInst.SetDirectedControl(direct);
         }
     }
 }

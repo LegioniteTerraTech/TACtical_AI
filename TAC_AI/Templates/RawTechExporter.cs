@@ -17,7 +17,7 @@ namespace TAC_AI.Templates
     public class AIBookmarker : MonoBehaviour
     {   // External AI-setting interface - used to set Tech AI state externally
         public EnemyHandling commander = EnemyHandling.Wheeled;
-        public EnemyAttack attack = EnemyAttack.Circle;
+        public EAttackMode attack = EAttackMode.Circle;
         public EnemyAttitude attitude = EnemyAttitude.Default;
         public EnemySmarts smarts = EnemySmarts.Default;
         public EnemyBolts bolts = EnemyBolts.Default;
@@ -26,7 +26,7 @@ namespace TAC_AI.Templates
     /// <summary>
     /// Don't try bothering with anything sneaky with this - it's built against illegal blocks and block rotations.
     /// </summary>
-    public class BuilderExternal
+    public class RawTechTemplateFast
     {   // External builder interface - use to save Techs externally
         public string Name = "unset";
         public string Blueprint;
@@ -371,7 +371,7 @@ namespace TAC_AI.Templates
             int count = 0;
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
-            DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            DebugTAC_AI.LogDevOnly("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
                 try
@@ -394,7 +394,7 @@ namespace TAC_AI.Templates
 #endif
         }
 
-        internal static void MakeExternalRawTechListFile(string fileNameAndPath, List<BaseTemplate> content)
+        internal static void MakeExternalRawTechListFile(string fileNameAndPath, List<RawTechTemplate> content)
         {
             string toWrite = JsonConvert.SerializeObject(content, Formatting.None);
             MakeExternalRawTechListFile(fileNameAndPath, toWrite);
@@ -444,10 +444,10 @@ namespace TAC_AI.Templates
             return toAdd;
         }
 
-        internal static List<BaseTemplate> LoadAllEnemyTechsExternalMods()
+        internal static List<RawTechTemplate> LoadAllEnemyTechsExternalMods()
         {
 #if STEAM
-            List<BaseTemplate> toAdd = new List<BaseTemplate>();
+            List<RawTechTemplate> toAdd = new List<RawTechTemplate>();
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
             //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
@@ -466,7 +466,7 @@ namespace TAC_AI.Templates
                             {
                                 using (StreamReader SR = new StreamReader(GZS))
                                 {
-                                    List<BaseTemplate> ext = JsonConvert.DeserializeObject<List<BaseTemplate>>(SR.ReadToEnd());
+                                    List<RawTechTemplate> ext = JsonConvert.DeserializeObject<List<RawTechTemplate>>(SR.ReadToEnd());
                                     toAdd.AddRange(ext);
                                 }
                             }
@@ -484,11 +484,11 @@ namespace TAC_AI.Templates
             return new List<BaseTemplate>();
 #endif
         }
-        public static List<BaseTemplate> LoadAllEnemyTechs()
+        public static List<RawTechTemplate> LoadAllEnemyTechs()
         {
             ValidateEnemyFolder();
             List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
-            List<BaseTemplate> temps = new List<BaseTemplate>();
+            List<RawTechTemplate> temps = new List<RawTechTemplate>();
             List<string> names;
             DebugTAC_AI.Log("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
             foreach (string Dir in Dirs)
@@ -500,9 +500,9 @@ namespace TAC_AI.Templates
                     int errorLevel = 0;
                     try
                     {
-                        BuilderExternal ext = LoadEnemyTech(name, Dir);
+                        RawTechTemplateFast ext = LoadEnemyTech(name, Dir);
                         errorLevel++; // 1
-                        BaseTemplate temp = new BaseTemplate
+                        RawTechTemplate temp = new RawTechTemplate
                         {
                             techName = ext.Name,
                             savedTech = ext.Blueprint,
@@ -517,7 +517,7 @@ namespace TAC_AI.Templates
                         else
                             MainCorp = ext.Faction;
                         errorLevel++; // 3
-                        temp.purposes = GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
+                        temp.purposes = RawTechTemplate.GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                         temp.IntendedGrade = minCorpGrade;
                         temp.faction = MainCorp;
                         temp.terrain = terra;
@@ -620,556 +620,12 @@ namespace TAC_AI.Templates
         }
         private static readonly FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance); 
         
-        public static List<BasePurpose> GetHandler(string blueprint, FactionTypesExt factionType, bool Anchored, out BaseTerrain terra, out int minCorpGrade)
-        {
-            List<TankBlock> blocs = new List<TankBlock>();
-            List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
-            if (mems.Count < 1)
-            {
-                DebugTAC_AI.Log("TACtical_AI: TECH IS NULL!  SKIPPING!");
-                minCorpGrade = 99;
-                terra = BaseTerrain.AnyNonSea;
-                return new List<BasePurpose>();
-            }
-
-            List<BasePurpose> purposes = new List<BasePurpose>();
-            //foreach (BlockMemory mem in mems)
-            //{
-            //    blocs.Add(Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)));
-            //}
-
-            bool isFlying = false;
-            bool isFlyingDirectionForwards = true;
-
-            Vector3 biasDirection = Vector3.zero;
-            Vector3 boostBiasDirection = Vector3.zero;
-
-            int FoilCount = 0;
-            int MovingFoilCount = 0;
-
-            int modControlCount = 0;
-            int modCollectCount = 0;
-            int modEXPLODECount = 0;
-            int modBoostCount = 0;
-            int modHoverCount = 0;
-            int modGyroCount = 0;
-            int modWheelCount = 0;
-            int modAGCount = 0;
-            int modDangerCount = 0;
-            int modGunCount = 0;
-            int modDrillCount = 0;
-            minCorpGrade = 0;
-            bool NotMP = false;
-            bool hasAutominer = false;
-            bool hasReceiver = false;
-            bool hasBaseFunction = false;
-
-            BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
-            int gradeM = blockList.GetMaxGrade(KickStart.CorpExtToCorp(factionType));
-            //DebugTAC_AI.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
-            foreach (BlockMemory blocRaw in mems)
-            {
-                BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
-                TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
-                if (bloc.IsNull())
-                    continue;
-                ModuleItemPickup rec = bloc.GetComponent<ModuleItemPickup>();
-                ModuleItemHolder conv = bloc.GetComponent<ModuleItemHolder>();
-                if ((bool)rec && conv && conv.Acceptance.HasFlag(ModuleItemHolder.AcceptFlags.Chunks) && conv.IsFlag(ModuleItemHolder.Flags.Receiver))
-                {
-                    hasReceiver = true;
-                }
-                if (bloc.GetComponent<ModuleItemProducer>())
-                {
-                    hasAutominer = true;
-                    NotMP = true;
-                }
-                if (bloc.GetComponent<ModuleItemConveyor>())
-                {
-                    NotMP = true;
-                }
-                if (bloc.GetComponent<ModuleItemConsume>())
-                {
-                    hasBaseFunction = true;
-                    switch (type)
-                    {
-                        case BlockTypes.GSODeliCannon_221:
-                        case BlockTypes.GSODeliCannon_222:
-                        case BlockTypes.GCDeliveryCannon_464:
-                        case BlockTypes.VENDeliCannon_221:
-                        case BlockTypes.HE_DeliveryCannon_353:
-                        case BlockTypes.BF_DeliveryCannon_122:
-                            break;
-                        default:
-                            var recipeCase = bloc.GetComponent<ModuleRecipeProvider>();
-                            if ((bool)recipeCase)
-                            {
-                                using (IEnumerator<RecipeTable.RecipeList> matters = recipeCase.GetEnumerator())
-                                {
-                                    while (matters.MoveNext())
-                                    {
-                                        RecipeTable.RecipeList matter = matters.Current;
-                                        if (matter.m_Name != "rawresources" && matter.m_Name != "gsodelicannon")
-                                        {
-                                            NotMP = true;
-                                        }
-                                    }
-                                }
-                            }
-                            break;
-                    }
-                }
-
-
-                if (bloc.GetComponent<ModuleItemHolder>())
-                    modCollectCount++;
-                if (bloc.GetComponent<ModuleDetachableLink>())
-                    modEXPLODECount++;
-                if (bloc.GetComponent<ModuleBooster>())
-                {
-                    var module = bloc.GetComponent<ModuleBooster>();
-                    List<FanJet> jets = module.GetComponentsInChildren<FanJet>().ToList();
-                    foreach (FanJet jet in jets)
-                    {
-                        if (jet.spinDelta <= 10)
-                        {
-                            Quaternion quat = new OrthoRotation(blocRaw.r);
-                            biasDirection -= quat * (jet.EffectorForwards * jet.force);
-                        }
-                    }
-                    List<BoosterJet> boosts = module.GetComponentsInChildren<BoosterJet>().ToList();
-                    foreach (BoosterJet boost in boosts)
-                    {
-                        //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                        boostBiasDirection -= boost.LocalBoostDirection * (float)forceVal.GetValue(boost);
-                    }
-                    modBoostCount++;
-                }
-                if (bloc.GetComponent<ModuleHover>())
-                    modHoverCount++;
-                if (bloc.GetComponent<ModuleGyro>())
-                    modGyroCount++;
-                if (bloc.GetComponent<ModuleWheels>())
-                    modWheelCount++;
-                if (bloc.GetComponent<ModuleAntiGravityEngine>())
-                    modAGCount++;
-
-                if (bloc.GetComponent<ModuleTechController>())
-                    modControlCount++;
-                else
-                {
-                    if (bloc.GetComponent<ModuleWeapon>() || bloc.GetComponent<ModuleWeaponTeslaCoil>())
-                        modDangerCount++;
-                    if (bloc.GetComponent<ModuleWeaponGun>())
-                        modGunCount++;
-                    if (bloc.GetComponent<ModuleDrill>())
-                        modDrillCount++;
-                }
-
-                try
-                {
-                    int tier = Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetBlockTier(type, true);
-                    if (KickStart.GetCorpExtended(type) == factionType)
-                    {
-                        if (tier > minCorpGrade)
-                        {
-                            minCorpGrade = tier;
-                        }
-                    }
-                    else
-                    {
-                        if (tier - 1 > minCorpGrade)
-                        {
-                            if (tier > gradeM)
-                                minCorpGrade = gradeM - 1;
-                            else
-                                minCorpGrade = tier - 1;
-                        }
-                    }
-                }
-                catch
-                {
-                    //DebugTAC_AI.Log("TACtical_AI: GetHandler - error");
-                }
-
-                if (bloc.GetComponent<ModuleWing>())
-                {
-                    //Get the slowest spooling one
-                    List<ModuleWing.Aerofoil> foils = bloc.GetComponent<ModuleWing>().m_Aerofoils.ToList();
-                    FoilCount += foils.Count();
-                    foreach (ModuleWing.Aerofoil Afoil in foils)
-                    {
-                        if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
-                            MovingFoilCount++;
-                    }
-                }
-                blocs.Add(bloc);
-            }
-            bool isDef = true;
-            if (modEXPLODECount > 0)
-            {
-                purposes.Add(BasePurpose.TechProduction);
-                isDef = false;
-            }
-            if (modCollectCount > 0 || hasBaseFunction)
-            {
-                purposes.Add(BasePurpose.Harvesting);
-                isDef = false;
-            }
-            if (NotMP)
-                purposes.Add(BasePurpose.MPUnsafe);
-            if (Anchored)
-            {
-                if (hasReceiver)
-                {
-                    purposes.Add(BasePurpose.HasReceivers);
-                    isDef = false;
-                }
-                if (hasAutominer)
-                {
-                    purposes.Add(BasePurpose.Autominer);
-                    isDef = false;
-                }
-                if (isDef)
-                    purposes.Add(BasePurpose.Defense);
-            }
-
-
-            boostBiasDirection.Normalize();
-            biasDirection.Normalize();
-
-            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (boostBiasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-            else if (biasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (biasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-
-            if (modDangerCount == 0)
-                purposes.Add(BasePurpose.NoWeapons);
-
-            terra = BaseTerrain.Land;
-            string purposesList = "None.";
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
-            {
-                purposesList = "";
-                foreach (BasePurpose purp in purposes)
-                {
-                    purposesList += purp.ToString() + "|";
-                }
-                DebugTAC_AI.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
-
-                //DebugTAC_AI.Log("TACtical_AI: Purposes: Anchored (static)");
-                return purposes;
-            }
-            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
-            {   //Starship
-                terra = BaseTerrain.Space;
-            }
-            else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
-            {   // Airplane
-                terra = BaseTerrain.Air;
-            }
-            else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
-            {   // Chopper
-                terra = BaseTerrain.Air;
-            }
-            else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
-            {   // Naval
-                terra = BaseTerrain.Sea;
-            }
-            else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
-            {   // Melee
-                terra = BaseTerrain.AnyNonSea;
-            }
-
-            if (!Anchored)
-                purposes.Add(BasePurpose.NotStationary);
-
-            if (mems.Count >= AIGlobals.LethalTechSize || modGunCount > 48 || modHoverCount > 18)
-            {
-                purposes.Add(BasePurpose.NANI);
-            }
-
-            if (purposes.Count > 0)
-            {
-                purposesList = "";
-                foreach (BasePurpose purp in purposes)
-                {
-                    purposesList += purp.ToString() + "|";
-                }
-            }
-
-            DebugTAC_AI.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList);
-
-            return purposes;
-        }
-        public static BaseTerrain GetBaseTerrain(TechData tech, bool Anchored)
-        {
-            List<TankBlock> blocs = new List<TankBlock>();
-            List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(BlockSpecToJSONExternal(tech.m_BlockSpecs, out _, out _, out _, out _));
-            if (mems.Count < 1)
-            {
-                DebugTAC_AI.Log("TACtical_AI: TECH IS NULL!  SKIPPING!");
-                return BaseTerrain.Land;
-            }
-
-            List<BasePurpose> purposes = new List<BasePurpose>();
-            //foreach (BlockMemory mem in mems)
-            //{
-            //    blocs.Add(Singleton.Manager<ManSpawn>.inst.GetBlockPrefab((BlockTypes)Enum.Parse(typeof(BlockTypes), mem.t)));
-            //}
-
-            bool isFlying = false;
-            bool isFlyingDirectionForwards = true;
-
-            Vector3 biasDirection = Vector3.zero;
-            Vector3 boostBiasDirection = Vector3.zero;
-
-            int FoilCount = 0;
-            int MovingFoilCount = 0;
-
-            int modControlCount = 0;
-            int modCollectCount = 0;
-            int modEXPLODECount = 0;
-            int modBoostCount = 0;
-            int modHoverCount = 0;
-            int modGyroCount = 0;
-            int modWheelCount = 0;
-            int modAGCount = 0;
-            int modDangerCount = 0;
-            int modGunCount = 0;
-            int modDrillCount = 0;
-            bool NotMP = false;
-            bool hasAutominer = false;
-            bool hasReceiver = false;
-            bool hasBaseFunction = false;
-
-            //BlockUnlockTable blockList = Singleton.Manager<ManLicenses>.inst.GetBlockUnlockTable();
-            //DebugTAC_AI.Log("TACtical_AI: GetHandler - " + Singleton.Manager<ManLicenses>.inst.m_UnlockTable.GetAllBlocksInTier(1, factionType, false).Count());
-            foreach (BlockMemory blocRaw in mems)
-            {
-                BlockTypes type = BlockIndexer.StringToBlockType(blocRaw.t);
-                TankBlock bloc = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type);
-                if (bloc.IsNull())
-                    continue;
-                ModuleItemPickup rec = bloc.GetComponent<ModuleItemPickup>();
-                if ((bool)rec)
-                {
-                    hasReceiver = true;
-                }
-                if (bloc.GetComponent<ModuleItemProducer>())
-                {
-                    hasAutominer = true;
-                    NotMP = true;
-                }
-                if (bloc.GetComponent<ModuleItemConveyor>())
-                {
-                    NotMP = true;
-                }
-                if (bloc.GetComponent<ModuleItemConsume>())
-                {
-                    hasBaseFunction = true;
-                    switch (type)
-                    {
-                        case BlockTypes.GSODeliCannon_221:
-                        case BlockTypes.GSODeliCannon_222:
-                        case BlockTypes.GCDeliveryCannon_464:
-                        case BlockTypes.VENDeliCannon_221:
-                        case BlockTypes.HE_DeliveryCannon_353:
-                        case BlockTypes.BF_DeliveryCannon_122:
-                            break;
-                        default:
-                            var recipeCase = bloc.GetComponent<ModuleRecipeProvider>();
-                            if ((bool)recipeCase)
-                            {
-                                List<RecipeTable.RecipeList> matters = (List<RecipeTable.RecipeList>)recipeCase.GetEnumerator();
-                                foreach (RecipeTable.RecipeList matter in matters)
-                                {
-                                    if (matter.m_Name != "rawresources" && matter.m_Name != "gsodelicannon")
-                                    {
-                                        NotMP = true;
-                                    }
-                                }
-                            }
-                            break;
-                    }
-                }
-
-
-                if (bloc.GetComponent<ModuleTechController>())
-                    modControlCount++;
-                if (bloc.GetComponent<ModuleTechController>())
-                    modControlCount++;
-                if (bloc.GetComponent<ModuleItemHolder>())
-                    modCollectCount++;
-                if (bloc.GetComponent<ModuleDetachableLink>())
-                    modEXPLODECount++;
-                if (bloc.GetComponent<ModuleBooster>())
-                {
-                    var module = bloc.GetComponent<ModuleBooster>();
-                    List<FanJet> jets = module.GetComponentsInChildren<FanJet>().ToList();
-                    foreach (FanJet jet in jets)
-                    {
-                        if (jet.spinDelta <= 10)
-                        {
-                            Quaternion quat = new OrthoRotation(blocRaw.r);
-                            biasDirection -= quat * (jet.EffectorForwards * jet.force);
-                        }
-                    }
-                    List<BoosterJet> boosts = module.GetComponentsInChildren<BoosterJet>().ToList();
-                    foreach (BoosterJet boost in boosts)
-                    {
-                        //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                        boostBiasDirection -= boost.LocalBoostDirection * (float)forceVal.GetValue(boost);
-                    }
-                    modBoostCount++;
-                }
-                if (bloc.GetComponent<ModuleHover>())
-                    modHoverCount++;
-                if (bloc.GetComponent<ModuleGyro>())
-                    modGyroCount++;
-                if (bloc.GetComponent<ModuleWheels>())
-                    modWheelCount++;
-                if (bloc.GetComponent<ModuleAntiGravityEngine>())
-                    modAGCount++;
-                if (bloc.GetComponent<ModuleWeapon>())
-                    modDangerCount++;
-                if (bloc.GetComponent<ModuleWeaponGun>())
-                    modGunCount++;
-                if (bloc.GetComponent<ModuleDrill>())
-                    modDrillCount++;
-
-
-                if (bloc.GetComponent<ModuleWing>())
-                {
-                    //Get the slowest spooling one
-                    List<ModuleWing.Aerofoil> foils = bloc.GetComponent<ModuleWing>().m_Aerofoils.ToList();
-                    FoilCount += foils.Count();
-                    foreach (ModuleWing.Aerofoil Afoil in foils)
-                    {
-                        if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
-                            MovingFoilCount++;
-                    }
-                }
-                blocs.Add(bloc);
-            }
-            bool isDef = true;
-            if (modEXPLODECount > 0)
-            {
-                purposes.Add(BasePurpose.TechProduction);
-                isDef = false;
-            }
-            if (modCollectCount > 0 || hasBaseFunction)
-            {
-                purposes.Add(BasePurpose.Harvesting);
-                isDef = false;
-            }
-            if (NotMP)
-                purposes.Add(BasePurpose.MPUnsafe);
-            if (Anchored)
-            {
-                if (hasReceiver)
-                {
-                    purposes.Add(BasePurpose.HasReceivers);
-                    isDef = false;
-                }
-                if (hasAutominer)
-                {
-                    purposes.Add(BasePurpose.Autominer);
-                    isDef = false;
-                }
-                if (isDef)
-                    purposes.Add(BasePurpose.Defense);
-            }
-
-
-            boostBiasDirection.Normalize();
-            biasDirection.Normalize();
-
-            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (boostBiasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-            else if (biasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (biasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-
-            if (modDangerCount <= modControlCount)
-                purposes.Add(BasePurpose.NoWeapons);
-
-            BaseTerrain terra = BaseTerrain.Land;
-            string purposesList;
-            if (Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(BlockIndexer.StringToBlockType(mems.ElementAt(0).t)).GetComponent<ModuleAnchor>())
-            {
-                purposesList = "";
-                foreach (BasePurpose purp in purposes)
-                {
-                    purposesList += purp.ToString() + "|";
-                }
-                DebugTAC_AI.Info("TACtical_AI: Terrain: " + terra.ToString() + " - Purposes: " + purposesList + "Anchored (static)");
-
-                return BaseTerrain.Land;
-            }
-            else if (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0))
-            {   //Starship
-                terra = BaseTerrain.Space;
-            }
-            else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
-            {   // Airplane
-                terra = BaseTerrain.Air;
-            }
-            else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
-            {   // Chopper
-                terra = BaseTerrain.Air;
-            }
-            else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
-            {   // Naval
-                terra = BaseTerrain.Sea;
-            }
-            else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
-            {   // Melee
-                terra = BaseTerrain.AnyNonSea;
-            }
-
-            if (!Anchored)
-                purposes.Add(BasePurpose.NotStationary);
-
-            if (mems.Count >= AIGlobals.LethalTechSize || modGunCount > 48 || modHoverCount > 18)
-            {
-                purposes.Add(BasePurpose.NANI);
-            }
-
-            if (purposes.Count > 0)
-            {
-                purposesList = "";
-                foreach (BasePurpose purp in purposes)
-                {
-                    purposesList += purp.ToString() + "|";
-                }
-            }
-
-            DebugTAC_AI.Info("TACtical_AI: Terrain: " + terra.ToString());
-
-            return terra;
-        }
         public static int ValidateCost(string blueprint, int ExistingCost)
         {
             if (ExistingCost <= 0)
             {
-                List<BlockMemory> mems = AIERepair.DesignMemory.JSONToMemoryExternal(blueprint);
-                ExistingCost = GetBBCost(AIERepair.DesignMemory.JSONToMemoryExternal(blueprint));
+                List<RawBlockMem> mems = RawTechTemplate.JSONToMemoryExternal(blueprint);
+                ExistingCost = RawTechTemplate.GetBBCost(RawTechTemplate.JSONToMemoryExternal(blueprint));
             }
             if (ExistingCost <= 0)
             {
@@ -1263,32 +719,32 @@ namespace TAC_AI.Templates
         // JSON Handlers
         public static void SaveTechToRawJSON(Tank tank)
         {
-            BuilderExternal builder = new BuilderExternal
+            RawTechTemplateFast builder = new RawTechTemplateFast
             {
                 Name = tank.name,
                 Faction = tank.GetMainCorpExt(),//GetTopCorp(tank);
-                Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank),
+                Blueprint = RawTechTemplate.TechToJSONExternal(tank),
                 InfBlocks = false,
                 IsAnchored = tank.IsAnchored,
                 NonAggressive = !IsLethal(tank),
                 Eradicator = tank.blockman.blockCount >= AIGlobals.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18,
-                Cost = GetBBCost(tank)
+                Cost = RawTechTemplate.GetBBCost(tank)
             };
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveTechToFile(tank.name, builderJSON);
         }
         public static void SaveEnemyTechToRawJSON(Tank tank)
         {
-            BuilderExternal builder = new BuilderExternal
+            RawTechTemplateFast builder = new RawTechTemplateFast
             {
                 Name = tank.name,
                 Faction = tank.GetMainCorpExt(),
-                Blueprint = AIERepair.DesignMemory.TechToJSONExternal(tank),
+                Blueprint = RawTechTemplate.TechToJSONExternal(tank),
                 InfBlocks = false,
                 IsAnchored = tank.IsAnchored,
                 NonAggressive = !IsLethal(tank),
                 Eradicator = tank.blockman.blockCount >= AIGlobals.LethalTechSize || tank.blockman.IterateBlockComponents<ModuleWeaponGun>().Count() > 48 || tank.blockman.IterateBlockComponents<ModuleHover>().Count() > 18,
-                Cost = GetBBCost(tank)
+                Cost = RawTechTemplate.GetBBCost(tank)
             };
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveEnemyTechToFile(tank.name, builderJSON);
@@ -1296,8 +752,8 @@ namespace TAC_AI.Templates
         }
         public static void SaveEnemyTechToRawJSONBLK(TechData tank)
         {
-            BuilderExternal builder = new BuilderExternal();
-            string bluep = BlockSpecToJSONExternal(tank.m_BlockSpecs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount);
+            RawTechTemplateFast builder = new RawTechTemplateFast();
+            string bluep = RawTechTemplate.BlockSpecToJSONExternal(tank.m_BlockSpecs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount);
             builder.Name = tank.Name;
             builder.Faction = tank.GetMainCorpExt();
             builder.Blueprint = bluep;
@@ -1309,47 +765,22 @@ namespace TAC_AI.Templates
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveEnemyTechToFileBLK(tank.Name, builderJSON);
         }
-        public static BuilderExternal LoadTechFromRawJSON(string TechName, string altFolderName = "")
+        public static RawTechTemplateFast LoadTechFromRawJSON(string TechName, string altFolderName = "")
         {
             string loaded = LoadTechFromFile(TechName, altFolderName);
-            return JsonUtility.FromJson<BuilderExternal>(loaded);
+            return JsonUtility.FromJson<RawTechTemplateFast>(loaded);
         }
-        internal static BuilderExternal LoadEnemyTech(string TechName, string altDirect = "")
+        internal static RawTechTemplateFast LoadEnemyTech(string TechName, string altDirect = "")
         {
             string loaded = LoadEnemyTechFromFile(TechName, altDirect);
-            return JsonUtility.FromJson<BuilderExternal>(loaded);
+            return JsonUtility.FromJson<RawTechTemplateFast>(loaded);
         }
-        internal static BuilderExternal SearchAndLoadEnemyTech(string TechName)
+        internal static RawTechTemplateFast SearchAndLoadEnemyTech(string TechName)
         {
             string loaded = FindAndLoadEnemyTechFromFile(TechName);
-            return JsonUtility.FromJson<BuilderExternal>(loaded);
+            return JsonUtility.FromJson<RawTechTemplateFast>(loaded);
         }
-        internal static int GetBBCost(ManSaveGame.StoredTech tech)
-        {
-            return tech.m_TechData.GetValue();
-        }
-        internal static int GetBBCost(Tank tank)
-        {
-            int output = 0;
-            foreach (TankBlock block in tank.blockman.IterateBlocks())
-            {
-                output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(block.BlockType);
-            }
-            return output;
-        }
-        internal static int GetBBCost(List<BlockMemory> mem)
-        {
-            int output = 0;
-            foreach (BlockMemory block in mem)
-            {
-                try
-                {
-                    output += Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice((BlockTypes)Enum.Parse(typeof(BlockTypes), block.t));
-                }
-                catch { }
-            }
-            return output;
-        }
+
 
 
         // Loaders
@@ -1654,7 +1085,7 @@ namespace TAC_AI.Templates
             try
             {
                 List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
-                List<BaseTemplate> temps = new List<BaseTemplate>();
+                List<RawTechTemplate> temps = new List<RawTechTemplate>();
                 List<string> names;
                 DebugTAC_AI.Info("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
                 foreach (string Dir in Dirs)
@@ -1675,87 +1106,36 @@ namespace TAC_AI.Templates
 
         }
 
-        // Utilities
-        public static string BlockSpecToJSONExternal(List<TankPreset.BlockSpec> specs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount)
-        {   // Saving a Tech from the BlockMemory
-            blockCount = 0;
-            int ctrlCount = 0;
-            int weapCount = 0;
-            weapGCount = 0;
-            hoveCount = 0;
-            lethal = false;
-            if (specs.Count == 0)
-                return null;
-            bool invalidBlocks = false;
-            List<BlockMemory> mem = new List<BlockMemory>();
-            foreach (TankPreset.BlockSpec spec in specs)
+        internal static Texture2D FetchTexture(string pngName)
+        {
+            Texture2D tex = null;
+            try
             {
-                BlockMemory mem1 = new BlockMemory
-                {
-                    t = spec.block,
-                    p = spec.position,
-                    r = new OrthoRotation(spec.orthoRotation).rot
-                };
-
-                try
-                {
-                    TankBlock block = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(spec.GetBlockType());
-                    if (block != null)
-                    {
-                        if (block.GetComponent<ModuleHover>())
-                            hoveCount++;
-                        if (block.GetComponent<ModuleWeapon>())
-                            weapCount++;
-                        if (block.GetComponent<ModuleWeaponGun>())
-                            weapGCount++;
-                        if (block.GetComponent<ModuleTechController>())
-                            ctrlCount++;
-                    }
-                    else
-                        invalidBlocks = true;
-                }
-                catch
-                {
-                    invalidBlocks = true;
-                }
-                mem.Add(mem1);
-            }
-
-            lethal =  weapCount > ctrlCount;
-            blockCount = mem.Count;
-
-            StringBuilder JSONTechRAW = new StringBuilder();
-            JSONTechRAW.Append(JsonUtility.ToJson(mem.First()));
-            for (int step = 1; step < mem.Count; step++)
-            {
-                JSONTechRAW.Append("|");
-                JSONTechRAW.Append(JsonUtility.ToJson(mem.ElementAt(step)));
-            }
-            string JSONTechRAWout = JSONTechRAW.ToString();
-            StringBuilder JSONTech = new StringBuilder();
-            foreach (char ch in JSONTechRAWout)
-            {
-                if (ch == '"')
-                {
-                    JSONTech.Append(ch);
-                }
+                ModContainer MC = ManMods.inst.FindMod("Advanced AI");
+                //ResourcesHelper.LookIntoModContents(MC);
+                if (MC != null)
+                    tex = ResourcesHelper.GetTextureFromModAssetBundle(MC, pngName.Replace(".png", ""), false);
                 else
-                    JSONTech.Append(ch);
+                    DebugTAC_AI.Log("TACtical_AI: ModContainer for Advanced AI DOES NOT EXIST");
+                if (!tex)
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Icon " + pngName.Replace(".png", "") + " did not exist in AssetBundle, using external...");
+                    string destination = DLLDirectory + up + "AI_Icons" + up + pngName;
+                    tex = FileUtils.LoadTexture(destination);
+                }
+                if (tex)
+                    return tex;
             }
-            //DebugTAC_AI.Log("TACtical_AI: " + JSONTech.ToString());
-
-            if (invalidBlocks)
-                DebugTAC_AI.Log("TACtical_AI: Invalid blocks in TechData");
-
-            return JSONTech.ToString();
+            catch { }
+            DebugTAC_AI.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   File is missing!");
+            return null;
         }
         private static Sprite LoadSprite(string pngName, bool RemoveBlackOutline = false)
         {
-            string destination = DLLDirectory + up + "AI_Icons" + up + pngName;
             try
             {
                 Sprite refS = referenceAIIcon;
-                Texture2D texRef = FileUtils.LoadTexture(destination);
+                Texture2D texRef = FetchTexture(pngName);
                 Sprite output;
                 if (!RemoveBlackOutline)
                 {
@@ -1781,18 +1161,16 @@ namespace TAC_AI.Templates
         }
         internal static Material CreateMaterial(string pngName, Material prefab)
         {
-            string destination = DLLDirectory + up + "AI_Icons" + up + pngName;
             try
             {
-                Texture2D tex = FileUtils.LoadTexture(destination);
                 Material mat = new Material(prefab);
-                mat.mainTexture = tex;
+                mat.mainTexture = FetchTexture(pngName);
                 DebugTAC_AI.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
                 return mat;
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   File is missing!");
+                DebugTAC_AI.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   Fail on material creation!");
                 return null;
             }
         }
@@ -1839,32 +1217,6 @@ namespace TAC_AI.Templates
                 final.AddRange(GetALLDirectoriesInFolder(Dir));
             }
             final = final.Distinct().ToList();
-            return final;
-        }
-        private static FactionTypesExt GetTopCorp(Tank tank)
-        {   // 
-            FactionTypesExt final = tank.GetMainCorpExt();
-            if (!(bool)Singleton.Manager<ManLicenses>.inst)
-                return final;
-            int corps = Enum.GetNames(typeof(FactionTypesExt)).Length;
-            int[] corpCounts = new int[corps];
-
-            foreach (TankBlock block in tank.blockman.IterateBlocks())
-            {
-                corpCounts[(int)TankExtentions.GetBlockCorpExt(block.BlockType)]++;
-            }
-            int blockCounts = 0;
-            int bestCorpIndex = 0;
-            for (int step = 0; step < corps; step++)
-            {
-                int num = corpCounts[step];
-                if (num > blockCounts)
-                {
-                    bestCorpIndex = step;
-                    blockCounts = num;
-                }
-            }
-            final = (FactionTypesExt)bestCorpIndex;
             return final;
         }
         private static bool IsLethal(Tank tank)

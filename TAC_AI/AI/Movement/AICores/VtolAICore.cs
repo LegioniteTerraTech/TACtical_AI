@@ -16,13 +16,13 @@ namespace TAC_AI.AI.Movement.AICores
         {
             base.Initiate(tank, pilot);
             this.pilot.FlyStyle = AIControllerAir.FlightType.VTOL;
-            pilot.Helper.GroundOffsetHeight = pilot.Helper.lastTechExtents + AIGlobals.AircraftGroundOffset;
+            pilot.Helper.GroundOffsetHeight = pilot.Helper.lastTechExtents + AIGlobals.GroundOffsetAircraft;
         }
-        public override bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public override bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
-                if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
+                if (!AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.lastTechExtents * 2))
                 {
                     return false;
                 }
@@ -34,7 +34,7 @@ namespace TAC_AI.AI.Movement.AICores
             {   // Try and takeoff like helicopter
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, thisInst.lastTechExtents * 2));
                 this.pilot.UpdateThrottle(thisInst, thisControl);
-                HelicopterUtils.AngleTowardsUp(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck, thisInst.lastDestination, true);
+                HelicopterUtils.AngleTowardsUp(thisControl, pilot, tank.boundsCentreWorldNoCheck, thisInst.lastDestinationCore, ref core, true);
             }
             else
             {   //Fly like plane
@@ -67,8 +67,8 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (pilot.PerformUTurn == 3)
                     {
-                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
-                        if (Vector3.Dot((pilot.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6f)
+                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.PathPointSet);
+                        if (Vector3.Dot((pilot.PathPointSet - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6f)
                             pilot.PerformUTurn = 0;
                     }
                     return true;
@@ -77,15 +77,15 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     pilot.MainThrottle = 1;
                     this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
-                    if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.ProcessedDest - tank.boundsCentreWorldNoCheck).normalized) > 0)
+                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.PathPointSet);
+                    if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.PathPointSet - tank.boundsCentreWorldNoCheck).normalized) > 0)
                         pilot.PerformUTurn = 0;
                     return true;
                 }
                 else
                 {
                     this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.ProcessedDest);
+                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.PathPointSet);
                 }
             }
 

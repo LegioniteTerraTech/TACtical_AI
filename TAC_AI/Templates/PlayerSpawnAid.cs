@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 { 
@@ -23,7 +24,7 @@ namespace TAC_AI.Templates
 
             if (tech.name == "My Tech")
             {
-                if (RawTechExporter.GetBBCost(tech) < 2272)
+                if (RawTechTemplate.GetBBCost(tech) < 2272)
                     RawTechLoader.ReconstructPlayerTech(SpawnBaseTypes.FTUEGSOGrade1Bote, SpawnBaseTypes.FTUEGSOGrade1BoteFallBack);
             }
             else if (tech.name == "FTUE GSO grade 2")

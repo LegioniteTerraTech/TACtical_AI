@@ -40,8 +40,19 @@ namespace TAC_AI.AI
         }
 
         //Manuvering (Post-Pathfinding)
-        public Vector3 PathPoint = Vector3.zero;// Where land and spaceships coordinate movement
-        public Vector3 ProcessedDest = Vector3.zero;// Where land and spaceships coordinate movement
+        public Vector3 PathPoint { get => PathPointMain.ScenePosition; }// Where land and spaceships coordinate movement
+        private WorldPosition PathPointMain = WorldPosition.FromScenePosition(Vector3.zero);// Where land and spaceships coordinate movement
+        public Vector3 PathPointSet
+        {
+            set
+            {
+                if (value.IsNaN())
+                    DebugTAC_AI.Exception("AIControllerDefault.PathPointSet - lastDestination was NaN!");
+                if (float.IsInfinity(value.x) || float.IsInfinity(value.z))
+                    DebugTAC_AI.Exception("AIControllerDefault.PathPointSet - lastDestination was Inf!");
+                PathPointMain = WorldPosition.FromScenePosition(value);
+            }
+        }// Where land and spaceships coordinate movement
 
         //Tech Drive Data Gathering
         public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
@@ -49,11 +60,12 @@ namespace TAC_AI.AI
 
         //AI Pathfinding
         public bool AutoPathfind { get; set; } = false;
-        public AIEAutoPather2D Pathfinder { get; set; }
+        public bool Do3DPathing => _helper.Attempt3DNavi;
+        public AIEAutoPather Pathfinder { get; set; }
         public WaterPathing WaterPathing { get; set; }
         public float PathingPrecision { get; set; } = 10;
-        public byte MaxPathDifficulty { get; set; } = 65;
-        public Queue<WorldPosition> PathPlanned = null;
+        public byte MaxPathDifficulty { get; set; } = AIEAutoPather.DefaultMaxDifficulty;
+        public readonly Queue<WorldPosition> PathPlanned = new Queue<WorldPosition>();
         public WorldPosition TargetDestination;
 
         public Vector3 CurrentPosition()
@@ -64,12 +76,17 @@ namespace TAC_AI.AI
         {
             return TargetDestination.ScenePosition;
         }
-        public void OnFinishedPathfinding(List<WorldPosition> pos)
+        public bool IsRunningLowOnPathPoints()
+        {
+            return PathPlanned.Count < 3;
+        }
+        public void OnPartialPathfinding(List<WorldPosition> pos)
         {
             if (pos.Count == 0)
-                throw new Exception("OnFinishedPathfinding expects at least one pathing WorldPosition in pos, but received none!");
-            DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + pos.Count + " waypoints to follow.");
-            PathPlanned = new Queue<WorldPosition>();
+            {
+                DebugTAC_AI.LogPathing(Tank.name + ": OnPartialPathfinding - Path - NONE");
+                return;
+            }
             StringBuilder SB = new StringBuilder();
             int num = 0;
             foreach (var item in pos)
@@ -79,11 +96,37 @@ namespace TAC_AI.AI
                 //AIGlobals.PopupNeutralInfo(num + " | " + item.GameWorldPosition.ToString(), item);
                 num++;
             }
+            DebugTAC_AI.LogPathing(Tank.name + ": OnPartialPathfinding - Path -" + SB.ToString());
+        }
+        public void OnFinishedPathfinding(List<WorldPosition> pos)
+        {
+            if (pos == null)
+            {
+                PathPlanned.Clear();
+                return; // Clearing 
+            }
+            if (pos.Count == 0)
+            {
+                DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + PathPlanned.Count + " waypoints to follow.");
+                DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Path - NONE");
+                //throw new Exception("OnFinishedPathfinding expects at least one pathing WorldPosition in pos, but received none!");
+                return;
+            }
+            StringBuilder SB = new StringBuilder();
+            int num = 0;
+            foreach (var item in pos)
+            {
+                PathPlanned.Enqueue(item);
+                SB.Append(" > " + item.ScenePosition.ToString());
+                //AIGlobals.PopupNeutralInfo(num + " | " + item.GameWorldPosition.ToString(), item);
+                num++;
+            }
+            DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + PathPlanned.Count + " waypoints to follow.");
             DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Path -" + SB.ToString());
         }
 
 
-        public void DriveDirector()
+        public void DriveDirector(ref EControlCoreSet core)
         {
             if (this.Helper == null)
             {
@@ -92,9 +135,7 @@ namespace TAC_AI.AI
                 return;
             }
 
-            this.Helper.Steer = false;
-            this.Helper.DriveDir = EDriveFacing.Forwards;
-            if (this.Helper.AIState == AIAlignment.Player)// Allied
+            if (this.Helper.AIAlign == AIAlignment.Player)// Allied
             {
                 if (this.AICore == null)
                 {
@@ -102,14 +143,14 @@ namespace TAC_AI.AI
                     DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
                     return;
                 }
-                this.AICore.DriveDirector();
+                this.AICore.DriveDirector(ref core);
             }
             else//ENEMY
             {
-                this.AICore.DriveDirectorEnemy(this.EnemyMind);
+                this.AICore.DriveDirectorEnemy(this.EnemyMind, ref core);
             }
         }
-        public void DriveDirectorRTS()
+        public void DriveDirectorRTS(ref EControlCoreSet core)
         {
             if (this.Helper == null)
             {
@@ -118,9 +159,8 @@ namespace TAC_AI.AI
                 return;
             }
 
-            this.Helper.Steer = false;
-            this.Helper.DriveDir = EDriveFacing.Forwards;
-            if (this.Helper.AIState == AIAlignment.Player)// Allied
+
+            if (this.Helper.AIAlign == AIAlignment.Player)// Allied
             {
                 if (this.AICore == null)
                 {
@@ -128,18 +168,18 @@ namespace TAC_AI.AI
                     DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
                     return;
                 }
-                this.AICore.DriveDirectorRTS();
+                this.AICore.DriveDirectorRTS(ref core);
             }
             else//ENEMY
             {
-                this.AICore.DriveDirectorEnemy(this.EnemyMind);
+                this.AICore.DriveDirectorEnemy(this.EnemyMind, ref core);
             }
         }
 
-        public void DriveMaintainer(TankControl thisControl)
+        public void DriveMaintainer(TankControl thisControl, ref EControlCoreSet core)
         {
             thisControl.m_Movement.m_USE_AVOIDANCE = this.Helper.AvoidStuff;
-            this.AICore.DriveMaintainer(thisControl, this.Helper, this.Tank);
+            this.AICore.DriveMaintainer(thisControl, this.Helper, this.Tank, ref core);
         }
 
         public void Initiate(Tank tank, AIECore.TankAIHelper helper, EnemyMind mind = null)
@@ -148,8 +188,49 @@ namespace TAC_AI.AI
             this.Helper = helper;
             this.EnemyMind = mind;
 
-            this.AICore = new VehicleAICore();
-            this.AICore.Initiate(tank, this);
+            if (mind.IsNull())
+            {
+                //if (thisInst.isAstrotechAvail && thisInst.DediAI == AIECore.DediAIType.Aviator)
+                //    InitiateForVTOL(tank, this);
+                switch (helper.DriverType)
+                {
+                    case AIDriverType.AutoSet:
+                        //AICore = new VehicleAICore();
+                        AICore = new LandAICore();
+                        break;
+                    case AIDriverType.Tank:
+                        AICore = new LandAICore();
+                        break;
+                    case AIDriverType.Sailor:
+                        AICore = new SeaAICore();
+                        break;
+                    case AIDriverType.Astronaut:
+                        AICore = new SpaceAICore();
+                        break;
+                    default:
+                        throw new Exception("Invalid control type for Non-NPT Vehicle " + helper.DriverType.ToString());
+                }
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has been assigned Vehicle AI with " + helper.DriverType.ToString() + ".");
+            }
+            else
+            {
+                switch (mind.EvilCommander)
+                {
+                    case EnemyHandling.Wheeled:
+                        AICore = new LandAICore();
+                        break;
+                    case EnemyHandling.Starship:
+                        AICore = new SpaceAICore();
+                        break;
+                    case EnemyHandling.Naval:
+                        AICore = new SeaAICore();
+                        break;
+                    default:
+                        throw new Exception("Invalid control type for MPT Vehicle " + mind.EvilCommander.ToString());
+                }
+                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has been assigned Non-Player Vehicle AI with " + mind.EvilCommander.ToString() + ".");
+            }
+            AICore.Initiate(tank, this);
 
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
@@ -224,6 +305,13 @@ namespace TAC_AI.AI
                 TC.BoostControlJets = true;
             }
         }
+        public void TryBoost(TankControl TC, Vector3 headingLocalCab)
+        {
+            if (Helper.Obst)
+                return; // Prevent thrusting into trees
+            if (Vector3.Dot(BoostBias, headingLocalCab) > 0.75f)
+                TC.BoostControlJets = true;
+        }
 
 
         public void OnMoveWorldOrigin(IntVector3 move)
@@ -232,7 +320,7 @@ namespace TAC_AI.AI
         }
         public Vector3 GetDestination()
         {
-            return ProcessedDest;
+            return Helper.lastDestinationCore;
         }
 
         public void UpdateEnemyMind(EnemyMind mind)
@@ -252,6 +340,7 @@ namespace TAC_AI.AI
             this.AICore = null;
             if (this.IsNotNull())
             {
+                this.SetAutoPathfinding(false);
                 Tank.AttachEvent.Unsubscribe(OnAttach);
                 Tank.DetachEvent.Unsubscribe(OnDetach);
                 //DebugTAC_AI.Log("TACtical_AI: Removed ground AI from " + Tank.name);

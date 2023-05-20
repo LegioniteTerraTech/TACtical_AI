@@ -3,102 +3,109 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
+using TerraTechETCUtil;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
     public static class RWheeled
     {
-        public static void TryAttack(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void AttackVroom(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
             thisInst.Attempt3DNavi = false;
             thisInst.AvoidStuff = true;
 
+            //DebugTAC_AI.Log("RWheeled.TryAttack - " + tank.name);
+
             float distToTarget = 0;
-            if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemy.IsNotNull())
+            if (mind.CommanderMind == EnemyAttitude.Homing && thisInst.lastEnemyGet.IsNotNull())
             {
-                distToTarget = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).magnitude;
-                if (distToTarget > mind.Range)
+                distToTarget = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck).magnitude;
+                if (distToTarget > mind.MaxCombatRange)
                 {
-                    bool isMending = RGeneral.LollyGag(thisInst, tank, mind);
+                    bool isMending = RGeneral.LollyGag(thisInst, tank, mind, ref direct);
                     if (isMending)
                         return;
                 }
             }
-            if (thisInst.lastEnemy == null)
+            if (thisInst.lastEnemyGet == null)
             {
-                RGeneral.LollyGag(thisInst, tank, mind);
+                RGeneral.LollyGag(thisInst, tank, mind, ref direct);
                 return;
             }
             RGeneral.Engadge(thisInst, tank, mind);
 
             if (distToTarget == 0)
-                distToTarget = thisInst.GetDistanceFromTask(thisInst.lastEnemy.tank.boundsCentreWorldNoCheck);
+                distToTarget = thisInst.GetDistanceFromTask(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
 
-            float enemyExt = thisInst.lastEnemy.GetCheapBounds();
+            float enemyExt = thisInst.lastEnemyGet.GetCheapBounds();
             float dist = distToTarget - enemyExt;
             float range;
 
             float spacer = thisInst.lastTechExtents + enemyExt;
-            if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EnemyAttack.Coward)
+            if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EAttackMode.Safety)
                 spacer = -32;// ram no matter what, or get close for snipers
 
             switch (mind.CommanderAttack)
             {
-                case EnemyAttack.Coward:
-                    range = AIGlobals.SpacingRange;
-                    if ((bool)thisInst.lastEnemy)
-                        thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                case EAttackMode.Safety:
+                    range = AIGlobals.MinCombatRangeDefault;
+                    thisInst.AILimitSettings.ObjectiveRange = spacer + range;
+                    if ((bool)thisInst.lastEnemyGet)
+                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
                     else
                         RGeneral.Scurry(thisInst, tank, mind);
                     if (dist < spacer + range)
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.BOOST = true;
+                            thisInst.FullBoost = true;
+                            thisInst.AttackEnemy = true;
                         }
                     }
                     else if (dist < spacer + (range * 2))
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                         else
                             thisInst.SettleDown();
                     }
                     thisInst.SideToThreat = false;
                     thisInst.Retreat = true;
-                    thisInst.DriveDest = EDriveDest.FromLastDestination;
+                    direct.DriveAwayFacingAway();
                     break;
-                case EnemyAttack.Circle:
-                    range = AIGlobals.SpacingRange;
+                case EAttackMode.Circle:
+                    range = AIGlobals.MinCombatRangeDefault;
+                    thisInst.AILimitSettings.ObjectiveRange = spacer + range;
                     thisInst.SideToThreat = true;
-                    thisInst.Retreat = false;
+                    thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                     thisInst.MinimumRad = range;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
                     if (KickStart.isTweakTechPresent || KickStart.isWeaponAimModPresent)
                     {   // Continuous circle
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6) || 10 < thisInst.FrustrationMeter)
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend)
+                            || 10 < thisInst.FrustrationMeter)
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.DriveDest = EDriveDest.ToLastDestination;
+                            direct.DriveToFacingPerp();
                             /*
                             if (dist < spacer + 2)
                             {
-                                thisInst.DriveDest = EDriveDest.FromLastDestination;
+                                direct.DriveDest = EDriveDest.FromLastDestination;
                             }
                             else if (mind.Range < spacer + range)
                             {
-                                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                                direct.DriveDest = EDriveDest.ToLastDestination;
                             }
                             else
                             {
                                 thisInst.BOOST = true;
-                                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                                direct.DriveDest = EDriveDest.ToLastDestination;
                             }*/
                         }
                     }
@@ -106,49 +113,51 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {   // Stop every now and then to allow some shots
                         if (thisInst.ActionPause > 120)
                         {
-                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6) || 10 < thisInst.FrustrationMeter)
-                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                            if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                                //|| 10 < thisInst.FrustrationMeter)
+                                thisInst.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                             else
                             {
                                 thisInst.SettleDown();
-                                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                                direct.DriveToFacingPerp();
                             }
                         }
-                        if (thisInst.ActionPause > 0)
-                        {   // Stop moving and get some shots in
+                        else
+                        { // Stop moving and get some shots in
                             thisInst.SideToThreat = false;
-                        }
-                        else if (mind.Hurt)
-                        {
-                            thisInst.ActionPause = UnityEngine.Random.Range(160, 420);
+                            thisInst.SettleDown();
+                            direct.DriveToFacingTowards();
+                            if (mind.Hurt)
+                                thisInst.ActionPause = UnityEngine.Random.Range(160, 420);
                         }
                     }
                     break;
-                case EnemyAttack.Spyper:
-                    range = AIGlobals.SpacingRangeSpyper;
+                case EAttackMode.Ranged:
+                    range = AIGlobals.MinCombatRangeSpyper;
+                    thisInst.AILimitSettings.ObjectiveRange = spacer + range;
                     thisInst.SideToThreat = false;
-                    thisInst.Retreat = false;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
-                    if (dist < spacer + (range * 0.65f))
+                    thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
+                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                    
+                    /*if (dist < spacer + (range * 0.65f))
                     {
-                        thisInst.DriveDest = EDriveDest.FromLastDestination;
+                        direct.DriveAwayFacingTowards();
                         thisInst.ForceSetDrive = true;
                         thisInst.DriveVar = -1;
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                         else
                             thisInst.SettleDown();
-
                     }
-                    else if (dist < spacer + range)
+                    else */if (dist < spacer + range)
                     {
                         thisInst.SettleDown();
-                        thisInst.DriveDest = EDriveDest.FromLastDestination;
+                        direct.DriveAwayFacingTowards();
                     }
                     else if (dist < spacer + (range * 1.25f))
                     {
                         thisInst.PivotOnly = true;
-                        thisInst.DriveDest = EDriveDest.ToLastDestination; // point at the objective
+                        direct.DriveToFacingTowards(); // point at the objective
                         thisInst.SettleDown();
                     }
                     else if (dist < spacer + (range * 1.5f))
@@ -156,77 +165,79 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.PivotOnly = true;
                         thisInst.ForceSetDrive = true;
                         thisInst.DriveVar = 1;
-                        thisInst.DriveDest = EDriveDest.ToLastDestination; // point at the objective
+                        direct.DriveToFacingTowards(); // point at the objective
                         thisInst.SettleDown();
                     }
                     else if (dist < spacer + (range * 1.75f))
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.DriveDest = EDriveDest.ToLastDestination;
+                            direct.DriveToFacingTowards();
                         }
                     }
                     else
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.BOOST = true;
-                            thisInst.DriveDest = EDriveDest.ToLastDestination;
+                            thisInst.FullBoost = true;
+                            direct.DriveDest = EDriveDest.ToLastDestination;
                         };
                     }
                     break;
                 default:    // Others
-                    range = AIGlobals.SpacingRange;
+                    range = AIGlobals.MinCombatRangeDefault;
+                    thisInst.AILimitSettings.ObjectiveRange = spacer + range;
                     thisInst.SideToThreat = false;
-                    thisInst.Retreat = false;
-                    thisInst.lastDestination = thisInst.lastEnemy.tank.boundsCentreWorldNoCheck;
+                    thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
+                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
                     if (dist < spacer)
                     {   // too close?
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6) && !mind.LikelyMelee)
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend) && !mind.LikelyMelee)
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                         else
                         {
                             thisInst.SettleDown();
                             if (mind.LikelyMelee)
-                                thisInst.DriveDest = EDriveDest.ToLastDestination;
+                                direct.DriveToFacingTowards();
                             else
-                                thisInst.DriveDest = EDriveDest.FromLastDestination;
+                                direct.DriveAwayFacingTowards();
                         }
                     }
                     else if (dist < spacer + range)
                     {   // 
                         thisInst.PivotOnly = true;
-                        thisInst.DriveDest = EDriveDest.ToLastDestination;
+                        direct.DriveDest = EDriveDest.ToLastDestination;
                     }
                     else if (dist < spacer + (range * 1.25f))
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.DriveDest = EDriveDest.ToLastDestination;
+                            direct.DriveToFacingTowards();
                         }
                     }
                     else
                     {
-                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / 6))
-                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true);
+                        if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
                         else
                         {
                             thisInst.SettleDown();
-                            thisInst.BOOST = true;
-                            thisInst.DriveDest = EDriveDest.ToLastDestination;
+                            thisInst.FullBoost = true;
+                            direct.DriveToFacingTowards();
                         }
                     }
                     break;
             }
+            mind.MinCombatRange = range;
         }
     }
 }

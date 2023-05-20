@@ -50,12 +50,15 @@ namespace TAC_AI.AI
         public FlightType FlyStyle;             // Dictates the way the AI should fly the Tech
 
         //Manuvering (Post-Pathfinding)
-        public Vector3 ProcessedDest = Vector3.zero; // Aircraft-specific destination handling
+        /// <summary>
+        /// Where we try to fly to
+        /// </summary>
+        public Vector3 PathPoint { get => PathPointSet; }// Aircraft-specific destination handling
+        public Vector3 PathPointSet = Vector3.zero; // Aircraft-specific destination handling
         public float DestSuccessRad // When we have reached our airborne destination
         {
             get { try { return Helper.MinimumRad; } catch { return 10; } }
         }
-        internal Vector3 deltaMovementClock;
 
 
         // Forward for aircraft, Upwards for helicopters
@@ -153,7 +156,7 @@ namespace TAC_AI.AI
                         AICore.Initiate(tank, this);
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has been assigned Allied aircraft AI with flight mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
+                DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " has been assigned Non-NPT aircraft AI with flight mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
             }
             else
             {
@@ -199,7 +202,7 @@ namespace TAC_AI.AI
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has been assigned Non-Player aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
+                DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " has been assigned Non-Player aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
             }
         }
         public void UpdateEnemyMind(Enemy.EnemyMind mind)
@@ -371,7 +374,7 @@ namespace TAC_AI.AI
         }
 
         //Navigation Director - set airborne positions for the plane to fly to based on lastDestination
-        public void DriveDirector()
+        public void DriveDirector(ref EControlCoreSet core)
         {
             AIECore.TankAIHelper thisInst = this.Helper;
             Tank tank = this.Tank;
@@ -382,15 +385,14 @@ namespace TAC_AI.AI
                 return;
             }
 
-            deltaMovementClock = Tank.rbody.velocity * Time.deltaTime * KickStart.AIDodgeCheapness * AIGlobals.AircraftPreCrashDetection;
             this.TestForMayday(thisInst, tank);
 
-            if (thisInst.AIState == AIAlignment.Player)
+            if (thisInst.AIAlign == AIAlignment.Player)
             {
                 this.ForcePitchUp = false;
                 if (this.Grounded)
                 {   //Become a ground vehicle for now
-                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
+                    if (!AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.lastTechExtents * 2))
                     {
                         return;
                     }
@@ -398,19 +400,19 @@ namespace TAC_AI.AI
                     return;
                 }
                 if (!this.TargetGrounded)
-                    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
-                this.AICore.DriveDirector();
+                    PathPointSet = AIEPathing.OffsetFromGroundA(thisInst.lastDestinationCore, thisInst);
+                this.AICore.DriveDirector(ref core);
             }
-            else if (thisInst.AIState == AIAlignment.NonPlayer) //enemy
+            else if (thisInst.AIAlign == AIAlignment.NonPlayer) //enemy
             {
                 if (!this.TargetGrounded)
-                    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
+                    PathPointSet = AIEPathing.OffsetFromGroundA(thisInst.lastDestinationCore, thisInst);
 
-                this.AICore.DriveDirectorEnemy(EnemyMind);
+                this.AICore.DriveDirectorEnemy(EnemyMind, ref core);
             }
             return;
         }
-        public void DriveDirectorRTS()
+        public void DriveDirectorRTS(ref EControlCoreSet core)
         {
             AIECore.TankAIHelper thisInst = this.Helper;
             Tank tank = this.Tank;
@@ -421,36 +423,35 @@ namespace TAC_AI.AI
                 return;
             }
 
-            deltaMovementClock = Tank.rbody.velocity * Time.deltaTime * KickStart.AIDodgeCheapness * AIGlobals.AircraftPreCrashDetection;
             TestForMayday(thisInst, tank);
 
-            if (thisInst.AIState == AIAlignment.Player)
+            if (thisInst.AIAlign == AIAlignment.Player)
             {
                 this.ForcePitchUp = false;
                 if (this.Grounded)
                 {   //Become a ground vehicle for now
-                    if (!AIEPathing.AboveHeightFromGround(tank.boundsCentreWorldNoCheck, thisInst.lastTechExtents * 2))
+                    if (!AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.lastTechExtents * 2))
                     {
                         return;
                     }
                     //Try fighting the controls to land safely
                     return;
                 }
-                thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.RTSDestination, thisInst);
-                this.AICore.DriveDirectorRTS();
+                core.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.RTSDestination, thisInst);
+                this.AICore.DriveDirectorRTS(ref core);
             }
-            else if (thisInst.AIState == AIAlignment.NonPlayer) //enemy
+            else if (thisInst.AIAlign == AIAlignment.NonPlayer) //enemy
             {
                 //if (!this.TargetGrounded)
-                //    thisInst.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
+                //    core.lastDestination = AIEPathing.OffsetFromGroundA(thisInst.lastDestination, thisInst);
 
-                this.AICore.DriveDirectorEnemy(EnemyMind);
+                this.AICore.DriveDirectorEnemy(EnemyMind, ref core);
             }
             return;
         }
 
         //Flight Maintainer - handle the flight between airborne positions
-        public void DriveMaintainer(TankControl thisControl)
+        public void DriveMaintainer(TankControl thisControl, ref EControlCoreSet core)
         {
             //Universal handler
             AIECore.TankAIHelper thisInst = this.Helper;
@@ -467,20 +468,20 @@ namespace TAC_AI.AI
                 return;
             } 
 
-            thisControl.BoostControlJets = thisInst.BOOST;
+            thisControl.BoostControlJets = thisInst.FullBoost;
 
-            this.AICore.DriveMaintainer(thisControl, thisInst, tank);
+            this.AICore.DriveMaintainer(thisControl, thisInst, tank, ref core);
             return;
         }
 
 
         public void OnMoveWorldOrigin(IntVector3 move)
         {
-            ProcessedDest += move;
+            PathPointSet += move;
         }
         public Vector3 GetDestination()
         {
-            return Helper.lastDestination;
+            return Helper.lastDestinationCore;
         }
 
         // Action Updaters
@@ -541,7 +542,7 @@ namespace TAC_AI.AI
         private void OnAttach(TankBlock block, Tank tank)
         {
             if (AIERepair.SystemsCheck(tank))
-                this.Grounded = this.TestForMayday(tank.GetComponent<AIECore.TankAIHelper>(), tank);
+                this.Grounded = this.TestForMayday(tank.GetHelperInsured(), tank);
         }
         private void OnDetach(TankBlock block, Tank tank)
         {   //Disabled for now as some irrelievent warning that doesn't have a label is spamming the logs
@@ -559,7 +560,7 @@ namespace TAC_AI.AI
             if (mem.IsNull())
                 return;
             if (AIERepair.SystemsCheck(tank))
-                this.Grounded = TestForMayday(tank.GetComponent<AIECore.TankAIHelper>(), tank, this);
+                this.Grounded = TestForMayday(tank.GetHelperInsured(), tank, this);
             */
         }
         public void UpdateThrottle(AIECore.TankAIHelper thisInst, TankControl control)
@@ -570,19 +571,19 @@ namespace TAC_AI.AI
             {
                 if (this.FlyStyle == FlightType.Aircraft)
                 {
-                    if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(this.Tank.rbody.velocity).z < AIGlobals.AirStallSpeed + 5 && !this.Tank.beam.IsActive)
+                    if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(Helper.SafeVelocity).z < AIGlobals.AirStallSpeed + 5 && !this.Tank.beam.IsActive)
                         control3D.m_State.m_BoostJets = true;
                     else
-                        control3D.m_State.m_BoostJets = thisInst.BOOST;
+                        control3D.m_State.m_BoostJets = thisInst.FullBoost;
                 }
                 else // VTOL
                 {
-                    if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(this.Tank.rbody.velocity).z < AIGlobals.AirStallSpeed + 5 && !this.Tank.beam.IsActive)
+                    if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(Helper.SafeVelocity).z < AIGlobals.AirStallSpeed + 5 && !this.Tank.beam.IsActive)
                         control3D.m_State.m_BoostJets = true;
-                    else if (this.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGround(this.Tank.boundsCentreWorldNoCheck, this.Helper.lastTechExtents * 2) && !this.Tank.beam.IsActive)
+                    else if (this.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGroundTech(thisInst, this.Helper.lastTechExtents * 2) && !this.Tank.beam.IsActive)
                         control3D.m_State.m_BoostJets = true;
                     else
-                        control3D.m_State.m_BoostJets = thisInst.BOOST;
+                        control3D.m_State.m_BoostJets = thisInst.FullBoost;
                 }
 
                 // Still try to move wheels and other things

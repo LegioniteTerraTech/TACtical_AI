@@ -5,13 +5,15 @@ using System.Text;
 using System.Threading.Tasks;
 
 
-public class ModuleEventRadar : TAC_AI.ModuleEventRadar { };
+public class ModuleCommandCenter : TAC_AI.ModuleCommandCenter { };
 namespace TAC_AI
 {
     /// <summary>
-    /// See updates on distant enemy fighting
+    /// Allows all Techs within it's field to be player-controllable regardless 
+    /// of AI availabilty
+    ///   Planned for next year
     /// </summary>
-    public class ModuleEventRadar
+    public class ModuleCommandCenter
     {
     }
     /// <summary>

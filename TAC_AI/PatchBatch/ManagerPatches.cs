@@ -62,7 +62,7 @@ namespace TAC_AI
                             if (attached)
                             {
                                 Singleton.Manager<ManNetwork>.inst.ServerNetBlockAttachedToTech.Send(tank, netBlock, canidate);
-                                tank.GetComponent<AIECore.TankAIHelper>().dirty = true;
+                                tank.GetHelperInsured().dirty = true;
 
                                 Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.BlockAttach, BAM);
                                 if (netBlock.block != null)
@@ -92,11 +92,7 @@ namespace TAC_AI
             private static void RegisterTank_Postfix(ManTechs __instance, ref Tank t)
             {
                 //DebugTAC_AI.Log("TACtical_AI: Patched Tank OnPool(TankAIHelper & TimeTank)");
-                var ModuleCheck = t.GetComponent<AIECore.TankAIHelper>();
-                if (ModuleCheck.IsNull())
-                {
-                    t.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe();
-                }
+                t.GetHelperInsured();
             }
         }
 

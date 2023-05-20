@@ -9,18 +9,18 @@ namespace TAC_AI.AI.AlliedOperations
 {
     public static class BAssassin
     {
-        public static void MotivateKill(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MotivateKill(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Assassin) what to do movement-wise
             thisInst.IsMultiTech = false;
             thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
 
-            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestination).magnitude;
+            float dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestinationCore).magnitude;
             bool hasMessaged = false;
             thisInst.SetDistanceFromTaskUnneeded();
             thisInst.AvoidStuff = true;
 
-            BGeneral.ResetValues(thisInst);
+            BGeneral.ResetValues(thisInst, ref direct);
 
 
             EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
@@ -44,7 +44,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (!thisInst.CollectedTarget || thisInst.Retreat)
             {
-                thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.DetectionRange * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.JobSearchRange * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest charger!");
@@ -58,7 +58,7 @@ namespace TAC_AI.AI.AlliedOperations
 
                 if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                    thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
                     if (thisInst.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -77,12 +77,12 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                    thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
                         thisInst.AvoidStuff = false;
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false, ref direct);
                     }
                     else if (thisInst.recentSpeed < 8)
                     {
@@ -100,11 +100,11 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                    thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                     }
                     else
                     {
@@ -117,10 +117,10 @@ namespace TAC_AI.AI.AlliedOperations
                 else if (thisInst.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                 }
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
-                thisInst.DriveDest = EDriveDest.ToBase;
+                direct.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
             else if (thisInst.ActionPause > 0)
@@ -138,7 +138,7 @@ namespace TAC_AI.AI.AlliedOperations
                     AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for enemies...");
                     if (!thisInst.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.DetectionRange * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
+                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.JobSearchRange * 2.5f, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                         if (thisInst.theBase == null)
                             return; // There's no base!
                         thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
@@ -154,7 +154,7 @@ namespace TAC_AI.AI.AlliedOperations
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Target destroyed or disbanded.");
                     return; // Enemy destroyed
                 }
-                thisInst.lastDestination = thisInst.theResource.tank.boundsCentreWorldNoCheck;
+                direct.lastDestination = thisInst.theResource.tank.boundsCentreWorldNoCheck;
 
                 if (dist < thisInst.lastTechExtents + thisInst.MinimumRad)
                 {
@@ -163,15 +163,15 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Close to enemy at " + thisInst.theResource.centrePosition);
                 }
-                else if (dist < thisInst.lastTechExtents + thisInst.RangeToChase)
+                else if (dist < thisInst.lastTechExtents + thisInst.MaxCombatRange)
                 {
-                    thisInst.AutoHandleObstruction();
+                    thisInst.AutoHandleObstruction(ref direct);
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Engadging the enemy at " + thisInst.theResource.centrePosition);
                 }
                 else if (thisInst.recentSpeed < 2)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true);
+                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                 }
                 /*
                 else if (dist < thisInst.lastTechExtents + 12)
@@ -180,7 +180,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.SettleDown();
                 }*/
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to fight at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.DriveDest = EDriveDest.ToBase;
+                direct.DriveDest = EDriveDest.ToBase;
                 thisInst.foundBase = false;
             }
         }
@@ -190,16 +190,16 @@ namespace TAC_AI.AI.AlliedOperations
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             thisInst.AttackEnemy = false;
-            //thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            //thisInst.lastEnemySet = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
 
             if (thisInst.theResource)
             {
                 thisInst.lastEnemy = thisInst.theResource;
             }
 
-            if (thisInst.lastEnemy != null)
+            if (thisInst.lastEnemyGet != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemy.transform.position - tank.transform.position).normalized;
+                Vector3 aimTo = (thisInst.lastEnemyGet.transform.position - tank.transform.position).normalized;
                 thisInst.WeaponDelayClock += KickStart.AIClockPeriod;
                 if (thisInst.SideToThreat)
                 {

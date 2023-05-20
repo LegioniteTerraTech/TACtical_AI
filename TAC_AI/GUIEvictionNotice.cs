@@ -59,7 +59,7 @@ namespace TAC_AI.AI
 
         private static float windowTimer = 0;
         private const int EvictionID = 8008;
-        private static RBases.EnemyBaseFunder funder;
+        private static RLoadedBases.EnemyBaseFunder funder;
 
 
         public static void Initiate()
@@ -107,8 +107,8 @@ namespace TAC_AI.AI
             xMenu = Mous.x - (HotWindow.width / 2);
             yMenu = Display.main.renderingHeight - Mous.y - 10;
 
-            techCost = Mathf.RoundToInt(RawTechExporter.GetBBCost(lastTank) * AIGlobals.BribePenalty);
-            funder = RBases.GetTeamFunder(tank.Team);
+            techCost = Mathf.RoundToInt(RawTechTemplate.GetBBCost(lastTank) * AIGlobals.BribeMulti);
+            funder = RLoadedBases.GetTeamFunder(tank.Team);
             if (funder)
             {
                 var teamUnloaded = ManEnemyWorld.GetTeam(lastTank.Team);
@@ -154,7 +154,7 @@ namespace TAC_AI.AI
                 CloseSubMenuClickable();
                 return;
             }
-            if (lastTank.GetComponent<RBases.EnemyBaseFunder>())
+            if (lastTank.GetComponent<RLoadedBases.EnemyBaseFunder>())
             {
                 GUIBaseTeam();
             }
@@ -168,7 +168,7 @@ namespace TAC_AI.AI
         private static void GUIBaseTeam()
         { // Bases that store BB
             int teamFunds = 0;
-            funder = RBases.GetTeamFunder(lastTank.Team);
+            funder = RLoadedBases.GetTeamFunder(lastTank.Team);
             if (funder != null)
             {
                 teamFunds = funder.BuildBucks;
@@ -178,7 +178,7 @@ namespace TAC_AI.AI
                 var teamUnloaded = ManEnemyWorld.GetTeam(lastTank.Team);
                 if (teamUnloaded != null)
                 {
-                    EnemyBaseUnit EBU = UnloadedBases.GetTeamFunder(teamUnloaded);
+                    NP_BaseUnit EBU = UnloadedBases.GetSetTeamMainBase(teamUnloaded);
                     if (EBU != null)
                     {
                         teamFunds = EBU.BuildBucks;
@@ -263,7 +263,7 @@ namespace TAC_AI.AI
                         ManEnemyWorld.TeamWarEvent.Send(lastTeam, newTeam);
                         CloseSubMenuClickable();
                     }
-                    RBases.RequestFocusFireNPTs(lastTank, Singleton.playerTank.visible, RequestSeverity.ThinkMcFly);
+                    RLoadedBases.RequestFocusFireNPTs(lastTank, Singleton.playerTank.visible, RequestSeverity.ThinkMcFly);
                 }
             }
             else if (GUI.Button(new Rect(10, 120, 180, 30), new GUIContent(randomEvict, "You have no tech!"), AltUI.ButtonGrey))

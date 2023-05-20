@@ -12,9 +12,9 @@ public class ModuleAIExtension : TAC_AI.ModuleAIExtension { }
 namespace TAC_AI
 {
     [AutoSaveComponent]
-    public class ModuleAIExtension : MonoBehaviour
+    public class ModuleAIExtension : ExtModule
     {
-        TankBlock TankBlock;
+        public AIDriverType PreferedDriver = AIDriverType.AutoSet;
 
         // Set by saves ingame
         [SSaveField]
@@ -22,11 +22,15 @@ namespace TAC_AI
         [SSaveField]
         public AIType SavedAI;
         [SSaveField]
-        public bool WasRTS = false;
+        public bool RTSActive = false;
         [SSaveField]
-        public Vector3 RTSPos = Vector3.zero;
+        public Vector3 RTSInTilePos = Vector3.zero;
+        [SSaveField]
+        public IntVector2 RTSPosTile = IntVector2.zero;
         [SSaveField]
         public bool WasMobileAnchor = false;
+        [SSaveField]
+        public string BooleanSerial = null;
 
         /*
         // What can this new AI do? 
@@ -78,6 +82,8 @@ namespace TAC_AI
             "MTForAll": false,      // Should the AI listen to other Tech MT commands?
             "AidAI": false,         // Should the AI be willing to sacrifice themselves for their owner's safety? - (N/A)
             "SelfRepairAI": false,  // Can the AI self-repair?
+            "InventoryUser" = false;// Can the AI use the player Inventory?
+            "Builder" = false;      // Can the AI build new Techs?
             "AnimeAI": false,       // Work with the AnimeAI mod and display a character for this AI? (And also allow interaction with other characters?)
 
             "MinCombatRange": 50,   // Min range the AI will keep from an enemy
@@ -112,6 +118,7 @@ namespace TAC_AI
         public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's safety?
         public bool SelfRepairAI = false;   // Can the AI self-repair?
         public bool InventoryUser = false;  // Can the AI use the player Inventory?
+        public bool Builder = false;        // Can the AI build new Techs?
         //public bool AnimeAI = false;      // Do we attempt a hookup to the AnimeAI mod and display a character for this AI?
 
         public float MaxCombatRange = 100;  // Range to chase enemy
@@ -120,50 +127,45 @@ namespace TAC_AI
         /// <summary>
         /// Changed to OnFirstAttach
         /// </summary>
-        public void OnPool()
+        protected override void Pool()
         {
-            if (TankBlock)
-                return;
-            TankBlock = gameObject.GetComponent<TankBlock>();
-            Invoke("DelayedSub", 1f);
-            if (TankBlock.IsAttached)
+            if (block.IsAttached)
                 OnAttach();
         }
         public void DelayedSub()
         {
-            TankBlock.SubToBlockAttachConnected(OnAttach, OnDetach);
-            if (TankBlock.IsAttached)
+            if (block.IsAttached)
                 LoadToTech();
         }
-        public void OnAttach()
+        public override void OnAttach()
         {
-            TankBlock.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
-            TankBlock.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            block.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            block.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec, bool>(OnSerializeSnapshot));
             if (!KickStart.EnableBetterAI)
                 return;
-            var tankInst = TankBlock.transform.root.GetComponent<Tank>();
+            var tankInst = block.transform.root.GetComponent<Tank>();
             if (!tankInst)
             {
                 DebugTAC_AI.Log("TACtical_AI: ModuleAIExtention - TANK IS NULL!!!");
                 return;
             }
-            SavedAI = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>().DediAI;
-            //var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+            SavedAI = block.tank.GetHelperInsured().DediAI;
+            //var thisInst = block.tank.GetHelperInsured();
             //thisInst.AIList.Add(this);
             //thisInst.RefreshAI();
         }
-        public void OnDetach()
+        public override void OnDetach()
         {
-            TankBlock.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
-            TankBlock.serializeTextEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            block.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            block.serializeTextEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec, bool>(OnSerializeSnapshot));
             if (!KickStart.EnableBetterAI)
                 return;
-            if (!TankBlock?.transform?.root?.GetComponent<AIECore.TankAIHelper>())
+            if (!block?.tank)
             {
-                DebugTAC_AI.Info("TACtical_AI: ModuleAIExtention - TankAIHelper IS NULL AND BLOCK IS LOOSE");
+                DebugTAC_AI.Info("TACtical_AI: ModuleAIExtention - Tank IS NULL AND BLOCK IS LOOSE");
                 return;
             }
-            var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+            var thisInst = block.tank.GetHelperInsured();
             //thisInst.AIList.Remove(this);
             //if (!TankBlock.IsBeingRecycled())
             //    thisInst.RefreshAI();
@@ -181,30 +183,37 @@ namespace TAC_AI
                     Aegis = true;
                     Prospector = true;
                     Buccaneer = true;
+                    Builder = true;
                     AidAI = true;
+                    AdvAvoidence = true;
                     //SelfRepairAI = true; // testing
                 }
                 else if (name == "GSO_AIAnchor_121")
                 {
                     Aegis = true;
+                    Prospector = true;
+                    Buccaneer = true;
+                    Builder = true;
                     AidAI = true;
                     MaxCombatRange = 150;
                 }
                 else if (name == "GC_AI_Module_Guard_222")
                 {
-                    AutoAnchor = true; // temp testing
                     Prospector = true;
                     Energizer = true;
                     Scrapper = true;  // Temp Testing
+                    AutoAnchor = true; // temp testing
                     SelfRepairAI = true; // EXTREMELY POWERFUL
                     MTForAll = true;
                     MeleePreferred = true;
+                    AdvAvoidence = true;
                 }
                 else if (name == "VEN_AI_Module_Guard_111")
                 {
                     Aviator = true;
                     Buccaneer = true;
                     SidePreferred = true;
+                    AdvAvoidence = true;
                     MaxCombatRange = 300;
                 }
                 else if (name == "HE_AI_Module_Guard_112")
@@ -213,22 +222,26 @@ namespace TAC_AI
                     Aviator = true;
                     Astrotech = true;
                     AdvancedAI = true;
+                    AdvAvoidence = true;
                     MinCombatRange = 50;
                     MaxCombatRange = 200;
                 }
                 else if (name == "HE_AI_Turret_111")
                 {
                     Assault = true;
+                    Aviator = true;
+                    Astrotech = true;
                     AdvancedAI = true;
+                    Builder = true;
                     MinCombatRange = 50;
                     MaxCombatRange = 225;
                 }
                 else if (name == "BF_AI_Module_Guard_212")
                 {
                     Astrotech = true;
-                    AdvAvoidence = true;
                     SelfRepairAI = true; // EXTREMELY POWERFUL
                     InventoryUser = true;
+                    AdvAvoidence = true;
                     MinCombatRange = 60;
                     MaxCombatRange = 250;
                 }
@@ -270,6 +283,7 @@ namespace TAC_AI
                     Astrotech = true;
                     AidAI = true;
                     AdvancedAI = true;
+                    Builder = true;
                     AdvAvoidence = true;
                     SidePreferred = true;
                     MeleePreferred = true;
@@ -297,6 +311,14 @@ namespace TAC_AI
             }
         }
 
+        public void SaveRTS(AIECore.TankAIHelper help, IntVector3 posInternal)
+        {
+            RTSActive = help.RTSControlled;
+            WorldPosition WP = WorldPosition.FromScenePosition(posInternal);
+            RTSInTilePos = WP.TileRelativePos;
+            RTSPosTile = WP.TileCoord;
+            //DebugTAC_AI.Log("GetRTSScenePos - " + RTSPosTile + " | " + RTSInTilePos);
+        }
 
         [Serializable]
         // Now obsolete
@@ -306,13 +328,18 @@ namespace TAC_AI
             public bool wasRTS;
             public Vector3 RTSPos;
         }
+        public Vector3 GetRTSScenePos()
+        {
+            DebugTAC_AI.Log("GetRTSScenePos - " + RTSPosTile + " | " + RTSInTilePos);
+            return new WorldPosition(RTSPosTile, RTSInTilePos).ScenePosition;
+        }
         private bool LoadToTech()
         {
             try
             {
                 if (Serialize(false))
                 {
-                    var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                    var thisInst = block.tank.GetHelperInsured();
                     if (thisInst.DediAI != SavedAI || thisInst.DriverType != SavedAIDriver)
                     {
                         if (KickStart.TransferLegacyIfNeeded(SavedAI, out AIType newtype, out AIDriverType driver))
@@ -323,15 +350,14 @@ namespace TAC_AI
                         thisInst.DriverType = SavedAIDriver;
                         thisInst.DediAI = SavedAI;
                         DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
-                        thisInst.RefreshAI();
-                        thisInst.RecalibrateMovementAIController();
+                        thisInst.dirtyAI = true;
                         if (WasMobileAnchor)
                         { 
                         }
                     }
-                    if (WasRTS)
+                    if (RTSActive)
                     {
-                        thisInst.RTSDestination = RTSPos;
+                        thisInst.RTSDestination = GetRTSScenePos();
                     }
                     return true;
                 }
@@ -344,9 +370,16 @@ namespace TAC_AI
         {
             KickStart.TryHookUpToSafeSavesIfNeeded();
             if (Saving)
+            {
+                var help = tank.GetHelperInsured();
+                SaveRTS(help, help.RTSDestination);
+                AISettings.StringSerial(tank, true, ref BooleanSerial);
                 return this.SerializeToSafe();
+            }
             bool deserial = this.DeserializeFromSafe();
-            DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
+            AISettings.StringSerial(tank, false, ref BooleanSerial);
+            //DebugTAC_AI.Log("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
+            //DebugTAC_AI.Log("GetRTSScenePos - " + RTSPosTile + " | " + RTSInTilePos);
             return deserial;
         }
         private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)
@@ -357,7 +390,7 @@ namespace TAC_AI
                 {   //Save to snap
                     if (KickStart.EnableBetterAI && !Singleton.Manager<ManScreenshot>.inst.TakingSnapshot)
                     {   //Allow resaving of Techs but not saving this to snapshot to prevent bugs
-                        var Helper = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                        var Helper = block.tank.GetHelperInsured();
                         /*
                         SerialData serialData;
                         if (Helper.RTSControlled)
@@ -379,8 +412,6 @@ namespace TAC_AI
                         */
                         SavedAIDriver = Helper.DriverType;
                         SavedAI = Helper.DediAI;
-                        WasRTS = Helper.RTSControlled;
-                        RTSPos = Helper.RTSDestination;
                         WasMobileAnchor = Helper.PlayerAllowAutoAnchoring;
                         Serialize(true);
                         // OBSOLETE - CAN CAUSE CRASHES
@@ -397,7 +428,7 @@ namespace TAC_AI
                             SerialData serialData2 = Module.SerialData<SerialData>.Retrieve(blockSpec.saveState);
                             if (serialData2 != null)
                             {
-                                var thisInst = TankBlock.transform.root.GetComponent<AIECore.TankAIHelper>();
+                                var thisInst = block.tank.GetHelperInsured();
                                 if (thisInst.DediAI != serialData2.savedMode)
                                 {
                                     thisInst.DediAI = serialData2.savedMode;
@@ -408,7 +439,7 @@ namespace TAC_AI
                                 SavedAI = serialData2.savedMode;
                                 if (serialData2.wasRTS)
                                 {
-                                    WasRTS = true;
+                                    RTSActive = true;
                                     thisInst.RTSDestination = serialData2.RTSPos;
                                 }
                                 if (KickStart.TransferLegacyIfNeeded(SavedAI, out AIType newtype, out AIDriverType driver))
@@ -427,6 +458,23 @@ namespace TAC_AI
                 }
             }
             catch { } // MP caused error - cannot resolve
+        }
+
+
+        internal void OnSerializeSnapshot(bool saving, TankPreset.BlockSpec blockSpec, bool tankPresent)
+        {
+            if (!tankPresent)
+                return;
+            if (saving)
+            {
+                tank.GetHelperInsured().AISetSettings.SaveFromAI(blockSpec);
+                DebugTAC_AI.Log("AI State(SNAPSHOT) was saved");
+            }
+            else
+            {
+                new AISettings(blockSpec).LoadToAI(tank);
+            }
+
         }
     }
 

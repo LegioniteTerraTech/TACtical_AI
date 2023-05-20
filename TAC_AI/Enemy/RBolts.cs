@@ -25,22 +25,22 @@ namespace TAC_AI.AI.Enemy
             switch (mind.CommanderBolts)
             {
                 case EnemyBolts.Default:        // Blow up like default - first enemy sighting on spacebar
-                    if (thisInst.lastEnemy.IsNotNull() && thisInst.FIRE_NOW)
+                    if (thisInst.lastEnemyGet.IsNotNull() && thisInst.FIRE_NOW)
                         BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.MissionTrigger:  // do nothing
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !thisInst.PendingDamageCheck)
+                    if (RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !thisInst.PendingDamageCheck)
                         BlowBolts(tank, mind);
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemy.IsNotNull() && RBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !thisInst.PendingDamageCheck)
+                    if (thisInst.lastEnemyGet.IsNotNull() && RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !thisInst.PendingDamageCheck)
                         BlowBolts(tank, mind);
                     break;
                 default:                        // Unimplemented
-                    if (thisInst.lastEnemy.IsNotNull())
+                    if (thisInst.lastEnemyGet.IsNotNull())
                         BlowBolts(tank, mind);
                     break;
             }

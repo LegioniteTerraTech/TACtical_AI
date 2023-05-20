@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Reflection;
 using UnityEngine;
+using TerraTechETCUtil;
 using TAC_AI.Templates;
 using TAC_AI.AI.Movement;
 using TAC_AI.World;
@@ -42,14 +43,29 @@ namespace TAC_AI.AI.Enemy
             RunEvilOperations(Mind, thisInst, tank);
             ScarePlayer(Mind, thisInst, tank);
         }
+        public static void BeEvilLight(AIECore.TankAIHelper thisInst, Tank tank)
+        {
+            //DebugTAC_AI.Log("TACtical_AI: enemy AI active!");
+            var Mind = thisInst.MovementController.EnemyMind;
+            if (Mind.IsNull())
+            {
+                Mind = tank.GetComponent<EnemyMind>();
+                DebugTAC_AI.Log("TACtical_AI: Updating MovementController for " + tank.name);
+                thisInst.MovementController.UpdateEnemyMind(Mind);
+                //RandomizeBrain(thisInst, tank);
+                //return;
+            }
+            RunLightEvilOp(Mind, thisInst, tank);
+            ScarePlayer(Mind, thisInst, tank);
+        }
         public static void ScarePlayer(EnemyMind mind, AIECore.TankAIHelper thisInst, Tank tank)
         {
             //DebugTAC_AI.Log("TACtical_AI: enemy AI active!");
             try
             {
-                if (thisInst.AttackEnemy)
+                if (mind.CommanderAlignment == EnemyStanding.Enemy)
                 {
-                    var tonk = thisInst.lastEnemy;
+                    var tonk = thisInst.lastEnemyGet;
                     if (tonk?.tank)
                     {
                         bool player = tonk.tank.PlayerFocused;
@@ -75,17 +91,8 @@ namespace TAC_AI.AI.Enemy
         }
 
         // Begin the AI tree
-        public static void RunLightEvilOp(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void RunLightEvilOp(EnemyMind Mind, AIECore.TankAIHelper thisInst, Tank tank)
         {
-            var Mind = thisInst.MovementController.EnemyMind;
-            if (Mind.IsNull())
-            {
-                Mind = tank.GetComponent<EnemyMind>();
-                DebugTAC_AI.Log("TACtical_AI: Updating MovementController for " + tank.name);
-                thisInst.MovementController.UpdateEnemyMind(Mind);
-                //RandomizeBrain(thisInst, tank);
-                //return;
-            }
             if (Mind.StartedAnchored)
             {
                 Mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
@@ -110,8 +117,24 @@ namespace TAC_AI.AI.Enemy
                     RRepair.EnemyRepairStepper(thisInst, tank, Mind, venPower);// longer while fighting
                 }
             }
+            // Attack handling
+            switch (Mind.CommanderAlignment)
+            {
+                case EnemyStanding.Enemy:
+                    BeHostile(thisInst, tank);
+                    break;
+                case EnemyStanding.SubNeutral:
+                    BeSubNeutral(thisInst, tank);
+                    break;
+                case EnemyStanding.Neutral:
+                    BeNeutral(thisInst, tank);
+                    break;
+                case EnemyStanding.Friendly:
+                    BeFriendly(thisInst, tank);
+                    break;
+            }
         }
-        public static void RunEvilOperations(EnemyMind Mind, AIECore.TankAIHelper thisInst, Tank tank)
+        private static void RunEvilOperations(EnemyMind Mind, AIECore.TankAIHelper thisInst, Tank tank)
         {
             if (Mind.StartedAnchored)
             {
@@ -143,9 +166,9 @@ namespace TAC_AI.AI.Enemy
             }
             if (Mind.AIControl.Provoked <= 0)
             {
-                if (thisInst.lastEnemy)
+                if (thisInst.lastEnemyGet && thisInst.lastEnemyGet.isActive)
                 {
-                    if (!Mind.InRangeOfTargetEnemy())
+                    if (!Mind.InMaxCombatRangeOfTarget())
                     {
                         Mind.EndAggro();
                     }
@@ -175,102 +198,32 @@ namespace TAC_AI.AI.Enemy
                     break;
             }
 
+            if (thisInst.RTSControlled)
+                thisInst.RunRTSNaviEnemy(Mind);
+            else
+                Mind.EnemyOpsController.Execute();
             //CommanderMind is handled in each seperate class
             if (AIGlobals.IsBaseTeam(tank.Team))
             {
-                ProccessIfRetreat(thisInst, tank, Mind);
+                EControlOperatorSet direct = thisInst.GetDirectedControl();
+                if (ProccessIfRetreat(thisInst, tank, Mind, ref direct))
+                {
+                    thisInst.SetDirectedControl(direct);
+                    return;
+                }
+                thisInst.SetDirectedControl(direct);
             }
-            Mind.EnemyOpsController.Execute();
         }
-        public static Vector3 GetTargetCoordinates(Tank tank, Visible target, EnemyMind mind)
+
+
+        public static Vector3 GetTargetCoordinates(AIECore.TankAIHelper thisInst, Visible target, EnemyMind mind)
         {
             if (mind.CommanderSmarts >= EnemySmarts.Smrt)   // Rough Target leading
             {
-                if (target.tank.rbody.IsNull())
-                    return target.tank.boundsCentreWorldNoCheck;
-                else
-                    return target.tank.rbody.velocity + target.tank.boundsCentreWorldNoCheck;
+                return thisInst.RoughPredictTarget(target.tank);
             }
             else
                 return target.tank.boundsCentreWorldNoCheck;
-        }
-
-        /// <summary>
-        /// Will populate if there's desync issues between clients
-        /// </summary>
-        /// <param name="Mind"></param>
-        /// <param name="thisInst"></param>
-        /// <param name="tank"></param>
-        public static void RunEvilOperationsNetworked(EnemyMind Mind, AIECore.TankAIHelper thisInst, Tank tank)
-        {
-            if (Mind.StartedAnchored)
-            {
-                Mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
-                if (!tank.IsAnchored && !Mind.Hurt)
-                {
-                    if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
-                    {
-                        //DebugTAC_AI.Log("TACtical_AI: Trying to anchor " + tank.name);
-                        thisInst.TryReallyAnchor();
-                        thisInst.anchorAttempts++;
-                        if (tank.IsAnchored)
-                            thisInst.anchorAttempts = 0;
-                    }
-                }
-            }
-
-
-            RBolts.ManageBolts(thisInst, tank, Mind);
-            TestShouldCommitDie(tank, Mind);
-            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck))
-            {
-                if ((Mind.AllowRepairsOnFly || Mind.StartedAnchored || Mind.BuildAssist) && thisInst.TechMemor)
-                {
-                    bool venPower = false;
-                    if (Mind.MainFaction == FactionTypesExt.VEN) venPower = true;
-                    RRepair.EnemyRepairStepper(thisInst, tank, Mind, venPower);// longer while fighting
-                }
-            }
-            if (Mind.AIControl.Provoked <= 0)
-            {
-                if (thisInst.lastEnemy)
-                {
-                    if (!Mind.InRangeOfTargetEnemy())
-                    {
-                        Mind.EndAggro();
-                    }
-                }
-                else
-                    Mind.EndAggro();
-                Mind.AIControl.Provoked = 0;
-            }
-            else
-                Mind.AIControl.Provoked -= KickStart.AIClockPeriod;
-
-
-            // Attack handling
-            switch (Mind.CommanderAlignment)
-            {
-                case EnemyStanding.Enemy:
-                    BeHostile(thisInst, tank);
-                    break;
-                case EnemyStanding.SubNeutral:
-                    BeSubNeutral(thisInst, tank);
-                    break;
-                case EnemyStanding.Neutral:
-                    BeNeutral(thisInst, tank);
-                    break;
-                case EnemyStanding.Friendly:
-                    BeFriendly(thisInst, tank);
-                    break;
-            }
-
-            //CommanderMind is handled in each seperate class
-            if (AIGlobals.IsBaseTeam(tank.Team))
-            {
-
-            }
-            Mind.EnemyOpsController.Execute();
         }
 
 
@@ -285,9 +238,9 @@ namespace TAC_AI.AI.Enemy
             var Mind = thisInst.MovementController.EnemyMind;
             if (Mind.Hurt && Mind.AIControl.Provoked > 0)
             {   // If we were hit, then we fight back the attacker
-                if (thisInst.lastEnemy?.tank)
+                if (thisInst.lastEnemyGet?.tank)
                 {
-                    int teamAttacker = thisInst.lastEnemy.tank.Team;
+                    int teamAttacker = thisInst.lastEnemyGet.tank.Team;
                     if (AIGlobals.IsBaseTeam(teamAttacker) || teamAttacker == ManPlayer.inst.PlayerTeam)
                     {
                         ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomEnemyBaseTeam());
@@ -304,25 +257,26 @@ namespace TAC_AI.AI.Enemy
             var Mind = thisInst.MovementController.EnemyMind;
             if (Mind.Hurt && thisInst.PendingDamageCheck && Mind.AIControl.Provoked > 0)
             {   // If we were hit & lost blocks, then we fight back the attacker
-                if (thisInst.lastEnemy?.tank)
+                if (thisInst.lastEnemyGet?.tank)
                 {
-                    if (thisInst.lastEnemy.tank.Team == ManPlayer.inst.PlayerTeam)
+                    if (thisInst.lastEnemyGet.tank.Team == ManPlayer.inst.PlayerTeam)
                     {
                         ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomEnemyBaseTeam());
                         RandomSetMindAttack(Mind, tank);
                         Mind.CommanderAlignment = EnemyStanding.Enemy;
                         return;
                     }
-                    else if (AIGlobals.IsBaseTeam(thisInst.lastEnemy.tank.Team))
+                    else if (AIGlobals.IsBaseTeam(thisInst.lastEnemyGet.tank.Team))
                     {
                         ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomAllyBaseTeam());
                         RandomSetMindAttack(Mind, tank);
-                        Mind.CommanderAlignment = EnemyStanding.Enemy;
+                        Mind.CommanderAlignment = EnemyStanding.Friendly;
                         return;
                     }
                 }
             }
             thisInst.lastEnemy = null;
+            thisInst.AttackEnemy = false;
         }
         public static void BeFriendly(AIECore.TankAIHelper thisInst, Tank tank)
         {
@@ -344,13 +298,13 @@ namespace TAC_AI.AI.Enemy
                 default:
                     switch (Mind.CommanderAttack)
                     {
-                        case EnemyAttack.Coward:
+                        case EAttackMode.Safety:
                             RGeneral.SelfDefense(thisInst, tank, Mind);
                             break;
-                        case EnemyAttack.Spyper:
+                        case EAttackMode.Ranged:
                             RGeneral.AimAttack(thisInst, tank, Mind);
                             break;
-                        case EnemyAttack.Grudge:
+                        case EAttackMode.Chase:
                             RGeneral.AidAttack(thisInst, tank, Mind);
                             //RGeneral.HoldGrudge(thisInst, tank, Mind); - now handled within FindEnemy
                             break;
@@ -362,48 +316,64 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public static bool ProccessIfRetreat(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind Mind)
+        public static bool ProccessIfRetreat(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind Mind, ref EControlOperatorSet direct)
         {
-            RBases.EnemyBaseFunder funds = RBases.GetTeamFunder(tank.Team);
-            if (thisInst.Retreat && funds)
+            if (thisInst.Retreat)
             {
-                BGeneral.ResetValues(thisInst);
+                return GetRetreatLocation(thisInst, tank, Mind, ref direct);
+            }
+            return false;
+        }
+        public static bool GetRetreatLocation(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind Mind, ref EControlOperatorSet direct)
+        {
+            RLoadedBases.EnemyBaseFunder funds = RLoadedBases.GetTeamFunder(tank.Team);
+            if (funds)
+            {
+                BGeneral.ResetValues(thisInst, ref direct);
                 thisInst.theBase = funds.Tank;
                 thisInst.lastBaseExtremes = funds.Tank.visible.GetCheapBounds();
 
                 Vector3 veloFlat = Vector3.zero;
                 if ((bool)tank.rbody)   // So that drifting is minimized
                 {
-                    veloFlat = tank.rbody.velocity;
+                    veloFlat = thisInst.SafeVelocity;
                     veloFlat.y = 0;
                 }
                 float dist = (thisInst.theBase.boundsCentreWorldNoCheck + veloFlat - tank.boundsCentreWorldNoCheck).magnitude;
                 bool messaged = true;
-                thisInst.lastDestination = funds.Tank.boundsCentreWorldNoCheck;
-                StopByBase(thisInst, tank, dist, ref messaged);
-                
+                direct.lastDestination = funds.Tank.boundsCentreWorldNoCheck;
+                StopByBase(thisInst, tank, dist, ref messaged, ref direct);
                 return true;
             }
             else
             {
-                EnemyPresence EP = ManEnemyWorld.GetTeam(tank.Team);
-                if (EP != null)
+                if (thisInst.lastEnemy?.tank)
                 {
-                    EnemyBaseUnit EBU = UnloadedBases.GetTeamFunder(EP);
-                    if (EBU != null)
+                    BGeneral.ResetValues(thisInst, ref direct);
+                    Vector3 runVec = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).normalized;
+                    direct.lastDestination = tank.boundsCentreWorldNoCheck + (runVec * 150);
+                    direct.DriveAwayFacingAway();
+                }
+                else
+                {
+                    NP_Presence EP = ManEnemyWorld.GetTeam(tank.Team);
+                    if (EP != null)
                     {
-                        BGeneral.ResetValues(thisInst);
-                        thisInst.Steer = true;
-                        thisInst.DriveDest = EDriveDest.ToLastDestination;
-                        thisInst.lastDestination = EBU.PosScene;
-                        // yes we will drive off-scene to retreat home
-                        return true;
+                        NP_BaseUnit EBU = UnloadedBases.GetSetTeamMainBase(EP);
+                        if (EBU != null)
+                        {
+                            BGeneral.ResetValues(thisInst, ref direct);
+                            direct.DriveToFacingTowards();
+                            direct.lastDestination = EBU.PosScene;
+                            // yes we will drive off-scene to retreat home
+                            return true;
+                        }
                     }
                 }
             }
             return false;
         }
-        public static void StopByBase(AIECore.TankAIHelper thisInst, Tank tank, float dist, ref bool hasMessaged)
+        public static void StopByBase(AIECore.TankAIHelper thisInst, Tank tank, float dist, ref bool hasMessaged, ref EControlOperatorSet direct)
         {
             if (thisInst.theBase == null)
                 return; // There's no base!
@@ -411,9 +381,9 @@ namespace TAC_AI.AI.Enemy
             if (dist < girth + 3)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving room to base... |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
-                thisInst.AdviseAway = true;
+                direct.DriveDest = EDriveDest.FromLastDestination;
                 thisInst.ForceSetDrive = true;
                 thisInst.DriveVar = -1;
                 thisInst.SettleDown();
@@ -421,7 +391,7 @@ namespace TAC_AI.AI.Enemy
             else if (dist < girth + 7)
             {   // We are at the base, stop moving and hold pos
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. |Tech is at " + tank.boundsCentreWorldNoCheck);
-                thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
                 thisInst.AvoidStuff = false;
                 thisInst.Yield = true;
                 thisInst.PivotOnly = true;
@@ -447,12 +417,6 @@ namespace TAC_AI.AI.Enemy
 
             toSet.sceneStationaryPos = tank.boundsCentreWorldNoCheck;
             toSet.Refresh();
-            toSet.Range = 100;
-            try
-            {
-                toSet.Range = (int)thisInst.DetectionRange + 50;
-            }
-            catch { }
 
             bool isMissionTech = RMission.SetupMissionAI(thisInst, tank, toSet);
             if (isMissionTech)
@@ -479,11 +443,6 @@ namespace TAC_AI.AI.Enemy
                 RandomSetMindAttack(toSet, tank);
             }
             FinalCleanup(thisInst, toSet, tank);
-            if (tank.Anchors.NumAnchored > 0 || tank.GetComponent<RequestAnchored>())
-            {
-                toSet.StartedAnchored = true;
-                toSet.EvilCommander = EnemyHandling.Stationary;
-            }
             if (ManNetwork.IsNetworked && ManNetwork.IsHost)
             {
                 NetworkHandler.TryBroadcastNewEnemyState(tank.netTech.netId.Value, toSet.CommanderSmarts);
@@ -540,7 +499,7 @@ namespace TAC_AI.AI.Enemy
                 toSet.CommanderSmarts = EnemySmarts.Default;
                 toSet.CommanderMind = EnemyAttitude.Homing;
                 toSet.EvilCommander = EnemyHandling.Wheeled;
-                toSet.CommanderAttack = EnemyAttack.Grudge;
+                toSet.CommanderAttack = EAttackMode.Chase;
                 return true;
             }
 
@@ -551,47 +510,44 @@ namespace TAC_AI.AI.Enemy
             if (!playerIsSmall && BM.blockCount + BM.IterateBlockComponents<ModuleDrill>().Count() <= BM.IterateBlockComponents<ModuleTechController>().Count())
             {   // Unarmed - Runner
                 toSet.CommanderMind = EnemyAttitude.Default;
-                toSet.CommanderAttack = EnemyAttack.Coward;
+                toSet.CommanderAttack = EAttackMode.Safety;
             }
-            else if (BM.blockCount > AIGlobals.BossTechSize && KickStart.MaxEnemyHQLimit > RBases.GetAllTeamsEnemyHQCount())
+            else if (BM.blockCount > AIGlobals.BossTechSize && KickStart.MaxEnemyHQLimit > RLoadedBases.GetAllTeamsEnemyHQCount())
             {   // Boss
                 toSet.InvertBullyPriority = true;
                 toSet.CommanderMind = EnemyAttitude.Boss;
-                toSet.CommanderAttack = EnemyAttack.Bully;
+                toSet.CommanderAttack = EAttackMode.Strong;
             }
-            else if (RWeapSetup.HasArtilleryWeapon(BM))
+            else if (EWeapSetup.HasArtilleryWeapon(BM))
             {   // Artillery
                 toSet.CommanderMind = EnemyAttitude.Homing;
-                toSet.CommanderAttack = EnemyAttack.Spyper;
+                toSet.CommanderAttack = EAttackMode.Ranged;
                 fired = true;
             }
             else if (IsHarvester(BM) || toSet.MainFaction == FactionTypesExt.GC)
             {   // Miner
-                switch (UnityEngine.Random.Range(0, 3))
+                if (AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
                 {
-                    case 0:
+                    if (IsHarvester(BM))
+                    {
                         if (tank.IsPopulation)
                             toSet.CommanderMind = EnemyAttitude.NPCBaseHost;
                         else
                             toSet.CommanderMind = EnemyAttitude.Miner;
-                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
-                        toSet.Range = 64;
-                        break;
-                    default:
-                        if (IsHarvester(BM))
-                        {
-                            if (tank.IsPopulation)
-                            toSet.CommanderMind = EnemyAttitude.NPCBaseHost;
-                            else
-                                toSet.CommanderMind = EnemyAttitude.Miner;
-                        }
-                        else
-                            toSet.CommanderMind = EnemyAttitude.Junker;
-                        //toSet.CommanderAttack = EnemyAttack.Bully;
-                        toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
-                        toSet.Range = 64;
-                        toSet.InvertBullyPriority = true;
-                        break;
+                    }
+                    else
+                        toSet.CommanderMind = EnemyAttitude.Junker;
+                    //toSet.CommanderAttack = EnemyAttack.Bully;
+                    toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
+                    toSet.InvertBullyPriority = true;
+                }
+                else
+                {
+                    if (tank.IsPopulation)
+                        toSet.CommanderMind = EnemyAttitude.NPCBaseHost;
+                    else
+                        toSet.CommanderMind = EnemyAttitude.Miner;
+                    toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
                 }
                 fired = true;
             }
@@ -605,7 +561,7 @@ namespace TAC_AI.AI.Enemy
             else if (toSet.MainFaction == FactionTypesExt.VEN)
             {   // Ven
                 //toSet.CommanderMind = EnemyAttitude.Default; 
-                toSet.CommanderAttack = EnemyAttack.Circle;
+                toSet.CommanderAttack = EAttackMode.Circle;
                 toSet.CommanderAttack = RWeapSetup.GetAttackStrat(tank, toSet);
                 fired = true;
             }
@@ -623,72 +579,20 @@ namespace TAC_AI.AI.Enemy
             }
             return fired;
         }
+        private static List<ModuleBooster> engineGetCache = new List<ModuleBooster>();
+        private static List<FanJet> jetGetCache = new List<FanJet>();
+        private static List<BoosterJet> boosterGetCache = new List<BoosterJet>();
         public static void BlockSetEnemyHandling(Tank tank, EnemyMind toSet, bool ForceAllBubblesUp = false)
         {
             var BM = tank.blockman;
-
+            // We have to do it this way since modded blocks don't work well with the defaults
             bool isFlying = false;
             bool isFlyingDirectionForwards = true;
-            List<ModuleBooster> Engines = BM.IterateBlockComponents<ModuleBooster>().ToList();
             Vector3 biasDirection = Vector3.zero;
             Vector3 boostBiasDirection = Vector3.zero;
 
-            foreach (ModuleBooster module in Engines)
-            {
-                //Get the slowest spooling one
-                List<FanJet> jets = module.transform.GetComponentsInChildren<FanJet>().ToList();
-                foreach (FanJet jet in jets)
-                {
-                    if (jet.spinDelta <= 10)
-                    {
-                        biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
-                    }
-                }
-                List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
-                foreach (BoosterJet boost in boosts)
-                {
-                    //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                    boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection));
-                }
-            }
-            boostBiasDirection.Normalize();
-            biasDirection.Normalize();
-            
-            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (boostBiasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-            else if (biasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (biasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
-
             int FoilCount = 0;
             int MovingFoilCount = 0;
-            foreach (ModuleWing module in BM.IterateBlockComponents<ModuleWing>())
-            {
-                //Get teh slowest spooling one
-                List<ModuleWing.Aerofoil> foils = module.m_Aerofoils.ToList();
-                FoilCount += foils.Count();
-                foreach (ModuleWing.Aerofoil Afoil in foils)
-                {
-                    if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
-                        MovingFoilCount++;
-                }
-            }
-            /*
-            int modBoostCount = BM.IterateBlockComponents<ModuleBooster>().Count();
-            int modHoverCount = BM.IterateBlockComponents<ModuleHover>().Count();
-            int modGyroCount = BM.IterateBlockComponents<ModuleGyro>().Count();
-            */
-
-            // We have to do it this way since modded blocks don't work well with the above
-            List<TankBlock> blocs = BM.IterateBlocks().ToList();
             int modControlCount = 0;
             int modBoostCount = 0;
             int modHoverCount = 0;
@@ -699,8 +603,41 @@ namespace TAC_AI.AI.Enemy
             int modDrillCount = 0;
             int modTeslaCount = 0;
 
-            foreach (TankBlock bloc in blocs)
+            foreach (TankBlock bloc in BM.IterateBlocks())
             {
+                var booster = bloc.GetComponent<ModuleBooster>();
+                if (booster)
+                {
+                    //Get the slowest spooling one
+                    booster.transform.GetComponentsInChildren(jetGetCache);
+                    foreach (FanJet jet in jetGetCache)
+                    {
+                        if (jet.spinDelta <= 10)
+                        {
+                            biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                        }
+                    }
+                    jetGetCache.Clear();
+                    booster.transform.GetComponentsInChildren(boosterGetCache);
+                    foreach (BoosterJet boost in boosterGetCache)
+                    {
+                        //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
+                        boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection));
+                    }
+                    boosterGetCache.Clear();
+                }
+
+                var wing = bloc.GetComponent<ModuleWing>();
+                if (wing)
+                {
+                    ModuleWing.Aerofoil[] foils = wing.m_Aerofoils;
+                    FoilCount += foils.Length;
+                    foreach (ModuleWing.Aerofoil Afoil in foils)
+                    {
+                        if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
+                            MovingFoilCount++;
+                    }
+                }
                 if (bloc.GetComponent<ModuleBooster>())
                     modBoostCount++;
                 if (bloc.GetComponent<ModuleHover>())
@@ -746,7 +683,25 @@ namespace TAC_AI.AI.Enemy
 
                 CheckAndHandleControlBlocks(toSet, bloc);
             }
-            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
+
+            boostBiasDirection.Normalize();
+            biasDirection.Normalize();
+
+            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (boostBiasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+            else if (biasDirection != Vector3.zero)
+            {
+                isFlying = true;
+                if (biasDirection.y > 0.6)
+                    isFlyingDirectionForwards = false;
+            }
+            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
+
+            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + "  Has block count " + BM.blockCount + "  | " + modBoostCount + " | " + modAGCount);
 
 
             if (tank.IsAnchored)
@@ -806,7 +761,7 @@ namespace TAC_AI.AI.Enemy
             //add Attitude
             if (IsUnarmed(tank))
             {
-                toSet.CommanderAttack = EnemyAttack.Coward;
+                toSet.CommanderAttack = EAttackMode.Safety;
                 toSet.CommanderMind = EnemyAttitude.Default;
                 toSet.CommanderAlignment = EnemyStanding.SubNeutral;
             }
@@ -871,17 +826,16 @@ namespace TAC_AI.AI.Enemy
         }
         public static void FinalCleanup(AIECore.TankAIHelper thisInst, EnemyMind toSet, Tank tank)
         {
+            if (tank.Anchors.NumAnchored > 0 || tank.GetComponent<RequestAnchored>())
+            {
+                toSet.StartedAnchored = true;
+                toSet.EvilCommander = EnemyHandling.Stationary;
+            }
             if (toSet.CommanderSmarts > EnemySmarts.Meh)
             {
-                if (thisInst.TechMemor.IsNull())
-                {
-                    thisInst.TechMemor = tank.gameObject.AddComponent<AIERepair.DesignMemory>();
-                    toSet.TechMemor.Initiate();
-                    DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Setup for DesignMemory (FinalCleanup)");
-                }
+                thisInst.InsureTechMemor("FinalCleanup", true);
                 toSet.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
             }
-            thisInst.RecalibrateMovementAIController();
 
             bool isBaseMaker = toSet.CommanderMind == EnemyAttitude.NPCBaseHost || toSet.CommanderMind == EnemyAttitude.Boss;
             if (toSet.CommanderSmarts == EnemySmarts.Default && !isBaseMaker && toSet.EvilCommander == EnemyHandling.Wheeled)
@@ -903,12 +857,9 @@ namespace TAC_AI.AI.Enemy
                     else
                         AIGlobals.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
                 }
+                thisInst.RecalibrateMovementAIController();
                 return;
             }
-
-
-            if (toSet.CommanderAttack == EnemyAttack.Grudge)
-                toSet.FindEnemy();
 
             // now handle base spawning
             if (AIGlobals.IsAttract)
@@ -938,15 +889,15 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (toSet.StartedAnchored)
                     {
-                        RBases.SetupBaseAI(thisInst, tank, toSet);
+                        RLoadedBases.SetupBaseAI(thisInst, tank, toSet);
                         DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is is a base Tech");
                     }
                     if (toSet.EvilCommander != EnemyHandling.Wheeled)
-                        toSet.CommanderAttack = EnemyAttack.Grudge;
-                    if (toSet.CommanderAttack == EnemyAttack.Coward)
-                        toSet.CommanderAttack = EnemyAttack.Circle;
-                    if (toSet.CommanderAttack == EnemyAttack.Spyper)
-                        toSet.CommanderAttack = EnemyAttack.Grudge;
+                        toSet.CommanderAttack = EAttackMode.Chase;
+                    if (toSet.CommanderAttack == EAttackMode.Safety)
+                        toSet.CommanderAttack = EAttackMode.Circle;
+                    if (toSet.CommanderAttack == EAttackMode.Ranged)
+                        toSet.CommanderAttack = EAttackMode.Chase;
                     if (toSet.CommanderMind == EnemyAttitude.Miner)
                         toSet.CommanderMind = EnemyAttitude.Homing;
                 }
@@ -979,7 +930,6 @@ namespace TAC_AI.AI.Enemy
                     RBolts.BlowBolts(tank, toSet);
                 }
                 thisInst.SuppressFiring(!toSet.AttackAny);
-                thisInst.FullMelee = toSet.LikelyMelee;
 
                 if (!KickStart.AllowEnemiesToMine && toSet.CommanderMind == EnemyAttitude.Miner)
                     toSet.CommanderMind = EnemyAttitude.Default;
@@ -993,13 +943,54 @@ namespace TAC_AI.AI.Enemy
                 else
                     AIGlobals.PopupEnemyInfo(toSet.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
             }
+
+            thisInst.SecondAvoidence = toSet.CommanderSmarts >= EnemySmarts.Smrt;
+            thisInst.AILimitSettings.AdvancedAI = toSet.CommanderSmarts >= EnemySmarts.Meh;
+            if (toSet.CommanderMind == EnemyAttitude.Homing)
+                thisInst.AILimitSettings.ScanRange = AIGlobals.EnemyExtendActionRange;
+            else
+                thisInst.AILimitSettings.ScanRange = AIGlobals.DefaultEnemyScanRange;
+
+            switch (toSet.CommanderMind)
+            {
+                case EnemyAttitude.Homing:
+                    toSet.MaxCombatRange = AIGlobals.EnemyExtendActionRange;
+                    break;
+                case EnemyAttitude.Miner:
+                case EnemyAttitude.Junker:
+                    toSet.MaxCombatRange = AIGlobals.PassiveMaxCombatRange;
+                    break;
+                case EnemyAttitude.NPCBaseHost:
+                    toSet.MaxCombatRange = AIGlobals.BaseFounderMaxCombatRange;
+                    break;
+                case EnemyAttitude.Boss:
+                    toSet.MaxCombatRange = AIGlobals.BossMaxCombatRange;
+                    break;
+                case EnemyAttitude.Invader:
+                    toSet.MaxCombatRange = AIGlobals.InvaderMaxCombatRange;
+                    break;
+                default:
+                    if (thisInst.AttackMode == EAttackMode.Ranged)
+                        toSet.MaxCombatRange = AIGlobals.SpyperMaxCombatRange;
+                    else
+                        toSet.MaxCombatRange = AIGlobals.DefaultEnemyMaxCombatRange;
+
+                    break;
+            }
+            if (thisInst.AttackMode == EAttackMode.Ranged)
+                toSet.MinCombatRange = AIGlobals.MinCombatRangeSpyper;
+            else if (thisInst.Attempt3DNavi)
+                toSet.MinCombatRange = AIGlobals.SpacingRangeHoverer;
+            else
+                toSet.MinCombatRange = AIGlobals.MinCombatRangeDefault;
+
+            thisInst.RecalibrateMovementAIController();
         }
         public static void CheckShouldMakeBase(AIECore.TankAIHelper thisInst, EnemyMind toSet, Tank tank)
         {
             switch (toSet.CommanderMind)
             {
                 case EnemyAttitude.NPCBaseHost:
-                    toSet.Range = AIGlobals.BaseFounderRange;
                     if (!tank.name.Contains('Ω'))
                         tank.SetName(tank.name + " Ω");
                     toSet.CommanderMind = EnemyAttitude.NPCBaseHost;
@@ -1024,20 +1015,20 @@ namespace TAC_AI.AI.Enemy
                     DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is an invader looking to take over your world!  " + toSet.EvilCommander.ToString() + " based " + toSet.CommanderAlignment.ToString() + " with attitude " + toSet.CommanderAttack.ToString() + " | Mind " + toSet.CommanderMind.ToString() + " | Smarts " + toSet.CommanderSmarts.ToString() + " inbound!");
                     break;
                 case EnemyAttitude.Miner:
-                    if (toSet.CommanderAttack == EnemyAttack.Circle)// Circle breaks the harvester AI in some attack cases
+                    if (toSet.CommanderAttack == EAttackMode.Circle)// Circle breaks the harvester AI in some attack cases
                     {
                         switch (toSet.EvilCommander)
                         {
                             case EnemyHandling.Naval:
-                                toSet.CommanderAttack = EnemyAttack.Spyper;
+                                toSet.CommanderAttack = EAttackMode.Ranged;
                                 break;
                             case EnemyHandling.Starship:
                             case EnemyHandling.Airplane:
                             case EnemyHandling.Chopper:
-                                toSet.CommanderAttack = EnemyAttack.Pesterer;
+                                toSet.CommanderAttack = EAttackMode.Random;
                                 break;
                             default:
-                                toSet.CommanderAttack = EnemyAttack.Coward;
+                                toSet.CommanderAttack = EAttackMode.Safety;
                                 break;
                         }
                     }
@@ -1087,123 +1078,6 @@ namespace TAC_AI.AI.Enemy
         }
 
         // etc
-        public static EnemyHandling EnemyHandlingDetermine(Tank tank)
-        {
-            var BM = tank.blockman;
-
-            bool isFlying = false;
-            bool isFlyingDirectionForwards = true;
-            List<ModuleBooster> Engines = BM.IterateBlockComponents<ModuleBooster>().ToList();
-            Vector3 biasDirection = Vector3.zero;
-            Vector3 boostBiasDirection = Vector3.zero;
-
-            foreach (ModuleBooster module in Engines)
-            {
-                //Get the slowest spooling one
-                List<FanJet> jets = module.transform.GetComponentsInChildren<FanJet>().ToList();
-                foreach (FanJet jet in jets)
-                {
-                    if (jet.spinDelta <= 10)
-                    {
-                        biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
-                    }
-                }
-                List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
-                foreach (BoosterJet boost in boosts)
-                {
-                    //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                    boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection));
-                }
-            }
-            boostBiasDirection.Normalize();
-            biasDirection.Normalize();
-
-            if (biasDirection == Vector3.zero && boostBiasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (boostBiasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-            else if (biasDirection != Vector3.zero)
-            {
-                isFlying = true;
-                if (biasDirection.y > 0.6)
-                    isFlyingDirectionForwards = false;
-            }
-            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
-
-            int FoilCount = 0;
-            int MovingFoilCount = 0;
-            foreach (ModuleWing module in BM.IterateBlockComponents<ModuleWing>())
-            {
-                //Get teh slowest spooling one
-                List<ModuleWing.Aerofoil> foils = module.m_Aerofoils.ToList();
-                FoilCount += foils.Count();
-                foreach (ModuleWing.Aerofoil Afoil in foils)
-                {
-                    if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
-                        MovingFoilCount++;
-                }
-            }
-
-            List<TankBlock> blocs = BM.IterateBlocks().ToList();
-            int modBoostCount = 0;
-            int modHoverCount = 0;
-            int modGyroCount = 0;
-            int modWheelCount = 0;
-            int modAGCount = 0;
-            int modGunCount = 0;
-            int modDrillCount = 0;
-
-            foreach (TankBlock bloc in blocs)
-            {
-                if (bloc.GetComponent<ModuleBooster>())
-                    modBoostCount++;
-                if (bloc.GetComponent<ModuleHover>())
-                    modHoverCount++;
-                if (bloc.GetComponent<ModuleGyro>())
-                    modGyroCount++;
-                if (bloc.GetComponent<ModuleWheels>())
-                    modWheelCount++;
-                if (bloc.GetComponent<ModuleAntiGravityEngine>())
-                    modAGCount++;
-                if (bloc.GetComponent<ModuleWeaponGun>())
-                    modGunCount++;
-                if (bloc.GetComponent<ModuleDrill>())
-                    modDrillCount++;
-            }
-            //Debug.Info("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
-
-
-            if (tank.IsAnchored)
-            {
-                return EnemyHandling.Stationary;
-            }
-            else if ((modHoverCount > 3) || (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0)))
-            {
-                return EnemyHandling.Starship;
-            }
-            else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
-            {
-                return EnemyHandling.Airplane;
-            }
-            else if (modGyroCount > 0 && isFlying && !isFlyingDirectionForwards)
-            {
-                return EnemyHandling.Chopper;
-            }
-            else if (KickStart.isWaterModPresent && FoilCount > 0 && modGyroCount > 0 && modBoostCount > 0 && (modWheelCount < 4 || modHoverCount > 1))
-            {
-                return EnemyHandling.Naval;
-            }
-            else if (modGunCount < 2 && modDrillCount < 2 && modBoostCount > 0)
-            {
-                return EnemyHandling.SuicideMissile;
-            }
-            else
-                return EnemyHandling.Wheeled;
-        }
-
-
         public static bool IsUnarmed(Tank tank)
         {
             return tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() + tank.blockman.IterateBlockComponents<ModuleDrill>().Count();
@@ -1225,10 +1099,10 @@ namespace TAC_AI.AI.Enemy
             }
             if (KickStart.isWaterModPresent && minion && mind.EvilCommander == EnemyHandling.Wheeled)
             {
-                if (!tank.grounded && RBases.TeamActiveMakerBaseCount(tank.Team) > 0 && AIEPathing.AboveTheSea(tank.boundsCentreWorldNoCheck))
+                if (!tank.grounded && RLoadedBases.TeamActiveMakerBaseCount(tank.Team) > 0 && AIEPathing.AboveTheSea(mind.AIControl))
                 {
                     DebugTAC_AI.Log("TACtical_AI: Recycling " + tank.name + " back to team " + tank.Team + " because it was stuck in the water");
-                    RBases.RecycleTechToTeam(tank);
+                    RLoadedBases.RecycleTechToTeam(tank);
                 }
             }
         }

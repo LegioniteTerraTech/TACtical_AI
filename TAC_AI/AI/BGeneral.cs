@@ -9,18 +9,18 @@ namespace TAC_AI.AI
 {
     public static class BGeneral
     {
-        public static void ResetValues(AIECore.TankAIHelper thisInst)
+        public static void ResetValues(AIECore.TankAIHelper thisInst, ref EControlOperatorSet direct)
         {
             thisInst.Yield = false;
             thisInst.PivotOnly = false;
             thisInst.FIRE_NOW = false;
-            thisInst.BOOST = false;
+            thisInst.FullBoost = false;
             thisInst.FirePROPS = false;
             thisInst.ForceSetBeam = false;
             thisInst.ForceSetDrive = false;
-            thisInst.FeatherBoost = false;
+            thisInst.LightBoost = false;
 
-            thisInst.DriveDest = EDriveDest.None;
+            direct.DriveToFacingTowards();
         }
 
         /// <summary>
@@ -31,9 +31,9 @@ namespace TAC_AI.AI
         public static bool AidDefend(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI
-            if (thisInst.lastEnemy != null)
+            if (thisInst.lastEnemyGet != null)
             {
-                thisInst.lastEnemy = thisInst.GetTarget();
+                thisInst.lastEnemy = thisInst.GetEnemyAllied();
                 //Fire even when retreating - the AI's life depends on this!
                 thisInst.AttackEnemy = true;
                 return false;
@@ -41,8 +41,8 @@ namespace TAC_AI.AI
             else
             {
                 thisInst.AttackEnemy = false;
-                thisInst.lastEnemy = thisInst.GetTarget();
-                return thisInst.lastEnemy;
+                thisInst.lastEnemy = thisInst.GetEnemyAllied();
+                return thisInst.lastEnemyGet;
             }
         }
 
@@ -55,10 +55,10 @@ namespace TAC_AI.AI
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             thisInst.AttackEnemy = false;
-            thisInst.lastEnemy = thisInst.GetTarget();
-            if (thisInst.lastEnemy != null)
+            thisInst.lastEnemy = thisInst.GetEnemyAllied();
+            if (thisInst.lastEnemyGet != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
+                Vector3 aimTo = (thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
                 thisInst.WeaponDelayClock++;
                 if (thisInst.Attempt3DNavi)
                 {
@@ -115,7 +115,7 @@ namespace TAC_AI.AI
             {
                 if (AidDefend(thisInst, tank))
                 {
-                    AIECore.RequestFocusFireALL(tank, thisInst.lastEnemy, RequestSeverity.ThinkMcFly);
+                    AIECore.RequestFocusFireALL(tank, thisInst.lastEnemyGet, RequestSeverity.ThinkMcFly);
                 }
                 else
                     thisInst.AttackEnemy = false;
@@ -132,16 +132,16 @@ namespace TAC_AI.AI
         public static void RTSCombat(AIECore.TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI
-            if (thisInst.lastEnemy != null)
+            if (thisInst.lastEnemyGet != null)
             {   // focus fire like Grudge
                 thisInst.AttackEnemy = true;
-                if (!thisInst.lastEnemy.isActive)
-                    thisInst.lastEnemy = thisInst.GetTarget();
+                if (!thisInst.lastEnemyGet.isActive)
+                    thisInst.lastEnemy = thisInst.GetEnemyAllied();
             }
             else
             {
                 thisInst.AttackEnemy = false;
-                thisInst.lastEnemy = thisInst.GetTarget();
+                thisInst.lastEnemy = thisInst.GetEnemyAllied();
             }
         }
 
