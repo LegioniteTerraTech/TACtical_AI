@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace TAC_AI.World
 {
-    public class TileMoveCommand
+    internal class TileMoveCommand
     {
         public readonly IntVector2 PrevTileCoord;
         public readonly Vector3 posInTile;
@@ -51,7 +51,7 @@ namespace TAC_AI.World
             }
             return true;
         }
-        public void OnFinish(bool success, bool stillRegistered)
+        public void OnFinished(bool success, bool stillRegistered)
         {
             if (call != null)
                 call.Invoke(this, success, stillRegistered);

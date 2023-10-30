@@ -14,7 +14,7 @@ namespace TAC_AI.AI.Movement.AICores
         /// DriveMaintainer is the most frequently updated out of the AI operations.  
         ///   Use this for matters that must be updated quickly and frequently.
         /// </summary>
-        bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, ref EControlCoreSet core);
+        bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core);
 
         void Initiate(Tank tank, IMovementAIController controller);
 

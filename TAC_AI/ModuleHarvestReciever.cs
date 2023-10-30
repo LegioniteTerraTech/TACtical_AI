@@ -5,7 +5,7 @@ using TerraTechETCUtil;
 
 namespace TAC_AI
 {
-    public class ModuleHarvestReciever : MonoBehaviour
+    internal class ModuleHarvestReciever : MonoBehaviour
     {
         TankBlock TankBlock;
         // Returns the position of itself in the world as a point the AI can pathfind to
@@ -67,7 +67,7 @@ namespace TAC_AI
             }
             DockingRequested = false;
         }
-        public void RequestDocking(AIECore.TankAIHelper Approaching)
+        public void RequestDocking(TankAIHelper Approaching)
         {
             if (!DockingRequested)
             {
@@ -78,7 +78,7 @@ namespace TAC_AI
                 }
                 DockingRequested = true;
                 Invoke("StopDocking", 2);
-                tank.GetHelperInsured().AllowApproach(Approaching);
+                tank.GetHelperInsured().SlowForApproacher(Approaching);
             }
         }
         private void StopDocking()

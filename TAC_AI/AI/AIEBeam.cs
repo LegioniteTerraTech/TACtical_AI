@@ -4,9 +4,9 @@ using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI
 {
-    public static class AIEBeam
+    internal static class AIEBeam
     {
-        public static void BeamMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public static void BeamMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank)
         {
             try
             {
@@ -58,17 +58,17 @@ namespace TAC_AI.AI
                     if (thisInst.Attempt3DNavi)
                     {
                         //reduce build beam spam when aiming
-                        thisInst.ActionPause++;
+                        thisInst.actionPause++;
 
                         if (thisInst.ActionPause == 70)
-                            thisInst.ActionPause = 100;
+                            thisInst.actionPause = 100;
                         else if (thisInst.ActionPause > 80)
                         {
                             thisInst.BeamTimeoutClock = 1;
                             //thisInst.ActionPause--;
                         }
                         else if (thisInst.ActionPause == 80)
-                            thisInst.ActionPause = 0;
+                            thisInst.actionPause = 0;
                     }
                     else
                     {
@@ -78,7 +78,7 @@ namespace TAC_AI.AI
                 else
                 {
                     if (thisInst.Attempt3DNavi)
-                        thisInst.ActionPause = 0;
+                        thisInst.actionPause = 0;
                     if (thisInst.MTLockedToTechBeam && thisInst.IsMultiTech)
                     {   //Override and disable most driving abilities - We are going to follow the host tech!
                         if (thisInst.lastCloseAlly != null)
@@ -140,7 +140,7 @@ namespace TAC_AI.AI
         */
 
 
-        private static bool IsTechTippedOver(Tank tank, AIECore.TankAIHelper thisInst)
+        private static bool IsTechTippedOver(Tank tank, TankAIHelper thisInst)
         {   // It's more crude than the built-in but should take less to process.
             if (tank.rootBlockTrans.up.y < 0)
             {   // the Tech is literally sideways

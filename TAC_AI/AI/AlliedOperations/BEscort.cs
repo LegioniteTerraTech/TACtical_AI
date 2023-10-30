@@ -1,31 +1,45 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BEscort {
-        public static void MotivateMove(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+    internal struct BEscort
+    {
+        public void Init(TankAIHelper thisInst)
+        {
+        }
+        public void DeInit(TankAIHelper thisInst)
+        {
+        }
+        public void MovementActions(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        {
+        }
+
+        public static void MotivateMove(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             thisInst.IsMultiTech = false;
-            thisInst.lastPlayer = thisInst.GetPlayerTech();
             thisInst.foundGoal = false;
             thisInst.Attempt3DNavi = false;
 
             BGeneral.ResetValues(thisInst, ref direct);
             thisInst.AvoidStuff = true;
 
+            thisInst.lastPlayer = thisInst.GetPlayerTech();
             if (thisInst.lastPlayer == null)
                 return;
-            Vector3 veloFlat = Vector3.zero;
+            /*
+            Vector3 veloFlat;
             if ((bool)tank.rbody)   // So that drifting is minimized
             {
                 veloFlat = tank.rbody.velocity;
                 veloFlat.y = 0;
-            }
-            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestinationCore, thisInst.lastPlayer.GetCheapBounds());
-            float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents;
+            }*/
             bool hasMessaged = false;
 
+            float dist = thisInst.GetDistanceFromTask(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck, thisInst.lastPlayer.GetCheapBounds());
+            float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents;
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
 
             if ((bool)thisInst.lastEnemyGet && !thisInst.Retreat)
@@ -48,9 +62,6 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.DelayedAnchorClock = 0;
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
                 direct.DriveAwayFacingTowards();
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = -1;
-                //direct.lastDestination = thisInst.lastPlayer.centrePosition;
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
                 if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
@@ -84,7 +95,6 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 thisInst.DelayedAnchorClock = 0;
                 direct.DriveToFacingTowards();
-                //direct.lastDestination = thisInst.lastPlayer.centrePosition;
                 //thisInst.ForceSetDrive = true;
                 //thisInst.DriveVar = 1f;
 
@@ -153,7 +163,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //bloody tree moment
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
                     //thisInst.AvoidStuff = false;
-                    thisInst.FIRE_NOW = true;
+                    thisInst.FIRE_ALL = true;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 0.5f;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
@@ -163,7 +173,6 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 //Likely stationary
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
-                //direct.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 if ((bool)thisInst.lastEnemyGet)
@@ -187,7 +196,6 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 //Likely idle
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
-                //direct.lastDestination = tank.transform.position;
                 thisInst.AvoidStuff = true;
                 thisInst.SettleDown();
                 if ((bool)thisInst.lastEnemyGet)

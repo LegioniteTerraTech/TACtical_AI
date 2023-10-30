@@ -7,11 +7,11 @@ using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAstrotech 
+    internal static class BAstrotech 
     {
         //Same a escort code, because the BEscort code supports 3D!
         // we just need to re-define how far above ground we should be
-        public static void MotivateSpace(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MotivateSpace(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the ship (Escort) what to do movement-wise
             thisInst.lastPlayer = thisInst.GetPlayerTech();
@@ -23,6 +23,7 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (thisInst.lastPlayer == null)
                 return;
+            direct.SetLastDest(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck);
             float dist = thisInst.GetDistanceFromTask(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck, thisInst.lastPlayer.GetCheapBounds());
             float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents;
 
@@ -127,7 +128,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //bloody tree moment
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
                     thisInst.AvoidStuff = false;
-                    thisInst.FIRE_NOW = true;
+                    thisInst.FIRE_ALL = true;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 0.5f;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
@@ -192,7 +193,8 @@ namespace TAC_AI.AI.AlliedOperations
             }
         }
 
-        public static void SpaceDriver(AIECore.TankAIHelper thisInst, Tank tank, Visible followThis, ref EControlOperatorSet direct)
+        /// <summary> UNFINISHED <param name="direct"></param>
+        public static void SpaceDriver(TankAIHelper thisInst, Tank tank, Visible followThis, ref EControlOperatorSet direct)
         {
             //The Handler that tells the ship (Escort) what to do movement-wise
             thisInst.IsMultiTech = false;
@@ -307,7 +309,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //bloody tree moment
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
                     thisInst.AvoidStuff = false;
-                    thisInst.FIRE_NOW = true;
+                    thisInst.FIRE_ALL = true;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 0.5f;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;

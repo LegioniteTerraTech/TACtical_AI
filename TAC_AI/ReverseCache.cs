@@ -10,7 +10,7 @@ using TerraTechETCUtil;
 
 namespace TAC_AI
 {
-    public class ReverseCache : MonoBehaviour
+    internal class ReverseCache : MonoBehaviour
 	{   // For blocks edited externally - we need to destroy them from affecting the pool of related blocks
 
 		private static readonly FieldInfo minerOp = typeof(ModuleItemProducer).GetField("m_OperationMode", BindingFlags.NonPublic | BindingFlags.Instance),
@@ -35,7 +35,7 @@ namespace TAC_AI
                 try
                 {
                     Tank tank = transform.root.GetComponent<Tank>();
-                    AIECore.TankAIHelper help = tank.GetHelperInsured();
+                    TankAIHelper help = tank.GetHelperInsured();
                     tank.FixupAnchors(true);
                     if (tank.IsAnchored)
                         tank.Anchors.UnanchorAll(true);

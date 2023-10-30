@@ -12,7 +12,6 @@ namespace TAC_AI.Templates
 {
     internal class CommunityCluster
     {
-
         internal static void LoadPublicFromFile()
         {
             try
@@ -46,9 +45,9 @@ namespace TAC_AI.Templates
         {
             string clusterHold = (new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent) + RawTechExporter.up + "commBatch.RTList";
             string compressedSerial = JsonConvert.SerializeObject(ClusterF, Formatting.None);
-            RawTechExporter.MakeExternalRawTechListFile(clusterHold, compressedSerial);
+            RawTechExporter.SaveExternalRawTechListFileToDisk(clusterHold, compressedSerial);
             string clusterHold2 = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport" + RawTechExporter.up + "commBatch.RTList";
-            RawTechExporter.MakeExternalRawTechListFile(clusterHold2, compressedSerial);
+            RawTechExporter.SaveExternalRawTechListFileToDisk(clusterHold2, compressedSerial);
         }
 
 

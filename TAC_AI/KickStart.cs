@@ -27,7 +27,11 @@ namespace TAC_AI
     //
     public class KickStart
     {
-        internal const string ModName = "TACtical AIs";
+        internal const string ModID = "Advanced AI";
+        internal const string ModCommandID = "TAC_AI";
+
+
+        public static FactionSubTypes factionAttractOST = FactionSubTypes.NULL;
 
 #if STEAM
         public static bool ShouldBeActive = false;//
@@ -103,7 +107,12 @@ namespace TAC_AI
         public static bool enablePainMode = true;
         public static bool EnemyEradicators = false;    // Insanely large or powerful Techs
         public static bool EnemiesHaveCreativeInventory = false;
+
+        public static bool AISelfRepair => ManNetwork.IsNetworked ? AllowAISelfRepairInMP : AllowAISelfRepair;
         public static bool AllowAISelfRepair = true;
+        public static bool AllowAISelfRepairInMP = false;
+
+        public static int ForceRemoveOverEnemyMaxCap = 4;
         internal static bool AllowEnemiesToStartBases { get { return MaxEnemyBaseLimit != 0; } }
         internal static bool AllowEnemyBaseExpand { get { return MaxBasesPerTeam != 0; } }
         public static int LandEnemyOverrideChance {
@@ -122,6 +131,8 @@ namespace TAC_AI
         public static bool AllowEnemiesToMine = true;
         public static bool DesignsToLog = false;
         public static bool CommitDeathMode = false;
+        public static bool CatMode = false;
+
         public static bool AllowStrategicAI = true;
         public static bool CullFarEnemyBases = true;
         public static float EnemySellGainModifier = 1; // multiply enemy sell gains by this value
@@ -168,6 +179,8 @@ namespace TAC_AI
 
 
         public static int EnemyBlockDropChance = 40;
+
+        public static bool WarnOnEnemyLock = true;
 
         //Calculated
         public static int LastRawTechCount = 0;
@@ -389,7 +402,7 @@ namespace TAC_AI
             {
                 Assembly assemble = Assembly.GetExecutingAssembly();
                 DebugTAC_AI.Log("TACtical_AI: DLL is " + assemble.GetName());
-                ManSafeSaves.RegisterSaveSystem(assemble);
+                ManSafeSaves.RegisterSaveSystem(assemble, OnSaveManagers, OnLoadManagers);
                 HasHookedUpToSafeSaves = true;
             }
             catch { 
@@ -410,37 +423,56 @@ namespace TAC_AI
 #else
             DebugTAC_AI.Log("TACtical_AI: Startup was invoked by TTSMM!  Set-up to handle LATE initialization.");
 #endif
+            //throw new NullReferenceException("CrashHandle");
 
             //Initiate the madness
             PatchMod();
 
             HookToSafeSaves();
 
-            AIECore.TankAIManager.Initiate();
+            ManBaseTeams.Initiate();
+            TankAIManager.Initiate();
+            AIGlobals.InitSharedMenu();
             GUIAIManager.Initiate();
             RawTechExporter.Initiate();
             RLoadedBases.BaseFunderManager.Initiate();
             ManEnemyWorld.Initiate();
             SpecialAISpawner.Initiate();
-            GUIEvictionNotice.Initiate();
+            GUINPTInteraction.Initiate();
 
 
             AIERepair.RefreshDelays();
             // Because official fails to init this while switching modes
             SpecialAISpawner.DetermineActiveOnModeType();
-            AIECore.TankAIManager.inst.CorrectBlocksList();
+            TankAIManager.inst.CorrectBlocksList();
 
             InitSettings();
 
             if (!isPopInjectorPresent)
                 OverrideEnemyMax();
+            _ = AIWiki.hintADV;
 #if STEAM
             EnableBetterAI = true;
 #endif
+            if (CustomAttract.Attracts == null)
+            {
+                CustomAttract.Attracts = CustomAttract.InitAttracts;
+            }
+            AIWiki.InitWiki();
+            ManGameMode.inst.ModeSwitchEvent.Subscribe(OnModeSwitch);
+        }
+        private static void OnModeSwitch()
+        {
+            factionAttractOST = FactionSubTypes.NULL;
+            var prof = ManProfile.inst.GetCurrentUser();
+            if (prof != null)
+            {
+                ManMusic.inst.SetMusicMixerVolume(prof.m_SoundSettings.m_MusicVolume);
+            }
         }
 
 #if STEAM
-        public static IEnumerator<float> MainOfficialInitIterate()
+        public static IEnumerable<float> MainOfficialInitIterate()
         {
             //Where the fun begins
             DebugTAC_AI.Log("TACtical_AI: MAIN [ITERATOR] (Steam Workshop Version) startup");
@@ -456,9 +488,11 @@ namespace TAC_AI
             HookToSafeSaves();
             yield return 0.16f;
 
-            AIECore.TankAIManager.Initiate();
+            ManBaseTeams.Initiate();
+            TankAIManager.Initiate();
             yield return 0.24f;
 
+            AIGlobals.InitSharedMenu();
             GUIAIManager.Initiate();
             yield return 0.32f;
 
@@ -474,19 +508,24 @@ namespace TAC_AI
             SpecialAISpawner.Initiate();
             yield return 0.64f;
 
-            GUIEvictionNotice.Initiate();
+            GUINPTInteraction.Initiate();
             AIERepair.RefreshDelays();
             yield return 0.72f;
 
             // Because official fails to init this while switching modes
             SpecialAISpawner.DetermineActiveOnModeType();
             yield return 0.80f;
-            AIECore.TankAIManager.inst.CorrectBlocksList();
+            TankAIManager.inst.CorrectBlocksList();
             yield return 0.95f;
 
             InitSettings();
             yield return 1f;
 
+            if (CustomAttract.Attracts == null)
+            {
+                CustomAttract.Attracts = CustomAttract.InitAttracts;
+            }
+            ManGameMode.inst.ModeSwitchEvent.Subscribe(OnModeSwitch);
             EnableBetterAI = true;
         }
         private static bool launched = false;
@@ -495,6 +534,7 @@ namespace TAC_AI
             if (launched)
                 return;
             launched = true;
+            GUINPTInteraction.InsureNetHooks();
             if (isNativeOptionsPresent && isConfigHelperPresent)
             {
                 try
@@ -539,14 +579,16 @@ namespace TAC_AI
 
         public static void DeInitCheck()
         {
-            if (AIECore.TankAIManager.inst)
+            if (TankAIManager.inst)
             {
-                AIECore.TankAIManager.inst.CheckNextFrameNeedsDeInit();
+                TankAIManager.inst.CheckNextFrameNeedsDeInit();
             }
         }
 
+
         public static void DeInitALL()
         {
+            ManGameMode.inst.ModeSwitchEvent.Unsubscribe(OnModeSwitch);
             float timeStart = Time.realtimeSinceStartup;
             DebugTAC_AI.Log("TAC_AI: Doing mod DeInit. Garbage Cleanup... current " + GC.GetTotalMemory(false));
             EnableBetterAI = false;
@@ -554,6 +596,14 @@ namespace TAC_AI
             {
                 try
                 {
+                    if (CustomAttract.Attracts != null)
+                    {
+                        foreach (var item in CustomAttract.Attracts)
+                        {
+                            item.Release();
+                        }
+                        CustomAttract.Attracts = null;
+                    }
                     MassPatcher.MassUnPatchAllWithin(harmonyInstance, typeof(ModulePatches), "TACtical_AI");
                     MassPatcher.MassUnPatchAllWithin(harmonyInstance, typeof(UIPatches), "TACtical_AI");
                     MassPatcher.MassUnPatchAllWithin(harmonyInstance, typeof(ManagerPatches), "TACtical_AI");
@@ -569,16 +619,18 @@ namespace TAC_AI
             }
 
             // DE-INIT ALL
-            SpecialAISpawner.DeInitiate();
+            ManBaseTeams.DeInit();
+            SpecialAISpawner.DeInit();
             ManEnemyWorld.DeInit();
             RLoadedBases.BaseFunderManager.DeInit();
             RawTechExporter.DeInit();
             GUIAIManager.DeInit();
-            AIECore.TankAIManager.DeInit();
-            GUIEvictionNotice.DeInit();
+            TankAIManager.DeInit();
+            GUINPTInteraction.DeInit();
+            AIEPathMapper.DepoolUnusedTiles();
             try
             {
-                ManSafeSaves.UnregisterSaveSystem(Assembly.GetExecutingAssembly());
+                ManSafeSaves.UnregisterSaveSystem(Assembly.GetExecutingAssembly(), OnSaveManagers, OnLoadManagers);
                 HasHookedUpToSafeSaves = false;
             }
             catch { }
@@ -613,7 +665,7 @@ namespace TAC_AI
                 PatchMod();
                 HookToSafeSaves();
 
-                AIECore.TankAIManager.Initiate();
+                TankAIManager.Initiate();
                 GUIAIManager.Initiate();
                 RawTechExporter.Initiate();
                 RBases.BaseFunderManager.Initiate();
@@ -654,7 +706,32 @@ namespace TAC_AI
             DebugRawTechSpawner.Initiate();
             firedAfterBlockInjector = true;
         }
-        
+
+
+        public static void OnSaveManagers(bool Doing)
+        {
+            if (Doing)
+            {
+                ManBaseTeams.OnWorldSave();
+            }
+            else
+            {
+                ManBaseTeams.OnWorldFinishSave();
+            }
+        }
+        public static void OnLoadManagers(bool Doing)
+        {
+            if (Doing)
+            {
+                ManBaseTeams.OnWorldPreLoad();
+            }
+            else
+            {
+                ManBaseTeams.OnWorldLoad();
+            }
+        }
+
+
 
         internal static FieldInfo limitBreak = typeof(ManPop).GetField("m_PopulationLimit", BindingFlags.NonPublic | BindingFlags.Instance);
         public static void OverrideEnemyMax()
@@ -712,74 +789,72 @@ namespace TAC_AI
         /// </summary>
         /// <param name="type"></param>
         /// <returns></returns>
-        public static FactionTypesExt GetCorpExtended(BlockTypes type)
+        public static FactionSubTypes GetCorpExtended(BlockTypes type)
         {
-            return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(type);
+            return (FactionSubTypes)Singleton.Manager<ManSpawn>.inst.GetCorporation(type);
         }
-        public static bool IsFactionExtension(FactionTypesExt ext)
-        {
-            return ext >= FactionTypesExt.AER && ext <= FactionTypesExt.LOL;
-        }
-        public static FactionSubTypes CorpExtToCorp(FactionTypesExt corpExt)
+
+        /*
+        public static FactionSubTypes CorpExtToCorp(FactionSubTypes corpExt)
         {
             switch (corpExt)
             {
-                case FactionTypesExt.SPE:
-                //case FactionTypesExt.GSO:
-                case FactionTypesExt.GT:
-                case FactionTypesExt.IEC:
+                case FactionSubTypes.SPE:
+                //case FactionSubTypes.GSO:
+                case FactionSubTypes.GT:
+                case FactionSubTypes.IEC:
                     return FactionSubTypes.GSO;
-                //case FactionTypesExt.GC:
-                case FactionTypesExt.EFF:
-                case FactionTypesExt.LK:
+                //case FactionSubTypes.GC:
+                case FactionSubTypes.EFF:
+                case FactionSubTypes.LK:
                     return FactionSubTypes.GC;
-                //case FactionTypesExt.VEN:
-                case FactionTypesExt.OS:
+                //case FactionSubTypes.VEN:
+                case FactionSubTypes.OS:
                     return FactionSubTypes.VEN;
-                //case FactionTypesExt.HE:
-                case FactionTypesExt.BL:
-                case FactionTypesExt.TAC:
+                //case FactionSubTypes.HE:
+                case FactionSubTypes.BL:
+                case FactionSubTypes.TAC:
                     return FactionSubTypes.HE;
-                //case FactionTypesExt.BF:
-                case FactionTypesExt.DL:
-                case FactionTypesExt.EYM:
-                case FactionTypesExt.HS:
+                //case FactionSubTypes.BF:
+                case FactionSubTypes.DL:
+                case FactionSubTypes.EYM:
+                case FactionSubTypes.HS:
                     return FactionSubTypes.BF;
-                case FactionTypesExt.EXP:
+                case FactionSubTypes.EXP:
                     return FactionSubTypes.EXP;
             }
             return (FactionSubTypes)corpExt;
         }
-        public static FactionTypesExt CorpExtToVanilla(FactionTypesExt corpExt)
+        public static FactionSubTypes CorpExtToVanilla(FactionSubTypes corpExt)
         {
             switch (corpExt)
             {
-                case FactionTypesExt.SPE:
-                //case FactionTypesExt.GSO:
-                case FactionTypesExt.GT:
-                case FactionTypesExt.IEC:
-                    return FactionTypesExt.GSO;
-                //case FactionTypesExt.GC:
-                case FactionTypesExt.EFF:
-                case FactionTypesExt.LK:
-                    return FactionTypesExt.GC;
-                //case FactionTypesExt.VEN:
-                case FactionTypesExt.OS:
-                    return FactionTypesExt.VEN;
-                //case FactionTypesExt.HE:
-                case FactionTypesExt.BL:
-                case FactionTypesExt.TAC:
-                    return FactionTypesExt.HE;
-                //case FactionTypesExt.BF:
-                case FactionTypesExt.DL:
-                case FactionTypesExt.EYM:
-                case FactionTypesExt.HS:
-                    return FactionTypesExt.BF;
-                case FactionTypesExt.EXP:
-                    return FactionTypesExt.EXP;
+                case FactionSubTypes.SPE:
+                //case FactionSubTypes.GSO:
+                case FactionSubTypes.GT:
+                case FactionSubTypes.IEC:
+                    return FactionSubTypes.GSO;
+                //case FactionSubTypes.GC:
+                case FactionSubTypes.EFF:
+                case FactionSubTypes.LK:
+                    return FactionSubTypes.GC;
+                //case FactionSubTypes.VEN:
+                case FactionSubTypes.OS:
+                    return FactionSubTypes.VEN;
+                //case FactionSubTypes.HE:
+                case FactionSubTypes.BL:
+                case FactionSubTypes.TAC:
+                    return FactionSubTypes.HE;
+                //case FactionSubTypes.BF:
+                case FactionSubTypes.DL:
+                case FactionSubTypes.EYM:
+                case FactionSubTypes.HS:
+                    return FactionSubTypes.BF;
+                case FactionSubTypes.EXP:
+                    return FactionSubTypes.EXP;
             }
             return corpExt;
-        }
+        }*/
         public static bool TransferLegacyIfNeeded(AIType type, out AIType newType, out AIDriverType driver)
         {
             newType = type;
@@ -837,6 +912,12 @@ namespace TAC_AI
         internal static ModConfig PushExtModConfigSetup()
         {
             ModConfig thisModConfig = new ModConfig();
+            if (!thisModConfig.ReadConfigJsonFile())
+            {
+                LoadingHintsExt.MandatoryHints.Add(AltUI.ObjectiveString("Advanced AI") + " adds multiple layers of depth and " +
+                AltUI.EnemyString("difficulty") + " to TerraTech.  " +
+                AltUI.HintString("Best suited for prospecting veterans looking for a new challenge."));
+            }
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "RetreatHotkeySav");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
@@ -848,6 +929,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<RawTechExporter>(null, "ExportJSONInsteadOfRAWTECH");
             thisModConfig.BindConfig<KickStart>(null, "difficulty");
             thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepair");
+            thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepairInMP");
             thisModConfig.BindConfig<KickStart>(null, "LandEnemyOverrideChanceSav");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
@@ -860,9 +942,10 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
             thisModConfig.BindConfig<KickStart>(null, "TryForceOnlyPlayerSpawns");
             thisModConfig.BindConfig<KickStart>(null, "CommitDeathMode");
+            thisModConfig.BindConfig<KickStart>(null, "CatMode");
             thisModConfig.BindConfig<KickStart>(null, "EnemySellGainModifier");
             thisModConfig.BindConfig<KickStart>(null, "CullFarEnemyBases");
-            thisModConfig.BindConfig<KickStart>(null, "AllowEnemiesToMine");
+            thisModConfig.BindConfig<KickStart>(null, "ForceRemoveOverEnemyMaxCap"); 
 
             // RTS
             thisModConfig.BindConfig<KickStart>(null, "AllowStrategicAI");
@@ -910,6 +993,7 @@ namespace TAC_AI
         public static OptionToggle commandClassic;
         public static OptionToggle betterAI;
         public static OptionToggle aiSelfRepair;
+        public static OptionToggle aiSelfRepair2;
         public static OptionRange dodgePeriod;
         public static OptionRange aiUpkeepRefresh; //AIClockPeriod
         public static OptionRange aiPathing;
@@ -929,48 +1013,61 @@ namespace TAC_AI
         public static OptionToggle playerMadeTechsOnly;
         public static OptionRange enemyBaseCount;
         public static OptionRange enemyMaxCount;
+        public static OptionRange enemyMaxCountForceLim;
         public static OptionToggle ragnarok;
+        public static OptionToggle copycat;
         public static OptionToggle enemyStrategic;
         public static OptionToggle enemyMiners;
         public static OptionToggle useKeypadForGroups;
         public static OptionToggle enemyBaseCulling;
 
+        public static OptionToggle WarnEnemyLock;
+
         internal static void PushExtModOptionsHandling()
         {
-            var TACAI = KickStart.ModName + " - A.I. Settings";
+            var TACAI = KickStart.ModID + " - A.I. General";
 #if !STEAM  // Because this toggle is reserved for the loading and unloading of the mod in STEAM release
             betterAI = new OptionToggle("<b>Enable Mod</b>", TACAI, KickStart.EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { KickStart.EnableBetterAI = betterAI.SavedValue; });
 #endif
+            WarnEnemyLock = new OptionToggle("Flying Enemy Warnings", TACAI, KickStart.WarnOnEnemyLock);
+            WarnEnemyLock.onValueSaved.AddListener(() => { KickStart.WarnOnEnemyLock = WarnEnemyLock.SavedValue; });
+            muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, KickStart.MuteNonPlayerRacket);
+            muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { KickStart.MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; });
+            exportReadableRAW = new OptionToggle("Export .JSON instead of .RAWTECH", TACAI, RawTechExporter.ExportJSONInsteadOfRAWTECH);
+            exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; });
+
             retreatHotkey = new OptionKey("Retreat Button", TACAI, KickStart.RetreatHotkey);
             retreatHotkey.onValueSaved.AddListener(() =>
             {
                 KickStart.RetreatHotkey = retreatHotkey.SavedValue;
                 KickStart.RetreatHotkeySav = (int)KickStart.RetreatHotkey;
             });
-            aiSelfRepair = new OptionToggle("Allow Mobile A.I.s to Build", TACAI, KickStart.AllowAISelfRepair);
-            aiSelfRepair.onValueSaved.AddListener(() => { KickStart.AllowAISelfRepair = aiSelfRepair.SavedValue; });
             dodgePeriod = new OptionRange("A.I. Dodge Processing Laziness", TACAI, KickStart.AIDodgeCheapness - 1, 0, 60, 5);
             dodgePeriod.onValueSaved.AddListener(() => { KickStart.AIDodgeCheapness = (int)dodgePeriod.SavedValue + 1; });
-            aiUpkeepRefresh = new OptionRange("A.I. Awareness Update Laziness", TACAI, KickStart.AIClockPeriodSet, 5, 50, 5);
-            aiUpkeepRefresh.onValueSaved.AddListener(() => { KickStart.AIClockPeriodSet = (short)aiUpkeepRefresh.SavedValue; });
             aiPathing = new OptionRange("A.I. Pathfinding Speed", TACAI, AIEPathMapper.PathRequestsToCalcPerFrame, 0, 6, 1);
             aiPathing.onValueSaved.AddListener(() => { 
                 AIEPathMapper.PathRequestsToCalcPerFrame = (int)aiPathing.SavedValue;
             });
 
-            muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, KickStart.MuteNonPlayerRacket);
-            muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { KickStart.MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; });
-            exportReadableRAW = new OptionToggle("Export .JSON instead of .RAWTECH", TACAI, RawTechExporter.ExportJSONInsteadOfRAWTECH);
-            exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; });
+            var TACAISP = KickStart.ModID + " - A.I. Single Player";
+            aiUpkeepRefresh = new OptionRange("A.I. Awareness Update Laziness", TACAISP, KickStart.AIClockPeriodSet, 5, 50, 5);
+            aiUpkeepRefresh.onValueSaved.AddListener(() => { KickStart.AIClockPeriodSet = (short)aiUpkeepRefresh.SavedValue; });
+            aiSelfRepair = new OptionToggle("Allow Mobile A.I.s to Build", TACAISP, KickStart.AllowAISelfRepair);
+            aiSelfRepair.onValueSaved.AddListener(() => { KickStart.AllowAISelfRepair = aiSelfRepair.SavedValue; });
 
-            var TACAIRTS = KickStart.ModName + " - Real-Time Strategy [RTS] Mode";
+            var TACAIMP = KickStart.ModID + " - A.I. MP Host";
+            aiSelfRepair2 = new OptionToggle("Mobile A.I. Building - Requires Beefy Networking", TACAIMP, KickStart.AllowAISelfRepairInMP);
+            aiSelfRepair2.onValueSaved.AddListener(() => { KickStart.AllowAISelfRepairInMP = aiSelfRepair2.SavedValue; });
+
+
+            var TACAIRTS = KickStart.ModID + " - Real-Time Strategy [RTS] Mode";
             enemyStrategic = new OptionToggle("Enable RTS A.I.", TACAIRTS, KickStart.AllowStrategicAI);//\nRandomAdditions and TweakTech highly advised for best experience
             enemyStrategic.onValueSaved.AddListener(() => {
                 KickStart.AllowStrategicAI = enemyStrategic.SavedValue;
                 if (KickStart.AllowStrategicAI)
                 {
-                    ManPlayerRTS.DelayedInitiate();
+                    ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManPlayerRTS.DelayedInitiate, KickStart.DeInitALL);
                 }
                 else
                 {
@@ -1005,7 +1102,7 @@ namespace TAC_AI
             useKeypadForGroups = new OptionToggle("Enable Keypad for Grouping - Check Num Lock", TACAIRTS, KickStart.UseNumpadForGrouping);
             useKeypadForGroups.onValueSaved.AddListener(() => { KickStart.UseNumpadForGrouping = useKeypadForGroups.SavedValue; });
 
-            var TACAIEnemies = KickStart.ModName + " - Non-Player Techs (NPT) General";
+            var TACAIEnemies = KickStart.ModID + " - Non-Player Techs (NPT) General";
             painfulEnemies = new OptionToggle("<b>Enable Advanced NPTs</b>", TACAIEnemies, KickStart.enablePainMode);
             painfulEnemies.onValueSaved.AddListener(() => { KickStart.enablePainMode = painfulEnemies.SavedValue; });
             diff = new OptionRange("NPT Difficulty [Easy-Medium-Hard]", TACAIEnemies, KickStart.difficulty, -50, 150, 25);
@@ -1030,25 +1127,31 @@ namespace TAC_AI
                 else
                     Globals.inst.moduleDamageParams.detachMeterFillFactor = KickStart.SavedDefaultEnemyFragility;
             });
-            infEnemySupplies = new OptionToggle("All NPT Techs Cheat Blocks", TACAIEnemies, KickStart.EnemiesHaveCreativeInventory);
+            infEnemySupplies = new OptionToggle("All NPTechs Cheat Blocks", TACAIEnemies, KickStart.EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { KickStart.EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; });
-            enemyBaseCount = new OptionRange("Max Unique NPT Base Teams Loaded [0-6]", TACAIEnemies, KickStart.MaxEnemyBaseLimit, 0, 6, 1);
+            enemyBaseCount = new OptionRange("Max Unique NPT Base Teams Active [0-6]", TACAIEnemies, KickStart.MaxEnemyBaseLimit, 0, 6, 1);
             enemyBaseCount.onValueSaved.AddListener(() => { KickStart.MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; });
             enemyExpandLim = new OptionRange("Max NPT Anchored Techs [0-12]", TACAIEnemies, KickStart.MaxBasesPerTeam, 0, 12, 3);
             enemyExpandLim.onValueSaved.AddListener(() => { KickStart.MaxBasesPerTeam = (int)enemyExpandLim.SavedValue; });
-            enemyBaseCulling = new OptionToggle("Remove Distant NPT Bases", TACAIEnemies, KickStart.CullFarEnemyBases);
+            enemyBaseCulling = new OptionToggle("Remove Far NPT Bases", TACAIEnemies, KickStart.CullFarEnemyBases);
             enemyBaseCulling.onValueSaved.AddListener(() => { KickStart.CullFarEnemyBases = enemyBaseCulling.SavedValue; });
 
             if (!KickStart.isPopInjectorPresent)
             {
-                var TACAIEnemiesPop = KickStart.ModName + " - Non-Player Techs (NPT) Spawning";
-                enemyMaxCount = new OptionRange("Max NPT Techs Loaded [6-32]", TACAIEnemiesPop, KickStart.AIPopMaxLimit, 6, 32, 1);
+                var TACAIEnemiesPop = KickStart.ModID + " - Non-Player Techs (NPT) Spawning";
+                enemyMaxCount = new OptionRange("NPTechs Spawn Limit [6-32]", TACAIEnemiesPop, KickStart.AIPopMaxLimit, 6, 32, 1);
                 enemyMaxCount.onValueSaved.AddListener(() =>
                 {
                     KickStart.AIPopMaxLimit = (int)enemyMaxCount.SavedValue;
                     KickStart.OverrideEnemyMax();
                 });
-                landEnemyChangeChance = new OptionRange("NPT Land RawTechs Chance", TACAIEnemiesPop, KickStart.LandEnemyOverrideChance, 0, 100, 5);
+                enemyMaxCountForceLim = new OptionRange("NPTechs Limit Overflow [1-12]", TACAIEnemiesPop, KickStart.ForceRemoveOverEnemyMaxCap, 1, 12, 1);
+                enemyMaxCountForceLim.onValueSaved.AddListener(() => 
+                { 
+                    KickStart.ForceRemoveOverEnemyMaxCap = (int)enemyMaxCountForceLim.SavedValue; 
+                });
+
+                landEnemyChangeChance = new OptionRange("NPT Land RawTechs Chance [0-100]", TACAIEnemiesPop, KickStart.LandEnemyOverrideChance, 0, 100, 5);
                 landEnemyChangeChance.onValueSaved.AddListener(() => { KickStart.LandEnemyOverrideChance = (int)landEnemyChangeChance.SavedValue; });
                 enemyAirSpawn = new OptionRange("NPT Aircraft Frequency [0x - 2x - 4x]", TACAIEnemiesPop, KickStart.AirEnemiesSpawnRate, 0, 4, 0.5f);
                 enemyAirSpawn.onValueSaved.AddListener(() => {
@@ -1061,18 +1164,24 @@ namespace TAC_AI
                         KickStart.AllowAirEnemiesToSpawn = true;
                     }
                 });
-                enemySeaSpawn = new OptionToggle("NPT Ship Spawning (Need Water Mod)", TACAIEnemiesPop, KickStart.AllowSeaEnemiesToSpawn);
+                enemySeaSpawn = new OptionToggle("NPT Sea Spawning (Needs Water Mod)", TACAIEnemiesPop, KickStart.AllowSeaEnemiesToSpawn);
                 enemySeaSpawn.onValueSaved.AddListener(() => { KickStart.AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; });
                 playerMadeTechsOnly = new OptionToggle("Disable Built-In Spawn Pool (\"Raw Techs\" Folder Only)", TACAIEnemiesPop, KickStart.TryForceOnlyPlayerSpawns);
                 playerMadeTechsOnly.onValueSaved.AddListener(() => { KickStart.TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; });
                 permitEradication = new OptionToggle("<b>Eradicators</b> - Huge NPT Tech Spawns - Requires Beefy Computer", TACAIEnemiesPop, KickStart.EnemyEradicators);
                 permitEradication.onValueSaved.AddListener(() => { KickStart.EnemyEradicators = permitEradication.SavedValue; });
-                ragnarok = new OptionToggle("<b>Ragnarok - Death To All (Spawns have no restrictions)</b> - Requires Beefy Computer", TACAIEnemiesPop, KickStart.CommitDeathMode);
+                ragnarok = new OptionToggle("<b>Ragnarok</b> - Death To All (Anything Can Spawn) - Requires Beefy Computer", TACAIEnemiesPop, KickStart.CommitDeathMode);
                 ragnarok.onValueSaved.AddListener(() =>
                 {
                     KickStart.CommitDeathMode = ragnarok.SavedValue;
                     OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
-                });
+                }); 
+                /*
+                copycat = new OptionToggle("<b>Copy Cat</b> - Enemy can use your local Tech snaps!", TACAIEnemiesPop, KickStart.CatMode);
+                copycat.onValueSaved.AddListener(() =>
+                {
+                    KickStart.CatMode = copycat.SavedValue;
+                });*/
             }
             if (KickStart.EnemyBlockDropChance == 0)
             {
@@ -1133,12 +1242,12 @@ namespace TAC_AI
             }
             return tank.IsAnchored || tank.name.Contains('¥') || tank.name.Contains(RawTechLoader.turretChar);
         }
-        public static AIECore.TankAIHelper GetHelperInsured(this Tank tank)
+        public static TankAIHelper GetHelperInsured(this Tank tank)
         {
-            AIECore.TankAIHelper help = tank.GetComponent<AIECore.TankAIHelper>();
+            TankAIHelper help = tank.GetComponent<TankAIHelper>();
             if (!help)
             {
-                help = tank.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe();
+                help = tank.gameObject.AddComponent<TankAIHelper>().Subscribe();
             }
             return help;
         }
@@ -1151,10 +1260,10 @@ namespace TAC_AI
             }
             if (!vis.tank)
                 return vis.Radius;
-            AIECore.TankAIHelper help = vis.GetComponent<AIECore.TankAIHelper>();
+            TankAIHelper help = vis.GetComponent<TankAIHelper>();
             if (!help)
             {
-                help = vis.gameObject.AddComponent<AIECore.TankAIHelper>().Subscribe();
+                help = vis.gameObject.AddComponent<TankAIHelper>().Subscribe();
             }
             return help.lastTechExtents;
         }
@@ -1162,67 +1271,54 @@ namespace TAC_AI
         {
             return tank.GetHelperInsured().lastTechExtents;
         }
-        private static List<FactionTypesExt> toSortCache = new List<FactionTypesExt>();
-        public static FactionTypesExt GetMainCorpExt(this Tank tank)
+        private static List<FactionSubTypes> toSortCache = new List<FactionSubTypes>();
+        public static FactionSubTypes GetMainCorp(this Tank tank)
         {
-            foreach (TankBlock BlocS in tank.blockman.IterateBlocks())
+            try
             {
-                toSortCache.Add(GetBlockCorpExt(BlocS.BlockType));
+                foreach (TankBlock BlocS in tank.blockman.IterateBlocks())
+                {
+                    toSortCache.Add(ManSpawn.inst.GetCorporation(BlocS.BlockType));
+                }
+                toSortCache = SortCorps(toSortCache);
+                FactionSubTypes final = toSortCache.FirstOrDefault();
+                //DebugTAC_AI.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp")
+                return final;//(FactionSubTypes)tank.GetMainCorporations().FirstOrDefault();
             }
-            toSortCache = SortCorps(toSortCache);
-            FactionTypesExt final = toSortCache.First();
-            toSortCache.Clear();
-
-            //DebugTAC_AI.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp");
-            return final;
-        }
-        public static FactionTypesExt GetMainCorpExt(this TechData tank)
-        {
-            foreach (TankPreset.BlockSpec BlocS in tank.m_BlockSpecs)
+            finally
             {
-                toSortCache.Add(GetBlockCorpExt(BlocS.m_BlockType));
+                toSortCache.Clear();
             }
-            toSortCache = SortCorps(toSortCache);
-            var first = toSortCache.First();
-            toSortCache.Clear();
-            return first;//(FactionTypesExt)tank.GetMainCorporations().First();
         }
-        internal static FactionTypesExt GetBlockCorpExt(BlockTypes BT)
+        public static FactionSubTypes GetMainCorp(this TechData tank)
         {
-            int BTval = (int)BT;
-            if (BTval < 5000)// Payload's range
-                return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
-
-            if (BTval >= 300000 && BTval <= 303999) // Old Star
-            {   // This should work until Pachu makes a VEN Block
-                if (Singleton.Manager<ManSpawn>.inst.GetCorporation(BT) == FactionSubTypes.VEN)
-                    return FactionTypesExt.OS;
+            try
+            {
+                foreach (TankPreset.BlockSpec BlocS in tank.m_BlockSpecs)
+                {
+                    toSortCache.Add(ManSpawn.inst.GetCorporation(BlocS.m_BlockType));
+                }
+                toSortCache = SortCorps(toSortCache);
+                var first = toSortCache.FirstOrDefault();
+                return first;//(FactionSubTypes)tank.GetMainCorporations().FirstOrDefault();
             }
-            if (BTval >= 419000 && BTval <= 419999) // Lemon Kingdom - Mobile Kingdom
-                return FactionTypesExt.LK;
-            if (BTval == 584147)
-                return FactionTypesExt.TAC;
-            if (BTval >= 584200 && BTval <= 584599) // Technocratic AI Colony - Power Density
-                return FactionTypesExt.TAC;
-            if (BTval >= 584600 && BTval <= 584750) // Emperical Forge Fabrication - Unit Count
-                return FactionTypesExt.EFF;
-            if (BTval >= 911000 && BTval <= 912000) // GreenTech - Eco Rangers
-                return FactionTypesExt.GT;
-
-            return (FactionTypesExt)Singleton.Manager<ManSpawn>.inst.GetCorporation(BT);
+            finally
+            {
+                toSortCache.Clear();
+            }
         }
 
-        private static readonly List<KeyValuePair<int, FactionTypesExt>> sorter = new List<KeyValuePair<int, FactionTypesExt>>();
-        private static List<FactionTypesExt> SortCorps(List<FactionTypesExt> unsorted)
+        private static List<KeyValuePair<int, FactionSubTypes>> sorter = new List<KeyValuePair<int, FactionSubTypes>>();
+        private static List<FactionSubTypes> distinct = new List<FactionSubTypes>();
+        private static List<FactionSubTypes> SortCorps(List<FactionSubTypes> unsorted)
         {
-            List<FactionTypesExt> distinct = unsorted.Distinct().ToList();
-            foreach (FactionTypesExt FTE in distinct)
+            foreach (FactionSubTypes FTE in unsorted.Distinct())
             {
-                int countOut = unsorted.FindAll(delegate (FactionTypesExt cand) { return cand == FTE; }).Count();
-                sorter.Add(new KeyValuePair<int, FactionTypesExt>(countOut, FTE));
+                int countOut = unsorted.Count(delegate (FactionSubTypes cand) { return cand == FTE; });
+                sorter.Add(new KeyValuePair<int, FactionSubTypes>(countOut, FTE));
             }
             distinct.Clear();
-            foreach (KeyValuePair<int, FactionTypesExt> intBT in sorter.OrderByDescending(x => x.Key))
+            foreach (KeyValuePair<int, FactionSubTypes> intBT in sorter.OrderByDescending(x => x.Key))
             {
                 distinct.Add(intBT.Value);
             }

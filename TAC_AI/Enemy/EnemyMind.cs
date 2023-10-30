@@ -11,16 +11,21 @@ using TAC_AI.AI.Enemy.EnemyOperations;
 
 namespace TAC_AI.AI.Enemy
 {
+    /// <summary>
+    /// Where the brain is handled for enemies (and mayber non-player allies)
+    /// </summary>
     public class EnemyMind : MonoBehaviour
-    {   // Where the brain is handled for enemies (and mayber non-player allies)
+    {
         // ESSENTIALS
-        public Tank Tank;
-        public AIECore.TankAIHelper AIControl;
-        public EnemyOperationsController EnemyOpsController;
+        public Tank Tank { get; private set; }
+        public TankAIHelper AIControl { get; private set; }
+        internal EnemyOperationsController EnemyOpsController;
         public AIERepair.DesignMemory TechMemor => AIControl.TechMemor;
 
         // Set on spawn
-        private EnemyHandling evilCommander = EnemyHandling.Wheeled; // What kind of vehicle is this Enemy?
+        /// <summary>What kind of vehicle is this Enemy?</summary>
+        private EnemyHandling evilCommander = EnemyHandling.Wheeled;
+        /// <summary>The way the enemy interacts with the player and world</summary>
         public EnemyHandling EvilCommander 
         { 
             get => evilCommander;
@@ -51,41 +56,53 @@ namespace TAC_AI.AI.Enemy
                 evilCommander = value;
             }
         }
-        public EnemyAttitude CommanderMind = EnemyAttitude.Default; // What the Enemy does if there's no threats around.
+        /// <summary>What the Enemy does if there's no threats around.</summary>
+        public EnemyAttitude CommanderMind = EnemyAttitude.Default;
+        /// <summary>The way the Enemy acts if there's a threat.</summary>
         public EAttackMode CommanderAttack
-        {     // The way the Enemy acts if there's a threat.
+        {
             get => AIControl.AttackMode;
             set { AIControl.AttackMode = value; }
         }
-        public EnemySmarts CommanderSmarts = EnemySmarts.Default;   // The extent the Enemy will be "self-aware"
-        public EnemyBolts CommanderBolts = EnemyBolts.Default;      // When the Enemy should press X.
-        public EnemyStanding CommanderAlignment = EnemyStanding.Enemy;// How to handle attacks
+        /// <summary>The extent the Enemy will be "self-aware" and intellegent about it's current state</summary>
+        public EnemySmarts CommanderSmarts = EnemySmarts.Default;
+        /// <summary>When the Enemy should press X and seperate bolts.</summary>
+        public EnemyBolts CommanderBolts = EnemyBolts.Default;
+        /// <summary>How the enemy will handle attacking</summary>
+        public EnemyStanding CommanderAlignment = EnemyStanding.Enemy;
 
-        public FactionTypesExt MainFaction = FactionTypesExt.GSO;   // Extra for determining mentality on auto-generation
-        public bool StartedAnchored = false;    // Do we stay anchored?
-        public bool AllowRepairsOnFly = false;  // If we are feeling extra evil
-        public bool InvertBullyPriority = false;// Shoot the big techs instead
-        public bool AllowInvBlocks = false;     // Can this tech spawn blocks from inventory?
-        public bool LikelyMelee        // Can we melee?
-        {     // The way the Enemy acts if there's a threat.
+        /// <summary>Extra for determining mentality on auto-generation</summary>
+        public FactionSubTypes MainFaction = FactionSubTypes.GSO;
+        /// <summary>Do we stay anchored?</summary>
+        public bool StartedAnchored = false;
+        /// <summary>If we are feeling extra evil</summary>
+        public bool AllowRepairsOnFly = false;
+        /// <summary>Shoot the big techs instead?</summary>
+        public bool InvertBullyPriority = false;
+        /// <summary>Can this tech spawn blocks from inventory?</summary>
+        public bool AllowInvBlocks = false;
+        /// <summary>Can we melee?</summary>
+        public bool LikelyMelee
+        {
             get => AIControl.FullMelee;
-            set { AIControl.FullMelee = value; }
-        }
+            set { AIControl.AISetSettings.FullMelee = value; }
+        }// The way the Enemy acts if there's a threat.
 
-        public bool SolarsAvail = false;        // Do we currently have solar panels
-        public bool Hurt = false;               // Are we damaged?
+        public bool SolarsAvail { get; internal set; } = false;        // Do we currently have solar panels
+        public bool Hurt { get; internal set; } = false;               // Are we damaged?
         public float MaxCombatRange// Aggro range
         {
             get => AIControl.MaxCombatRange;
-            set => AIControl.AILimitSettings.ChaseRange = value;
+            set => AIControl.AISetSettings.ChaseRange = value;
         }
         public float MinCombatRange
         {
             get => AIControl.MinCombatRange;
-            set => AIControl.AILimitSettings.CombatRange = value;
+            set => AIControl.AISetSettings.CombatRange = value;
         }
-        public Vector3 sceneStationaryPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
+        internal Vector3 sceneStationaryPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
 
+        internal bool IsPopulation => Tank.IsPopulation;
         internal bool BuildAssist = false;
 
         internal int BoltsQueued = 0;
@@ -93,18 +110,23 @@ namespace TAC_AI.AI.Enemy
 
         public bool AttackPlayer => CommanderAlignment == EnemyStanding.Enemy;
         public bool AttackAny => CommanderAlignment < EnemyStanding.SubNeutral;
+        public bool CanCallRetreat => AIGlobals.IsBaseTeam(Tank.Team);
+        public bool CanDoRetreat => AIGlobals.IsBaseTeam(Tank.Team) || IsPopulation;
 
 
         public void Initiate()
         {
             //DebugTAC_AI.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
             Tank = gameObject.GetComponent<Tank>();
-            AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
+            AIControl = gameObject.GetComponent<TankAIHelper>();
             AIControl.FinishedRepairEvent.Subscribe(OnFinishedRepairs);
             Tank.DamageEvent.Unsubscribe(AIControl.OnHit);
             Tank.DamageEvent.Subscribe(OnHit);
             Tank.AttachEvent.Subscribe(OnBlockAdd);
             Tank.DetachEvent.Subscribe(OnBlockLoss);
+
+            AIControl.AILimitSettings.Recalibrate();
+            AIControl.AISetSettings = new AISettingsSet(AIControl.AILimitSettings); 
         }
         public void Refresh()
         {
@@ -119,11 +141,11 @@ namespace TAC_AI.AI.Enemy
             BoltsQueued = 0;
             try
             {
-                MainFaction = Tank.GetMainCorpExt();   //Will help determine their Attitude
+                MainFaction = TankExtentions.GetMainCorp(Tank);   //Will help determine their Attitude
             }
             catch
             {   // can't always get this 
-                MainFaction = FactionTypesExt.GSO;
+                MainFaction = FactionSubTypes.GSO;
             }
         }
         public void SetForRemoval()
@@ -133,7 +155,7 @@ namespace TAC_AI.AI.Enemy
             if (AIControl)
                 Tank.DamageEvent.Subscribe(AIControl.OnHit);
             else
-                DebugTAC_AI.Assert("NULL AIControl (AIECore.TankAIHelper) in Tech " + Tank.name);
+                DebugTAC_AI.Assert("NULL AIControl (TankAIHelper) in Tech " + Tank.name);
             Tank.AttachEvent.Unsubscribe(OnBlockAdd);
             Tank.DetachEvent.Unsubscribe(OnBlockLoss);
             AIControl.FinishedRepairEvent.Unsubscribe(OnFinishedRepairs);
@@ -174,19 +196,19 @@ namespace TAC_AI.AI.Enemy
                     if (Tank.IsAnchored && Tank.GetComponent<RLoadedBases.EnemyBaseFunder>())
                     {
                         // Execute remote orders to allied units - Attack that threat!
-                        RLoadedBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemyGet, RequestSeverity.AllHandsOnDeck);
+                        RLoadedBases.RequestFocusFireNPTs(this, AIControl.lastEnemyGet, RequestSeverity.AllHandsOnDeck);
                     }
                     else if (CommanderSmarts > EnemySmarts.Mild)
                     {
                         // Execute remote orders to allied units - Attack that threat!
                         if (AIGlobals.IsNeutralBaseTeam(Tank.Team))
-                            RLoadedBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemyGet, RequestSeverity.Warn);
+                            RLoadedBases.RequestFocusFireNPTs(this, AIControl.lastEnemyGet, RequestSeverity.Warn);
                         else
-                            RLoadedBases.RequestFocusFireNPTs(Tank, AIControl.lastEnemyGet, RequestSeverity.ThinkMcFly);
+                            RLoadedBases.RequestFocusFireNPTs(this, AIControl.lastEnemyGet, RequestSeverity.ThinkMcFly);
                     }
                 }
                 AIControl.Provoked = AIGlobals.ProvokeTime;
-                AIControl.FIRE_NOW = true;
+                AIControl.FIRE_ALL = true;
             }
         }
         public static void OnBlockLoss(TankBlock blockLoss, Tank tonk)
@@ -196,7 +218,7 @@ namespace TAC_AI.AI.Enemy
                 if (tonk.FirstUpdateAfterSpawn)
                     return;
                 var mind = tonk.GetComponent<EnemyMind>();
-                mind.AIControl.FIRE_NOW = true;
+                mind.AIControl.FIRE_ALL = true;
                 mind.Hurt = true;
                 mind.AIControl.PendingDamageCheck = true;
                 if (mind.BoltsQueued == 0 && ManNetwork.IsHost)
@@ -243,7 +265,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public void OnFinishedRepairs(AIECore.TankAIHelper unused)
+        public void OnFinishedRepairs(TankAIHelper unused)
         {
             try
             {

@@ -186,16 +186,21 @@ namespace TAC_AI.AI.Movement
         }
 
 
-
+        private static HashSet<IntVector2> pos = new HashSet<IntVector2>();
+        private static HashSet<IntVector2> posPre = new HashSet<IntVector2>();
+        private static HashSet<IntVector2> posPre2 = new HashSet<IntVector2>();
         private static List<IntVector2> IterateAroundExpand(int rad)
         {
-            HashSet<IntVector2> pos = new HashSet<IntVector2> { IntVector2.zero };
-            HashSet<IntVector2> posPre = new HashSet<IntVector2> { IntVector2.zero };
+            pos.Clear();
+            pos.Add(IntVector2.zero);
             for (int step = 0; step < rad; step++)
             {
-                var next = new HashSet<IntVector2>(posPre);
+                posPre2.Clear();
+                foreach (var item in posPre)
+                    posPre2.Add(item);
                 posPre.Clear();
-                foreach (var item in next)
+                posPre.Add(IntVector2.zero);
+                foreach (var item in posPre2)
                 {
                     foreach (var item2 in iterationsStr)
                     {
@@ -208,6 +213,8 @@ namespace TAC_AI.AI.Movement
                     }
                 }
             }
+            posPre.Clear();
+            posPre2.Clear();
             return pos.ToList();
         }
         private static List<IntVector2> iterationsAll = new List<IntVector2>
@@ -240,7 +247,7 @@ namespace TAC_AI.AI.Movement
         {
             try
             {
-                KeyValuePair<byte, IntVector2> best = toCheckAlt.OrderBy(x => x.Key).First();
+                KeyValuePair<byte, IntVector2> best = toCheckAlt.OrderBy(x => x.Key).FirstOrDefault();
                 Vector3 posScene = ToSceneNoHeightCheck(best.Value);
                 DebugTAC_AI.Log("AIAutoPather - Type " + waterPath.ToString() + " | CurAlt is " + CurAlt + " vs best alt " + AIEPathMapper.GetAlt(posScene, false) +
                     " | Max Difficulty " + maxDiff + " vs best possible " + best.Key + " | Obst " + AIEPathMapper.HasObst(posScene));
@@ -451,7 +458,7 @@ namespace TAC_AI.AI.Movement
                 }
                 else
                 {
-                    KeyValuePair<byte, IntVector2> best = toCheck.OrderBy(x => x.Key).First();
+                    KeyValuePair<byte, IntVector2> best = toCheck.OrderBy(x => x.Key).FirstOrDefault();
                     CurPos = best.Value;
                     CurAlt = AIEPathMapper.GetAlt(ToSceneNoHeightCheck(CurPos), false);
                     if (SpamNumbers)
@@ -589,8 +596,7 @@ namespace TAC_AI.AI.Movement
         }
         private byte CalcActiveObst(Vector3 posScene)
         {
-            foreach (var item in ManVisible.inst.VisiblesTouchingRadius(posScene, MoveGridScale,
-                new Bitfield<ObjectTypes>(new ObjectTypes[2] { ObjectTypes.Scenery, ObjectTypes.Vehicle })))
+            foreach (var item in ManVisible.inst.VisiblesTouchingRadius(posScene, MoveGridScale, AIGlobals.crashBitMask))
             {
                 if (item.isActive)
                 {
@@ -628,6 +634,7 @@ namespace TAC_AI.AI.Movement
             diff += CalcActiveObst(posV);
             return (byte)Mathf.Clamp(diff, 1, AIEPathMapper.maxAltByte);
         }
+
         private byte CalcAvoidWater(IntVector2 pos, IntVector2 posCur)
         {
             Vector3 posV = ToSceneHeightFast(pos);

@@ -34,7 +34,7 @@ namespace TAC_AI
 
         //private List<Tank> techsWithCharacters = new List<Tank>();
 
-        public static bool PollShouldRetreat(Tank tech, AIECore.TankAIHelper help, out bool verdict)
+        public static bool PollShouldRetreat(Tank tech, TankAIHelper help, out bool verdict)
         {
             verdict = false;
             if (!AnimeAIBackupValidation())
@@ -70,13 +70,13 @@ namespace TAC_AI
                 return;
 
         }
-        public static void OnPossibleCharacterSpawn(Tank tech, AIECore.TankAIHelper help, EnemyMind mind = null)
+        public static void OnPossibleCharacterSpawn(Tank tech, TankAIHelper help, EnemyMind mind = null)
         {
             if (!AnimeAIBackupValidation())
                 return;
             LatchEnemyToSpeechSystem(tech);
         }
-        public static void OnEnemyCEOSpawn(Tank tech, AIECore.TankAIHelper help, EnemyMind mind)
+        public static void OnEnemyCEOSpawn(Tank tech, TankAIHelper help, EnemyMind mind)
         {
             if (!AnimeAIBackupValidation())
                 return;

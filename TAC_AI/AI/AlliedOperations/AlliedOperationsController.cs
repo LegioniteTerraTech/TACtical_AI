@@ -7,13 +7,34 @@ using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public class AlliedOperationsController
+    /// <summary>
+    /// Will be implemented later if performance becomes an issue. 
+    ///   Currently the main game bottleneck is the physics engine
+    /// WARNING - MUST BE A STRUCT WITH NO SAVED ITEMS INSIDE!
+    /// </summary>
+    internal interface AIOperation
     {
-        private AIECore.TankAIHelper helper;
+        void Init(TankAIHelper thisInst);
+        void DeInit(TankAIHelper thisInst);
+        void MovementActions(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct);
+    }
 
-        public AlliedOperationsController(AIECore.TankAIHelper helper)
+    internal class AlliedOperationsController
+    {
+        private TankAIHelper helper;
+
+        private static Dictionary<AIType, AIOperation> Operations = new Dictionary<AIType, AIOperation>
+        {
+            //{ AIType.Escort, new BEscort()}
+        };
+
+        public AlliedOperationsController(TankAIHelper helper)
         {
             this.helper = helper;
+        }
+
+        public void Startup()
+        {
         }
 
         public void Execute()

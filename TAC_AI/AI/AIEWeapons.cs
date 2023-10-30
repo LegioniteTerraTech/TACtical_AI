@@ -1,10 +1,11 @@
 ﻿using UnityEngine;
+using TAC_AI.World;
 
 namespace TAC_AI.AI
 {
-    public static class AIEWeapons
+    internal static class AIEWeapons
     {
-        public static void WeaponDirector(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public static void WeaponDirector(TankControl thisControl, TankAIHelper thisInst, Tank tank)
         {
             float FinalAim;
 
@@ -42,11 +43,16 @@ namespace TAC_AI.AI
             }
         }
 
-        public static void WeaponMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank)
+        public static void WeaponMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank)
         {
             thisInst.ActiveAimState = 0;
             if (!tank.beam.IsActive)
             {
+                if (!thisInst.FIRE_ALL && thisInst.AIAlign == AIAlignment.Player && 
+                    !ManNetwork.IsNetworked && AIGlobals.PlayerClientFireCommand() &&
+                    ManPlayerRTS.inst.LocalPlayerTechsControlledFast.Contains(thisInst))
+                    thisInst.FIRE_ALL = true;
+
                 if (thisInst.IsMultiTech)
                 {   // sync to host tech
                     if (thisInst.lastCloseAlly.IsNotNull())
@@ -54,9 +60,12 @@ namespace TAC_AI.AI
                         if (thisInst.lastEnemyGet.IsNotNull())
                         {
                             thisInst.ActiveAimState = AIWeaponState.Mimic;
-                            var targetTank = thisInst.lastEnemyGet.gameObject.GetComponent<Tank>();
-                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemyGet.gameObject.transform.position, targetTank.GetCheapBounds());
-                            if (thisInst.FIRE_NOW)
+                            var targetTank = thisInst.lastEnemyGet.tank;
+                            if (targetTank)
+                                thisControl.m_Weapons.AimAtTarget(tank, targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
+                            else
+                                thisControl.m_Weapons.AimAtTarget(tank, thisInst.lastEnemyGet.centrePosition, thisInst.lastEnemyGet.GetCheapBounds() + 1);
+                            if (thisInst.FIRE_ALL)
                                 thisControl.m_Weapons.FireWeapons(tank);
                         }
                         else if (thisInst.lastCloseAlly.control.FireControl)
@@ -73,8 +82,8 @@ namespace TAC_AI.AI
                         {
                             //DebugTAC_AI.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
                             thisInst.ActiveAimState = AIWeaponState.Obsticle;
-                            thisControl.m_Weapons.FireAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
-                            if (thisInst.FIRE_NOW)
+                            thisControl.m_Weapons.AimAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
+                            if (thisInst.FIRE_ALL)
                                 thisControl.m_Weapons.FireWeapons(tank);
                         }
                         catch
@@ -100,12 +109,15 @@ namespace TAC_AI.AI
                     {
                         thisInst.ActiveAimState = AIWeaponState.Enemy;
                         var targetTank = thisInst.lastEnemyGet.tank;
-                        thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemyGet.gameObject.transform.position, targetTank.GetCheapBounds());
-                        if (thisInst.FIRE_NOW)
+                        if (targetTank)
+                            thisControl.m_Weapons.AimAtTarget(tank, targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
+                        else
+                            thisControl.m_Weapons.AimAtTarget(tank, thisInst.lastEnemyGet.centrePosition, thisInst.lastEnemyGet.GetCheapBounds() + 1);
+                        if (thisInst.FIRE_ALL)
                             thisControl.m_Weapons.FireWeapons(tank);
                     }
                 }
-                else if (thisInst.FIRE_NOW)
+                else if (thisInst.FIRE_ALL)
                     thisControl.m_Weapons.FireWeapons(tank);
             }
         }

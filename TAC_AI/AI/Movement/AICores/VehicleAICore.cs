@@ -8,7 +8,7 @@ using TerraTechETCUtil;
 namespace TAC_AI.AI.Movement.AICores
 {
     /// <summary> [OBSOLETE] Handles both Wheeled and Space AI Directors & Maintainers </summary>
-    public class VehicleAICore : IMovementAICore
+    internal class VehicleAICore : IMovementAICore
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
         private AIControllerDefault controller;
@@ -347,7 +347,7 @@ namespace TAC_AI.AI.Movement.AICores
 
 
 
-        public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
+        public bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
             // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
             if (thisInst.Attempt3DNavi)
@@ -372,22 +372,19 @@ namespace TAC_AI.AI.Movement.AICores
                     {   //Move from target
                         if (core.DriveDir == EDriveFacing.Backwards)//EDriveType.Backwards
                         {   // Face back TOWARDS target
-                            if (VehicleUtils.Turner(thisControl, thisInst, -destDirect, ref core, out float turnVal))
-                                thisControl.m_Movement.FaceDirection(tank, -destDirect, turnVal);
+                            VehicleUtils.Turner(thisControl, thisInst, -destDirect, ref core);
                             thisControl.DriveControl = 1f;
                             //DebugTAC_AI.Log("Forwards looking away from target");
                         }
                         else if (core.DriveDir == EDriveFacing.Perpendicular)
                         {   // Still proceed away from target
-                            if (VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core, out float turnVal))
-                                thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
+                            VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core);
                             thisControl.DriveControl = 1f;
                             //DebugTAC_AI.Log("Sideways at target");
                         }
                         else
                         {   // Face front TOWARDS target
-                            if (VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core, out float turnVal))
-                                thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
+                            VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core);
                             thisControl.DriveControl = -1f;
                             //DebugTAC_AI.Log("Reverse looking at target");
                         }
@@ -398,14 +395,12 @@ namespace TAC_AI.AI.Movement.AICores
                         float range = thisInst.lastOperatorRange;
                         if (range < thisInst.MinimumRad + 2)
                         {
-                            if (VehicleUtils.Turner(thisControl, thisInst, -destDirect, ref core, out float turnVal))
-                                thisControl.m_Movement.FaceDirection(tank, -destDirect, turnVal);
+                            VehicleUtils.Turner(thisControl, thisInst, -destDirect, ref core);
                             //DebugTAC_AI.Log("Orbiting out " + thisInst.MinimumRad + " | " + destDirect);
                         }
                         else if (range > thisInst.MinimumRad + 22)
                         {
-                            if (VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core, out float turnVal))
-                                thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
+                            VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core);
                             //DebugTAC_AI.Log("Orbiting in " + thisInst.MinimumRad);
                         }
                         else  //ORBIT!
@@ -415,8 +410,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 aimDirect = Vector3.Cross(destDirect.normalized, Vector3.down);
                             else
                                 aimDirect = Vector3.Cross(destDirect.normalized, Vector3.up);
-                            if (VehicleUtils.Turner(thisControl, thisInst, aimDirect, ref core, out float turnVal))
-                                thisControl.m_Movement.FaceDirection(tank, aimDirect, turnVal);
+                            VehicleUtils.Turner(thisControl, thisInst, aimDirect, ref core);
                             //DebugTAC_AI.Log("Orbiting hold " + thisInst.MinimumRad);
                         }
                         thisControl.DriveControl = 1f;
@@ -436,8 +430,7 @@ namespace TAC_AI.AI.Movement.AICores
                         //if (thisInst.PivotOnly)
                         //    thisControl.m_Movement.FacePosition(tank, controller.PathPoint, 1);// need max aiming strength for turning
                         //else
-                        if (VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core, out float turnVal))
-                            thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);//Face the music
+                        VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core);//Face the music
                         //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  driving to " + controller.PathPoint);
                         if (thisInst.MinimumRad > 0)
                         {
@@ -551,8 +544,8 @@ namespace TAC_AI.AI.Movement.AICores
                 if (!tank.IsAnchored)
                 {
                     Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, destDirect, new Color(0, 1, 1));
-                    Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, tank.rootBlockTrans.forward * thisControl.DriveControl, new Color(0, 0, 1));
-                    if (thisControl.BoostControlJets)
+                    Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, tank.rootBlockTrans.forward * thisControl.CurState.m_InputMovement.z, new Color(0, 0, 1));
+                    if (thisControl.CurState.m_BoostJets)
                         Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, tank.rootBlockTrans.TransformDirection(controller.BoostBias) * thisInst.lastTechExtents, new Color(1, 0, 0));
                 }
                 else if (thisInst.AttackEnemy && thisInst.lastEnemyGet)
@@ -566,7 +559,7 @@ namespace TAC_AI.AI.Movement.AICores
 
         public void SpaceMaintainer(TankControl thisControl, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = controller.Helper;
+            TankAIHelper thisInst = controller.Helper;
             TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
 
             float driveMultiplier = 0;
@@ -683,8 +676,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core, out turnValF))
-                                thisControl.m_Movement.FaceDirection(tank, distDiff, turnValF);
+                            VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core);
                         }
                         // Disabled for now as most spaceships in the pop do not have broadsides.
                         /*
@@ -719,15 +711,13 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core, out turnValF))
-                                thisControl.m_Movement.FaceDirection(tank, distDiff, turnValF);
+                            VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core);
                         }
                     }
                     else if (core.DriveDir == EDriveFacing.Backwards)
                     {
                         control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
-                        if (VehicleUtils.TurnerHovership(tank.control, thisInst, -distDiff, ref core, out turnValF))
-                            thisControl.m_Movement.FaceDirection(tank, -distDiff, turnValF);
+                        VehicleUtils.TurnerHovership(tank.control, thisInst, -distDiff, ref core);
                     }
                     else
                     {
@@ -757,15 +747,13 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             //thisInst.Navi3DDirect = controller.PathPoint - tank.boundsCentreWorldNoCheck;
-                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core, out turnValF))
-                                thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
+                            VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core);
                         }
                     }
                     else if (core.DriveDir == EDriveFacing.Backwards)
                     {
                         control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
-                        if (VehicleUtils.TurnerHovership(tank.control, thisInst, -distDiff, ref core, out turnValF))
-                            thisControl.m_Movement.FaceDirection(tank, -distDiff, turnValF);
+                        VehicleUtils.TurnerHovership(tank.control, thisInst, -distDiff, ref core);
                     }
                     else if (core.DriveDir == EDriveFacing.Forwards)
                     {
@@ -777,15 +765,13 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             //thisInst.Navi3DDirect = controller.PathPoint - tank.boundsCentreWorldNoCheck;
-                            if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core, out turnValF))
-                                thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
+                            VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core);
                         }
                     }
                     else
                     {   //Forwards follow but no pitch controls
                         control3D.m_State.m_InputRotation = (turnVal * Mathf.Clamp(1 - Vector3.Dot(turnVal, tank.rootBlockTrans.forward), 0, 1)).Clamp01Box();
-                        if (VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core, out turnValF))
-                            thisControl.m_Movement.FacePosition(tank, controller.PathPoint, turnValF);
+                        VehicleUtils.TurnerHovership(tank.control, thisInst, distDiff, ref core);
                     }
                 }
             }
@@ -986,11 +972,11 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool TryAdjustForCombat(bool between, ref Vector3 pos, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = controller.Helper;
+            TankAIHelper thisInst = controller.Helper;
             bool output = false;
-            if (thisInst.ChaseThreat && (!thisInst.IsDirectedMovingAnyDest || !thisInst.Retreat) && thisInst.lastEnemyGet.IsNotNull())
+            if (thisInst.ChaseThreat && (!thisInst.IsDirectedMoving || !thisInst.Retreat) && thisInst.lastEnemyGet.IsNotNull())
             {
-                Vector3 targPos = thisInst.LeadTargetAiming(thisInst.lastEnemyGet);
+                Vector3 targPos = thisInst.InterceptTargetDriving(thisInst.lastEnemyGet);
                 output = true;
                 core.DriveDir = EDriveFacing.Forwards;
                 thisInst.UpdateEnemyDistance(targPos);
@@ -1077,7 +1063,7 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool TryAdjustForCombatEnemy(EnemyMind mind, ref Vector3 pos, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = controller.Helper;
+            TankAIHelper thisInst = controller.Helper;
             bool output = false;
             if (!thisInst.Retreat && thisInst.lastEnemyGet.IsNotNull() && mind.CommanderMind != EnemyAttitude.OnRails)
             {

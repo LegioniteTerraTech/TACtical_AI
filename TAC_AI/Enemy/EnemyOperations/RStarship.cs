@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public static class RStarship
+    internal static class RStarship
     {
         //Same as RWheeled but has multi-plane support
         /// <summary>
@@ -15,7 +15,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
         /// <param name="mind"></param>
-        public static void AttackZoom(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void AttackZoom(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst, ref direct);
@@ -49,8 +49,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 case EAttackMode.Safety:
                     range = AIGlobals.SpacingRangeHoverer;
-                    thisInst.AILimitSettings.ObjectiveRange = spacing + range;
-                    thisInst.SideToThreat = false;
+                    thisInst.AISetSettings.ObjectiveRange = spacing + range;
+                    thisInst.AISetSettings.SideToThreat = false;
                     thisInst.Retreat = true;
                     direct.DriveAwayFacingTowards();
                     if (dist < spacing + range)
@@ -71,9 +71,9 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     break;
                 case EAttackMode.Circle:
                     range = AIGlobals.SpacingRangeHoverer;
-                    thisInst.AILimitSettings.ObjectiveRange = spacing + range;
+                    thisInst.AISetSettings.ObjectiveRange = spacing + range;
                     //thisInst.SideToThreat = true;
-                    thisInst.SideToThreat = false;
+                    thisInst.AISetSettings.SideToThreat = false;
                     thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                     thisInst.MinimumRad = range;
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
@@ -97,8 +97,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     break;
                 case EAttackMode.Ranged:// Spyper does not support melee
                     range = AIGlobals.SpacingRangeSpyperAir;
-                    thisInst.AILimitSettings.ObjectiveRange = spacing + range;
-                    thisInst.SideToThreat = false; // cannot strafe while firing shells it seems, will miss
+                    thisInst.AISetSettings.ObjectiveRange = spacing + range;
+                    thisInst.AISetSettings.SideToThreat = false; // cannot strafe while firing shells it seems, will miss
                     thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                     if (dist < spacing + range)
                     {
@@ -138,8 +138,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     break;
                 default:
                     range = AIGlobals.SpacingRangeHoverer;
-                    thisInst.AILimitSettings.ObjectiveRange = spacing + range;
-                    thisInst.SideToThreat = false;
+                    thisInst.AISetSettings.ObjectiveRange = spacing + range;
+                    thisInst.AISetSettings.SideToThreat = false;
                     thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                     if (!mind.LikelyMelee && dist < spacing + 2)
                     {

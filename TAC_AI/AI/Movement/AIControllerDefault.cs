@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace TAC_AI.AI
 {
-    public class AIControllerDefault : MonoBehaviour, IMovementAIController, IPathfindable
+    internal class AIControllerDefault : MonoBehaviour, IMovementAIController, IPathfindable
     {
         internal static FieldInfo boostGet = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -20,8 +20,8 @@ namespace TAC_AI.AI
             get => _tank;
             internal set => _tank = value;
         }
-        private AIECore.TankAIHelper _helper;
-        public AIECore.TankAIHelper Helper
+        private TankAIHelper _helper;
+        public TankAIHelper Helper
         {
             get => _helper;
             internal set => _helper = value;
@@ -46,10 +46,17 @@ namespace TAC_AI.AI
         {
             set
             {
+                if (value.IsNaN() || float.IsInfinity(value.x) || float.IsInfinity(value.z))
+                {
+                    DebugTAC_AI.Assert("AIControllerDefault.PathPointSet - lastDestination was NaN or infinity.  Defaulting to own position");
+                    PathPointMain = WorldPosition.FromScenePosition(Tank.boundsCentreWorldNoCheck);
+                }
+                /*
                 if (value.IsNaN())
                     DebugTAC_AI.Exception("AIControllerDefault.PathPointSet - lastDestination was NaN!");
                 if (float.IsInfinity(value.x) || float.IsInfinity(value.z))
                     DebugTAC_AI.Exception("AIControllerDefault.PathPointSet - lastDestination was Inf!");
+                */
                 PathPointMain = WorldPosition.FromScenePosition(value);
             }
         }// Where land and spaceships coordinate movement
@@ -80,23 +87,37 @@ namespace TAC_AI.AI
         {
             return PathPlanned.Count < 3;
         }
+        private static StringBuilder SB = new StringBuilder();
         public void OnPartialPathfinding(List<WorldPosition> pos)
         {
-            if (pos.Count == 0)
+            if (DebugTAC_AI.NoLogPathing)
             {
-                DebugTAC_AI.LogPathing(Tank.name + ": OnPartialPathfinding - Path - NONE");
-                return;
+                if (pos.Count == 0)
+                    return;
+                foreach (var item in pos)
+                {
+                    PathPlanned.Enqueue(item);
+                }
             }
-            StringBuilder SB = new StringBuilder();
-            int num = 0;
-            foreach (var item in pos)
+            else
             {
-                PathPlanned.Enqueue(item);
-                SB.Append(" > " + item.ScenePosition.ToString());
-                //AIGlobals.PopupNeutralInfo(num + " | " + item.GameWorldPosition.ToString(), item);
-                num++;
+                if (pos.Count == 0)
+                {
+                    DebugTAC_AI.Log(Tank.name + ": OnPartialPathfinding - Path - NONE");
+                    return;
+                }
+                int num = 0;
+                SB.Clear();
+                foreach (var item in pos)
+                {
+                    PathPlanned.Enqueue(item);
+                    SB.Append(" > " + item.ScenePosition.ToString());
+                    //AIGlobals.PopupNeutralInfo(num + " | " + item.GameWorldPosition.ToString(), item);
+                    num++;
+                }
+                DebugTAC_AI.Log(Tank.name + ": OnPartialPathfinding - Path -" + SB.ToString());
+                SB.Clear();
             }
-            DebugTAC_AI.LogPathing(Tank.name + ": OnPartialPathfinding - Path -" + SB.ToString());
         }
         public void OnFinishedPathfinding(List<WorldPosition> pos)
         {
@@ -105,24 +126,37 @@ namespace TAC_AI.AI
                 PathPlanned.Clear();
                 return; // Clearing 
             }
-            if (pos.Count == 0)
+            if (DebugTAC_AI.NoLogPathing)
             {
-                DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + PathPlanned.Count + " waypoints to follow.");
-                DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Path - NONE");
-                //throw new Exception("OnFinishedPathfinding expects at least one pathing WorldPosition in pos, but received none!");
-                return;
+                if (pos.Count == 0)
+                    return;
+                foreach (var item in pos)
+                {
+                    PathPlanned.Enqueue(item);
+                }
             }
-            StringBuilder SB = new StringBuilder();
-            int num = 0;
-            foreach (var item in pos)
+            else
             {
-                PathPlanned.Enqueue(item);
-                SB.Append(" > " + item.ScenePosition.ToString());
-                //AIGlobals.PopupNeutralInfo(num + " | " + item.GameWorldPosition.ToString(), item);
-                num++;
+                if (pos.Count == 0)
+                {
+                    DebugTAC_AI.Log(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + PathPlanned.Count + " waypoints to follow.");
+                    DebugTAC_AI.Log(Tank.name + ": OnFinishedPathfinding - Path - NONE");
+                    //throw new Exception("OnFinishedPathfinding expects at least one pathing WorldPosition in pos, but received none!");
+                    return;
+                }
+                int num = 0;
+                SB.Clear();
+                foreach (var item in pos)
+                {
+                    PathPlanned.Enqueue(item);
+                    SB.Append(" > " + item.ScenePosition.ToString());
+                    //AIGlobals.PopupNeutralInfo(num + " | " + item.GameWorldPosition.ToString(), item);
+                    num++;
+                }
+                DebugTAC_AI.Log(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + PathPlanned.Count + " waypoints to follow.");
+                DebugTAC_AI.Log(Tank.name + ": OnFinishedPathfinding - Path -" + SB.ToString());
+                SB.Clear();
             }
-            DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + PathPlanned.Count + " waypoints to follow.");
-            DebugTAC_AI.LogPathing(Tank.name + ": OnFinishedPathfinding - Path -" + SB.ToString());
         }
 
 
@@ -182,7 +216,7 @@ namespace TAC_AI.AI
             this.AICore.DriveMaintainer(thisControl, this.Helper, this.Tank, ref core);
         }
 
-        public void Initiate(Tank tank, AIECore.TankAIHelper helper, EnemyMind mind = null)
+        public void Initiate(Tank tank, TankAIHelper helper, EnemyMind mind = null)
         {
             this.Tank = tank;
             this.Helper = helper;
@@ -225,6 +259,9 @@ namespace TAC_AI.AI
                     case EnemyHandling.Naval:
                         AICore = new SeaAICore();
                         break;
+                    case EnemyHandling.SuicideMissile:
+                        AICore = new SpaceAICore();
+                        break;
                     default:
                         throw new Exception("Invalid control type for MPT Vehicle " + mind.EvilCommander.ToString());
                 }
@@ -248,11 +285,10 @@ namespace TAC_AI.AI
             float fanThrust = 0.0f;
             float boosterThrust = 0.0f;
 
-            foreach (ModuleBooster module in Tank.blockman.IterateBlockComponents<ModuleBooster>().ToList())
+            foreach (ModuleBooster module in Tank.blockman.IterateBlockComponents<ModuleBooster>())
             {
                 //Get the slowest spooling one
-                List<FanJet> jets = module.transform.GetComponentsInChildren<FanJet>().ToList();
-                foreach (FanJet jet in jets)
+                foreach (FanJet jet in module.transform.GetComponentsInChildren<FanJet>())
                 {
                     if (jet.spinDelta <= 10)
                     {
@@ -267,8 +303,7 @@ namespace TAC_AI.AI
                         fanThrust += jet.force;
                     }
                 }
-                List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
-                foreach (BoosterJet boost in boosts)
+                foreach (BoosterJet boost in module.transform.GetComponentsInChildren<BoosterJet>())
                 {
                     if (boost.ConsumesFuel)
                     {

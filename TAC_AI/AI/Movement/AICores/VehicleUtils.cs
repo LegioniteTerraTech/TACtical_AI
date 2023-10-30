@@ -9,8 +9,14 @@ using TerraTechETCUtil;
 
 namespace TAC_AI.AI.Movement.AICores
 {
-    internal class VehicleUtils
+    internal static class VehicleUtils
     {
+        public static bool FixControlReversal(this TankControl thisControl)
+        {
+            return !(thisControl.ActiveScheme == null || !thisControl.ActiveScheme.ReverseSteering) &&
+                thisControl.CurState.m_InputMovement.z < -0.01f && 
+                Vector3.Dot(thisControl.Tech.rbody.velocity, thisControl.Tech.rootBlockTrans.forward) < 0f;
+        }
         private const float ignoreSteeringAboveAngle = 0.925f;
         private const float strictForwardsLowerSteeringAboveAngle = 0.775f;
         private const float forwardsLowerSteeringAboveAngle = 0.6f;
@@ -20,10 +26,10 @@ namespace TAC_AI.AI.Movement.AICores
         /// <summary>
         /// Controls how hard the Tech should turn when pursuing a target vector
         /// </summary>
-        public static bool Turner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, ref EControlCoreSet core, out float turnVal)
+        public static bool Turner(TankControl thisControl, TankAIHelper helper, Vector3 destVec, ref EControlCoreSet core)
         {
-            turnVal = 1;
-            float forwards = Vector2.Dot(destinationVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
+            float turnVal = 1;
+            float forwards = Vector2.Dot(destVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
             if (core.StrictTurning)
             {
                 if (forwards > ignoreSteeringAboveAngle)
@@ -49,16 +55,21 @@ namespace TAC_AI.AI.Movement.AICores
                     else
                     {*/
                     float strength = Mathf.Log10(1 + Mathf.Max(0, forwards * 9));
-                    thisControl.DriveControl = Mathf.Sign(thisControl.DriveControl) * Mathf.Clamp(Mathf.Max(Mathf.Abs(thisControl.DriveControl), strength), -1, 1);
+                    thisControl.DriveControl = Mathf.Sign(thisControl.CurState.m_InputMovement.z) * Mathf.Clamp(Mathf.Max(Mathf.Abs(thisControl.CurState.m_InputMovement.z), strength), -1, 1);
                     //}
                 }
                 if (turnVal < 0 || turnVal > 1 || float.IsNaN(turnVal))
                     DebugTAC_AI.Exception("Invalid Turnval  NaN " + float.IsNaN(turnVal) + "  negative " + (turnVal < 0));
+
+                if (thisControl.FixControlReversal())
+                    thisControl.m_Movement.FaceDirection(helper.tank, new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                else
+                    thisControl.m_Movement.FaceDirection(helper.tank, destVec, turnVal);
                 return true;
             }
             else
             {
-                if (forwards > ignoreSteeringAboveAngle && thisControl.DriveControl >= MaxThrottleToTurnFull)
+                if (forwards > ignoreSteeringAboveAngle && thisControl.CurState.m_InputMovement.z >= MaxThrottleToTurnFull)
                     return false;
                 else
                 {
@@ -77,7 +88,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {
-                        if (thisControl.DriveControl <= MaxThrottleToTurnAccurate)
+                        if (thisControl.CurState.m_InputMovement.z <= MaxThrottleToTurnAccurate)
                         {
                             if (!(bool)helper.lastCloseAlly && forwards > forwardsLowerSteeringAboveAngle)
                             {
@@ -93,8 +104,12 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     if (turnVal < 0 || turnVal > 1 || float.IsNaN(turnVal))
                         DebugTAC_AI.Exception("Invalid Turnval  NaN " + float.IsNaN(turnVal) + "  negative " + (turnVal < 0));
-                    return true;
                 }
+                if (thisControl.FixControlReversal())
+                    thisControl.m_Movement.FaceDirection(helper.tank, new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                else
+                    thisControl.m_Movement.FaceDirection(helper.tank, destVec, turnVal);
+                return true;
             }
         }
 
@@ -104,14 +119,12 @@ namespace TAC_AI.AI.Movement.AICores
         /// <summary>
         /// Controls how hard the Tech should turn when pursuing a target vector
         /// </summary>
-        public static bool TurnerHovership(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, ref EControlCoreSet core, out float turnVal)
+        public static void TurnerHovership(TankControl thisControl, TankAIHelper helper, Vector3 destVec, ref EControlCoreSet core)
         {
-            turnVal = 1;
-            float forwards = Vector2.Dot(destinationVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
+            float turnVal = 1;
+            float forwards = Vector2.Dot(destVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
 
-            if (forwards > ignoreSteeringAboveAngleAir)
-                return false;
-            else
+            if (forwards <= ignoreSteeringAboveAngleAir)
             {
                 if (core.DriveDir == EDriveFacing.Perpendicular)
                 {
@@ -134,7 +147,10 @@ namespace TAC_AI.AI.Movement.AICores
                         turnVal = Mathf.Clamp(strength, 0, 1);
                     }
                 }
-                return true;
+                if (thisControl.FixControlReversal())
+                    thisControl.m_Movement.FaceDirection(helper.tank, new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                else
+                    thisControl.m_Movement.FaceDirection(helper.tank, destVec, turnVal);
             }
         }
 
@@ -164,7 +180,7 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         if (help.recentSpeed < 10 && controller.Helper.GetDistanceFromTask(help.RTSDestination) < 32)
                         {
-                            if (ManPlayerRTS.HasMovementQueue(help))
+                            if (ManNetwork.IsNetworked || ManPlayerRTS.HasMovementQueue(help))
                             {
                                 help.ForceSetDrive = true;
                                 help.DriveVar = 1;
@@ -247,6 +263,12 @@ namespace TAC_AI.AI.Movement.AICores
                 {   //Override and disable most driving abilities
                     core.DrivePathing = EDrivePathing.IgnoreAll;
                     pos = MultiTechUtils.HandleMultiTech(help, tank, ref core);
+                }
+                else if (help.DriveDestDirected == EDriveDest.Override)
+                {
+                    core.DrivePathing = EDrivePathing.IgnoreAll;
+                    core.DriveDir = EDriveFacing.Forwards;
+                    core.DriveDest = EDriveDest.Override;
                 }
                 else if (help.DriveDestDirected == EDriveDest.ToBase)
                 {
@@ -387,7 +409,7 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             if (help.IsDirectedMovingFromDest)
                             {
-                                core.DrivePathing = EDrivePathing.PathInv;
+                                core.DrivePathing = EDrivePathing.Path;//PathInv;
                                 core.DriveDir = EDriveFacing.Forwards;
                                 core.DriveDest = EDriveDest.FromLastDestination;
                                 help.MinimumRad = 0.5f;
@@ -452,7 +474,13 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (mind.IsNull())
                 return false;
-            if (help.DriveDestDirected == EDriveDest.ToBase)
+            if (help.DriveDestDirected == EDriveDest.Override)
+            {
+                core.DrivePathing = EDrivePathing.IgnoreAll;
+                core.DriveDir = EDriveFacing.Forwards;
+                core.DriveDest = EDriveDest.Override;
+            }
+            else if (help.DriveDestDirected == EDriveDest.ToBase)
             {
                 if (help.lastBasePos.IsNotNull())
                 {

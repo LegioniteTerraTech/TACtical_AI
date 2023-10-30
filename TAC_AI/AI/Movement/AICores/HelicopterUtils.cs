@@ -9,15 +9,12 @@ namespace TAC_AI.AI.Movement.AICores
 {
     internal class HelicopterUtils
     {
-        internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
-
         public static void AngleTowardsUp(TankControl thisControl, AIControllerAir pilot, 
             Vector3 positionToMoveTo, Vector3 positionToLookAt, ref EControlCoreSet core, bool ForceAccend = false)
         {
-            AIECore.TankAIHelper thisInst = pilot.Helper;
+            TankAIHelper thisInst = pilot.Helper;
             Tank tank = pilot.Tank;
             //AI Steering Rotational
-            TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(thisControl);
             Vector3 turnVal;
             float upVal = tank.rootBlockTrans.up.y;
             //bool isMostlyInControl = upVal > 0.4f;
@@ -80,7 +77,7 @@ namespace TAC_AI.AI.Movement.AICores
 
 
             //Turn our work in to process
-            control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
+            Vector3 TurnVal = turnVal.Clamp01Box();
 
             // -----------------------------------------------------------------------------------------------
             // -----------------------------------------------------------------------------------------------
@@ -138,11 +135,11 @@ namespace TAC_AI.AI.Movement.AICores
 
             //Turn our work in to processing
             //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " | steering " + turnVal + " | drive " + DriveVar);
-            control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
-            controlGet.SetValue(tank.control, control3D);
+            Vector3 DriveVal = DriveVar.Clamp01Box();
+            thisControl.CollectMovementInput(DriveVal, TurnVal, Vector3.zero, false, false);
         }
         public static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestPosWorld, Vector3 LookPosWorld, 
-            AIECore.TankAIHelper thisInst, bool avoidCrash, bool PointAtTarget, ref EControlCoreSet core)
+            TankAIHelper thisInst, bool avoidCrash, bool PointAtTarget, ref EControlCoreSet core)
         {
             float pitchDampening = 64 * thisInst.lastTechExtents;
             Vector3 Heading;
@@ -201,7 +198,7 @@ namespace TAC_AI.AI.Movement.AICores
             thisInst.Navi3DDirect = fFlat.normalized;
             thisInst.Navi3DUp = directUp;
         }
-        public static float ModerateUpwardsThrust(Tank tank, AIECore.TankAIHelper thisInst, AIControllerAir pilot, Vector3 targetHeight, bool ForceUp = false)
+        public static float ModerateUpwardsThrust(Tank tank, TankAIHelper thisInst, AIControllerAir pilot, Vector3 targetHeight, bool ForceUp = false)
         {
             pilot.LowerEngines = false;
             float final = ((targetHeight.y - tank.boundsCentreWorldNoCheck.y) / (pilot.PropLerpValue / 4)) + AIGlobals.ChopperOperatingExtraPower;
@@ -217,7 +214,7 @@ namespace TAC_AI.AI.Movement.AICores
                 final = -0.1f;
                 if (tank.rbody.velocity.y < 0)
                 {
-                    final = Mathf.Pow(tank.rbody.velocity.y, 2) /12;
+                    final = Mathf.Pow(tank.rbody.velocity.y, 2) / 32;
                 }
             }
             else if (tank.rbody.velocity.y < 0 && final > -0.4f && final < 0)  // try ease fall
@@ -243,7 +240,7 @@ namespace TAC_AI.AI.Movement.AICores
         }
         public static void UpdateThrottleCopter(TankControl control, AIControllerAir pilot)
         {
-            AIECore.TankAIHelper thisInst = pilot.Helper;
+            TankAIHelper thisInst = pilot.Helper;
             control.BoostControlProps = false;
             if (pilot.NoProps)
             {

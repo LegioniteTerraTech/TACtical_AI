@@ -11,12 +11,20 @@ namespace TAC_AI.AI.Enemy
     /// </summary>
     public enum EnemyHandling
     {
+        /// <summary>Drive like a Tank on the floor and avoid trees</summary>
         Wheeled,
+        /// <summary>Keep thrusting up while floating above tree-line</summary>
         Chopper,
+        /// <summary>Keep thrusting forwards while flying above tree-line</summary>
         Airplane,
+        /// <summary>Float above tree-line</summary>
         Starship,
+        /// <summary>Float above water-line and avoid terrain</summary>
         Naval,
+        /// <summary>Fly vertically, make approx 90-degree turn, 
+        /// then ram into the enemy by whatever means possible</summary>
         SuicideMissile, // set for bolt tech splitoffs with less than 2 weapons (excluding cabs)
+        /// <summary>Stay still.  Avoid anchoring when possible</summary>
         Stationary,     // sit there like a good wingnut
     }
 
@@ -25,49 +33,78 @@ namespace TAC_AI.AI.Enemy
     /// </summary>
     public enum EnemyAttitude
     {
-        Default,    // Wander around
-        Homing,     // Beeline for the nearest enemy tech
-        Miner,      // Attack resources
-        Junker,     // Move towards patches of loose blocks
-        OnRails,    // Follow set RTS destinations instead for MissionManager
-        NPCBaseHost,// Build a base and manage it, plus go off and do "missions"
-        Boss,       // Build a big base and show off your power on the off-world
-        Invader,    // One. job.   INVADE      end the player  REALLY PAINFULLY
+        /// <summary>Wander around</summary>
+        Default,
+        /// <summary>Beeline for the nearest enemy tech</summary>
+        Homing, 
+        /// <summary>Harvest resources</summary>
+        Miner,
+        /// <summary>Collect loose blocks</summary>
+        Junker,
+        /// <summary>Follow set RTS destinations</summary>
+        OnRails,
+        /// <summary>Build a base and manage it, plus go off and do "missions" (WIP)</summary>
+        NPCBaseHost,
+        /// <summary>Build a big-S base and show off your power on the off-world</summary>
+        Boss,
+        /// <summary>One. job.<para>INVADE</para><para>end the player</para><para>REALLY PAINFULLY</para></summary>
+        Invader,
     }
 
     /// <summary>
-    /// How the AI reacts to the Player
+    /// How the AI interacts with the Player
     /// </summary>
     public enum EnemyStanding
     {
+        /// <summary>My sole existance is to <c>D E S T R O Y</c></summary>
         Enemy,      // Attack. Always
-        Friendly,   // Fight on the player's side
-        SubNeutral, // Don't attack unless attacked once -> Attack everyone
-        Neutral,    // Don't attack unless a block falls off -> Attack attacker
-        MissionControl,// Only follow mission requests
+        /// <summary>Fight on the player's side</summary>
+        Friendly,
+        /// <summary>Don't attack unless attacked once -> Attack everyone</summary>
+        SubNeutral,
+        /// <summary>Don't attack at all.  Usually indestructable.</summary>
+        Neutral,
+        /// <summary>Only follow mission requests</summary>
+        MissionControl,
     }
 
     /// <summary>
-    /// The AI's skill level and abilities
+    /// The AI's skill level and abilities.  Retroactive.
     /// </summary>
     public enum EnemySmarts
-    {               // retroactive for each step lower on this, also meaning more lag lol
-        Default,    // literally default AI
-        Mild,       // can at least deal with obstructions
-        Meh,        // pathfinds two objects at once
-        Smrt,       // anchors when left alone
-        IntAIligent // enemies nearby this ai ALLY with this AI! - (still planned but not functional yet)
+    {   // retroactive for each step lower on this.
+        /// <summary>Literally default AI</summary>
+        Default,
+        /// <summary>Can at least deal with obstructions</summary>
+        Mild,
+        /// <summary>Pathfinds two objects at once</summary>
+        Meh,
+        /// <summary>Anchors when left alone</summary>
+        Smrt,
+        /// <summary>Enemies nearby this ai ALLY with this AI!</summary>
+        IntAIligent
     }
 
     /// <summary>
     /// The conditions of which the AI decides to press X
+    /// <list type="">EnemyBolts</list>
+    /// <list type="bullet">Default        - Explode IMMEDEATELY</list>
+    /// <list type="bullet">AtFull         - Explode when tech is fully-built (requires smrt or above to utilize nicely)</list>
+    /// <list type="bullet">AtFullOnAggro  - Explode when tech is fully-built and enemy in range (requires smrt or above to utilize nicely)</list>
+    /// <list type="bullet">Countdown      - Explode after # of ingame FixedUpdate ticks</list>
+    /// <list type="bullet">MissionTrigger - Hold until triggered by mission event (basically no internal fire)</list>
     /// </summary>
     public enum EnemyBolts
     {                   // Handler for how you want your bolts used
-        Default,        // Explode IMMEDEATELY
-        AtFull,         // Explode when tech is fully-built (requires smrt or above to utilize nicely)
-        AtFullOnAggro,  // Explode when tech is fully-built and enemy in range (requires smrt or above to utilize nicely)
-        Countdown,      // Explode after # of ingame FixedUpdate ticks
-        MissionTrigger, // Hold until triggered by mission event
+        /// <summary>Explode IMMEDEATELY</summary>
+        Default,
+        /// <summary>Explode when tech is fully-built (requires smrt or above to utilize nicely)</summary>
+        AtFull,
+        /// <summary>Explode when tech is fully-built and enemy in range (requires smrt or above to utilize nicely)</summary>
+        AtFullOnAggro,
+        /// <summary>Explode after # of ingame FixedUpdate ticks</summary>
+        Countdown,
+        /// <summary>Hold until triggered by mission event</summary>
+        MissionTrigger,
     }
 }

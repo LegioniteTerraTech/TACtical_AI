@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BEnergizer
+    internal static class BEnergizer
     {
-        public static void MotivateCharge(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        internal const int reverseFromResourceTime = 35;
+        public static void MotivateCharge(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Energizer) what to do movement-wise
             thisInst.IsMultiTech = false;
@@ -22,12 +23,13 @@ namespace TAC_AI.AI.AlliedOperations
 
             // No running here - this is a combat case!
 
-            EnergyRegulator.EnergyState state = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+            TechEnergy.EnergyState state = tank.EnergyRegulator.Energy(TechEnergy.EnergyType.Electric);
             if (thisInst.CollectedTarget)
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.2f)
                 {
                     thisInst.CollectedTarget = false;
+                    thisInst.actionPause = reverseFromResourceTime;
                 }
             }
             else
@@ -35,12 +37,19 @@ namespace TAC_AI.AI.AlliedOperations
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.9f)
                 {
                     thisInst.CollectedTarget = true;
-                    thisInst.ActionPause = AIGlobals.ReverseDelay;
+                    thisInst.actionPause = AIGlobals.ReverseDelay;
                 }
             }
 
             if (!thisInst.CollectedTarget)
             {   // BRANCH - Not Charged: Recharge!
+                if (thisInst.ActionPause > 0)
+                {   // BRANCH - Reverse from Resources
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from resources...");
+                    direct.Reverse(thisInst);
+                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    return;
+                }
                 thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.JobSearchRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
@@ -55,7 +64,7 @@ namespace TAC_AI.AI.AlliedOperations
 
                 if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
                 {
-                    thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
+                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
                     if (thisInst.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -68,14 +77,14 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arrived at nearest charger and recharging!");
                         thisInst.AvoidStuff = false;
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
                 }
                 else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
                 {
-                    thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
+                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -92,14 +101,14 @@ namespace TAC_AI.AI.AlliedOperations
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
                         thisInst.AvoidStuff = false;
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
                 }
                 else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
                 {
-                    thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
+                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  unjamming from base...");
@@ -108,7 +117,7 @@ namespace TAC_AI.AI.AlliedOperations
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arrived at base!");
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                         //thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
@@ -122,14 +131,15 @@ namespace TAC_AI.AI.AlliedOperations
                 direct.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
-            else if (thisInst.ActionPause > 0)
-            {
-                hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = -1;
-            }
             else
             {   // BRANCH - Charged: Find a chargeable target
+                if (thisInst.ActionPause > 0)
+                {   // BRANCH - Reverse from Base
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
+                    direct.Reverse(thisInst);
+                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    return;
+                }
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg

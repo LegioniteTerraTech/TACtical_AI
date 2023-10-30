@@ -32,13 +32,13 @@ namespace TAC_AI.Templates
         public string Blueprint;
         public bool InfBlocks;
         public bool IsAnchored;
-        public FactionTypesExt Faction;
+        public FactionSubTypes Faction;
         public bool NonAggressive = false;
         public bool Eradicator = false;
         public int Cost = 0;
     }
 
-    public class DEVTypeEnumConverter : StringEnumConverter
+    internal class DEVTypeEnumConverter : StringEnumConverter
     {
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
         {
@@ -52,9 +52,9 @@ namespace TAC_AI.Templates
                 writer.WriteValue(Enum.GetName(typeof(BaseTerrain), (BaseTerrain)value));
                 return;
             }
-            else if (value is FactionTypesExt)
+            else if (value is FactionSubTypes)
             {
-                writer.WriteValue(Enum.GetName(typeof(FactionTypesExt), (FactionTypesExt)value));
+                writer.WriteValue(Enum.GetName(typeof(FactionSubTypes), (FactionSubTypes)value));
                 return;
             }
 
@@ -62,7 +62,7 @@ namespace TAC_AI.Templates
         }
     }
 
-    public class RawTechExporter : MonoBehaviour
+    internal class RawTechExporter : MonoBehaviour
     {
         public static RawTechExporter inst;
         public static GameObject GUIWindow;
@@ -85,21 +85,22 @@ namespace TAC_AI.Templates
 
 
         // AI Icons
+        public static Sprite Escort;
         public static Dictionary<AIDriverType, Sprite> aiBackplates;
         public static Dictionary<AIType, Sprite> aiIcons;
         public static Dictionary<EnemySmarts, Sprite> aiIconsEnemy;
-        public static AIECore.TankAIHelper lastTech;
+        public static TankAIHelper lastTech;
 
         private static bool firstInit = false;
 
         // GUI
         private const int RawTechExporterID = 846321;
-        private static Sprite referenceAIIcon;
+        internal static Sprite GuardAIIcon;
         public static void Initiate()
         {
             if (inst)
                 return;
-            referenceAIIcon = Resources.FindObjectsOfTypeAll<Sprite>().ToList().Find(delegate 
+            GuardAIIcon = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(delegate 
                 (Sprite cand)
             { return cand.name == "Icon_AI_Guard"; });
 #if STEAM
@@ -192,18 +193,7 @@ namespace TAC_AI.Templates
             Destroy(inst.gameObject);
             inst = null;
         }
-        internal class GUIRawDisplay : MonoBehaviour
-        {
-            private void OnGUI()
-            {
-                if (isOpen)
-                {
-                    AltUI.StartUI();
-                    HotWindow = GUI.Window(RawTechExporterID, HotWindow, GUIHandler, "RAW Tech Saving", AltUI.MenuLeft);
-                    AltUI.EndUI();
-                }
-            }
-        }
+       
 
         private static bool isSubbed = false;
         public void LateInitiate()
@@ -288,27 +278,50 @@ namespace TAC_AI.Templates
             DebugTAC_AI.Log("TACtical_AI: Done in " + timeDelay + " seconds");
             pendingInGameReload = false;
         }
+        
 
+        internal class GUIRawDisplay : MonoBehaviour
+        {
+            private void OnGUI()
+            {
+                if (isOpen)
+                {
+                    HotWindow = AltUI.Window(RawTechExporterID, HotWindow, GUIHandler, "Enemy Spawns");
+                }
+            }
+        }
         private static void GUIHandler(int ID)
         {
             bool snapsAvail = SnapsAvailable();
-            if (GUI.Button(new Rect(20, 30, 160, 40), new GUIContent("<b><color=#ffffffff>SAVE CURRENT</color></b>", "Save current Tech to the Raw Techs directory"), AltUI.ButtonBlue))
+            GUI.tooltip = "Make your own techs spawn as enemies!";
+            //"The techs are saved to your Raw Techs directory";
+            /*
+            if (GUILayout.Button(new GUIContent("Save Current", "Export your current Tech to the lightweight RawTech format."), AltUI.ButtonBlue))
             {
                 SaveTechToRawJSON(Singleton.playerTank);
             }
-            if (GUI.Button(new Rect(20, 70, 160, 40), new GUIContent("<b><color=#ffffffff>+ ENEMY POP</color></b>", "Save current Tech to Raw Enemies pop in eLocal."), AltUI.ButtonBlue))
+            */
+            if (GUILayout.Button(new GUIContent("To Enemy", "Save your current Tech to the Enemy Spawn Pool"), 
+                AltUI.ButtonBlueLarge, GUILayout.Height(40)))
             {
                 SaveEnemyTechToRawJSON(Singleton.playerTank);
                 inst.ReloadRawTechLoader();
             }
-            if (GUI.Button(new Rect(20, 110, 160, 40), new GUIContent("<b><color=#ffffffff>+ ALL SNAPS</color></b>", snapsAvail ? "Save ALL snapshots to Raw Enemies pop in eBulk." : "Open the snapshots menu at least once first!"), snapsAvail ? AltUI.ButtonBlue : AltUI.ButtonGrey))
+            if (GUILayout.Button(new GUIContent("All To Enemy", snapsAvail ? "Save ALL your local Techs to the Enemy Spawn Pool." : "Open your Load Techs at least once!"), 
+                snapsAvail ? AltUI.ButtonBlueLarge : AltUI.ButtonGreyLarge, GUILayout.Height(40)))
             {
                 SaveEnemyTechsToRawBLK();
                 inst.ReloadRawTechLoader();
             }
-            GUI.Label(new Rect(20, 160, 150, 75), AltUI.UIAlphaText + GUI.tooltip + "</color>");
+            if (GUILayout.Button(new GUIContent("Global Pool", "Add your Tech or suggest changes to the global Enemy Tech pool!"), 
+                AltUI.ButtonOrangeLarge, GUILayout.Height(40)))
+            {
+                ManSteamworks.inst.OpenOverlayURL("https://steamcommunity.com/workshop/filedetails/discussion/2765217410/3790379982475551622/");
+            }
+            GUILayout.Label(GUI.tooltip, AltUI.TextfieldBlackHuge, GUILayout.Height(75));
             GUI.DragWindow();
         }
+
         public static void LaunchSubMenu()
         {
             if (Singleton.playerTank.IsNull() || !KickStart.EnableBetterAI)
@@ -397,9 +410,9 @@ namespace TAC_AI.Templates
         internal static void MakeExternalRawTechListFile(string fileNameAndPath, List<RawTechTemplate> content)
         {
             string toWrite = JsonConvert.SerializeObject(content, Formatting.None);
-            MakeExternalRawTechListFile(fileNameAndPath, toWrite);
+            SaveExternalRawTechListFileToDisk(fileNameAndPath, toWrite);
         }
-        internal static void MakeExternalRawTechListFile(string fileNameAndPath, string toWrite)
+        internal static void SaveExternalRawTechListFileToDisk(string fileNameAndPath, string toWrite)
         {
             using (FileStream FS = File.Create(fileNameAndPath))
             {
@@ -509,17 +522,17 @@ namespace TAC_AI.Templates
                             startingFunds = ValidateCost(ext.Blueprint, ext.Cost),
                         };
                         errorLevel++; // 2
-                        FactionTypesExt MainCorp;
-                        if (ext.Faction == FactionTypesExt.NULL)
+                        FactionSubTypes MainCorp;
+                        if (ext.Faction == FactionSubTypes.NULL)
                         {
-                            MainCorp = KickStart.GetCorpExtended(AIERepair.JSONToFirstBlock(ext.Blueprint));
+                            MainCorp = KickStart.GetCorpExtended(RawTechTemplate.JSONToFirstBlock(ext.Blueprint));
                         }
                         else
                             MainCorp = ext.Faction;
                         errorLevel++; // 3
-                        temp.purposes = RawTechTemplate.GetHandler(ext.Blueprint, MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
+                        temp.purposes = RawTechTemplate.GetHandler(ext.Blueprint, (FactionTypesExt)MainCorp, ext.IsAnchored, out BaseTerrain terra, out int minCorpGrade);
                         temp.IntendedGrade = minCorpGrade;
-                        temp.faction = MainCorp;
+                        temp.faction = (FactionTypesExt)MainCorp;
                         temp.terrain = terra;
 
                         temps.Add(temp);
@@ -579,6 +592,7 @@ namespace TAC_AI.Templates
             return techCount;
         }
 
+        private static StringBuilder SB = new StringBuilder();
         private static List<string> CleanNames(List<string> FolderDirectories, bool excludeJSON)
         {
             List<string> Cleaned = new List<string>();
@@ -592,30 +606,33 @@ namespace TAC_AI.Templates
         }
         internal static bool GetNameJSON(string FolderDirectory, out string output, bool excludeJSON)
         {
-            StringBuilder final = new StringBuilder();
-            foreach (char ch in FolderDirectory)
+            try
             {
-                if (ch == up.ToCharArray()[0])
+                foreach (char ch in FolderDirectory)
                 {
-                    final.Clear();
+                    if (ch == up.ToCharArray()[0])
+                    {
+                        SB.Clear();
+                    }
+                    else
+                        SB.Append(ch);
+                }
+                if (!SB.ToString().Contains(".RAWTECH"))
+                {
+                    if (!SB.ToString().Contains(".JSON") && !excludeJSON)
+                    {
+                        output = null;
+                        return false;
+                    }
+                    else
+                        SB.Remove(SB.Length - 5, 5);// remove ".JSON"
                 }
                 else
-                    final.Append(ch);
+                    SB.Remove(SB.Length - 8, 8);// remove ".RAWTECH"
+
+                output = SB.ToString();
             }
-            if (!final.ToString().Contains(".RAWTECH"))
-            {
-                if (!final.ToString().Contains(".JSON") && !excludeJSON)
-                {
-                    output = null;
-                    return false;
-                }
-                else
-                    final.Remove(final.Length - 5, 5);// remove ".JSON"
-            }
-            else
-                final.Remove(final.Length - 8, 8);// remove ".RAWTECH"
-            
-            output = final.ToString();
+            finally { SB.Clear(); }
             return true;
         }
         private static readonly FieldInfo forceVal = typeof(BoosterJet).GetField("m_Force", BindingFlags.NonPublic | BindingFlags.Instance); 
@@ -722,7 +739,7 @@ namespace TAC_AI.Templates
             RawTechTemplateFast builder = new RawTechTemplateFast
             {
                 Name = tank.name,
-                Faction = tank.GetMainCorpExt(),//GetTopCorp(tank);
+                Faction = TankExtentions.GetMainCorp(tank),//GetTopCorp(tank);
                 Blueprint = RawTechTemplate.TechToJSONExternal(tank),
                 InfBlocks = false,
                 IsAnchored = tank.IsAnchored,
@@ -738,7 +755,7 @@ namespace TAC_AI.Templates
             RawTechTemplateFast builder = new RawTechTemplateFast
             {
                 Name = tank.name,
-                Faction = tank.GetMainCorpExt(),
+                Faction = TankExtentions.GetMainCorp(tank),
                 Blueprint = RawTechTemplate.TechToJSONExternal(tank),
                 InfBlocks = false,
                 IsAnchored = tank.IsAnchored,
@@ -755,7 +772,7 @@ namespace TAC_AI.Templates
             RawTechTemplateFast builder = new RawTechTemplateFast();
             string bluep = RawTechTemplate.BlockSpecToJSONExternal(tank.m_BlockSpecs, out int blockCount, out bool lethal, out int hoveCount, out int weapGCount);
             builder.Name = tank.Name;
-            builder.Faction = tank.GetMainCorpExt();
+            builder.Faction = tank.GetMainCorp();
             builder.Blueprint = bluep;
             builder.InfBlocks = false;
             builder.IsAnchored = tank.CheckIsAnchored();
@@ -1134,7 +1151,7 @@ namespace TAC_AI.Templates
         {
             try
             {
-                Sprite refS = referenceAIIcon;
+                Sprite refS = GuardAIIcon;
                 Texture2D texRef = FetchTexture(pngName);
                 Sprite output;
                 if (!RemoveBlackOutline)
@@ -1176,42 +1193,47 @@ namespace TAC_AI.Templates
         }
         private static string GetNameDirectory(string FolderDirectory)
         {
-            StringBuilder final = new StringBuilder();
-            foreach (char ch in FolderDirectory)
+            try
             {
-                if (ch == up.ToCharArray()[0])
+                foreach (char ch in FolderDirectory)
                 {
-                    final.Clear();
+                    if (ch == up.ToCharArray()[0])
+                    {
+                        SB.Clear();
+                    }
+                    else
+                        SB.Append(ch);
                 }
-                else
-                    final.Append(ch);
-            }
 
-            return final.ToString();
+                return SB.ToString();
+            }
+            finally { SB.Clear(); }
         }
         private static string GetDirectoryPathOnly(string FolderDirectory)
         {
-            StringBuilder final = new StringBuilder();
-            int offsetRemove = 0;
-            foreach (char ch in FolderDirectory)
+            try
             {
-                if (ch == up.ToCharArray()[0])
+                int offsetRemove = 0;
+                foreach (char ch in FolderDirectory)
                 {
-                    offsetRemove = 1;
+                    if (ch == up.ToCharArray()[0])
+                    {
+                        offsetRemove = 1;
+                    }
+                    else
+                        offsetRemove++;
+                    SB.Append(ch);
                 }
-                else
-                    offsetRemove++;
-                final.Append(ch);
+                SB.Remove(SB.Length - offsetRemove, offsetRemove);
+                return SB.ToString();
             }
-            final.Remove(final.Length - offsetRemove, offsetRemove);
-            return final.ToString();
+            finally { SB.Clear(); }
         }
         private static List<string> GetALLDirectoriesInFolder(string directory)
         {   // 
             List<string> final = new List<string>();
-            List<string> Dirs = Directory.GetDirectories(directory).ToList();
             final.Add(directory);
-            foreach (string Dir in Dirs)
+            foreach (string Dir in Directory.GetDirectories(directory))
             {
                 final.Add(Dir);
                 final.AddRange(GetALLDirectoriesInFolder(Dir));

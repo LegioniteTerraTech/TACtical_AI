@@ -6,9 +6,8 @@ using UnityEngine;
 
 namespace TAC_AI.AI.Movement.AICores
 {
-    public class StaticAICore : IMovementAICore
+    internal class StaticAICore : IMovementAICore
     {
-        internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
         private AIControllerStatic controller;
         private Tank tank;
 
@@ -97,7 +96,7 @@ namespace TAC_AI.AI.Movement.AICores
             return true;
         }
 
-        public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
+        public bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
             // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
             if (tank.Anchors.Fixed)
@@ -110,17 +109,14 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else //Land movement
             {
-                TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
-
-                control3D.m_State.m_InputRotation = Vector3.zero;
+                Vector3 TurnVal = Vector3.zero;
 
 
                 Vector3 destDirect = controller.AimTarget - tank.boundsCentreWorldNoCheck;
                 thisControl.DriveControl = 0;
                 if (thisInst.DoSteerCore)
                 {
-                    if (VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core, out float turnVal))
-                        thisControl.m_Movement.FaceDirection(tank, destDirect, turnVal);
+                    VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core);
                 }
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, destDirect * thisInst.lastTechExtents, new Color(1, 0, 1));
 
@@ -152,16 +148,15 @@ namespace TAC_AI.AI.Movement.AICores
                     Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, InputLineVal, new Color(0, 1, 1));
                 }
 
-                control3D.m_State.m_InputMovement = InputLineVal;
-                controlGet.SetValue(tank.control, control3D);
+                Vector3 DriveVal = InputLineVal;
+                thisControl.CollectMovementInput(DriveVal, TurnVal, Vector3.zero, false, false);
             }
             return true;
         }
 
         public void SkyMaintainer(TankControl thisControl, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = controller.Helper;
-            TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(tank.control);
+            TankAIHelper thisInst = controller.Helper;
 
             float driveMultiplier = 0;
 
@@ -236,9 +231,10 @@ namespace TAC_AI.AI.Movement.AICores
 
             thisInst.Navi3DDirect = Vector3.zero;
             thisInst.Navi3DUp = Vector3.up;
+            Vector3 TurnVal = Vector3.zero;
             if (thisInst.DoSteerCore)
             {
-                control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
+                TurnVal = turnVal.Clamp01Box();
                 if (thisInst.lastEnemyGet.IsNotNull())
                 {
                     thisInst.Navi3DDirect = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck;
@@ -249,7 +245,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             else
-                control3D.m_State.m_InputRotation = Vector3.zero;
+                TurnVal = Vector3.zero;
 
             //AI Drive Translational
             Vector3 driveVal;
@@ -318,16 +314,18 @@ namespace TAC_AI.AI.Movement.AICores
                     driveVal.y += 0.5f;
                 }
             }
+            Vector3 DriveVal = Vector3.zero;
+
 
             // PREVENT GROUND CRASHING
             if (EmergencyUp)
             {
-                control3D.m_State.m_InputMovement = (tank.rootBlockTrans.InverseTransformVector(Vector3.up) * 2).Clamp01Box();
+                DriveVal = (tank.rootBlockTrans.InverseTransformVector(Vector3.up) * 2).Clamp01Box();
 
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
-                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, DriveVal * thisInst.lastTechExtents, new Color(1, 0, 0));
 
-                controlGet.SetValue(tank.control, control3D);
+                thisControl.CollectMovementInput(DriveVal, TurnVal, Vector3.zero, false, false);
                 return;
             }
             //thisInst.MinimumRad
@@ -357,26 +355,26 @@ namespace TAC_AI.AI.Movement.AICores
                 final.z = throttleZ;
             }
 
-            control3D.m_State.m_InputMovement = final.Clamp01Box();
+            DriveVal = final.Clamp01Box();
 
             // DEBUG FOR DRIVE ERRORS
             if (tank.IsAnchored)
             {
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, distDiff, new Color(0, 1, 1));
                 Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, driveVal * thisInst.lastTechExtents, new Color(0, 0, 1));
-                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, control3D.m_State.m_InputMovement * thisInst.lastTechExtents, new Color(1, 0, 0));
+                Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, DriveVal * thisInst.lastTechExtents, new Color(1, 0, 0));
             }
             else if (thisInst.AttackEnemy && thisInst.lastEnemyGet)
             {
                 if (thisInst.lastEnemyGet.tank.IsEnemy(tank.Team))
                     Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 0, thisInst.lastEnemyGet.centrePosition - tank.trans.position, new Color(0, 1, 1));
             }
-            controlGet.SetValue(tank.control, control3D);
+            thisControl.CollectMovementInput(DriveVal, TurnVal, Vector3.zero, false, false);
         }
 
         public bool TryAdjustForCombat(bool between, ref Vector3 pos, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = controller.Helper;
+            TankAIHelper thisInst = controller.Helper;
             bool output = false;
             if (thisInst.lastEnemyGet.IsNotNull())
             {
@@ -394,7 +392,7 @@ namespace TAC_AI.AI.Movement.AICores
         }
         public bool TryAdjustForCombatEnemy(EnemyMind mind, ref Vector3 pos, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = controller.Helper;
+            TankAIHelper thisInst = controller.Helper;
             bool output = false;
             if (thisInst.lastEnemyGet.IsNotNull() && mind.CommanderMind != Enemy.EnemyAttitude.OnRails)
             {
@@ -414,12 +412,12 @@ namespace TAC_AI.AI.Movement.AICores
         private const float ignoreTurning = 0.875f;
         private const float MinThrottleToTurnFull = 0.75f;
         private const float MaxThrottleToTurnAccurate = 0.25f;
-        public static bool StaticTurner(TankControl thisControl, AIECore.TankAIHelper helper, Vector3 destinationVec, ref EControlCoreSet core, out float turnVal)
+        public static bool StaticTurner(TankControl thisControl, TankAIHelper helper, Vector3 destinationVec, ref EControlCoreSet core, out float turnVal)
         {
             turnVal = 1;
             float forwards = Vector2.Dot(destinationVec.normalized.ToVector2XZ(), helper.tank.rootBlockTrans.forward.ToVector2XZ());
 
-            if (forwards > ignoreTurning && thisControl.DriveControl >= MinThrottleToTurnFull)
+            if (forwards > ignoreTurning && thisControl.CurState.m_InputMovement.z >= MinThrottleToTurnFull)
                 return false;
             else
             {
@@ -438,7 +436,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    if (thisControl.DriveControl <= MaxThrottleToTurnAccurate)
+                    if (thisControl.CurState.m_InputMovement.z <= MaxThrottleToTurnAccurate)
                     {
                         if (!(bool)helper.lastCloseAlly && forwards > 0.7f)
                         {

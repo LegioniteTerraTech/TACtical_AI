@@ -10,12 +10,12 @@ using TerraTechETCUtil;
 
 namespace TAC_AI.World
 {
-    public class PlayerRTSUI : MonoBehaviour
+    internal class PlayerRTSUI : MonoBehaviour
     {
         internal static readonly List<RTSUnitDisp> unitsSelected = new List<RTSUnitDisp>();
         internal static readonly List<RTSUnitDisp> unitsPast = new List<RTSUnitDisp>();
         private static HashSet<Tank> techsAltered = new HashSet<Tank>();
-        private static AIECore.TankAIHelper Leader;
+        private static TankAIHelper Leader;
 
         private const int ButtonWidth = 80;
         private const int ButtonHeight = 80;
@@ -68,7 +68,7 @@ namespace TAC_AI.World
             if (inst)
                 return;
             inst = new GameObject("PlayerRTSUI").AddComponent<GUIRTSDisplay>();
-            AIECore.TankAIManager.TechRemovedEvent.Subscribe(OnTechRemoved);
+            TankAIManager.TechRemovedEvent.Subscribe(OnTechRemoved);
             ManTechs.inst.TankBlockAttachedEvent.Subscribe(OnTechChanged);
             ManTechs.inst.TankBlockDetachedEvent.Subscribe(OnTechChanged);
         }
@@ -78,7 +78,7 @@ namespace TAC_AI.World
                 return;
             ManTechs.inst.TankBlockDetachedEvent.Unsubscribe(OnTechChanged);
             ManTechs.inst.TankBlockAttachedEvent.Unsubscribe(OnTechChanged);
-            AIECore.TankAIManager.TechRemovedEvent.Unsubscribe(OnTechRemoved);
+            TankAIManager.TechRemovedEvent.Unsubscribe(OnTechRemoved);
             Destroy(inst.gameObject);
             inst = null;
             DebugTAC_AI.Log("TACtical_AI: Removed PlayerRTSUI.");
@@ -89,7 +89,7 @@ namespace TAC_AI.World
             if (!techsAltered.Contains(tank))
                 techsAltered.Add(tank);
         }
-        public static void OnTechRemoved(AIECore.TankAIHelper helper)
+        public static void OnTechRemoved(TankAIHelper helper)
         {
             LastSelectedCount = 0;
         }
@@ -101,8 +101,7 @@ namespace TAC_AI.World
         }
         private static bool unitListActive = false;
 
-        private static AIECore.TankAIHelper lastBase = null;
-        public static void ShowTechPlacementUI(AIECore.TankAIHelper thisInst)
+        public static void ShowTechPlacementUI(TankAIHelper thisInst)
         {
             /*
             ManHUD.inst.ShowHudElement(ManHUD.HUDElementType.TechLoader, null);
@@ -116,21 +115,47 @@ namespace TAC_AI.World
                 }
             }
             */
-            ManUI.inst.GoToScreen(ManUI.ScreenType.TechLoaderScreen);
-            UIScreenTechLoader UISTL = (UIScreenTechLoader)ManUI.inst.GetScreen(ManUI.ScreenType.TechLoaderScreen);
-            if (UISTL != null)
+            if (Input.GetKey(KickStart.MultiSelect) && thisInst?.lastBuiltTech != null)
             {
-                UISTL.SelectorCallback = TryDoTechBuild;
-                lastBase = thisInst;
+                if (DoTechBuild(thisInst, thisInst.lastBuiltTech))
+                {
+                    ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AIGuard);
+                    InvokeHelper.Invoke(ManSFX.inst.PlayUISFX, 0.225f, ManSFX.UISfxType.Craft);
+                }
+            }
+            else
+            {
+                if (ManUI.inst.IsScreenShowing(ManUI.ScreenType.TechLoaderScreen))
+                {
+                    if (thisInst?.lastBuiltTech != null)
+                    {
+                        ManUI.inst.PopScreen(false);
+                        if (DoTechBuild(thisInst, thisInst.lastBuiltTech))
+                        {
+                            ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AIGuard);
+                            InvokeHelper.Invoke(ManSFX.inst.PlayUISFX, 0.225f, ManSFX.UISfxType.Craft);
+                        }
+                    }
+                }
+                else
+                {
+                    ManUI.inst.GoToScreen(ManUI.ScreenType.TechLoaderScreen);
+                    UIScreenTechLoader UISTL = (UIScreenTechLoader)ManUI.inst.GetScreen(ManUI.ScreenType.TechLoaderScreen);
+                    if (UISTL != null)
+                    {
+                        UISTL.SelectorCallback = (Snapshot s) => { DoTechBuild(thisInst, s); };
+                    }
+                }
             }
         }
-        public static void TryDoTechBuild(Snapshot snap)
+        private static bool DoTechBuild(TankAIHelper doingTech, Snapshot snap)
         {
-            if (lastBase?.tank && lastBase.tank.visible.isActive && lastBase.tank.IsAnchored)
+            if (doingTech?.tank && doingTech.tank.visible.isActive && doingTech.tank.IsAnchored)
             {
-                var pos = lastBase.tank.boundsCentreWorldNoCheck + (lastBase.tank.rootBlockTrans.forward * 64);
-                AIEBases.BaseConstructTech(lastBase.tank, pos, snap);
+                doingTech.lastBuiltTech = snap;
+                return AIEBases.BaseConstructTech(doingTech.tank, snap);
             }
+            return false;
         }
 
         public static void DisplayHud(bool show)
@@ -140,7 +165,8 @@ namespace TAC_AI.World
 
         private static GUIRTSDisplay inst;
         private const int AIRTSDisplayID = 8015;
-        private static GUIStyle SmallText = null;
+        private static GUIStyle SmallTextTitle = null;
+        private static GUIStyle SmallTextDesc = null;
         private static Canvas hudBack = null;
         private static Vector2 hudBackOrigin;
         public static void RTSDamageWarnings(float duration, float strength)
@@ -159,17 +185,19 @@ namespace TAC_AI.World
                 if (!ManPauseGame.inst.IsPaused && !ManPlayerRTS.BoxSelecting)
                 {
                     AltUI.StartUI();
-                    if (SmallText == null)
+                    if (SmallTextTitle == null)
                     {
-                        SmallText = new GUIStyle
-                        {
-                            font = AltUI.MenuGUI.font,
-                            fontSize = 9,
-                        };
+                        SmallTextTitle = new GUIStyle(AltUI.LabelBlueTitle);
+                        SmallTextTitle.fontSize = 11;
+
+                        SmallTextDesc = new GUIStyle(AltUI.LabelBlackTitle);
+                        SmallTextDesc.font = AltUI.ExoFontExtraBold;
+                        SmallTextDesc.fontSize = 10;
+
                         hudBack = ManHUD.inst.GetComponent<Canvas>();
                         hudBackOrigin = hudBack.pixelRect.position;
                     }
-                    if (unitListActive)
+                    if (unitListActive && !AIGlobals.HideHud)
                     {
                         if (ManPlayerRTS.inst.Leading || ManPlayerRTS.PlayerRTSOverlay)
                         {
@@ -232,6 +260,7 @@ namespace TAC_AI.World
             }
         }
 
+        private const float BorderSize = 1.5f;
         private static void GUIShowHP(Tank tech)
         {
             try
@@ -243,18 +272,24 @@ namespace TAC_AI.World
                     data = Pending.Dequeue();
                 Did.Enqueue(data);
                 var curHP = tech.GetHelperInsured();
+                data.AlwaysShowName = false;
                 data.HullHP = curHP.GetHealth();
                 data.HullHPMax = curHP.GetHealthMax();
                 if (data.HullHPMax <= 0 || data.HullHP <= 0)
                     return;
                 data.WidthHealthBar = (curHP.lastTechExtents * 2) + 80;
                 bool storeE = curHP.CanStoreEnergy();
-                float height = 28;
+                float height = 38;
                 Vector3 AboveTechUI = Singleton.cameraTrans.up * curHP.lastTechExtents;
                 Vector3 OnScreenPos = Singleton.camera.WorldToScreenPoint(tech.boundsCentreWorldNoCheck + AboveTechUI);
                 if (OnScreenPos.z <= 0)
                     return;
-                data.HealthPos = new Rect(OnScreenPos.x - (data.WidthHealthBar / 2), Display.main.renderingHeight - OnScreenPos.y, data.WidthHealthBar, height);
+
+                data.HealthPos = new Rect(OnScreenPos.x - ((data.WidthHealthBar / 2) + BorderSize), 
+                    Display.main.renderingHeight - (OnScreenPos.y + height),
+                    data.WidthHealthBar + BorderSize + BorderSize, height);
+                UIHelpersExt.ClampMenuToScreen(ref data.HealthPos, false);
+
                 if (storeE)
                 {
                     data.Energy = curHP.GetEnergy();
@@ -266,7 +301,8 @@ namespace TAC_AI.World
                 }
                 data.name = tech.name.NullOrEmpty() ? "NULL" : tech.name;
             }
-            catch { }
+            catch (Exception e)
+            { throw new Exception("PlayerRTSUI.GUIShowHP(Tank) has errored: " + e); }
         }
         private static void GUIShowHP(Visible vis)
         {
@@ -278,22 +314,29 @@ namespace TAC_AI.World
                 else
                     data = Pending.Dequeue();
                 Did.Enqueue(data);
+                data.AlwaysShowName = true;
                 data.HullHP = vis.damageable.Health;
                 data.HullHPMax = vis.damageable.MaxHealth;
                 if (data.HullHPMax <= 0 || data.HullHP <= 0)
                     return;
                 data.WidthHealthBar = 80;
-                float height = 28;
+                float height = 38;
+                
                 Vector3 AboveTechUI = Singleton.cameraTrans.up * vis.GetCheapBounds();
                 Vector3 OnScreenPos = Singleton.camera.WorldToScreenPoint(vis.centrePosition + AboveTechUI);
                 if (OnScreenPos.z <= 0)
                     return;
-                data.HealthPos = new Rect(OnScreenPos.x - (data.WidthHealthBar / 2), Display.main.renderingHeight - OnScreenPos.y, data.WidthHealthBar, height);
+
+                data.HealthPos = new Rect(OnScreenPos.x - ((data.WidthHealthBar / 2) + BorderSize),
+                    Display.main.renderingHeight - (OnScreenPos.y + height),
+                    data.WidthHealthBar + BorderSize + BorderSize, height);
+                UIHelpersExt.ClampMenuToScreen(ref data.HealthPos, false);
                 data.EnergyMax = 0;
                 data.name = StringLookup.GetItemName(vis.m_ItemType);
                 IDStep++;
             }
-            catch { }
+            catch (Exception e)
+            { throw new Exception("PlayerRTSUI.GUIShowHP(Visible) has errored: " + e); }
         }
         private static Queue<GUIData> Did = new Queue<GUIData>();
         private static Queue<GUIData> Pending = new Queue<GUIData>();
@@ -301,6 +344,8 @@ namespace TAC_AI.World
         private static int IDStep = AIRTSHealthStartID;
         public class GUIData
         {
+
+            public bool AlwaysShowName = false;
             public string name;
             public Rect HealthPos;
             public float WidthHealthBar = 1;
@@ -311,21 +356,35 @@ namespace TAC_AI.World
 
             public void Display()
             {
-                GUI.Window(IDStep, HealthPos, GUIHandlerHealthbar, "", SmallText);
+                GUI.Window(IDStep, HealthPos, GUIHandlerHealthbar, "", SmallTextTitle);
                 IDStep++;
             }
             private void GUIHandlerHealthbar(int ID)
             {
-                GUI.DrawTexture(new Rect(0, 0, WidthHealthBar, 10), OutlineWhite, ScaleMode.ScaleAndCrop);
-                GUI.Label(new Rect(0, 0, WidthHealthBar, 10), name, SmallText);
-                GUI.DrawTexture(new Rect(0, 10, WidthHealthBar, 16), OutlineBlack, ScaleMode.ScaleAndCrop);
+                float WidthHealthBarExt = WidthHealthBar + BorderSize + BorderSize;
+                //GUI.DrawTexture(new Rect(0, 0, WidthHealthBar, 14), OutlineWhite, ScaleMode.ScaleAndCrop);
+                if (AlwaysShowName || Input.GetKey(KickStart.MultiSelect))
+                {
+                    GUI.DrawTexture(new Rect(0, 0, WidthHealthBarExt, 14), OutlineBlack, ScaleMode.ScaleAndCrop);
+                    GUI.Label(new Rect(0, 0, WidthHealthBarExt, 14), name, SmallTextTitle);
+                }
+                //GUI.DrawTexture(new Rect(0, 10, WidthHealthBar, 16), OutlineBlack, ScaleMode.ScaleAndCrop);
                 if (EnergyMax > 0)
                 {
-                    GUI.DrawTexture(new Rect(0, 10, (Energy / EnergyMax) * WidthHealthBar, 16), HPBarBlue, ScaleMode.ScaleAndCrop);
-                    GUI.Label(new Rect(0, 8, WidthHealthBar, 10), "<color=#808080ff>" + (int)Energy + "/" + (int)EnergyMax + "</color>", SmallText);
+                    GUI.DrawTexture(new Rect(0, 14 - BorderSize, WidthHealthBarExt, 20 + BorderSize + BorderSize), OutlineBlack, ScaleMode.ScaleAndCrop);
+                    GUI.DrawTexture(new Rect(BorderSize, 14, WidthHealthBar, 20), HPBarRed, ScaleMode.ScaleAndCrop);
+                    GUI.DrawTexture(new Rect(BorderSize, 14, (Energy / EnergyMax) * WidthHealthBar, 20), HPBarBlue, ScaleMode.ScaleAndCrop);
+                    GUI.Label(new Rect(BorderSize, 12, WidthHealthBar, 14), (int)Energy + "/" + (int)EnergyMax, SmallTextDesc);
+                    GUI.DrawTexture(new Rect(BorderSize, 24, (HullHP / HullHPMax) * WidthHealthBar, 10), HPBarGreen, ScaleMode.ScaleAndCrop);
+                    GUI.Label(new Rect(BorderSize, 22, WidthHealthBar, 14), HullHP + "/" + HullHPMax, SmallTextDesc);
                 }
-                GUI.DrawTexture(new Rect(0, 20, (HullHP / HullHPMax) * WidthHealthBar, 8), HPBarGreen, ScaleMode.ScaleAndCrop);
-                GUI.Label(new Rect(0, 18, WidthHealthBar, 10), "<color=#808080ff>" + HullHP + "/" + HullHPMax + "</color>", SmallText);
+                else
+                {
+                    GUI.DrawTexture(new Rect(0, 14 - BorderSize, WidthHealthBarExt, 10 + BorderSize + BorderSize), OutlineBlack, ScaleMode.ScaleAndCrop);
+                    GUI.DrawTexture(new Rect(BorderSize, 14, WidthHealthBar, 10), HPBarRed, ScaleMode.ScaleAndCrop);
+                    GUI.DrawTexture(new Rect(BorderSize, 14, (HullHP / HullHPMax) * WidthHealthBar, 10), HPBarGreen, ScaleMode.ScaleAndCrop);
+                    GUI.Label(new Rect(BorderSize, 12, WidthHealthBar, 14), HullHP + "/" + HullHPMax, SmallTextDesc);
+                }
             }
         }
 
@@ -377,6 +436,8 @@ namespace TAC_AI.World
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
             }
+            catch (ExitGUIException e)
+            { throw e; }
             catch { }
         }
         private static void GUIHandlerUnits()
@@ -426,6 +487,8 @@ namespace TAC_AI.World
                         }
                         HoriPosOff += ButtonWidth;
                     }
+                    catch (ExitGUIException e)
+                    { throw e; }
                     catch { }// error on handling something
                 }
             }
@@ -467,11 +530,11 @@ namespace TAC_AI.World
 
             //GUI.DragWindow();
         }
-        private static AIECore.TankAIHelper lastTank => ManPlayerRTS.inst.Leading;
-        private static List<AIECore.TankAIHelper> lastTanks => ManPlayerRTS.inst.LocalPlayerTechsControlled;
+        private static TankAIHelper lastTank => ManPlayerRTS.inst.Leading;
+        private static List<TankAIHelper> lastTanks => ManPlayerRTS.inst.LocalPlayerTechsControlled;
         private static void GUIHandlerCommands()
         {
-            AIECore.TankAIHelper helper = ManPlayerRTS.inst.Leading;
+            TankAIHelper helper = ManPlayerRTS.inst.Leading;
             if (helper != null)
             {
                 if (helper.ActuallyWorks)
@@ -731,16 +794,16 @@ namespace TAC_AI.World
 
         private const int AIRTSDisplayToolID = 8016;
         private static Rect toolWindow = new Rect(0, 0, 200, 80);   // the "window"
-        private static AIECore.TankAIHelper hovered => ManPlayerRTS.inst.PlayerHovered ? ManPlayerRTS.inst.PlayerHovered : ManPlayerRTS.inst.OtherHovered;
+        private static TankAIHelper hovered => ManPlayerRTS.inst.PlayerHovered ? ManPlayerRTS.inst.PlayerHovered : ManPlayerRTS.inst.OtherHovered;
         private static void GUIHandlerInfo(int ID)
         {
             if (hovered)
             {
                 string action = hovered.GetActionStatus(out bool notAble);
                 if (notAble)
-                    GUI.Label(new Rect(20, 15, 160, 60), AltUI.UIAlphaText + action + " (Unable)</color>");
+                    GUI.Label(new Rect(20, 15, 160, 60), action + " (Unable)", AltUI.LabelBlack);
                 else
-                    GUI.Label(new Rect(20, 15, 160, 60), AltUI.UIAlphaText + action + "</color>");
+                    GUI.Label(new Rect(20, 15, 160, 60), action, AltUI.LabelBlack);
             }
         }
 
@@ -751,10 +814,17 @@ namespace TAC_AI.World
         private static Texture2D OutlineMain;
         private static Texture2D OutlineFollower;
         private static Texture2D OutlinePlayer;
-        private static Texture2D OutlineBlack = Texture2D.blackTexture;
+        private static Texture2D OutlineBlack;
         private static Texture2D OutlineWhite = Texture2D.whiteTexture;
         public static void InitTextures()
         {
+            OutlineBlack = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
+            OutlineBlack.SetPixels(0, 0, 2, 2, new Color[4]{
+                    AltUI.ColorDefaultGrey,
+                    AltUI.ColorDefaultGrey,
+                    AltUI.ColorDefaultGrey,
+                    AltUI.ColorDefaultGrey,
+                });
             NoHPBar = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             NoHPBar.SetPixels(0, 0, 2, 2, new Color[4]{
                     new Color(0.2f, 0.2f, 0.2f, 1f),
@@ -765,26 +835,26 @@ namespace TAC_AI.World
             NoHPBar.Apply();
             HPBarGreen = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             HPBarGreen.SetPixels(0, 0, 2, 2, new Color[4]{
-                    new Color(0.2f, 1, 0.3f, 1f),
-                    new Color(0.2f, 1, 0.3f, 1f),
-                    new Color(0.2f, 1, 0.3f, 1f),
-                    new Color(0.2f, 1, 0.3f, 1f),
+                    new Color(0.225f, 1, 0.35f, 1f),
+                    new Color(0.225f, 1, 0.35f, 1f),
+                    new Color(0.225f, 1, 0.35f, 1f),
+                    new Color(0.225f, 1, 0.35f, 1f),
                 });
             HPBarGreen.Apply();
             HPBarRed = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             HPBarRed.SetPixels(0, 0, 2, 2, new Color[4]{
-                    new Color(1, 0.2f, 0.3f, 1f),
-                    new Color(1, 0.2f, 0.3f, 1f),
-                    new Color(1, 0.2f, 0.3f, 1f),
-                    new Color(1, 0.2f, 0.3f, 1f),
+                    new Color(1, 0.3f, 0.4f, 1f),
+                    new Color(1, 0.3f, 0.4f, 1f),
+                    new Color(1, 0.3f, 0.4f, 1f),
+                    new Color(1, 0.3f, 0.4f, 1f),
                 });
             HPBarRed.Apply();
             HPBarBlue = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             HPBarBlue.SetPixels(0, 0, 2, 2, new Color[4]{
-                    new Color(0.1f, 0.75f, 1, 1f),
-                    new Color(0.1f, 0.75f, 1, 1f),
-                    new Color(0.1f, 0.75f, 1, 1f),
-                    new Color(0.1f, 0.75f, 1, 1f),
+                    new Color(0.225f, 0.75f, 1, 1f),
+                    new Color(0.225f, 0.75f, 1, 1f),
+                    new Color(0.225f, 0.75f, 1, 1f),
+                    new Color(0.225f, 0.75f, 1, 1f),
                 });
             HPBarBlue.Apply();
             Texture2D[] res = Resources.FindObjectsOfTypeAll<Texture2D>();
@@ -804,13 +874,13 @@ namespace TAC_AI.World
         }
         public class RTSUnitDisp
         {
-            public AIECore.TankAIHelper unit;
+            public TankAIHelper unit;
             public Texture2D unitVis;
             public bool IsLeading => unit == Leader;
             public float lastHealth = 0;
             public float lastEnergy = 0;
 
-            public RTSUnitDisp(AIECore.TankAIHelper thisInst)
+            public RTSUnitDisp(TankAIHelper thisInst)
             {
                 if (HPBarGreen == null)
                     InitTextures();
@@ -819,7 +889,7 @@ namespace TAC_AI.World
             }
 
 
-            public bool Init(AIECore.TankAIHelper tech)
+            public bool Init(TankAIHelper tech)
             {
                 if (tech != null)
                 {

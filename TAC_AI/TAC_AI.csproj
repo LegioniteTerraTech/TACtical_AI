@@ -77,6 +77,22 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Rewired">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Rewired.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Rewired_Core">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Rewired_Core.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Rewired_Windows_Lib">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\Rewired_Windows_Lib.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="SafeSaves, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\Desktop\SafeSaves\SafeSaves\bin\Steam\SafeSaves.dll</HintPath>
+    </Reference>
     <Reference Include="System">
       <Private>False</Private>
     </Reference>
@@ -166,15 +182,11 @@
     <!--> THE MATTERS BELOW ARE OFFICIAL </!-->
     <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
     <Reference Include="0Harmony">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2765217410\0Harmony.dll</HintPath>
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2571814511\0Harmony.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="RandomAdditions">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2765334969\RandomAdditions.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
-    <Reference Include="SafeSaves">
-      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2765217410\SafeSaves.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="0Nuterra.NativeOptions">
@@ -242,10 +254,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AISettings.cs" />
+    <Compile Include="AISettingsSet.cs" />
     <Compile Include="AIStates.cs" />
     <Compile Include="AIGlobals.cs" />
+    <Compile Include="AIWiki.cs" />
     <Compile Include="AI\AIEBases.cs" />
+    <Compile Include="AI\TankAIHelper.cs" />
     <Compile Include="AI\AIESplitHandler.cs" />
     <Compile Include="AI\AIEnabledModes.cs" />
     <Compile Include="AI\AlliedOperations\BAssassin.cs" />
@@ -283,6 +297,9 @@
     <Compile Include="AI\Movement\AICores\VehicleAICore.cs" />
     <Compile Include="AI\Movement\AICores\VtolAICore.cs" />
     <Compile Include="AI\Movement\AIEPathMapper.cs" />
+    <Compile Include="AI\TankAIManager.cs" />
+    <Compile Include="AI\TeamIndex.cs" />
+    <Compile Include="AICommands.cs" />
     <Compile Include="CursorChanger.cs" />
     <Compile Include="CustomAttract.cs" />
     <Compile Include="DebugTAC_AI.cs" />
@@ -314,7 +331,7 @@
     <Compile Include="Enemy\RCore.cs" />
     <Compile Include="Enemy\RWeapSetup.cs" />
     <Compile Include="GUIAIManager.cs" />
-    <Compile Include="GUIEvictionNotice.cs" />
+    <Compile Include="GUINPTInteraction.cs" />
     <Compile Include="GUILister.cs" />
     <Compile Include="ModuleWorldRadar.cs" />
     <Compile Include="PatchBatch\GlobalPatches.cs" />
@@ -331,8 +348,10 @@
     <Compile Include="AnimeAICompat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TeamNamer.cs" />
+    <Compile Include="Templates\BaseGamePopSpecials.cs" />
     <Compile Include="Templates\CommunityCluster.cs" />
     <Compile Include="World\ManEnemySiege.cs" />
+    <Compile Include="World\ManBaseTeams.cs" />
     <Compile Include="World\ManPlayerRTS.cs" />
     <Compile Include="Templates\CommunityStorage.cs" />
     <Compile Include="Templates\DebugRawTechSpawner.cs" />
@@ -346,6 +365,7 @@
     <Compile Include="Templates\TempStorage.cs" />
     <Compile Include="UnityEngineExtensions.cs" />
     <Compile Include="World\NP_BaseUnit.cs" />
+    <Compile Include="World\NP_MobileUnit.cs" />
     <Compile Include="World\UnloadedBases.cs" />
     <Compile Include="World\NP_Presence.cs" />
     <Compile Include="World\NP_TechUnit.cs" />

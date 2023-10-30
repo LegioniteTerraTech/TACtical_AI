@@ -63,7 +63,7 @@ namespace TAC_AI.AI
             return false;
         }
 
-        public static EAttackMode GetAttackStrat(Tank tank, AIECore.TankAIHelper help)
+        public static EAttackMode GetAttackStrat(Tank tank, TankAIHelper help)
         {
             bool smolTech = false;
             if (KickStart.isTweakTechPresent && tank.blockman.blockCount <= AIGlobals.SmolTechBlockThreshold)

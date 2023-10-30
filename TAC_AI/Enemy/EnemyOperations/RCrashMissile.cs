@@ -7,10 +7,10 @@ using UnityEngine;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public static class RCrashMissile
+    internal static class RCrashMissile
     {   // Temp changed to coward AI
 
-        public static void AttackCrash(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void AttackCrash(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             BGeneral.ResetValues(thisInst, ref direct);
             thisInst.AvoidStuff = true;
@@ -36,7 +36,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             float range = AIGlobals.MinCombatRangeDefault + thisInst.lastTechExtents;
             float spacer = thisInst.lastTechExtents + enemyExt;
 
-            thisInst.SideToThreat = false;
+            thisInst.AISetSettings.SideToThreat = false;
             thisInst.Retreat = true;
             direct.DriveDest = EDriveDest.FromLastDestination;
             /*
@@ -44,7 +44,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             if (ManWorld.inst.GetTerrainHeight(runPlane, out float height))
                 runPlane.y = height;
             */
-            direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+            direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
             thisInst.ForceSetDrive = true;
             thisInst.DriveVar = 1;
             if (dist < spacer + (range / 4))
@@ -66,7 +66,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
         }
         /*
-        public static void RamTillDeath(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void RamTillDeath(TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (thisInst.lastEnemy.IsNotNull())
             {

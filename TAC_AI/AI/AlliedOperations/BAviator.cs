@@ -7,8 +7,9 @@ using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAviator {
-        public static void MotivateFly(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+    internal static class BAviator 
+    {
+        public static void MotivateFly(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {   // Will have to account for the different types of flight methods available
             thisInst.lastPlayer = thisInst.GetPlayerTech();
             thisInst.IsMultiTech = false;
@@ -41,49 +42,55 @@ namespace TAC_AI.AI.AlliedOperations
                 else
                     thisInst.SettleDown();
             }
-
             float spacing = thisExtents + playerExt;
-            if (dist < spacing + (AIGlobals.PathfindingExtraSpace * 2))
-            {   // TOO CLOSE!!! WE DODGE!!!
-                if (thisInst.lastEnemyGet != null && !thisInst.Retreat)
-                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
-                else
-                    direct.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
-                direct.DriveDest = EDriveDest.FromLastDestination;
-            }
-            else if (dist > spacing && dist < range)
-            {   // Follow the leader
-                if (thisInst.lastEnemyGet != null && !thisInst.Retreat)
-                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
-                else
-                    direct.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
-                direct.DriveDest = EDriveDest.ToLastDestination;
-            }
-            else if (dist < range * 3)
-            {   // Far behind, must catch up
-                // The range is nearly quadrupled here due to dogfighting conditions
-                if (thisInst.lastEnemyGet != null && !thisInst.Retreat)
-                {
-                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+            if (thisInst.lastEnemyGet && !thisInst.Retreat && dist > range * 2)
+            {
+                float distCombat = thisInst.lastCombatRange;
+                float spacingCombat = thisExtents + thisInst.lastEnemyGet.GetCheapBounds();
+                direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
+                if (distCombat < spacingCombat + (AIGlobals.PathfindingExtraSpace * 2))
+                {   // TOO CLOSE!!! WE DODGE!!!
+                    direct.DriveDest = EDriveDest.FromLastDestination;
+                }
+                else if (distCombat > spacing && distCombat < spacingCombat)
+                {   // Follow the enemy
+                    direct.DriveDest = EDriveDest.ToLastDestination;
                 }
                 else
-                {
-                    direct.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
+                {   // Far behind, must catch up
+                    // The range is nearly quadrupled here due to dogfighting conditions
                     direct.DriveDest = EDriveDest.ToLastDestination;
                     thisInst.FullBoost = true; // boost in forwards direction towards objective
                 }
             }
             else
-            {   // SUPER Far behind, must catch up
-                direct.lastDestination = thisInst.lastPlayer.tank.boundsCentreWorldNoCheck;
-                direct.DriveDest = EDriveDest.ToLastDestination;
-                thisInst.Retreat = true;
-                thisInst.FullBoost = true; // boost in forwards direction towards objective
+            {
+                direct.SetLastDest(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck);
+                if (dist < spacing + (AIGlobals.PathfindingExtraSpace * 2))
+                {   // TOO CLOSE!!! WE DODGE!!!
+                    direct.DriveDest = EDriveDest.FromLastDestination;
+                }
+                else if (dist > spacing && dist < range)
+                {   // Follow the leader
+                    direct.DriveDest = EDriveDest.ToLastDestination;
+                }
+                else if (dist < range * 3)
+                {   // Far behind, must catch up
+                    // The range is nearly quadrupled here due to dogfighting conditions
+                    direct.DriveDest = EDriveDest.ToLastDestination;
+                    thisInst.FullBoost = true; // boost in forwards direction towards objective
+                }
+                else
+                {   // SUPER Far behind, must catch up
+                    direct.DriveDest = EDriveDest.ToLastDestination;
+                    thisInst.Retreat = true;
+                    thisInst.FullBoost = true; // boost in forwards direction towards objective
+                }
             }
         }
 
 
-        public static void Dogfighting(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void Dogfighting(TankAIHelper thisInst, Tank tank)
         {   // Will have to account for the different types of flight methods available
 
             thisInst.AttackEnemy = false;

@@ -28,16 +28,25 @@ namespace TAC_AI.World
         OtherAttack,
         ScriptWait,
     }
+    public static class NP_PresenceExtensions
+    {
+        internal static bool IsValidAndRegistered(this NP_Presence thisInst)
+        {
+            return thisInst != null && thisInst.registered;
+        }
+    }
     // The enemy base in world-relations
     public class NP_Presence
     {
-        public int team = AIGlobals.EnemyBaseTeamsStart;
+        public bool registered => ManEnemyWorld.AllTeamsUnloaded.ContainsKey(team);
+        public int team = AIGlobals.EnemyTeamsRangeStart;
         public int Team => team;
+        public bool AnyLeftStanding => EBUs.Any() || EMUs.Any();
         private bool canSiege = false;
         private float lastAttackedTimestep = 0;
         public NP_BaseUnit MainBase = null;
         public HashSet<NP_BaseUnit> EBUs = new HashSet<NP_BaseUnit>();
-        public HashSet<NP_TechUnit> ETUs = new HashSet<NP_TechUnit>();
+        public HashSet<NP_MobileUnit> EMUs = new HashSet<NP_MobileUnit>();
         private HashSet<NP_TechUnit> Fighting = new HashSet<NP_TechUnit>();
         public bool IsFighting => Fighting.Any();
         private AITeamMode teamMode = AITeamMode.Idle;
@@ -66,13 +75,19 @@ namespace TAC_AI.World
         private Visible _lastTarget = null;
         private int lastTargetUpdateCount = 0;
 
-        internal NP_TechUnit teamFounder;
+        internal NP_MobileUnit teamFounder;
         private Tank teamFounderActive;
         private AIFounderMode founderMode = AIFounderMode.HomeIdle;
         private int lastFounderStopUpdateTicks = 0;
 
+#if DEBUG
+        private const bool DoDebugLog = true;
+#else
+        private const bool DoDebugLog = false;
+#endif
 
-        public NP_Presence(int Team, bool canLaunchSieges)
+
+        internal NP_Presence(int Team, bool canLaunchSieges)
         {
             team = Team;
             canSiege = canLaunchSieges;
@@ -82,17 +97,17 @@ namespace TAC_AI.World
         /// Returns false if the team should be removed
         /// </summary>
         /// <returns></returns>
-        public bool UpdateOperatorRTS()
+        internal bool UpdateOperatorRTS()
         {
             if (Team == SpecialAISpawner.trollTeam)
             {
                 HandleTraderTrolls();
-                return EBUs.Count > 0 || ETUs.Count > 0;
+                return EBUs.Count > 0 || EMUs.Count > 0;
             }
             if (GlobalMakerBaseCount() == 0)
             {
                 DebugTAC_AI.Info("TACtical_AI: UpdateGrandCommandRTS - Team " + Team + " has no production bases");
-                return EBUs.Count > 0 || ETUs.Count > 0; // NO SUCH TEAM EXISTS (no base!!!)
+                return EBUs.Count > 0 || EMUs.Count > 0; // NO SUCH TEAM EXISTS (no base!!!)
             }
             PresenceDebug("TACtical_AI: UpdateGrandCommandRTS - Turn for Team " + Team);
             attackStarted = false;
@@ -107,20 +122,20 @@ namespace TAC_AI.World
             UnloadedBases.TryUnloadedBaseOperations(this);
             HandleRepairs();
             HandleRecharge();
-            UnloadedBases.GetSetTeamMainBase(this);
+            UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
             if (MainBase != null)
             {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
                 PresenceDebugDEV("TACtical_AI: UpdateGrandCommandRTS - Team final funds " + MainBase.BuildBucks);
             }
-            return EBUs.Count > 0 || ETUs.Count > 0;
+            return AnyLeftStanding;
         }
 
-        public bool UpdateOperator()
+        internal bool UpdateOperator()
         {
             if (Team == SpecialAISpawner.trollTeam)
             {
                 HandleTraderTrolls();
-                return EBUs.Count > 0 || ETUs.Count > 0;
+                return AnyLeftStanding;
             }
             if (GlobalMakerBaseCount() == 0)
             {
@@ -130,15 +145,14 @@ namespace TAC_AI.World
             PresenceDebug("TACtical_AI: UpdateGrandCommand - Turn for Team " + Team);
             attackStarted = false;
             //PresenceDebug("TACtical_AI: UpdateGrandCommand - Updating for team " + Team);
-            UnloadedBases.PoolTeamMoney(this);
-            UnloadedBases.GetSetTeamMainBase(this);
+            UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
 
             if (MainBase != null)
                 UnloadedBases.PurgeIfNeeded(this, MainBase);
-            return EBUs.Count > 0 || ETUs.Count > 0;
+            return AnyLeftStanding;
         }
 
-        public void UpdateMaintainer(float timeDelta)
+        internal void UpdateMaintainer(float timeDelta)
         {
             // The techs move every UpdateMoveDelay seconds
             //DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld - UpdateMaintainer, num fighting " + Fighting.Count());
@@ -156,7 +170,7 @@ namespace TAC_AI.World
                 if (item.tech != null)
                     item.tech.m_TeamID = team;
             }
-            foreach (var item in ETUs)
+            foreach (var item in EMUs)
             {
                 if (item.tech != null)
                     item.tech.m_TeamID = team;
@@ -167,7 +181,7 @@ namespace TAC_AI.World
         // Checks
         public bool HasMobileETUs()
         {
-            return ETUs.ToList().Exists(delegate (NP_TechUnit cand) { return cand.MoveSpeed > 12; });
+            return EMUs.ToList().Exists(delegate (NP_MobileUnit cand) { return cand.MoveSpeed > 12; });
         }
         public bool ShouldReturnToBase()
         {
@@ -181,7 +195,7 @@ namespace TAC_AI.World
         /// <param name="initial"></param>
         /// <param name="anon"></param>
         /// <returns></returns>
-        public static bool CanSwitchState(AIFounderMode initial, AIFounderMode anon)
+        internal static bool CanSwitchState(AIFounderMode initial, AIFounderMode anon)
         {
             switch (initial)
             {
@@ -325,12 +339,12 @@ namespace TAC_AI.World
         // Special
         private void HandleTraderTrolls()
         {
-            int count = ETUs.Count;
+            int count = EMUs.Count;
             for (int step = 0; step < count;)
             {
                 try
                 {
-                    NP_TechUnit ETUcase = ETUs.ElementAt(step);
+                    NP_TechUnit ETUcase = EMUs.ElementAt(step);
                     if ((ETUcase.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(ManEnemyWorld.EnemyBaseCullingExtents))
                     {
                         UnloadedBases.RemoteRemove(ETUcase);
@@ -345,7 +359,7 @@ namespace TAC_AI.World
 
         private void HandleRepairs()
         {
-            NP_BaseUnit funds = UnloadedBases.GetSetTeamMainBase(this);
+            NP_BaseUnit funds = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
 
             float healMulti;
             if (WasInCombat())
@@ -364,7 +378,7 @@ namespace TAC_AI.World
                         {
                             if (funds.BuildBucks > ManEnemyWorld.HealthRepairCost * healMulti)
                             {
-                                funds.BuildBucks -= (int)(ManEnemyWorld.HealthRepairCost * healMulti);
+                                funds.SpendBuildBucks((int)(ManEnemyWorld.HealthRepairCost * healMulti));
                                 EBU.Health = Math.Min(EBU.MaxHealth, EBU.Health + (int)(ManEnemyWorld.HealthRepairRate * healMulti));
                                 numHealed++;
                             }
@@ -372,7 +386,7 @@ namespace TAC_AI.World
                     }
                     catch { }
                 }
-                foreach (NP_TechUnit ETU in ETUs)
+                foreach (NP_TechUnit ETU in EMUs)
                 {
                     try
                     {
@@ -380,7 +394,7 @@ namespace TAC_AI.World
                         {
                             if (funds.BuildBucks > ManEnemyWorld.HealthRepairCost * healMulti)
                             {
-                                funds.BuildBucks -= (int)(ManEnemyWorld.HealthRepairCost * healMulti);
+                                funds.SpendBuildBucks((int)(ManEnemyWorld.HealthRepairCost * healMulti));
                                 ETU.Health = Math.Min(ETU.MaxHealth, ETU.Health + (int)(ManEnemyWorld.HealthRepairRate * healMulti));
                                 numHealed++;
                             }
@@ -418,7 +432,7 @@ namespace TAC_AI.World
         }
 
 
-        public void SetAttackMode(IntVector2 tilePos, Visible target = null)
+        internal void SetAttackMode(IntVector2 tilePos, Visible target = null)
         {
             //PresenceDebug("Enemy team " + Team + " has found target");
             attackStarted = true;
@@ -426,7 +440,7 @@ namespace TAC_AI.World
             lastAttackTile = tilePos;
             lastTarget = target;
         }
-        public void SetSiegeMode(IntVector2 tilePos)
+        internal void SetSiegeMode(IntVector2 tilePos)
         {
             //PresenceDebug("Enemy team " + Team + " has found target");
             attackStarted = true;
@@ -434,16 +448,16 @@ namespace TAC_AI.World
             lastAttackTile = tilePos;
             lastTarget = null;
         }
-        public void SetDefendMode(IntVector2 tilePos)
+        internal void SetDefendMode(IntVector2 tilePos)
         {
             //PresenceDebug("Enemy team " + Team + " has found target");
             teamMode = AITeamMode.Defending;
             lastAttackTile = tilePos;
         }
-        public void ResetModeToIdle()
+        internal void ResetModeToIdle()
         {
             teamMode = AITeamMode.Idle;
-            NP_BaseUnit mainBase = UnloadedBases.GetSetTeamMainBase(this);
+            NP_BaseUnit mainBase = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
             if (mainBase != null)
             {
                 lastAttackTile = mainBase.tilePos;
@@ -455,13 +469,13 @@ namespace TAC_AI.World
         private void HandleUnitRecon()
         {
             scannedPositions.Clear();
-            UnloadedBases.GetSetTeamMainBase(this);
+            UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
             if (MainBase != null)
             {
                 UnloadedBases.GetScannedTilesAroundTech(MainBase); // This happens first - home defense is more important
 
                 tilesHasOwnTechs.Clear();
-                foreach (NP_TechUnit ETU in ETUs)
+                foreach (NP_TechUnit ETU in EMUs)
                 {
                     try
                     {
@@ -525,7 +539,7 @@ namespace TAC_AI.World
             }
             if (AIECore.RetreatingTeams.Contains(team))
             {
-                if (AIECore.TankAIManager.GetTeamTanks(team).Any())
+                if (TankAIManager.GetTeamTanks(team).Any())
                     teamMode = AITeamMode.Retreating;
                 else
                 {
@@ -538,7 +552,7 @@ namespace TAC_AI.World
         {
             if (Allied.Count == 0 || Enemies.Count == 0)
                 return 0;
-            ReportCombat("Combat underway at " + TT + " | " + Team + " vs " + Enemies.First().tech.m_TeamID);
+            ReportCombat("Combat underway at " + TT + " | " + Team + " vs " + Enemies.FirstOrDefault().tech.m_TeamID);
             OnCombat();
             int allyIndex = 0;
             int damageTotal = 0;
@@ -560,7 +574,7 @@ namespace TAC_AI.World
                     }
                     else
                     {
-                        float mobileAcc = ManEnemyWorld.MobileAccuraccy - (ManEnemyWorld.MobileSpeedAccuraccyReduction * Ally.MoveSpeed);
+                        float mobileAcc = ManEnemyWorld.MobileAccuraccy - (ManEnemyWorld.MobileSpeedAccuraccyReduction * Ally.GetSpeed());
                         damageUnit = Mathf.CeilToInt(Ally.AttackPower * mobileAcc);
                         ReportCombat("  Unit " + Ally.Name + " - Power [" + damageUnit + "], Accuraccy[" + mobileAcc + "]");
                         Fighting.Add(Ally);
@@ -572,7 +586,7 @@ namespace TAC_AI.World
                 if (target is NP_BaseUnit)
                     EvasionEnemy = ManEnemyWorld.BaseEvasion;
                 else
-                    EvasionEnemy = target.MoveSpeed * ManEnemyWorld.MobileSpeedToEvasion;
+                    EvasionEnemy = target.GetSpeed() * ManEnemyWorld.MobileSpeedToEvasion;
                 if (EvasionEnemy < 1)
                     EvasionEnemy = 1;
                 else
@@ -581,18 +595,18 @@ namespace TAC_AI.World
                 damageWave = Mathf.CeilToInt((Math.Max(5 * attacksThisFrame, damageWave) * damageTime) / EvasionEnemy);
                 ReportCombat("-- TotalRecalc: " + damageWave + " --");
                 damageTotal += damageWave;
-                if (target.TakeDamage(damageWave))
+                if (target.RecieveDamage(damageWave))
                 {
                     try
                     {
                         ReportCombat("Enemy " + target.Name + " has been destroyed!");
-                        if (target is NP_BaseUnit EBU)
+                        if (target is NP_BaseUnit EBU && ManBaseTeams.TryGetBaseTeam(target.Team, out var ETD))
                         {
-                            var lootGain = UnloadedBases.EmergencyMoveMoney(EBU);
+                            var lootGain = ETD.StealBuildBucks();
                             if (lootGain > 0)
                             {
-                                if (UnloadedBases.GetSetTeamMainBase(this) != null)
-                                    MainBase.BuildBucks = MainBase.BuildBucks + lootGain;
+                                if (UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this) != null)
+                                    MainBase.AddBuildBucks(lootGain);
                             }
                         }
                     }
@@ -608,7 +622,7 @@ namespace TAC_AI.World
         // Movement
         private void HandleUnitMoving()
         {
-            UnloadedBases.GetSetTeamMainBase(this);
+            UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
             if (MainBase == null)
             {   // Attack the player
                 MoveAllETUsNoMainBase();
@@ -638,7 +652,7 @@ namespace TAC_AI.World
                         lastEventTile = homeTile;
                         if (canSiege && UnloadedBases.IsPlayerWithinProvokeDist(MainBase.tilePos))
                         {
-                            PresenceDebug("This team can attack your base!  Threshold: " + ETUs.Count + " / " + (KickStart.EnemyTeamTechLimit / 2f));
+                            PresenceDebug("This team can attack your base!  Threshold: " + EMUs.Count + " / " + (KickStart.EnemyTeamTechLimit / 2f));
                             var player = Singleton.playerTank;
                             if (player && ManEnemySiege.LaunchSiege(this))
                             {
@@ -654,11 +668,11 @@ namespace TAC_AI.World
         private void MoveAllETUsNoMainBase()
         {
             //PresenceDebug("Team " + Team + " does not have a base allocated yet");
-            int count = ETUs.Count;
+            int count = EMUs.Count;
             for (int step = 0; step < count; step++)
             {
-                NP_TechUnit ETU = ETUs.ElementAt(step);
-                if (ETU.MoveSpeed < 10)
+                NP_MobileUnit ETU = EMUs.ElementAt(step);
+                if (ETU.GetSpeed() < 10)
                     continue;
                 IntVector2 playerCoord = WorldPosition.FromGameWorldPosition(Singleton.cameraTrans.position).TileCoord;
                 if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(Singleton.Manager<ManWorld>.inst.TileManager.CalcTileCentreScene(ETU.tilePos)))
@@ -668,7 +682,7 @@ namespace TAC_AI.World
                         ManEnemyWorld.StrategicMoveQueue(ETU, playerCoord, OnUnitReachDestinationNoBase, out bool fail);
                         if (fail)
                         {
-                            ETUs.Remove(ETU);
+                            EMUs.Remove(ETU);
                             step--;
                             count--;
                         }
@@ -678,6 +692,10 @@ namespace TAC_AI.World
                 }
             }
         }
+
+
+        private static StringBuilder moving = new StringBuilder();
+        private static StringBuilder startedMove = new StringBuilder();
         /// <summary>
         /// 
         /// </summary>
@@ -686,53 +704,97 @@ namespace TAC_AI.World
         private bool MoveAllETUs()
         {
             bool techsMoving = false;
-            int count = ETUs.Count;
-            StringBuilder moving = new StringBuilder();
-            StringBuilder startedMove = new StringBuilder();
-            for (int step = 0; step < count; step++)
+            if (DoDebugLog)
             {
-                NP_TechUnit ETU = ETUs.ElementAt(step);
-                if (ETU.tilePos == lastEventTile)
-                    continue;
-                if (!ETU.isMoving)
+                int count = EMUs.Count;
+                try
                 {
-                    if (ETU.isFounder)
+                    for (int step = 0; step < count; step++)
                     {
-                        if (!DoFounderMovement(ETU, ref techsMoving))
+                        NP_MobileUnit ETU = EMUs.ElementAt(step);
+                        if (ETU.tilePos == lastEventTile)
+                            continue;
+                        if (!ETU.isMoving)
                         {
-                            ETUs.Remove(ETU);
-                            step--;
-                            count--;
+                            if (ETU.isFounder)
+                            {
+                                if (!DoFounderMovement(ETU, ref techsMoving))
+                                {
+                                    EMUs.Remove(ETU);
+                                    step--;
+                                    count--;
+                                }
+                            }
+                            else
+                            {
+                                if (ManEnemyWorld.StrategicMoveQueue(ETU, lastEventTile, OnUnitReachDestinationBase, out bool fail))
+                                {
+                                    startedMove.Append(ETU.Name + ", ");
+                                    techsMoving = true;
+                                }
+                                if (fail)
+                                {
+                                    EMUs.Remove(ETU);
+                                    step--;
+                                    count--;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            moving.Append(ETU.Name + ", ");
+                            techsMoving = true;
+                        }
+                    }
+                    if (startedMove.Length > 0)
+                    {
+                        PresenceDebug("   Unit(s) " + startedMove.ToString() + " have started moving to tile " + lastEventTile);
+                    }
+                    if (moving.Length > 0)
+                    {
+                        PresenceDebug("   Unit(s) " + moving.ToString() + " are moving");
+                    }
+                }
+                finally
+                {
+                    moving.Clear();
+                    startedMove.Clear();
+                }
+            }
+            else
+            {
+                int count = EMUs.Count;
+                for (int step = 0; step < count; step++)
+                {
+                    NP_MobileUnit ETU = EMUs.ElementAt(step);
+                    if (ETU.tilePos == lastEventTile)
+                        continue;
+                    if (!ETU.isMoving)
+                    {
+                        if (ETU.isFounder)
+                        {
+                            if (!DoFounderMovement(ETU, ref techsMoving))
+                            {
+                                EMUs.Remove(ETU);
+                                step--;
+                                count--;
+                            }
+                        }
+                        else
+                        {
+                            if (ManEnemyWorld.StrategicMoveQueue(ETU, lastEventTile, OnUnitReachDestinationBase, out bool fail))
+                                techsMoving = true;
+                            if (fail)
+                            {
+                                EMUs.Remove(ETU);
+                                step--;
+                                count--;
+                            }
                         }
                     }
                     else
-                    {
-                        if (ManEnemyWorld.StrategicMoveQueue(ETU, lastEventTile, OnUnitReachDestinationBase, out bool fail))
-                        {
-                            startedMove.Append(ETU.Name + ", ");
-                            techsMoving = true;
-                        }
-                        if (fail)
-                        {
-                            ETUs.Remove(ETU);
-                            step--;
-                            count--;
-                        }
-                    }
+                        techsMoving = true;
                 }
-                else
-                {
-                    moving.Append(ETU.Name + ", ");
-                    techsMoving = true;
-                }
-            }
-            if (startedMove.Length > 0)
-            {
-                PresenceDebug("   Unit(s) " + startedMove.ToString() + " have started moving to tile " + lastEventTile);
-            }
-            if (moving.Length > 0)
-            {
-                PresenceDebug("   Unit(s) " + moving.ToString() + " are moving");
             }
             return techsMoving;
         }
@@ -769,32 +831,32 @@ namespace TAC_AI.World
 
 
         // Funding
-        public void UpdateRevenue()
+        internal void UpdateRevenue()
         {
             foreach (NP_BaseUnit EBU in EBUs)
             {
                 if (Singleton.Manager<ManVisible>.inst.GetTrackedVisible(EBU.ID) == null)
                 {
-                    EBU.BuildBucks += EBU.revenue + ManEnemyWorld.ExpansionIncome;
+                    EBU.AddBuildBucks(EBU.revenue + ManEnemyWorld.ExpansionIncome);
                 }
             }
-            NP_BaseUnit mainBase = UnloadedBases.GetSetTeamMainBase(this);
+            NP_BaseUnit mainBase = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
 
             if (mainBase != null)
             {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
-                mainBase.BuildBucks += ManEnemyWorld.PassiveHQBonusIncome * ManEnemyWorld.OperatorTickDelay;
+                mainBase.AddBuildBucks(ManEnemyWorld.PassiveHQBonusIncome * ManEnemyWorld.OperatorTickDelay);
                 if (AIGlobals.TurboAICheat)
                 {
-                    mainBase.BuildBucks += 25000 * ManEnemyWorld.OperatorTickDelay;
+                    mainBase.AddBuildBucks(25000 * ManEnemyWorld.OperatorTickDelay);
                 }
             }
         }
         public bool AddBuildBucks(int add)
         {
-            NP_BaseUnit EBU = UnloadedBases.GetSetTeamMainBase(this);
+            NP_BaseUnit EBU = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
             if (EBU != null)
             {
-                EBU.BuildBucks += add;
+                EBU.AddBuildBucks(add);
                 return true;
             }
             return false;
@@ -802,13 +864,13 @@ namespace TAC_AI.World
 
 
         // MISC
-        public void PresenceDebug(string thing)
+        internal void PresenceDebug(string thing)
         {
 #if DEBUG
             DebugTAC_AI.Log(thing);
 #endif
         }
-        public void PresenceDebugDEV(string thing)
+        internal void PresenceDebugDEV(string thing)
         {
 #if DEBUG
             DebugTAC_AI.Log(thing);
@@ -825,7 +887,7 @@ namespace TAC_AI.World
         {
             return lastAttackedTimestep > Time.time;
         }
-        public void OnCombat()
+        internal void OnCombat()
         {
             lastAttackedTimestep = Time.time + (ManEnemyWorld.OperatorTickDelay * 2);
             if (teamMode == AITeamMode.Idle)
@@ -842,7 +904,7 @@ namespace TAC_AI.World
             return count;
         }
 
-        public bool TryGetFounderUnloaded(out NP_TechUnit ETUFounder)
+        public bool TryGetFounderUnloaded(out NP_MobileUnit ETUFounder)
         {
             ETUFounder = null;
             if (teamFounder != null && !teamFounder.IsNullOrTechMissing())
@@ -852,7 +914,7 @@ namespace TAC_AI.World
             }
             else
             {
-                foreach (var item in ETUs)
+                foreach (var item in EMUs)
                 {
                     if (!item.IsNullOrTechMissing())
                     {
@@ -867,7 +929,7 @@ namespace TAC_AI.World
                 }
                 if (teamFounder != null && !teamFounder.IsNullOrTechMissing())
                 {
-                    ETUs.Remove(teamFounder);
+                    EMUs.Remove(teamFounder);
                     return true;
                 }
                 return false;
@@ -898,7 +960,7 @@ namespace TAC_AI.World
 
         public bool HasANYTechs()
         {
-            return EBUs.Count > 0 || ETUs.Count > 0 || RLoadedBases.TeamActiveMobileTechCount(Team) > 0 || RLoadedBases.TeamActiveAnyBaseCount(Team) > 0;
+            return EBUs.Count > 0 || EMUs.Count > 0 || RLoadedBases.TeamActiveMobileTechCount(Team) > 0 || RLoadedBases.TeamActiveAnyBaseCount(Team) > 0;
         }
         public int GlobalTotalTechCount()
         {
@@ -911,13 +973,13 @@ namespace TAC_AI.World
         public int GlobalMobileTechCount()
         {
             //DebugTAC_AI.Assert("GlobalMobileTechCount " + (ETUs.Count + RBases.TeamActiveMobileTechCount(Team)));
-            return ETUs.Count + RLoadedBases.TeamActiveMobileTechCount(Team);
+            return EMUs.Count + RLoadedBases.TeamActiveMobileTechCount(Team);
         }
 
         public int GlobalTeamCost()
         {
             int teamValue = 0;
-            foreach (var item in ETUs)
+            foreach (var item in EMUs)
             {
                 try
                 {

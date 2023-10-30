@@ -9,9 +9,9 @@ using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BMultiTech
+    internal static class BMultiTech
     {
-        public static void MTStatic(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MTStatic(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {   // stay still
             thisInst.lastPlayer = thisInst.GetPlayerTech();
             thisInst.IsMultiTech = true;
@@ -22,7 +22,7 @@ namespace TAC_AI.AI.AlliedOperations
             thisInst.PivotOnly = true;
         }
 
-        public static void MimicAllClosestAlly(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MimicAllClosestAlly(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             thisInst.lastPlayer = thisInst.GetPlayerTech();
             thisInst.IsMultiTech = true;
@@ -107,9 +107,9 @@ namespace TAC_AI.AI.AlliedOperations
                 }
                 if (!thisInst.MTLockedToTechBeam && thisInst.MTMimicHostAvail)
                 {
-                    TankControl.ControlState controlCopyTarget = (TankControl.ControlState)AIEPathing.controlGet.GetValue(thisInst.theResource.tank.control);
-                    thisInst.FullBoost = controlCopyTarget.m_State.m_BoostJets;
-                    thisInst.FirePROPS = controlCopyTarget.m_State.m_BoostProps;
+                    TankControl.State controlCopyTarget = thisInst.theResource.tank.control.CurState;
+                    thisInst.FullBoost = controlCopyTarget.m_BoostJets;
+                    thisInst.FirePROPS = controlCopyTarget.m_BoostProps;
                 }
             }
             catch
@@ -118,7 +118,7 @@ namespace TAC_AI.AI.AlliedOperations
                 thisInst.MTMimicHostAvail = false;
             }
         }
-        public static void BeamLockWithinBounds(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void BeamLockWithinBounds(TankAIHelper thisInst, Tank tank)
         {
             Tank hostTech;
             float dist;
@@ -179,7 +179,7 @@ namespace TAC_AI.AI.AlliedOperations
             }
         }
 
-        public static void MimicDefend(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void MimicDefend(TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI, this one is for MTs that have a host
             thisInst.AttackEnemy = false;

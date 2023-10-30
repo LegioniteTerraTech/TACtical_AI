@@ -13,7 +13,7 @@ namespace TAC_AI.AI.Movement.AICores
         /// </summary>
         /// <param name="help"></param>
         /// <param name="tank"></param>
-        internal static Vector3 HandleMultiTech(AIECore.TankAIHelper help, Tank tank, ref EControlCoreSet core)
+        internal static Vector3 HandleMultiTech(TankAIHelper help, Tank tank, ref EControlCoreSet core)
         {
             Vector3 targPos;
             if (help.lastEnemyGet)

@@ -10,16 +10,24 @@ using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI
 {
-    public class AIEBases
+    internal class AIEBases
     {
-        internal static void BaseConstructTech(Tank tech, Vector3 aimedPos, Snapshot techToMake)
+        internal static bool BaseConstructTech(Tank tech, Snapshot techToMake)
+        {   // Expand the base!
+            InvokeHelper.Invoke(DoBaseConstructTech, 0.1f, tech, techToMake);
+            return true;
+        }
+        private static void DoBaseConstructTech(Tank tech, Snapshot techToMake)
         {   // Expand the base!
             try
             {
-                if (FindNewExpansionBase(tech, aimedPos, out Vector3 pos))
+                if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tech.boundsCentreWorld))
+                    DebugTAC_AI.Assert("TACtical_AI: BaseConstructTech - Spawning Tech is out of world playable bounds at " +
+                        tech.boundsCentreWorld.ToString() + " this should not be possible");
+                if (FindNewExpansionBase(tech, tech.boundsCentreWorld + (tech.rootBlockTrans.forward * 64), out Vector3 pos, true))
                 {
-                    var clone = techToMake.techData.GetShallowClonedCopy();
-                    RawTechLoader.SpawnTechFragment(pos, tech.Team, new RawTechTemplate(clone));
+                    //var clone = techToMake.techData.GetShallowClonedCopy();
+                    RawTechLoader.SpawnTechFragment(pos, tech.Team, new RawTechTemplate(techToMake.techData, true));
                 }
             }
             catch (Exception e)
@@ -27,14 +35,12 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
             }
         }
-        internal static void SetupBookmarkBuilder(AIECore.TankAIHelper helper)
+        internal static void SetupBookmarkBuilder(TankAIHelper helper)
         {
             BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
             if (builder)
             {
-                helper.AutoRepair = true;
-                helper.AILimitSettings.AdvancedAI = true;
-                helper.UseInventory = true;
+                helper.AILimitSettings.OverrideForBuilder(true);
 
                 helper.InsureTechMemor("SetupBookmarkBuilder", false);
 
@@ -47,23 +53,19 @@ namespace TAC_AI.AI
                 helper.FinishedRepairEvent.Subscribe(OnFinishTechAutoConstruction);
             }
         }
-        internal static bool CheckIfTechNeedsToBeBuilt(AIECore.TankAIHelper helper)
+        internal static bool CheckIfTechNeedsToBeBuilt(TankAIHelper helper)
         {
             BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
             if (builder)
             {
-                helper.AILimitSettings.AutoRepair = true;
-                helper.AISetSettings.AutoRepair = true;
-                helper.AILimitSettings.AdvancedAI = true;
-                helper.AISetSettings.AdvancedAI = true;
-                helper.AILimitSettings.UseInventory = true;
-                helper.AISetSettings.UseInventory = true;
+                helper.AILimitSettings.OverrideForBuilder();
+                helper.AISetSettings.OverrideForBuilder();
                 helper.RequestBuildBeam = true;
                 return true;
             }
             return false;
         }
-        internal static void SetupTechAutoConstruction(AIECore.TankAIHelper helper)
+        internal static void SetupTechAutoConstruction(TankAIHelper helper)
         {
             BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
             if (builder)
@@ -78,7 +80,7 @@ namespace TAC_AI.AI
                 helper.FinishedRepairEvent.Subscribe(OnFinishTechAutoConstruction);
             }
         }
-        internal static void OnFinishTechAutoConstruction(AIECore.TankAIHelper helper)
+        internal static void OnFinishTechAutoConstruction(TankAIHelper helper)
         {
             BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
             if (builder)
@@ -88,35 +90,31 @@ namespace TAC_AI.AI
             }
         }
 
-        internal static bool FindNewExpansionBase(Tank tank, Vector3 targetWorld, out Vector3 pos)
+        private static Vector3[] location = new Vector3[9];
+        internal static bool FindNewExpansionBase(Tank tank, Vector3 targetWorld, out Vector3 pos, bool IgnoreCurrentlyBuilding = false)
         {
-            List<Vector3> location = new List<Vector3>
-            {
-                tank.transform.TransformPoint(new Vector3(64, 0, 0)),
-                tank.transform.TransformPoint(new Vector3(-64, 0, 0)),
-                tank.transform.TransformPoint(new Vector3(0, 0, 64)),
-                tank.transform.TransformPoint(new Vector3(0, 0, -64)),
-                tank.transform.TransformPoint(new Vector3(64, 0, 64)),
-                tank.transform.TransformPoint(new Vector3(-64, 0, 64)),
-                tank.transform.TransformPoint(new Vector3(64, 0, -64)),
-                tank.transform.TransformPoint(new Vector3(-64, 0, -64)),
-                tank.transform.TransformPoint(new Vector3(0, 0, 0))
-            };
+            Vector3 coreOffset = tank.boundsCentreWorld - tank.transform.position;
+            location[0] = tank.transform.TransformPoint(new Vector3(64, 0, 0)) + coreOffset;
+            location[1] = tank.transform.TransformPoint(new Vector3(-64, 0, 0)) + coreOffset;
+            location[2] = tank.transform.TransformPoint(new Vector3(0, 0, 64)) + coreOffset;
+            location[3] = tank.transform.TransformPoint(new Vector3(0, 0, -64)) + coreOffset;
+            location[4] = tank.transform.TransformPoint(new Vector3(64, 0, 64)) + coreOffset;
+            location[5] = tank.transform.TransformPoint(new Vector3(-64, 0, 64)) + coreOffset;
+            location[6] = tank.transform.TransformPoint(new Vector3(64, 0, -64)) + coreOffset;
+            location[7] = tank.transform.TransformPoint(new Vector3(-64, 0, -64)) + coreOffset;
+            location[8] = tank.transform.TransformPoint(new Vector3(0, 0, 0)) + coreOffset;
 
-            location = location.OrderBy(x => (x - targetWorld).sqrMagnitude).ToList();
-
-            int locationsCount = location.Count;
-            bool constant = false;
-            while (locationsCount > 0)
+            bool buildingCancel = false;
+            foreach (var item in location.OrderBy(x => (x - targetWorld).sqrMagnitude))
             {
-                Vector3 posCase = location[0] + tank.blockBounds.center;
-                if (IsLocationValid(posCase, ref constant, true, false))
+                Vector3 posCase = item;
+                if (IgnoreCurrentlyBuilding)
+                    buildingCancel = false;
+                if (IsLocationValid(posCase, ref buildingCancel))
                 {
                     pos = posCase;
                     return true;
                 }
-                location.RemoveAt(0);
-                locationsCount--;
             }
             pos = tank.boundsCentreWorldNoCheck;
             return false;
@@ -131,7 +129,7 @@ namespace TAC_AI.AI
                 return false;
             }
 
-            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, 24, new Bitfield<ObjectTypes>()))
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, 24, AIGlobals.emptyBitMask))
             {
                 if (resourcesToo && vis.resdisp.IsNotNull())
                 {
@@ -143,10 +141,10 @@ namespace TAC_AI.AI
                     if (IgnoreNeutral && vis.tank.Team == -2)
                         continue;
                     var helper = vis.tank.GetHelperInsured();
-                    if (helper.TechMemor)
+                    if (helper && helper.PendingDamageCheck)
                     {
-                        if (helper.PendingDamageCheck)
-                            ChainCancel = true; // A tech is still being built here - we cannot build more until done!
+                        ChainCancel = true;
+                        return false;
                     }
                     validLocation = false;
                 }
@@ -178,33 +176,24 @@ namespace TAC_AI.AI
 
         internal static bool TryFindExpansionLocationGrid(Vector3 expansionCenter, Vector3 targetWorld, out Vector3 pos)
         {
-            List<Vector3> location = new List<Vector3>
-            {
-                expansionCenter + new Vector3(64, 0, 0),
-                expansionCenter + new Vector3(-64, 0, 0),
-                expansionCenter + new Vector3(0, 0, 64),
-                expansionCenter + new Vector3(0, 0, -64),
-                expansionCenter + new Vector3(64, 0, 64),
-                expansionCenter + new Vector3(-64, 0, 64),
-                expansionCenter + new Vector3(64, 0, -64),
-                expansionCenter + new Vector3(-64, 0, -64),
-                expansionCenter + new Vector3(0, 0, 0)
-            };
+            location[0] = expansionCenter + new Vector3(64, 0, 0);
+            location[1] = expansionCenter + new Vector3(-64, 0, 0);
+            location[2] = expansionCenter + new Vector3(0, 0, 64);
+            location[3] = expansionCenter + new Vector3(0, 0, -64);
+            location[4] = expansionCenter + new Vector3(64, 0, 64);
+            location[5] = expansionCenter + new Vector3(-64, 0, 64);
+            location[6] = expansionCenter + new Vector3(64, 0, -64);
+            location[7] = expansionCenter + new Vector3(-64, 0, -64);
+            location[8] = expansionCenter + new Vector3(0, 0, 0);
 
-            location = location.OrderBy(x => (x - targetWorld).sqrMagnitude).ToList();
-
-            int locationsCount = location.Count;
             bool constant = false;
-            while (locationsCount > 0)
+            foreach (var item in location.OrderBy(x => (x - targetWorld).sqrMagnitude))
             {
-                Vector3 posCase = location[0];
-                if (IsLocationValid(posCase, ref constant, true, false))
+                if (IsLocationValid(item, ref constant, true, false))
                 {
-                    pos = posCase;
+                    pos = item;
                     return true;
                 }
-                location.RemoveAt(0);
-                locationsCount--;
             }
             pos = expansionCenter;
             return false;

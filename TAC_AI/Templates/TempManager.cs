@@ -9,7 +9,7 @@ using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
 {
-    public static class TempManager
+    internal static class TempManager
     {
         private static int lastExtLocalCount = 0;
         private static int lastExtModCount = 0;
@@ -26,24 +26,9 @@ namespace TAC_AI.Templates
 
         public static List<RawTechTemplate> ExternalEnemyTechsAll;
 
-
-        public static void ValidateAllStringTechs()
+        public static void ValidateAndAddTechs(List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile)
         {
-            ValidateAndAddAllInternalTechs();
-            ValidateAndAddAllExternalTechs();
-        }
-        public static void ValidateAndAddAllInternalTechs(bool reloadPublic = true)
-        {
-            List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
-
-            preCompile.AddRange(CommunityStorage.ReturnAllCommunityStored(reloadPublic));
-            preCompile.AddRange(TempStorage.techBasesPrefab);
-
-
-            Dictionary<SpawnBaseTypes, RawTechTemplate> techBasesProcessing = preCompile.ToDictionary(x => x.Key, x => x.Value);
-
-            techBases = new Dictionary<SpawnBaseTypes, RawTechTemplate>();
-            foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in techBasesProcessing)
+            foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in preCompile)
             {
                 if (ValidateBlocksInTech(ref pair.Value.savedTech, pair.Value))
                 {
@@ -56,8 +41,38 @@ namespace TAC_AI.Templates
             }
             CommunityCluster.Organize(ref techBases);
 
-            techBasesProcessing.Clear(); // GC, do your duty
+            preCompile.Clear(); // GC, do your duty
             CommunityStorage.UnloadRemainingUnused();
+        }
+
+        /// <summary>
+        /// Add in some Vanilla Techs (PENDING)
+        /// </summary>
+        public static void DelayedValidateAndAddBaseGameTechs()
+        {
+            /*
+            if (ManPresetFilter.inst.IsSettingUp || ManPop.inst.IsSettingUp)
+                InvokeHelper.Invoke(DelayedValidateAndAddBaseGameTechs, 0.25f);
+            else
+                ValidateAndAddTechs(SpecialAISpawner.ReturnAllBaseGameSpawns());
+            */
+        }
+
+        public static void ValidateAllStringTechs()
+        {
+            ValidateAndAddAllInternalTechs();
+            ValidateAndAddAllExternalTechs();
+        }
+        public static void ValidateAndAddAllInternalTechs(bool reloadPublic = true)
+        {
+            techBases = new Dictionary<SpawnBaseTypes, RawTechTemplate>();
+            List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
+
+            preCompile.AddRange(SpecialAISpawner.ReturnAllBaseGameSpawns());
+            preCompile.AddRange(CommunityStorage.ReturnAllCommunityStored(reloadPublic));
+            preCompile.AddRange(TempStorage.techBasesPrefab);
+            ValidateAndAddTechs(preCompile);
+            InvokeHelper.Invoke(DelayedValidateAndAddBaseGameTechs, 3);
         }
         public static void ValidateAndAddAllExternalTechs(bool force = false)
         {
@@ -109,6 +124,8 @@ namespace TAC_AI.Templates
             }
         }
 
+        private static StringBuilder SB = new StringBuilder();
+
         /// <summary>
         /// Checks all of the blocks in a BaseTemplate Tech to make sure it's safe to spawn as well as calculate other requirements for it.
         /// </summary>
@@ -121,17 +138,16 @@ namespace TAC_AI.Templates
         {
             try
             {
-                StringBuilder RAW = new StringBuilder();
                 foreach (char ch in toLoad)
                 {
                     if (ch != RawTechExporter.up.ToCharArray()[0])
                     {
-                        RAW.Append(ch);
+                        SB.Append(ch);
                     }
                 }
                 List<RawBlockMem> mem = new List<RawBlockMem>();
-                StringBuilder blockCase = new StringBuilder();
-                string RAWout = RAW.ToString();
+                string RAWout = SB.ToString();
+                SB.Clear();
                 FactionLevel greatestFaction = FactionLevel.GSO;
                 try
                 {
@@ -139,16 +155,18 @@ namespace TAC_AI.Templates
                     {
                         if (ch == '|')//new block
                         {
-                            mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
-                            blockCase.Clear();
+                            mem.Add(JsonUtility.FromJson<RawBlockMem>(SB.ToString()));
+                            SB.Clear();
                         }
                         else
-                            blockCase.Append(ch);
+                            SB.Append(ch);
                     }
-                    mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
+                    mem.Add(JsonUtility.FromJson<RawBlockMem>(SB.ToString()));
+                    SB.Clear();
                 }
                 catch
                 {
+                    SB.Clear();
                     DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTech - Loading error - File was edited or corrupted!");
                     greatestFaction = FactionLevel.GSO;
                     return false;
@@ -203,6 +221,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
+                SB.Clear();
                 DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
                 return false;
             }
@@ -248,52 +267,61 @@ namespace TAC_AI.Templates
             if (toLoad.NullOrEmpty())
                 return false;
 
-            StringBuilder RAW = new StringBuilder();
-            foreach (char ch in toLoad)
-            {
-                if (ch != RawTechExporter.up.ToCharArray()[0])
-                {
-                    RAW.Append(ch);
-                }
-            }
-            List<RawBlockMem> mem = new List<RawBlockMem>();
-            StringBuilder blockCase = new StringBuilder();
-            string RAWout = RAW.ToString();
+            bool valid = true;
             try
             {
-                foreach (char ch in RAWout)
+                foreach (char ch in toLoad)
                 {
-                    if (ch == '|')//new block
+                    if (ch != RawTechExporter.up.ToCharArray()[0])
                     {
-                        mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
-                        blockCase.Clear();
+                        SB.Append(ch);
                     }
-                    else
-                        blockCase.Append(ch);
                 }
-                mem.Add(JsonUtility.FromJson<RawBlockMem>(blockCase.ToString()));
+                List<RawBlockMem> mem = new List<RawBlockMem>();
+                string RAWout = SB.ToString();
+                SB.Clear();
+                try
+                {
+                    foreach (char ch in RAWout)
+                    {
+                        if (ch == '|')//new block
+                        {
+                            mem.Add(JsonUtility.FromJson<RawBlockMem>(SB.ToString()));
+                            SB.Clear();
+                        }
+                        else
+                            SB.Append(ch);
+                    }
+                    mem.Add(JsonUtility.FromJson<RawBlockMem>(SB.ToString())); 
+                    SB.Clear();
+                    int cabHash = ManSpawn.inst.GetBlockPrefab(BlockTypes.GSOCockpit_111).name.GetHashCode();
+                    foreach (RawBlockMem bloc in mem)
+                    {
+                        BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
+                        if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) || (type == BlockTypes.GSOCockpit_111 && bloc.t.GetHashCode() != cabHash))
+                        {
+                            valid = false;
+                            continue;
+                        }
+                        bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
+                    }
+
+                    // Rebuild in workable format
+                    toLoad = RawTechTemplate.MemoryToJSONExternal(mem);
+
+                }
+                catch
+                {
+                    SB.Clear();
+                    DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTechStrict - Loading error(2) - File was edited or corrupted!");
+                    return false;
+                }
             }
-            catch
-            {
-                DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTechStrict - Loading error - File was edited or corrupted!");
+            catch { 
+                SB.Clear();
+                DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTechStrict - Loading error(1) - File was edited or corrupted!");
                 return false;
             }
-            bool valid = true;
-            int cabHash = ManSpawn.inst.GetBlockPrefab(BlockTypes.GSOCockpit_111).name.GetHashCode();
-            foreach (RawBlockMem bloc in mem)
-            {
-                BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
-                if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type) || (type == BlockTypes.GSOCockpit_111 && bloc.t.GetHashCode() != cabHash))
-                {
-                    valid = false;
-                    continue;
-                }
-                bloc.t = Singleton.Manager<ManSpawn>.inst.GetBlockPrefab(type).name;
-            }
-
-            // Rebuild in workable format
-            toLoad = RawTechTemplate.MemoryToJSONExternal(mem);
-
             return valid;
         }
 

@@ -7,9 +7,9 @@ using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BAegis 
+    internal static class BAegis 
     {
-        public static void MotivateProtect(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MotivateProtect(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Aegis) what to do movement-wise
             thisInst.lastPlayer = thisInst.GetPlayerTech();
@@ -29,7 +29,8 @@ namespace TAC_AI.AI.AlliedOperations
                 DebugTAC_AI.Assert(true, "TACtical_AI: AI " + tank.name + ":  Aegis - error: trying to protect self");
                 return;
             }
-            direct.lastDestination = thisInst.theResource.tank.boundsCentreWorldNoCheck;
+
+            direct.SetLastDest(thisInst.theResource.tank.boundsCentreWorldNoCheck);
             float dist = thisInst.GetDistanceFromTask(direct.lastDestination, thisInst.theResource.GetCheapBounds());
             float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents;
             bool hasMessaged = false;
@@ -156,7 +157,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //bloody tree moment
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
                     thisInst.AvoidStuff = false;
-                    thisInst.FIRE_NOW = true;
+                    thisInst.FIRE_ALL = true;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 0.5f;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;

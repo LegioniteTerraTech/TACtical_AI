@@ -6,8 +6,10 @@ using System.Reflection;
 
 namespace TAC_AI.AI.Enemy
 {
-    // Sets up all important AI statistics based on AI core
-    internal static class RWeapSetup
+    /// <summary>
+    /// Sets up all important AI statistics based on AI core
+    /// </summary>
+    public static class RWeapSetup
     {
         private static FieldInfo deals => EWeapSetup.deals;
         private static FieldInfo bDPS => EWeapSetup.bDPS;

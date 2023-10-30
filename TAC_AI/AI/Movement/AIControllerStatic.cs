@@ -11,7 +11,7 @@ namespace TAC_AI.AI
     /// <summary>
     /// Handles all anchored operations 
     /// </summary>
-    public class AIControllerStatic : MonoBehaviour, IMovementAIController
+    internal class AIControllerStatic : MonoBehaviour, IMovementAIController
     {
         private Tank _tank;
         public Tank Tank
@@ -19,8 +19,8 @@ namespace TAC_AI.AI
             get => _tank;
             internal set => _tank = value;
         }
-        private AIECore.TankAIHelper _helper;
-        public AIECore.TankAIHelper Helper
+        private TankAIHelper _helper;
+        public TankAIHelper Helper
         {
             get => _helper;
             internal set => _helper = value;
@@ -45,7 +45,7 @@ namespace TAC_AI.AI
         public Vector3 PathPoint => SceneStayPos.ScenePosition.SetY(HoldHeight);
         public Vector2 IdleFacingDirect = Vector2.up;
 
-        public void Initiate(Tank tank, AIECore.TankAIHelper helper, EnemyMind mind = null)
+        public void Initiate(Tank tank, TankAIHelper helper, EnemyMind mind = null)
         {
             Tank = tank;
             Helper = helper;
@@ -54,11 +54,11 @@ namespace TAC_AI.AI
             HoldHeight = tank.boundsCentreWorld.y;
             SceneStayPos = WorldPosition.FromScenePosition(tank.boundsCentreWorld);
             /*
-            List<Tank> Techs = AIECore.TankAIManager.GetNonEnemyTanks(Tank.Team);
+            List<Tank> Techs = TankAIManager.GetNonEnemyTanks(Tank.Team);
             Techs.Remove(tank);
             if (Techs.Count > 0)
             {
-                Vector3 PosWorld = Techs.OrderByDescending(x => x.IsAnchored).ThenBy(x => (x.boundsCentreWorld - tank.boundsCentreWorldNoCheck).sqrMagnitude).First().boundsCentreWorld;
+                Vector3 PosWorld = Techs.OrderByDescending(x => x.IsAnchored).ThenBy(x => (x.boundsCentreWorld - tank.boundsCentreWorldNoCheck).sqrMagnitude).FirstOrDefault().boundsCentreWorld;
                 IdleFacingDirect = (tank.boundsCentreWorldNoCheck - PosWorld).ToVector2XZ().normalized;
             }*/
             IdleFacingDirect = Vector3.forward;

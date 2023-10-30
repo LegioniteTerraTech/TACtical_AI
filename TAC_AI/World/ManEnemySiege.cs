@@ -4,6 +4,7 @@ using System.Text;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using TerraTechETCUtil;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
@@ -38,7 +39,7 @@ namespace TAC_AI.World
         private static readonly FieldInfo attackName = typeof(UIBlockLimit).GetField("m_TotalCountLabel", BindingFlags.NonPublic | BindingFlags.Instance);
 
 
-        public static void Init()
+        internal static void Init()
         {
             if (!inst)
             {
@@ -79,7 +80,7 @@ namespace TAC_AI.World
             }
         }
 
-        public static void UpdateThis()
+        internal static void UpdateThis()
         {
             if (inst)
             {
@@ -89,7 +90,7 @@ namespace TAC_AI.World
                     if (inst.EP == null || !Singleton.playerTank)
                         return; // Cannot run while no targetable player Tech is present
                     CallAllRaidersToPlayerTile();
-                    TryRefocusIdleRaidersOnPlayer();
+                    TryRefocusIdleOrDistractedRaidersOnPlayer();
                     ScrapStuckOrFrozenRaiders();
                     CheckSiegeEnded();
                 }
@@ -108,34 +109,31 @@ namespace TAC_AI.World
                 return;
             }
         }
-        private static void TryRefocusIdleRaidersOnPlayer()
+        private static void TryRefocusIdleOrDistractedRaidersOnPlayer()
         {
             inst.techsInvolved.Clear();
             foreach (Tank tech in ManTechs.inst.CurrentTechs)
             {
-                if ((bool)tech?.visible?.isActive)
+                if ((bool)tech?.visible?.isActive && tech.Team == inst.EP.Team && !tech.IsAnchored)
                 {
-                    if (tech.Team == inst.EP.Team && !tech.IsAnchored)
+                    if (!tech.IsSleeping)
                     {
-                        if (!tech.IsSleeping)
+                        var helper = tech.GetHelperInsured();
+                        if (!helper.lastEnemyGet || helper.lastEnemyGet.tank.Team != ManPlayer.inst.PlayerTeam)
                         {
-                            var helper = tech.GetHelperInsured();
-                            if (!helper.lastEnemyGet)
+                            helper.lastEnemy = Singleton.playerTank?.visible;
+                            var mind = tech.GetComponent<EnemyMind>();
+                            if (mind)
                             {
-                                helper.lastEnemy = Singleton.playerTank?.visible;
-                                var mind = tech.GetComponent<EnemyMind>();
-                                if (mind)
-                                {
-                                    if (mind.CommanderAttack == EAttackMode.Safety)
-                                        mind.CommanderAttack = EAttackMode.Strong;
-                                    mind.CommanderMind = EnemyAttitude.Homing;
-                                }
+                                if (mind.CommanderAttack == EAttackMode.Safety)
+                                    mind.CommanderAttack = EAttackMode.Strong;
+                                mind.CommanderMind = EnemyAttitude.Homing;
                             }
-                            inst.techsInvolved.Add(tech);
                         }
-                        else
-                            inst.techsFrozen.Add(tech);
+                        inst.techsInvolved.Add(tech);
                     }
+                    else
+                        inst.techsFrozen.Add(tech);
                 }
             }
         }
@@ -156,7 +154,7 @@ namespace TAC_AI.World
         }
         private static void CheckSiegeEnded()
         {
-            var mainBase = UnloadedBases.GetSetTeamMainBase(inst.EP);
+            var mainBase = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(inst.EP);
             bool defeatedAllUnits = !Tank.IsEnemy(inst.Team, ManPlayer.inst.PlayerTeam) || (inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs());
             if ((mainBase != null && !UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos)) || defeatedAllUnits)
             {
@@ -190,7 +188,7 @@ namespace TAC_AI.World
             else
                 RaidCooldown = 0;
         }
-        public void EndSiege2()
+        internal void EndSiege2()
         {
             if (!inst)
                 return;
@@ -200,25 +198,25 @@ namespace TAC_AI.World
         }
 
         private static long tempHP = 0;
-        public static void WarnPlayers()
+        internal static void WarnPlayers()
         {
             if (!inst)
                 return;
             tempHP = 0;
-            foreach (NP_TechUnit ETU in inst.EP.ETUs)
+            foreach (NP_TechUnit ETU in inst.EP.EMUs)
                 tempHP += ETU.Health;
 
             DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - WarnPlayers");
             inst.Invoke("ThrowWarnPlayers", 1);
         }
-        public void ThrowWarnPlayers()
+        internal void ThrowWarnPlayers()
         {
             DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - ThrowWarnPlayers");
             Team = EP.Team;
             NetworkHandler.TryBroadcastNewEnemySiege(Team, tempHP, true);
             InitSiegeWarning(Team, tempHP);
         }
-        public static void InitSiegeWarning(int team, long tempHPIn)
+        internal static void InitSiegeWarning(int team, long tempHPIn)
         {
             if (!inst)
                 DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - InitSiegeWarning inst IS NULL");
@@ -229,7 +227,7 @@ namespace TAC_AI.World
             Singleton.Manager<ManHUD>.inst.ShowHudElement(ManHUD.HUDElementType.BlockLimit);
 
             int totalHealth = 0;
-            foreach (NP_TechUnit tech in inst.EP.ETUs)
+            foreach (NP_MobileUnit tech in inst.EP.EMUs)
             {
                 if (tech != null && tech.MoveSpeed > 10)
                 {
@@ -240,7 +238,8 @@ namespace TAC_AI.World
             TotalHP = totalHealth;
             ready = true;
             attackBar.SetValue(ManBlockLimiter.inst, totalHealth);
-            BigF5broningWarning("WARNING: Siege Inbound");
+            BigF5broningWarning("WARNING: Siege Inbound", true);
+            AIWiki.hintNPTSiege.Show();
 
             ManBlockLimiter.CostChangeInfo CCI = new ManBlockLimiter.CostChangeInfo
             {
@@ -261,12 +260,14 @@ namespace TAC_AI.World
             DebugTAC_AI.Log("TACtical_AI: ManEnemySiege - Repurposed ManBlockLimiter and UIBlockLimit for Raid UI");
 
         }
-        public void RemoveWarning()
+        internal void RemoveWarning()
         {
             ManSFX.inst.StopMiscLoopingSFX(ManSFX.MiscSfxType.PayloadIncoming);
             warningBanner.Message = "";
         }
 
+        public static Action<string, bool> BigF5broningWarning => UIHelpersExt.BigF5broningBanner;
+         /*
         public static void BigF5broningWarning(string Text)
         {
             if (!Singleton.Manager<ManHUD>.inst.GetHudElement(ManHUD.HUDElementType.Multiplayer))
@@ -288,17 +289,19 @@ namespace TAC_AI.World
                 inst.CancelInvoke("RemoveWarning");
             inst.warningBanner.Message = Text;
             inst.Invoke("RemoveWarning", 4f);
-        }
+        }*/
 
         float delay = 0;
         private readonly List<Tank> techsFrozen = new List<Tank>();
+        private void CheckShouldRun()
+        {
+            bool should = RaidCooldown <= 0 && ready && Team != 0;
+        }
         public void Update()
         {
             if (!ManPauseGame.inst.IsPaused && RaidCooldown > 0)
                 RaidCooldown -= Time.deltaTime;
-            if (!ready)
-                return;
-            if (Team == 0)
+            if (!ready || Team == 0)
                 return;
             delay += Time.deltaTime;
 

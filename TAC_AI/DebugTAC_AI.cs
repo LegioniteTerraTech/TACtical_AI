@@ -8,7 +8,7 @@ namespace TAC_AI
 {
     internal static class DebugTAC_AI
     {
-        internal static bool LogAll = false;
+        internal static bool LogAll = true;
         internal static bool ShouldLog = true;
         internal static bool ShouldLogPathing = false;
         private static bool ShouldLogNet = true;
@@ -30,9 +30,10 @@ namespace TAC_AI
                 return;
             UnityEngine.Debug.Log(message);
         }
+        internal static bool NoLogPathing => !ShouldLog || !ShouldLogPathing;
         internal static void LogPathing(string message)
         {
-            if (!ShouldLog || !ShouldLogPathing)
+            if (NoLogPathing)
                 return;
             UnityEngine.Debug.Log(message);
         }

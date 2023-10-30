@@ -8,7 +8,7 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public class EnemyOperationsController
+    internal class EnemyOperationsController
     {
         private EnemyMind Mind;
 
@@ -19,7 +19,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
         public void Execute()
         {
-            AIECore.TankAIHelper thisInst = Mind.AIControl;
+            TankAIHelper thisInst = Mind.AIControl;
             Tank tank = thisInst.tank;
 
             EControlOperatorSet direct = thisInst.GetDirectedControl();

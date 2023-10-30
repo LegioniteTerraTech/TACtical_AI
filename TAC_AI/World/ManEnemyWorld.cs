@@ -7,27 +7,30 @@ using UnityEngine;
 using TerraTechETCUtil;
 using TAC_AI.Templates;
 using TAC_AI.AI.Enemy;
+using SafeSaves;
 using TAC_AI.AI;
 using UnityEngine.UI;
 
 namespace TAC_AI.World
 {
-    // Manages Enemy bases that are off-screen
-    // Za wardo
-    //  Enemy bases only attack if:
-    //    PLAYER BASES (Only when player base is ON SCENE):
-    //      An enemy team's base is close to the player's BASE position
-    //      An enemy scout follows the player home to their base and shoots at it
-    //      the player attacks the enemy and the enemy base is ON SCENE
-    //    ENEMY BASES
-    //      An enemy scout has found another enemy base
-    // 
-    //    Much like their active counterparts in AIECore.TankAIHelper,
-    //      EnemyPresense has both a:
-    //        Operator (Large Actions)
-    //        Maintainer (Small Actions)
-    // 
-    //
+    /// <summary>
+    /// Manages Enemy bases that are off-screen
+    /// <para>Enemy bases only attack if:</para>
+    /// <para>PLAYER BASES (Only when player base is ON SCENE): -
+    ///      An enemy team's base is close to the player's BASE position
+    ///      An enemy scout follows the player home to their base and shoots at it
+    ///      the player attacks the enemy and the enemy base is ON SCENE</para>
+    /// <para>ENEMY BASES: - 
+    ///      An enemy scout has found another enemy base</para>
+    ///      
+    ///    Much like their active counterparts in TankAIHelper,
+    ///      EnemyPresense has both a:
+    ///    <list type="bullet">
+    ///    <item>Operator (Large Actions)</item>
+    ///    <item>Maintainer (Small Actions)</item>
+    ///     </list>
+    ///
+    /// </summary>
     public class ManEnemyWorld : MonoBehaviour
     {
         //-------------------------------------
@@ -38,71 +41,73 @@ namespace TAC_AI.World
         //  EBU = EnemyBaseUnloaded = Unloaded, stationary enemy Base
         internal const int OperatorTickDelay = 4;             // How many seconds the AI will perform base actions - default 4
         internal const int OperatorTicksKeepTarget = 4;             // How many seconds the AI will perform base actions - default 4
-        internal const int UnitSightRadius = 2;         // How far an enemy Tech Unit can see other enemies. IN TILES
-        internal const int BaseSightRadius = 4;         // How far an enemy Base Unit can see other enemies. IN TILES
-        internal const int EnemyBaseCullingExtents = 8; // How far from the player should enemy bases be removed 
+        public const int UnitSightRadius = 2;         // How far an enemy Tech Unit can see other enemies. IN TILES
+        public const int BaseSightRadius = 4;         // How far an enemy Base Unit can see other enemies. IN TILES
+        public const int EnemyBaseCullingExtents = 8; // How far from the player should enemy bases be removed 
         // from the world? IN TILES
-        internal static int EnemyRaidProvokeExtents = 4;// How far the can the enemy bases issue raids on the player. IN TILES
+        public const int EnemyRaidProvokeExtents = 4;// How far the can the enemy bases issue raids on the player. IN TILES
 
         // Movement
         internal const float MaintainerTickDelay = 0.5f;         // How many seconds the AI will perform a move - default 2
-        internal static float TechTraverseMulti = 0.75f;// Multiplier for AI traverse speed over ALL terrain
+        public const float LandTechTraverseMulti = 0.75f;// Multiplier for AI traverse speed over ALL terrain
 
         // Harvesting
-        internal const float SurfaceHarvestingMulti = 5.5f; // The multiplier of unloaded
-        internal const int ExpectedDPSDelitime = 1;    // How long we expect an ETU to be hitting an unloaded target for in seconds
+        public const float SurfaceHarvestingMulti = 5.5f; // The multiplier of unloaded
+        public const int ExpectedDPSDelitime = 1;    // How long we expect an ETU to be hitting an unloaded target for in seconds
 
         // Gains - (Per second)
-        internal const int PassiveHQBonusIncome = 150;
-        internal const int ExpansionIncome = 75;
+        public const int PassiveHQBonusIncome = 150;
+        public const int ExpansionIncome = 75;
 
         // Health-Based (Volume-Based)
         //bases
-        internal const float BaseHealthMulti = 0.1f;    // Health multiplier for out-of-play combat
-        internal const float BaseAccuraccy = 75f;       // Damage multiplier vs evasion
-        internal const float BaseEvasion = 25f;        // Damage reducer
+        public const float BaseHealthMulti = 0.1f;    // Health multiplier for out-of-play combat
+        public const float BaseAccuraccy = 75f;       // Damage multiplier vs evasion
+        public const float BaseEvasion = 25f;        // Damage reducer
         //units
-        internal const float MobileHealthMulti = 0.05f;  // Health multiplier for out-of-play combat
-        internal const float MobileAccuraccy = 50f;       // Damage multiplier vs evasion
-        internal const float MobileSpeedAccuraccyReduction = 0.25f;  // Damage multiplier vs evasion
-        internal const float MobileSpeedToEvasion = 1f; // Damage reducer
-        internal const WorldTile.LoadStep LevelToAttemptTechEntry = WorldTile.LoadStep.Loaded;
+        public const float MobileHealthMulti = 0.05f;  // Health multiplier for out-of-play combat
+        public const float MobileAccuraccy = 50f;       // Damage multiplier vs evasion
+        public const float MobileSpeedAccuraccyReduction = 0.25f;  // Damage multiplier vs evasion
+        public const float MobileSpeedToEvasion = 1f; // Damage reducer
+        public const WorldTile.LoadStep LevelToAttemptTechEntry = WorldTile.LoadStep.Loaded;
 
         // Repair
-        internal const int HealthRepairCost = 60;       // How much BB the AI should spend to repair unloaded damage
-        internal const int HealthRepairRate = 15;       // How much the enemy should repair every turn
-        internal const float BatteryToHealthConversionRate = 0.5f; // Battery to health effectiveness
-        internal const float RadiusBonus = 5;       // How much the enemy should repair every turn
-        internal const float sphereForm = (4 / 3) * Mathf.PI * RadiusBonus;       // How much the enemy should repair every turn
-        internal static int GetShieldRadiusHealthCoverage(float ShieldRadius)
+        public const int HealthRepairCost = 60;       // How much BB the AI should spend to repair unloaded damage
+        public const int HealthRepairRate = 15;       // How much the enemy should repair every turn
+        public const float BatteryToHealthConversionRate = 0.5f; // Battery to health effectiveness
+        public const float RadiusBonus = 5;       // How much the enemy should repair every turn
+        public const float sphereForm = (4 / 3) * Mathf.PI * RadiusBonus;       // How much the enemy should repair every turn
+        public static int GetShieldRadiusHealthCoverage(float ShieldRadius)
         { // How much health a shield radius would account for
             return Mathf.CeilToInt(sphereForm * Mathf.Pow(ShieldRadius, 3));
         }
 
 
         // Corp Speeds For Each Corp when Unloaded
-        internal static readonly Dictionary<FactionTypesExt, float> corpSpeeds = new Dictionary<FactionTypesExt, float>() {
+        public static readonly Dictionary<FactionSubTypes, float> corpSpeeds = new Dictionary<FactionSubTypes, float>() {
             {
-                FactionTypesExt.GSO , 60
+                FactionSubTypes.GSO , 60
             },
             {
-                FactionTypesExt.GC , 40
+                FactionSubTypes.GC , 40
             },
             {
-                FactionTypesExt.VEN , 100
+                FactionSubTypes.VEN , 100
             },
             {
-                FactionTypesExt.HE , 50
+                FactionSubTypes.HE , 50
             },
             {
-                FactionTypesExt.BF , 75
+                FactionSubTypes.BF , 75
             },
-            { FactionTypesExt.EXP, 45 },
+            { FactionSubTypes.EXP, 45 },
 
             // MODDED UNOFFICIAL
-            { FactionTypesExt.GT, 65 },
-            { FactionTypesExt.TAC, 70 },
-            { FactionTypesExt.OS, 45 },
+            /*
+            { FactionSubTypes.GT, 65 },
+            { FactionSubTypes.TAC, 70 },
+            { FactionSubTypes.OS, 45 },
+            */
         };
 
         //-------------------------------------
@@ -129,7 +134,7 @@ namespace TAC_AI.World
         /// </summary>
         public static Event<int> TeamCreatedEvent = new Event<int>();
         /// <summary>
-        /// (TeamID) Sends when a new enemy base team is destroyed out-of-play
+        /// (TeamID) Sends when an enemy base team is destroyed out-of-play
         /// </summary>
         public static Event<int> TeamDestroyedEvent = new Event<int>();
         public static string CombatLog => GetCombatLog();
@@ -182,7 +187,7 @@ namespace TAC_AI.World
 
 
         private static bool setup = false;
-        public static void Initiate()
+        internal static void Initiate()
         {
             if (inst)
                 return;
@@ -191,11 +196,13 @@ namespace TAC_AI.World
 #if STEAM
             LateInitiate();
 #endif
+            ManPauseGame.inst.PauseEvent.Subscribe(inst.OnPaused);
         }
-        public static void DeInit()
+        internal static void DeInit()
         {
             if (!inst)
                 return;
+            ManPauseGame.inst.PauseEvent.Unsubscribe(inst.OnPaused);
             Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Unsubscribe(OnTechDestroyed);
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Unsubscribe(OnWorldLoad);
             Singleton.Manager<ManGameMode>.inst.ModeSwitchEvent.Unsubscribe(OnWorldReset);
@@ -207,7 +214,7 @@ namespace TAC_AI.World
             DebugTAC_AI.Log("TACtical_AI: Removed ManEnemyWorld.");
         }
 
-        public static void LateInitiate()
+        internal static void LateInitiate()
         {
             if (setup)
                 return;
@@ -233,16 +240,14 @@ namespace TAC_AI.World
             }
             if (!subToTiles)
             {
-                Singleton.Manager<ManWorld>.inst.TileManager.TileStartPopulatingEvent.Subscribe(OnTileTechsBeforeRespawn);
-                Singleton.Manager<ManWorld>.inst.TileManager.TilePopulatedEvent.Subscribe(OnTileTechsRespawned);
-                Singleton.Manager<ManWorld>.inst.TileManager.TileDepopulatedEvent.Subscribe(OnTileTechsDespawned);
+                Singleton.Manager<ManWorld>.inst.TileManager.TileStartPopulatingEvent.Subscribe(OnTileTechsBeforeLoad);
+                Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(OnWorldLoadEnd);
                 subToTiles = true;
             }
             enabledThis = true;
             OperatorTicker = 0;
-            inst.Invoke("OnWorldLoadEnd", 5);
         }
-        public void OnWorldLoadEnd()
+        public static void OnWorldLoadEnd(Mode mode)
         {
             int count = 0;
             if (ManSaveGame.inst.CurrentState != null)
@@ -250,44 +255,50 @@ namespace TAC_AI.World
             DebugRawTechSpawner.DestroyAllInvalidVisibles();
             try
             {
-                HashSet<int> loaded = new HashSet<int>();
+                HashSet<int> loaded = new HashSet<int>(); // INFREQUENTLY CALLED
                 foreach (var item in ManTechs.inst.IterateTechs())
                 {
                     loaded.Add(item.visible.ID);
                 }
-                foreach (var item in new Dictionary<IntVector2, ManSaveGame.StoredTile>(Singleton.Manager<ManSaveGame>.inst.CurrentState.m_StoredTiles))
+                if (Singleton.Manager<ManSaveGame>.inst.CurrentState.m_StoredTiles != null)
                 {
-                    ManSaveGame.StoredTile storedTile = item.Value;
-                    if (storedTile != null && storedTile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> techs)
-                        && techs.Count > 0)
+                    foreach (var item in new Dictionary<IntVector2, ManSaveGame.StoredTile>(Singleton.Manager<ManSaveGame>.inst.CurrentState.m_StoredTiles))
                     {
-                        foreach (ManSaveGame.StoredVisible Vis in techs)
+                        ManSaveGame.StoredTile storedTile = item.Value;
+                        if (storedTile != null && storedTile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> techs)
+                            && techs.Count > 0)
                         {
-                            if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
+                            foreach (ManSaveGame.StoredVisible Vis in techs)
                             {
-                                RegisterTechUnloaded(tech);
-                                count++;
+                                if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
+                                {
+                                    RegisterTechUnloaded(tech);
+                                    count++;
+                                }
                             }
                         }
                     }
                 }
-                foreach (var item in new Dictionary<IntVector2, string>(Singleton.Manager<ManSaveGame>.inst.CurrentState.m_StoredTilesJSON))
+                if (Singleton.Manager<ManSaveGame>.inst.CurrentState.m_StoredTilesJSON != null)
                 {
-                    ManSaveGame.StoredTile storedTile = null;
-                    ManSaveGame.LoadObjectFromRawJson(ref storedTile, item.Value, false, false);
-                    if (storedTile != null && storedTile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> techs)
-                        && techs.Count > 0)
+                    foreach (var item in new Dictionary<IntVector2, string>(Singleton.Manager<ManSaveGame>.inst.CurrentState.m_StoredTilesJSON))
                     {
-                        foreach (ManSaveGame.StoredVisible Vis in techs)
+                        ManSaveGame.StoredTile storedTile = null;
+                        ManSaveGame.LoadObjectFromRawJson(ref storedTile, item.Value, false, false);
+                        if (storedTile != null && storedTile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> techs)
+                            && techs.Count > 0)
                         {
-                            if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
+                            foreach (ManSaveGame.StoredVisible Vis in techs)
                             {
-                                RegisterTechUnloaded(tech);
-                                count++;
+                                if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
+                                {
+                                    RegisterTechUnloaded(tech);
+                                    count++;
+                                }
                             }
                         }
-                    }
 
+                    }
                 }
                 DebugTAC_AI.Log("TACtical_AI: OnWorldLoadEnd Handled " + count + " Techs");
             }
@@ -304,47 +315,43 @@ namespace TAC_AI.World
             */
         }
 
-        public static void OnTileTechsBeforeRespawn(WorldTile WT)
+        public static void VisibleUnloaded(ManSaveGame.StoredVisible Vis)
+        {
+            if (!enabledThis)
+                return;
+            if (Vis is ManSaveGame.StoredTech tech)
+            {
+                if (tech.m_TechData.IsBase() || GetTeam(tech.m_TeamID) != null)
+                    RegisterTechUnloaded(tech);
+            }
+        }
+
+        public static void VisibleLoaded(Visible Vis)
+        {
+            if (!enabledThis)
+                return;
+            if (Vis.type == ObjectTypes.Vehicle)
+            {
+                var tank = Vis.tank;
+                if (TryGetETUFromTank(tank, out NP_TechUnit ETU))
+                {
+                    if (ETU is NP_BaseUnit EBU)
+                    {
+                    }
+                    if (ETU.ShouldApplyShields())
+                        ETU.DoApplyShields(tank);
+                    StopManagingUnit(ETU); // Cannot manage loaded techs
+                }
+            }
+        }
+
+        public static void OnTileTechsBeforeLoad(WorldTile WT)
         {
             if (!enabledThis)
                 return;
             foreach (NP_TechUnit ETU in GetUnloadedTechsInTile(WT.Coord))
             {
                 ETU.ApplyDamage();
-            }
-        }
-        public static void OnTileTechsRespawned(WorldTile WT)
-        {
-            if (!enabledThis)
-                return;
-            foreach (NP_TechUnit ETU in GetUnloadedTechsInTile(WT.Coord))
-            {
-                RemoveTechFromTeam(ETU); // Cannot manage loaded techs
-                if (ETU is NP_BaseUnit EBU)
-                {
-                    EBU.TryPushMoneyToLoadedInstance();
-                }
-                if (ETU.ShouldApplyShields())
-                    ETU.DoApplyShields(ETU.GetActiveTech());
-            }
-        }
-        public static void OnTileTechsDespawned(WorldTile WT)
-        {
-            if (!enabledThis)
-                return;
-            ManSaveGame.StoredTile tileInst = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(WT.Coord, false);
-            if (tileInst == null)
-                return;
-            if (tileInst.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> techs))
-            {
-                foreach (ManSaveGame.StoredVisible Vis in techs)
-                {
-                    if (Vis is ManSaveGame.StoredTech tech)
-                    {
-                        if (tech.m_TechData.IsBase() || GetTeam(tech.m_TeamID) != null)
-                            RegisterTechUnloaded(tech);
-                    }
-                }
             }
         }
         public static void OnTechDestroyed(Tank tech, ManDamage.DamageInfo poof)
@@ -475,7 +482,7 @@ namespace TAC_AI.World
                 {
                     try
                     {
-                        NP_TechUnit ETU = new NP_TechUnit(tech, InsureTeam(team), tech.m_TechData.GetMainCorpExt());
+                        NP_TechUnit ETU = new NP_MobileUnit(tech, InsureTeam(team), tech.m_TechData.GetMainCorp());
                         ETU.SetTracker(TV);
                         if (TV.ID != tech.m_ID)
                             throw new Exception("NP_TechUnit and TrackedVisible ID Mismatch");
@@ -512,7 +519,7 @@ namespace TAC_AI.World
             var tile = ManWorld.inst.TileManager.LookupTile(coord);
             if (tile != null)
             {
-                if (tile.m_LoadStep >= LevelToAttemptTechEntry && AIGlobals.AtSceneTechMax())
+                if (tile.m_LoadStep >= LevelToAttemptTechEntry && AIGlobals.AtSceneTechMaxSpawnLimit())
                 {
                     DebugTAC_AI.Info("TACtical_AI: CanMoveUnloadedTechIntoTile(Loaded) - The scene is at the Tech max limit.  Cannot proceed.");
                     return false;
@@ -537,7 +544,7 @@ namespace TAC_AI.World
         {
             if (tile == null)
                 return false;
-            if (AIGlobals.AtSceneTechMax())
+            if (AIGlobals.AtSceneTechMaxSpawnLimit())
             {
                 DebugTAC_AI.Info("TACtical_AI: CanMoveUnloadedTechIntoActiveTile - The scene is at the Tech max limit.  Cannot proceed.");
                 return false;
@@ -592,8 +599,8 @@ namespace TAC_AI.World
                     {
                         if (shouldApplyShields)
                             tech.DoApplyShields(newTech);
-                        RemoveTechFromTile(tech);
-                        RemoveTechFromTeam(tech);
+                        EntirelyRemoveUnitFromTile(tech);
+                        StopManagingUnit(tech);
                         DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Tech " + tech.Name + " has moved to in-play world coordinate " + newPos + "!");
                         return true;
                     }
@@ -603,47 +610,53 @@ namespace TAC_AI.World
                 }
                 else
                 {   // Loading in an Inactive Tech
-                    BlockTypeCache.Clear();
                     ManSaveGame.StoredTech ST = tech.tech;
-                    foreach (TankPreset.BlockSpec mem in ST.m_TechData.m_BlockSpecs)
+                    try
                     {
-                        if (!BlockTypeCache.Contains((int)mem.m_BlockType))
+                        foreach (TankPreset.BlockSpec mem in ST.m_TechData.m_BlockSpecs)
                         {
-                            BlockTypeCache.Add((int)mem.m_BlockType);
+                            if (!BlockTypeCache.Contains((int)mem.m_BlockType))
+                            {
+                                BlockTypeCache.Add((int)mem.m_BlockType);
+                            }
                         }
-                    }
-                    if (!FindFreeSpaceOnTile(tech.tilePos - tileToMoveInto.coord, tileToMoveInto, out Vector2 newPosOff))
-                    {
-                        DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Could not find a valid spot to move the Tech");
-                        return false;
-                    }
-                    RemoveTechFromTile(tech);
-                    //RemoveTechFromTeam(tech);
-                    Vector3 newPos = newPosOff.ToVector3XZ() + ManWorld.inst.TileManager.CalcTileOriginScene(tileToMoveInto.coord);
-                    Quaternion fromDirect = Quaternion.LookRotation(newPos - ST.m_Position);
-                    if (setPrecise)
-                    {
-                        //Vector3 inTilePos = newPosOff.ToVector3XZ();
-                        ManWorld.inst.GetTerrainHeight(newPos, out newPos.y);
-                        //techInst.m_WorldPosition = new WorldPosition(tileToMoveInto.coord, inTilePos); // Accurate it!
-                    }
-                    if (AddTechToTileAndSetETU(tech, tileToMoveInto, ST.m_TechData, BlockTypeCache.ToArray(), ST.m_TeamID, newPos, fromDirect, false))
-                    {
-                        //RegisterTechUnloaded(techInst, tileToMoveInto.coord, false);
-                        //DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Moved a Tech");
-                        if (tech.tilePos == tileToMoveInto.coord)
+                        if (!FindFreeSpaceOnTile(tech.tilePos - tileToMoveInto.coord, tileToMoveInto, out Vector2 newPosOff))
                         {
-                            tech.UpdateTVLocation();
-                            //if (tech.Exists())
-                            //    DebugTAC_AI.Assert("TACtical_AI: MoveTechIntoTile - tech was moved but not part of team!!!");
+                            DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Could not find a valid spot to move the Tech");
+                            return false;
+                        }
+                        EntirelyRemoveUnitFromTile(tech);
+                        //RemoveTechFromTeam(tech);
+                        Vector3 newPos = newPosOff.ToVector3XZ() + ManWorld.inst.TileManager.CalcTileOriginScene(tileToMoveInto.coord);
+                        Quaternion fromDirect = Quaternion.LookRotation(newPos - ST.m_Position);
+                        if (setPrecise)
+                        {
+                            //Vector3 inTilePos = newPosOff.ToVector3XZ();
+                            ManWorld.inst.GetTerrainHeight(newPos, out newPos.y);
+                            //techInst.m_WorldPosition = new WorldPosition(tileToMoveInto.coord, inTilePos); // Accurate it!
+                        }
+                        if (AddTechToTileAndSetETU(tech, tileToMoveInto, ST.m_TechData, BlockTypeCache.ToArray(), ST.m_TeamID, newPos, fromDirect, false))
+                        {
+                            //RegisterTechUnloaded(techInst, tileToMoveInto.coord, false);
+                            //DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Moved a Tech");
+                            if (tech.tilePos == tileToMoveInto.coord)
+                            {
+                                tech.UpdateTVLocation();
+                                //if (tech.Exists())
+                                //    DebugTAC_AI.Assert("TACtical_AI: MoveTechIntoTile - tech was moved but not part of team!!!");
+                            }
+                            else
+                                DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - tile coord mismatch!");
                         }
                         else
-                            DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - tile coord mismatch!");
+                        {
+                            DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Tech was created but WE HAVE MISPLACED IT!  The Tech may or may not be gone forever");
+                            DebugTAC_AI.FatalError();
+                        }
                     }
-                    else
+                    finally
                     {
-                        DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Tech was created but WE HAVE MISPLACED IT!  The Tech may or may not be gone forever");
-                        DebugTAC_AI.FatalError();
+                        BlockTypeCache.Clear();
                     }
                 }
                 return true;
@@ -689,12 +702,12 @@ namespace TAC_AI.World
 
             if (possibleSpotsCache.Count == 1)
             {
-                finalPos = possibleSpotsCache.First();
+                finalPos = possibleSpotsCache.FirstOrDefault();
                 return true;
             }
 
             Vector2 Directed = -(headingDirection.normalized * ManWorld.inst.TileSize) + (Vector2.one * (partDist / 2));
-            finalPos = possibleSpotsCache.OrderBy(x => (x - Directed).sqrMagnitude).First();
+            finalPos = possibleSpotsCache.OrderBy(x => (x - Directed).sqrMagnitude).FirstOrDefault();
             return true;
         }
         /// <summary>
@@ -735,11 +748,11 @@ namespace TAC_AI.World
 
             if (possibleSpotsCache.Count == 1)
             {
-                finalPosOffsetOrigin = possibleSpotsCache.First();
+                finalPosOffsetOrigin = possibleSpotsCache.FirstOrDefault();
                 return true;
             }
 
-            finalPosOffsetOrigin = possibleSpotsCache.OrderBy(x => (x - PosInTile).sqrMagnitude).First();
+            finalPosOffsetOrigin = possibleSpotsCache.OrderBy(x => (x - PosInTile).sqrMagnitude).FirstOrDefault();
             return true;
         }
 
@@ -761,8 +774,15 @@ namespace TAC_AI.World
             float partitionScale = ManWorld.inst.TileSize / partitions;
             float partDist = ManWorld.inst.TileSize;
             Vector3 tileInPosScene = ManWorld.inst.TileManager.CalcTileOriginScene(tilePos);
-            int extActionRange = AIGlobals.EnemyExtendActionRange - 48;
+            int extActionRange = AIGlobals.EnemyExtendActionRangeShort - 48;
             extActionRange *= extActionRange;
+
+            float sleepRangeMain = (float)TankAIManager.rangeOverride.GetValue(ManTechs.inst);
+            float sleepRange = float.MaxValue;
+            if (ManNetwork.IsNetworked)
+            {
+                sleepRange = (sleepRange * sleepRange) - AIGlobals.SleepRangeSpacing;
+            }
 
             for (int stepX = 0; stepX < partDist; stepX += (int)partitionScale)
             {
@@ -773,8 +793,8 @@ namespace TAC_AI.World
                     {
                         float hPart = partitionScale / 2;
                         New.y = height + 6;
-                        if ((New.SetY(0) - Singleton.playerPos.SetY(0)).sqrMagnitude > extActionRange 
-                            && IsRadiusClearOfTechObst(New, hPart))
+                        float dist = (New.SetY(0) - Singleton.playerPos.SetY(0)).sqrMagnitude;
+                        if (dist > extActionRange && dist < sleepRange && IsRadiusClearOfTechObst(New, hPart))
                         {
                             //DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnActiveTile spawn position at " + New);
                             possibleSpotsCache3.Add(New);
@@ -791,7 +811,7 @@ namespace TAC_AI.World
 
             if (possibleSpotsCache3.Count == 1)
             {
-                finalPos = possibleSpotsCache3.First();
+                finalPos = possibleSpotsCache3.FirstOrDefault();
                 possibleSpotsCache3.Clear();
                 return true;
             }
@@ -809,9 +829,9 @@ namespace TAC_AI.World
             possibleSpotsCache3.Clear();
             return false;
         }
-        private static bool IsRadiusClearOfTechObst(Vector3 pos, float radius)
+        public static bool IsRadiusClearOfTechObst(Vector3 pos, float radius)
         {
-            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, new Bitfield<ObjectTypes>(new ObjectTypes[2] { ObjectTypes.Vehicle, ObjectTypes.Scenery })))
+            foreach (Visible vis in Singleton.Manager<ManVisible>.inst.VisiblesTouchingRadius(pos, radius, AIGlobals.crashBitMask))
             {
                 if (vis.isActive)
                 {
@@ -823,7 +843,7 @@ namespace TAC_AI.World
         public static void AddTechToTile(ManSaveGame.StoredTile ST, TechData TD, int[] bIDs, int Team, Vector3 posScene, Quaternion forwards, bool anchored = false)
         {
             int ID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
-            ST.AddSavedTech(TD, bIDs, Team, posScene, Quaternion.LookRotation(forwards * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
+            ST.AddSavedTech(TD, posScene, Quaternion.LookRotation(forwards * Vector3.right, Vector3.up), ID, Team, bIDs, true, false, true, false, 99, false);
             if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
             {
                 var sTech = (ManSaveGame.StoredTech)SV.Last();
@@ -837,7 +857,7 @@ namespace TAC_AI.World
         public static bool AddTechToTileAndSetETU(NP_TechUnit ETU, ManSaveGame.StoredTile ST, TechData TD, int[] bIDs, int Team, Vector3 posScene, Quaternion forwards, bool anchored = false)
         {
             int ID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
-            ST.AddSavedTech(TD, bIDs, Team, posScene, Quaternion.LookRotation(forwards * Vector3.right, Vector3.up), true, false, true, ID, false, 99, false);
+            ST.AddSavedTech(TD, posScene, Quaternion.LookRotation(forwards * Vector3.right, Vector3.up), ID, Team, bIDs, true, false, true, false, 99, false);
             if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
             {
                 var sTech = (ManSaveGame.StoredTech)SV.Last();
@@ -848,7 +868,7 @@ namespace TAC_AI.World
             }
             return false;
         }
-        public static void RemoveTechFromTeam(NP_TechUnit tech)
+        public static void StopManagingUnit(NP_TechUnit tech)
         {
             NP_Presence EP = GetTeam(tech.tech.m_TeamID);
             if (EP != null)
@@ -857,15 +877,17 @@ namespace TAC_AI.World
                 {
                     EP.EBUs.Remove(EBU);
                 }
-                else
+                else if (tech is NP_MobileUnit EMU)
                 {
-                    if (tech.isFounder)
+                    if (EMU.isFounder)
                         EP.teamFounder = null;
-                    EP.ETUs.Remove(tech);
+                    EP.EMUs.Remove(EMU);
                 }
             }
+            else
+                throw new NullReferenceException("Unit " + tech.Name + " exists yet has no team.");
         }
-        public static bool RemoveTechFromTile(NP_TechUnit tech)
+        public static bool EntirelyRemoveUnitFromTile(NP_TechUnit tech)
         {
             var tile = ManSaveGame.inst.GetStoredTile(tech.tilePos, false);
             if (tile != null && tile.m_StoredVisibles.TryGetValue(1, out var vals))
@@ -957,15 +979,11 @@ namespace TAC_AI.World
         public static void AddToTeam(NP_TechUnit ETU, bool AnnounceNew)
         {
             int team = ETU.tech.m_TeamID;
-            bool notLoaded = !NPTTeams.TryGetValue(team, out NP_Presence EP);
+            NP_Presence EP;
             if (ETU is NP_BaseUnit EBU)
             {
-                if (notLoaded)
-                {
-                    EP = new NP_Presence(team, AIGlobals.IsEnemyBaseTeam(ETU.tech.m_TeamID));
-                    NPTTeams.Add(team, EP);
-                }
-                if (!EP.EBUs.ToList().Exists(delegate (NP_BaseUnit cand) { return cand.ID == EBU.ID; }))
+                EP = InsureTeam(team);
+                if (!EP.EBUs.Any(delegate (NP_BaseUnit cand) { return cand.ID == EBU.ID; }))
                 {
 #if DEBUG
                     if (AnnounceNew)
@@ -977,21 +995,17 @@ namespace TAC_AI.World
                     if (EP.EBUs.Add(EBU))
                         DebugTAC_AI.Info("TACtical_AI: HandleTechUnloaded(EBUs) Added " + EBU.Name);
                     else
-                        DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(EBU) Hash Fail!");
+                        DebugTAC_AI.Assert("TACtical_AI: HandleTechUnloaded(EBU) Hash Fail!");
                 }
                 else
                 {
                     DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(EBU) DUPLICATE TECH ADD REQUEST!");
                 }
             }
-            else
+            else if (ETU is NP_MobileUnit EMU)
             {
-                if (notLoaded)
-                {
-                    EP = new NP_Presence(team, AIGlobals.IsEnemyBaseTeam(ETU.tech.m_TeamID));
-                    NPTTeams.Add(team, EP);
-                }
-                if (!EP.ETUs.ToList().Exists(delegate (NP_TechUnit cand) { return cand.ID == ETU.ID; }))
+                EP = InsureTeam(team);
+                if (EP.EMUs.FirstOrDefault(delegate (NP_MobileUnit cand) { return cand.ID == ETU.ID; }) == null)
                 {
 #if DEBUG
                     if (AnnounceNew)
@@ -1000,16 +1014,16 @@ namespace TAC_AI.World
                         DebugTAC_AI.Log("TACtical_AI: of Team " + ETU.tech.m_TeamID + ", tile " + ETU.tilePos);
                     }
 #endif
-                    if (ETU.isFounder)
+                    if (EMU.isFounder)
                     {
                         if (EP.teamFounder != null)
                             DebugTAC_AI.Log("TACtical_AI: ASSERT - THERE ARE TWO TEAM FOUNDERS IN TEAM " + EP.team);
-                        EP.teamFounder = ETU;
+                        EP.teamFounder = EMU;
                     }
-                    if (EP.ETUs.Add(ETU))
-                        DebugTAC_AI.Info("TACtical_AI: HandleTechUnloaded(ETU) Added " + ETU.Name);
+                    if (EP.EMUs.Add(EMU))
+                        DebugTAC_AI.Info("TACtical_AI: HandleTechUnloaded(ETU) Added " + EMU.Name);
                     else
-                        DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(ETU) Hash Fail!");
+                        DebugTAC_AI.Assert("TACtical_AI: HandleTechUnloaded(ETU) Hash Fail!");
                 }
                 else
                 {
@@ -1051,7 +1065,7 @@ namespace TAC_AI.World
             NP_Presence EP = GetTeam(team);
             if (EP == null)
                 return 0;
-            return EP.ETUs.Count;
+            return EP.EMUs.Count;
         }
 
 
@@ -1070,13 +1084,13 @@ namespace TAC_AI.World
         /// <param name="ETU"></param>
         /// <param name="target"></param>
         /// <returns>True if it's queued moving</returns>
-        public static bool StrategicMoveQueue(NP_TechUnit ETU, IntVector2 target, Action<TileMoveCommand, bool, bool> onFinished, out bool criticalFail)
+        internal static bool StrategicMoveQueue(NP_TechUnit ETU, IntVector2 target, Action<TileMoveCommand, bool, bool> onFinished, out bool criticalFail)
         {
             criticalFail = false;
             IntVector2 tilePosInitial = ETU.tilePos;
-            if (ETU.MoveSpeed < 2)
+            if (ETU.GetSpeed() < 2)
             {
-                DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Is too slow with " + ETU.MoveSpeed + " to move!");
+                DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Is too slow with " + ETU.GetSpeed() + " to move!");
                 return false;
             }
             ManSaveGame.StoredTech ST = ETU.tech;
@@ -1097,7 +1111,7 @@ namespace TAC_AI.World
                 ETU.tilePos = IV2;*/
                 return false;
             }
-            float moveRate = ETU.MoveSpeed * TechTraverseMulti * MaintainerTickDelay;
+            float moveRate = ETU.GetSpeed() * MaintainerTickDelay;
             Vector2 moveDist = (target - tilePosInitial) * 2;
             Vector2 moveTileDist = moveDist.Clamp(-Vector2.one, Vector2.one);
             float dist = moveTileDist.magnitude * ManWorld.inst.TileSize;
@@ -1124,14 +1138,14 @@ namespace TAC_AI.World
             DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Destination tile IS NULL OR NOT LOADED!");
             return false;
         }
-        public static bool StrategicMoveConcluded(TileMoveCommand TMC)
+        private static bool StrategicMoveConcluded(TileMoveCommand TMC)
         {
             //DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - EXECUTING");
-            bool worked = MoveUnloadedTech(TMC.ETU, TMC.TargetTileCoord);
-            TMC.OnFinish(worked, TMC.ETU.Exists());
+            bool worked = TryMoveUnloadedTech(TMC.ETU, TMC.TargetTileCoord);
+            TMC.OnFinished(worked, TMC.ETU.Exists());
             return worked;
         }
-        public static bool MoveUnloadedTech(NP_TechUnit ETU, IntVector2 TargetTileCoord)
+        public static bool TryMoveUnloadedTech(NP_TechUnit ETU, IntVector2 TargetTileCoord)
         {
             //DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - EXECUTING");
             if (!IsTechOnSetTile(ETU))
@@ -1171,8 +1185,8 @@ namespace TAC_AI.World
                     return;
                 if (!KickStart.EnemiesHaveCreativeInventory)
                 {
-                    var funder = UnloadedBases.GetSetTeamMainBase(EP);
-                    funder.BuildBucks -= RawTechLoader.GetBaseTemplate(SBT).baseCost;
+                    var funder = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(EP);
+                    funder.SpendBuildBucks(RawTechLoader.GetBaseTemplate(SBT).baseCost);
                 }
 
                 Quaternion quat = BuilderTech.tech.m_Rotation;
@@ -1191,8 +1205,8 @@ namespace TAC_AI.World
             {
                 if (!KickStart.EnemiesHaveCreativeInventory)
                 {
-                    var funder = UnloadedBases.GetSetTeamMainBase(EP);
-                    funder.BuildBucks -= RawTechLoader.GetBaseTemplate(SBT).baseCost;
+                    var funder = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(EP);
+                    funder.SpendBuildBucks(RawTechLoader.GetBaseTemplate(SBT).baseCost);
                 }
 
                 Quaternion quat = BuilderTech.tech.m_Rotation;
@@ -1212,8 +1226,8 @@ namespace TAC_AI.World
                     return;
                 if (!KickStart.EnemiesHaveCreativeInventory)
                 {
-                    var funder = UnloadedBases.GetSetTeamMainBase(EP);
-                    funder.BuildBucks -= BT.baseCost;
+                    var funder = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(EP);
+                    funder.SpendBuildBucks(BT.baseCost);
                 }
 
                 Quaternion quat = BuilderTech.tech.m_Rotation;
@@ -1232,8 +1246,8 @@ namespace TAC_AI.World
             {
                 if (!KickStart.EnemiesHaveCreativeInventory)
                 {
-                    var funder = UnloadedBases.GetSetTeamMainBase(EP);
-                    funder.BuildBucks -= BT.baseCost;
+                    var funder = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(EP);
+                    funder.SpendBuildBucks(BT.baseCost);
                 }
 
                 Quaternion quat = BuilderTech.tech.m_Rotation;
@@ -1247,9 +1261,13 @@ namespace TAC_AI.World
 
 
         // UPDATE
-        public void Update()
+        public void OnPaused(bool state)
         {
-            if (!ManPauseGame.inst.IsPaused && ManNetwork.IsHost)
+            inst.enabled = !state;
+        }
+        private void Update()
+        {
+            if (ManNetwork.IsHost)
             {
                 // The Strategic AI thinks every OperatorTickDelay seconds
                 if (AIGlobals.TurboAICheat)
@@ -1267,56 +1285,63 @@ namespace TAC_AI.World
                 }
             }
         }
-        public void UpdateOperators()
+        private static List<NP_Presence> EPScrambled = new List<NP_Presence>();
+        private void UpdateOperators()
         {
             //DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld - Updating All EnemyPresence");
-
-            List<NP_Presence> EPScrambled = NPTTeams.Values.ToList();
-            EPScrambled.Shuffle();
-            int Count = EPScrambled.Count;
-            if (KickStart.AllowStrategicAI)
+            try
             {
-                DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update()[RTS] - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
-                for (int step = 0; step < Count;)
+                EPScrambled.AddRange(NPTTeams.Values);
+                EPScrambled.Shuffle();
+                int Count = EPScrambled.Count;
+                if (KickStart.AllowStrategicAI)
                 {
-                    NP_Presence EP = EPScrambled.ElementAt(step);
-                    if (EP.UpdateOperatorRTS())
+                    DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update()[RTS] - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
+                    for (int step = 0; step < Count;)
                     {
-                        step++;
-                        continue;
-                    }
+                        NP_Presence EP = EPScrambled.ElementAt(step);
+                        if (EP.UpdateOperatorRTS())
+                        {
+                            step++;
+                            continue;
+                        }
 
-                    DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update()[RTS] - Team " + EP.Team + " has been unregistered");
-                    TeamDestroyedEvent.Send(EP.Team);
-                    NPTTeams.Remove(EP.Team);
-                    EPScrambled.RemoveAt(step);
-                    Count--;
+                        DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update()[RTS] - Team " + EP.Team + " has been unregistered");
+                        TeamDestroyedEvent.Send(EP.Team);
+                        NPTTeams.Remove(EP.Team);
+                        EPScrambled.RemoveAt(step);
+                        Count--;
+                    }
+                    ManEnemySiege.UpdateThis();
                 }
-                ManEnemySiege.UpdateThis();
+                else
+                {
+                    DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update() - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
+                    for (int step = 0; step < Count;)
+                    {
+                        NP_Presence EP = EPScrambled.ElementAt(step);
+                        if (EP.UpdateOperator())
+                        {
+                            step++;
+                            continue;
+                        }
+
+                        DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update() - Team " + EP.Team + " has been unregistered");
+                        TeamDestroyedEvent.Send(EP.Team);
+                        NPTTeams.Remove(EP.Team);
+                        EPScrambled.RemoveAt(step);
+                        Count--;
+                    }
+                }
+                //DebugRawTechSpawner.RemoveOrphanTrackedVisibles();
             }
-            else
+            finally
             {
-                DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update() - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
-                for (int step = 0; step < Count;)
-                {
-                    NP_Presence EP = EPScrambled.ElementAt(step);
-                    if (EP.UpdateOperator())
-                    {
-                        step++;
-                        continue;
-                    }
-
-                    DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update() - Team " + EP.Team + " has been unregistered");
-                    TeamDestroyedEvent.Send(EP.Team);
-                    NPTTeams.Remove(EP.Team);
-                    EPScrambled.RemoveAt(step);
-                    Count--;
-                }
+                EPScrambled.Clear();
             }
-            //DebugRawTechSpawner.RemoveOrphanTrackedVisibles();
         }
 
-        public void UpdateMaintainers()
+        private void UpdateMaintainers()
         {
             SpawnIndexThisFrame = 0;
             foreach (var item in NPTTeams)
@@ -1358,27 +1383,26 @@ namespace TAC_AI.World
         private static NP_TechUnit GetETUFromTank(Tank sTech)
         {
             NP_TechUnit ETUo = null;
-            if (NPTTeams.TryGetValue(sTech.Team, out NP_Presence EP))
-            {
-                ETUo = EP.EBUs.ToList().Find(delegate (NP_BaseUnit cand) { return cand.ID == sTech.visible.ID; });
-                if (ETUo != null)
-                    return ETUo;
-                ETUo = EP.ETUs.ToList().Find(delegate (NP_TechUnit cand) { return cand.ID == sTech.visible.ID; });
-                if (ETUo == null)
-                    throw new NullReferenceException("GetETUFromTank could not find StoredTech " + sTech.name + " team " + sTech.Team);
-            }
-            else
+            if (!sTech)
+                throw new NullReferenceException("GetETUFromTank sTech IS NULL");
+            if (!NPTTeams.TryGetValue(sTech.Team, out NP_Presence EP))
                 throw new NullReferenceException("GetETUFromTank could not find enemy team of ID " + sTech.Team);
-            return ETUo;
+            ETUo = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.visible.ID; });
+            if (ETUo != null)
+                return ETUo;
+            ETUo = EP.EMUs.FirstOrDefault(delegate (NP_MobileUnit cand) { return cand.ID == sTech.visible.ID; });
+            if (ETUo != null)
+                return ETUo;
+            throw new NullReferenceException("GetETUFromTank could not find StoredTech " + sTech.name + " of team " + sTech.Team);
         }
         private static bool TryGetETUFromTank(Tank sTech, out NP_TechUnit ETU)
         {
-            if (NPTTeams.TryGetValue(sTech.Team, out NP_Presence EP))
+            if (sTech && NPTTeams.TryGetValue(sTech.Team, out NP_Presence EP))
             {
-                ETU = EP.EBUs.ToList().Find(delegate (NP_BaseUnit cand) { return cand.ID == sTech.visible.ID; });
+                ETU = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.visible.ID; });
                 if (ETU != null)
                     return true;
-                ETU = EP.ETUs.ToList().Find(delegate (NP_TechUnit cand) { return cand.ID == sTech.visible.ID; });
+                ETU = EP.EMUs.FirstOrDefault(delegate (NP_MobileUnit cand) { return cand.ID == sTech.visible.ID; });
                 if (ETU != null)
                     return true;
             }
@@ -1388,28 +1412,24 @@ namespace TAC_AI.World
         private static NP_TechUnit GetETUFromInst(ManSaveGame.StoredTech sTech)
         {
             NP_TechUnit ETUo = null;
-            if (NPTTeams.TryGetValue(sTech.m_TeamID, out NP_Presence EP))
-            {
-                ETUo = EP.EBUs.ToList().Find(delegate (NP_BaseUnit cand) { return cand.ID == sTech.m_ID; });
-                if (ETUo != null)
-                    return ETUo;
-                ETUo = EP.ETUs.ToList().Find(delegate (NP_TechUnit cand) { return cand.ID == sTech.m_ID; });
-                if (ETUo == null)
-                    throw new NullReferenceException("GetETUFromInst could not find StoredTech " + sTech.m_TechData.Name + " team " + sTech.m_TeamID);
-            }
-            else
+            if (!NPTTeams.TryGetValue(sTech.m_TeamID, out NP_Presence EP))
                 throw new NullReferenceException("GetETUFromInst could not find enemy team of ID " + sTech.m_TeamID);
-
-            return ETUo;
+            ETUo = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.m_ID; });
+            if (ETUo != null)
+                return ETUo;
+            ETUo = EP.EMUs.FirstOrDefault(delegate (NP_MobileUnit cand) { return cand.ID == sTech.m_ID; });
+            if (ETUo != null)
+                return ETUo;
+            throw new NullReferenceException("GetETUFromInst could not find StoredTech " + sTech.m_TechData.Name + " team " + sTech.m_TeamID);
         }
         private static bool TryGetETUFromInst(ManSaveGame.StoredTech sTech, out NP_TechUnit ETU)
         {
             if (NPTTeams.TryGetValue(sTech.m_TeamID, out NP_Presence EP))
             {
-                ETU = EP.EBUs.ToList().Find(delegate (NP_BaseUnit cand) { return cand.ID == sTech.m_ID; });
+                ETU = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.m_ID; });
                 if (ETU != null)
                     return true;
-                ETU = EP.ETUs.ToList().Find(delegate (NP_TechUnit cand) { return cand.ID == sTech.m_ID; });
+                ETU = EP.EMUs.FirstOrDefault(delegate (NP_MobileUnit cand) { return cand.ID == sTech.m_ID; });
                 if (ETU != null)
                     return true;
             }
@@ -1571,6 +1591,223 @@ namespace TAC_AI.World
         }
 
 
+        // CALCULATIONS
+        private static ExpectedSpeedAsync Speedo = new ExpectedSpeedAsync();
+        private static Queue<NP_MobileUnit> ToRead = new Queue<NP_MobileUnit>();
+        public static void CalcWrapper()
+        {
+            if (!Speedo.CollectExpectedSpeedAsync())
+            {
+                while (ToRead.Any())
+                {
+                    var caseC = ToRead.Dequeue();
+                    if (caseC.Exists())
+                    {
+                        Speedo.Setup(caseC);
+                        Speedo.CollectExpectedSpeedAsync();
+                        return;
+                    }
+                }
+            }
+        }
+        public static void GetExpectedSpeedAsync(NP_MobileUnit unit)
+        {
+            if (!ToRead.Any())
+            {
+                InvokeHelper.InvokeSingleRepeat(CalcWrapper, 0.1f);
+            }
+            ToRead.Enqueue(unit);
+        }
+
+        private const int BlockCollectIterations = 6;
+        private const int SpeedCheckIterations = 32;
+        private static List<AnimationCurve> wheelCurves = new List<AnimationCurve>();
+        private static readonly FieldInfo oomph = typeof(BoosterJet).GetField("m_Force", BindingFlags.Instance | BindingFlags.NonPublic);
+        
+        /// <summary>
+        /// Doesn't care about placement or facing direction or if it actually works in-play - we just want QUICK STATS
+        /// </summary>
+        protected class ExpectedSpeedAsync
+        {
+            NP_MobileUnit unit = null;
+            ManSaveGame.StoredTech sTech = null;
+            int curStep = 0;
+            float TotalMass = 1;
+            float TorqueForceGrounded = 1;
+            float MaxRPM = 0;
+            int WheelsCount = 0;
+            float WheelRadius = 0;
+            float ForceAirborne = 1;
+            float FuelPotential = 0;
+            float RechargePotential = 0;
+            float BoostPotential = 0;
+            float ConsumePotential = 0;
+            int ControlSurfCount = 0;
+            float ControlSurfCombinedStallSpeed = 1;
+            float LiftAssistance = 1;
+            public void Setup(NP_MobileUnit Tech)
+            {
+                unit = Tech;
+                sTech = Tech.tech;
+                curStep = 0;
+                TotalMass = 1;
+                TorqueForceGrounded = 1;
+                MaxRPM = 0;
+                WheelsCount = 0;
+                WheelRadius = 0;
+                ForceAirborne = 1;
+                FuelPotential = 0;
+                RechargePotential = 0;
+                BoostPotential = 0;
+                ConsumePotential = 0;
+                ControlSurfCount = 0;
+                ControlSurfCombinedStallSpeed = 1;
+                LiftAssistance = 1;
+            }
+            public bool CollectExpectedSpeedAsync()
+            {
+                if (!unit.Exists())
+                    return true;
+                int nextVal = Mathf.Min(sTech.m_TechData.m_BlockSpecs.Count, curStep + BlockCollectIterations);
+                for (; curStep < nextVal; curStep++)
+                {
+                    TankPreset.BlockSpec item = sTech.m_TechData.m_BlockSpecs[curStep];
+                    BlockTypes BT = BlockIndexer.GetBlockIDLogFree(item.block);
+                    if (BT != BlockTypes.GSOAIController_111)
+                    {
+                        var block = ManSpawn.inst.GetBlockPrefab(BT);
+                        if (block)
+                        {
+                            TotalMass += block.m_DefaultMass;
+                            if (TryGetComponent(block, out ModuleWheels wheels))
+                            {
+                                var wParams = wheels.m_WheelParams;
+                                if (wParams.radius > 0)
+                                {
+                                    var tParams = wheels.m_TorqueParams;
+                                    WheelsCount++;
+                                    WheelRadius += wParams.radius;
+                                    TorqueForceGrounded += tParams.torqueCurveMaxTorque;
+                                    MaxRPM += tParams.torqueCurveMaxRpm;
+                                    wheelCurves.Add(tParams.torqueCurveDrive);
+                                }
+                            }
+                            if (TryGetComponent(block, out ModuleBooster boosters))
+                            {
+                                foreach (var item2 in block.GetComponentsInChildren<BoosterJet>())
+                                {
+                                    BoostPotential += (float)oomph.GetValue(item2);
+                                    ConsumePotential += item2.BurnRate;
+                                }
+                                foreach (var item2 in block.GetComponentsInChildren<FanJet>())
+                                {
+                                    ForceAirborne += item2.force;
+                                }
+                            }
+                            if (TryGetComponent(block, out ModuleFuelTank fuel))
+                            {
+                                FuelPotential += fuel.Capacity;
+                                RechargePotential += fuel.RefillRate;
+                            }
+                            if (TryGetComponent(block, out ModuleHover hovers))
+                            {
+                                float unitForce = 0;
+                                foreach (var item2 in block.GetComponentsInChildren<HoverJet>())
+                                {
+                                    unitForce += item2.forceMax;
+                                }
+                                ForceAirborne += unitForce;
+                            }
+                            if (TryGetComponent(block, out ModuleWing wings))
+                            {
+                                if (wings.m_Aerofoils != null)
+                                {
+                                    foreach (var wing in wings.m_Aerofoils)
+                                    {
+                                        if (wing.flapAngleRangeActual > 0 && wing.flapTurnSpeed > 0)
+                                        {
+                                            ControlSurfCount++;
+                                            float speedStall = 0;
+                                            for (; wing.liftCurve.Evaluate(speedStall) < 0.5f && speedStall < 150; 
+                                                speedStall += 10)
+                                            {
+                                            }
+                                            ControlSurfCombinedStallSpeed += speedStall;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return nextVal == curStep;
+            }
+            public void Finalize()
+            {
+                if (WheelsCount > 0)
+                {
+                    WheelRadius /= WheelsCount;
+                    MaxRPM /= WheelsCount;
+                }
+
+                if (FuelPotential > 0 && RechargePotential > 0)
+                {
+                    float ExpectedBoostUptime = ConsumePotential / FuelPotential;
+                    float ExpectedBoostCycle = ExpectedBoostUptime + (FuelPotential / RechargePotential);
+                    float ExpectedBoostEfficiency = ExpectedBoostUptime / ExpectedBoostCycle;
+                    ForceAirborne += ExpectedBoostEfficiency * BoostPotential;
+                }
+                float MaxSpeed = 0;
+                for (int step = 0; step < SpeedCheckIterations; step++)
+                {
+                    float wheelForce = 0;
+                    if (WheelsCount > 0)
+                    {
+                        float wheelAngleVelo = (MaxSpeed / (WheelRadius * Mathf.PI * 2)) / MaxRPM;
+                        float wheelForceMulti = 0;
+                        foreach (var item in wheelCurves)
+                        {
+                            wheelForceMulti += item.Evaluate(wheelAngleVelo);
+                        }
+                        wheelForceMulti /= WheelsCount;
+                        wheelForce = wheelForceMulti * TorqueForceGrounded;
+                    }
+                    float CombinedForces = ForceAirborne + wheelForce;
+                    float Acceleration = CombinedForces / TotalMass;
+                    MaxSpeed += Acceleration;
+                    float Drag = (MaxSpeed * MaxSpeed) * 0.001f;
+                    MaxSpeed -= Drag;
+                }
+                wheelCurves.Clear();
+
+                float ExpectedWeight = Physics.gravity.y * TotalMass;
+                float ExpectedLiftMaxCapacity = 0;
+
+                float ControlSurfExpectedStallSpeed = ControlSurfCombinedStallSpeed / Mathf.Max(1, ControlSurfCount);
+                if (ControlSurfExpectedStallSpeed < MaxSpeed)
+                    ExpectedLiftMaxCapacity += LiftAssistance * ForceAirborne;
+                unit.IsAirborne = ExpectedLiftMaxCapacity + ForceAirborne >= ExpectedWeight;
+                unit.MoveSpeed = MaxSpeed;
+                DebugTAC_AI.Log("Tech " + unit.Name + " is given speed of " + 
+                    unit.MoveSpeed + ", can fly: " + unit.IsAirborne);
+            }
+            public bool GetExpectedSpeedAsync()
+            {
+                if (CollectExpectedSpeedAsync())
+                {
+                    if (unit.Exists())
+                        Finalize();
+                    return false;
+                }
+                return true;
+            }
+        }
+        public static bool TryGetComponent<T>(TankBlock block, out T Comp) where T : Component
+        {
+            Comp = block.GetComponent<T>();
+            return Comp;
+        }
         public static int GetBiomeAutominerGains(Vector3 scenePos)
         {
             ChunkTypes[] res = RLoadedBases.TryGetBiomeResource(scenePos);
@@ -1645,7 +1882,7 @@ namespace TAC_AI.World
                         }
                         if (enabledTabs.Contains(item.Key))
                         {
-                            foreach (var item2 in AllTeamsUnloaded.ToList().FindAll(x => AIGlobals.GetNPTTeamType(x.Key) == item.Key))
+                            foreach (var item2 in AllTeamsUnloaded.TakeWhile(x => AIGlobals.GetNPTTeamType(x.Key) == item.Key))
                             {
                                 if (GUILayout.Button("Team: [" + item2.Key.ToString() + "] - " + TeamNamer.GetTeamName(item2.Key)))
                                 {
@@ -1691,9 +1928,9 @@ namespace TAC_AI.World
                                     GUILayout.Label("  Mode: " + item2.Value.TeamMode.ToString());
                                     GUILayout.Label("  Attacking: " + (item2.Value.attackStarted ? 
                                         ("true | Coord: " + item2.Value.attackTile) : "false"));
-                                    GUILayout.Label("  Techs: " + item2.Value.ETUs.Count);
+                                    GUILayout.Label("  Techs: " + item2.Value.EMUs.Count);
                                     StringBuilder SB = new StringBuilder();
-                                    foreach (var item3 in item2.Value.ETUs)
+                                    foreach (var item3 in item2.Value.EMUs)
                                     {
                                         SB.Append(item3.Name + ", ");
                                         var posV = ManVisible.inst.GetTrackedVisible(item3.ID);
@@ -1745,7 +1982,7 @@ namespace TAC_AI.World
                     }
                 }
 
-                if (GUILayout.Button("Combat Active: " + NPTTeams.ToList().Exists(x => x.Value.IsFighting)))
+                if (GUILayout.Button("Combat Active: " + NPTTeams.Any(x => x.Value.IsFighting)))
                     combatLogDisp = !combatLogDisp;
                 if (combatLogDisp)
                 {

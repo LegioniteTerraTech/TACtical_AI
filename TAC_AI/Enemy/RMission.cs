@@ -16,7 +16,7 @@ namespace TAC_AI.AI.Enemy
         public class OnRailsActions : MonoBehaviour
         {   // Will sit on standby for MissionManager
             public Tank Tank;
-            public AIECore.TankAIHelper AIControl;
+            public TankAIHelper AIControl;
             public int MissionAIID = 0;
 
 
@@ -38,7 +38,7 @@ namespace TAC_AI.AI.Enemy
             public void InitiateForTank()
             {
                 Tank = gameObject.GetComponent<Tank>();
-                AIControl = gameObject.GetComponent<AIECore.TankAIHelper>();
+                AIControl = gameObject.GetComponent<TankAIHelper>();
                 //Tank.DamageEvent.Subscribe(OnHit);
                 //Tank.DetachEvent.Subscribe(OnBlockLoss);
             }
@@ -61,7 +61,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        public static bool SpecificNameCases(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        internal static bool SpecificNameCases(TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {   // Handle specific enemy names to tailor the AI into working order
             int name = tank.name.GetHashCode();
             bool DidFire = false;
@@ -102,7 +102,7 @@ namespace TAC_AI.AI.Enemy
                 mind.EvilCommander = EnemyHandling.Starship;
                 mind.CommanderAttack = EAttackMode.Random;
                 mind.CommanderMind = EnemyAttitude.Homing;
-                RCore.AutoSetIntelligence(mind, tank);
+                RCore.AutoSetIntelligence(mind);
                 DidFire = true;
             }
             else if (name == "Enemy HQ".GetHashCode())
@@ -157,7 +157,7 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static bool SetupMissionAI(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        internal static bool SetupBaseOrMissionAI(TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             string name = tank.name;
             // Don't worry the bases are sorted based on if they are valid or not
@@ -193,7 +193,7 @@ namespace TAC_AI.AI.Enemy
                             mind.EvilCommander = EnemyHandling.Wheeled;
                             mind.CommanderAttack = EAttackMode.Safety;
                             mind.CommanderMind = EnemyAttitude.Homing;
-                            RCore.AutoSetIntelligence(mind, tank);
+                            RCore.AutoSetIntelligence(mind);
                             DidFire = true;
                         }
                         else if (tree == AITreeType.AITypes.ChargeAtSKU)
@@ -220,7 +220,7 @@ namespace TAC_AI.AI.Enemy
                                 mind.CommanderAttack = EAttackMode.Chase;
                                 mind.CommanderMind = EnemyAttitude.Invader;
                             }
-                            RCore.AutoSetIntelligence(mind, tank);
+                            RCore.AutoSetIntelligence(mind);
                             DidFire = true;
                         }
                         else if (tree == AITreeType.AITypes.Specific || tree == AITreeType.AITypes.FacePlayer)
@@ -258,7 +258,7 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static void MissionHandler(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void MissionHandler(TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             var AISettings = tank.GetComponent<AIBookmarker>();
             if (AISettings.IsNotNull())
@@ -272,7 +272,7 @@ namespace TAC_AI.AI.Enemy
             }
             return;
         }
-        public static bool ADVMissionHandler(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static bool ADVMissionHandler(TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             return true;
         }

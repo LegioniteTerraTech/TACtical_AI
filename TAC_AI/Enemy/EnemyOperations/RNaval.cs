@@ -7,10 +7,10 @@ using TerraTechETCUtil;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public static class RNaval
+    internal static class RNaval
     {
         //Same as RWheeled but has terrain avoidence
-        public static void AttackWhish(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void AttackWhish(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst, ref direct);
@@ -38,13 +38,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             float range = AIGlobals.MinCombatRangeDefault + thisInst.lastTechExtents;
             float spacer = thisInst.lastTechExtents + enemyExt;
 
-            if (mind.MainFaction == FactionTypesExt.GC && mind.CommanderAttack != EAttackMode.Safety)
+            if (mind.MainFaction == FactionSubTypes.GC && mind.CommanderAttack != EAttackMode.Safety)
                 spacer = -32;// ram no matter what, or get close for snipers
 
-            direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+            direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
             if (mind.CommanderAttack == EAttackMode.Safety)
             {
-                thisInst.SideToThreat = false;
+                thisInst.AISetSettings.SideToThreat = false;
                 thisInst.Retreat = true;
                 direct.DriveAwayFacingAway();
                 if (dist < spacer + (range / 4))
@@ -67,7 +67,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else if (mind.CommanderAttack == EAttackMode.Circle)
             {
-                thisInst.SideToThreat = true;
+                thisInst.AISetSettings.SideToThreat = true;
                 thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                 if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
                     thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
@@ -77,12 +77,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (dist < thisInst.lastTechExtents + enemyExt + 2)
                     {
                         direct.DriveAwayFacingPerp();
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                     }
                     else if (mind.MaxCombatRange < spacer + range)
                     {
                         direct.DriveToFacingPerp();
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                     }
                     else
                     {
@@ -93,7 +93,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else if (mind.CommanderAttack == EAttackMode.Ranged)
             {
-                thisInst.SideToThreat = true;
+                thisInst.AISetSettings.SideToThreat = true;
                 thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                 if (dist < spacer + (range / 2))
                 {
@@ -133,7 +133,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             }
             else
             {
-                thisInst.SideToThreat = false;
+                thisInst.AISetSettings.SideToThreat = false;
                 thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                 if (dist < spacer + 2)
                 {

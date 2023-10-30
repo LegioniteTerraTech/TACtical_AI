@@ -5,6 +5,7 @@ using System.Text;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using TAC_AI.AI;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
 
@@ -13,8 +14,124 @@ namespace TAC_AI
     /// <summary>
     /// Stores all global information for this mod. Edit at your own risk.
     /// </summary>
-    public class AIGlobals
+    public static class AIGlobals
     {
+        public static bool AIAttract => ManGameMode.inst.GetCurrentGameType() != ManGameMode.GameType.Attract;
+
+        private static FieldInfo getCamTank = typeof(TankCamera).GetField("m_hideHud", BindingFlags.NonPublic | BindingFlags.Instance);
+        public static bool GetHideHud => (bool)getCamTank.GetValue(TankCamera.inst);
+        public static bool HideHud = false;
+        public static bool IsBlockAIAble(BlockTypes BT)
+        {
+            if (BT != BlockTypes.GSOAIController_111)
+            {
+                if (ManMods.inst.IsModdedBlock(BT))
+                {
+                    var block = ManSpawn.inst.GetBlockPrefab(BT);
+                    if (block)
+                    {
+                        var AI = block.GetComponent<ModuleAIBot>();
+                        if (AI && (AI.AITypesEnabled.Contains(TechAI.AITypes.Escort) ||
+                            AI.AITypesEnabled.Contains(TechAI.AITypes.Guard)))
+                            return true;
+                    }
+                }
+                else
+                {
+                    var BA = ManSpawn.inst.GetBlockAttributes(BT);
+                    if (BA.Contains(BlockAttributes.AI))
+                        return true;
+                }
+            }
+            return false;
+        }
+        public static bool IsBlockAIAble(string name)
+        {
+            return IsBlockAIAble(BlockIndexer.GetBlockIDLogFree(name));
+        }
+        public static bool IsTechAIAble(Tank tech)
+        {
+            if (tech != null)
+            {
+                return tech.GetHelperInsured().hasAI;
+            }
+            return false;
+        }
+        public static bool IsTechAIAble(ManSaveGame.StoredTech tech)
+        {
+            if (tech != null)
+            {
+                foreach (var item in tech.m_TechData.m_BlockSpecs)
+                {
+                    if (IsBlockAIAble(item.block))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        public const float SleepRangeSpacing = 16;
+        public static bool IsInSleepRange(Vector3 posScene)
+        {
+            float sleepRange = (float)TankAIManager.rangeOverride.GetValue(ManTechs.inst);
+            return !ManNetwork.IsNetworked &&
+                (posScene - Singleton.cameraTrans.position).sqrMagnitude > 
+                (sleepRange * sleepRange) - SleepRangeSpacing;
+        }
+
+        public const float EradicateEffectMaxDistanceSqr = 200 * 200;
+
+
+        public static Rewired.Player controllerExt = null;
+
+        public static bool PlayerFireCommand(int team)
+        {
+            if (ManNetwork.IsNetworked)
+                return PlayerMPFireCommand(team);
+            else
+                return PlayerClientFireCommand();
+        }
+        public static bool PlayerClientFireCommand()
+        {
+            try
+            {
+                if (controllerExt == null)
+                    controllerExt = Rewired.ReInput.players.GetPlayer(ManPlayer.inst.PlayerTeam);
+                if (controllerExt != null && controllerExt.GetButton(2))
+                    return true;
+            }
+            catch { }
+            return false;
+        }
+        public static bool PlayerMPFireCommand(int Team)
+        {
+            if (ManNetwork.IsHost)
+            {
+                try
+                {
+                    for (int step = 0; step < ManNetwork.inst.GetNumPlayers(); step++)
+                    {
+                        NetPlayer NP = ManNetwork.inst.GetPlayer(step);
+                        if (NP && NP.HasTech() && Team == NP.TechTeamID && NP.CurTech.tech.control.FireControl)
+                            return NP.CurTech.tech.control.FireControl;
+                    }
+                }
+                catch { }
+            }
+            return false;
+        }
+        public static bool TechIsMPPlayerControlled(this Tank tank)
+        {
+            try
+            {
+                if (ManNetwork.IsNetworked)
+                    return ManNetwork.inst.GetAllPlayerTechs().Contains(tank);
+            }
+            catch { }
+            return false;
+        }
+
+
         // AIERepair contains the self-repair stats
         // EnemyWorldManager contains the unloaded enemy stats
 
@@ -30,12 +147,100 @@ namespace TAC_AI
         public const int MaxBlockLimitAttract = 128;
 
         // GENERAL AI PARAMETERS
+        public const float DefaultMaxObjectiveRange = 750;
         public const float TargetVelocityLeadPredictionMulti = 0.01f; // for projectiles of speed 100
         public const float StationaryMoveDampening = 6;
         public const int TeamRangeStart = 256;
         public const short NetAIClockPeriod = 30;
 
         public const float TargetCacheRefreshInterval = 1.5f;  // Seconds until we try to gather enemy Techs within range
+
+        internal static GUIButtonMadness ModularMenu;
+        private const int IDGUI = 8037315;
+        private static GUI_BM_Element[] MenuButtons = new GUI_BM_Element[]
+        {
+            new GUI_BM_Element_Simple()
+            {
+                Name = "Bribe",
+                OnIcon = null,
+                OnDesc = () => {
+                    return "Buy them out";
+                },
+                ClampSteps = 0,
+                LastVal = 0,
+                OnSet = (float in1) => {
+                    if (GUINPTInteraction.lastTank)
+                    {
+                        int techCost = Mathf.RoundToInt(RawTechTemplate.GetBBCost(GUINPTInteraction.lastTank) * BribeMulti);
+                        GUINPTInteraction.TryLoneCommand(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
+                        ModularMenu.CloseGUI();
+                    }
+                    return 0;
+                },
+            },
+            new GUI_BM_Element_Simple()
+            {
+                Name = "Info",
+                OnIcon = null,
+                OnDesc = () => {
+                    return "Open details pane";
+                },
+                ClampSteps = 0,
+                LastVal = 0,
+                OnSet = (float in1) => {
+                    GUINPTInteraction.LaunchSubMenuClickable();
+                    ModularMenu.CloseGUI();
+                    return 0;
+                },
+            },
+            new GUI_BM_Element_Simple()
+            {
+                Name = "Insult",
+                OnIcon = null,
+                OnDesc = () => {
+                    return "Anger and annoy them"; 
+                },
+                ClampSteps = 0,
+                LastVal = 0,
+                OnSet = (float in1) => {
+                    if (GUINPTInteraction.lastTank)
+                    {
+                        GUINPTInteraction.TryLoneCommand(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
+                        ModularMenu.CloseGUI();
+                    }
+                    return 0; 
+                },
+            },
+            new GUI_BM_Element_Simple()
+            {
+                Name = "Missions",
+                OnIcon = null,
+                OnDesc = () => {
+                    return "See what they want";
+                },
+                ClampSteps = 0,
+                LastVal = 0,
+                OnSet = (float in1) => {
+                    if (GUINPTInteraction.lastTank)
+                    {
+                        int techCost = Mathf.RoundToInt(RawTechTemplate.GetBBCost(GUINPTInteraction.lastTank) * BribeMulti);
+                        GUINPTInteraction.TryLoneCommand(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
+                        ModularMenu.CloseGUI();
+                    }
+                    return 0;
+                },
+            },
+        };
+
+        internal static void InitSharedMenu()
+        {
+            if (ModularMenu != null)
+                return;
+            DebugTAC_AI.Log("AIGlobals.InitSharedMenu()");
+            ModularMenu = GUIButtonMadness.Initiate(IDGUI, "ERROR", MenuButtons);
+        }
+
+        public static IntVector3 RTSDisabled => IntVector3.invalid;
 
         // Elevation
         public const float GroundOffsetGeneralAir = 10;
@@ -62,6 +267,12 @@ namespace TAC_AI
 
 
         // Pathfinding
+        internal static Bitfield<ObjectTypes> emptyBitMask = new Bitfield<ObjectTypes>();
+        internal static Bitfield<ObjectTypes> blockBitMask = new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Block });
+        internal static Bitfield<ObjectTypes> techBitMask = new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Vehicle });
+        internal static Bitfield<ObjectTypes> sceneryBitMask = new Bitfield<ObjectTypes>(new ObjectTypes[1] { ObjectTypes.Scenery });
+        internal static Bitfield<ObjectTypes> crashBitMask = new Bitfield<ObjectTypes>(new ObjectTypes[2] { ObjectTypes.Scenery, ObjectTypes.Vehicle });
+
         public const float AIPathingSuccessRad = 2.4f; // How far should the tech radius from the path point to consider finishing the path point?
         public const float AIPathingSuccessRadPrecise = 1.2f; // How far should the tech radius from the path point to consider finishing the path point?
 
@@ -86,7 +297,8 @@ namespace TAC_AI
         public const float LargeAircraftChillFactorMulti = 1.25f;   // More responsiveness, less accuraccy
 
         public const float AirNPTMaxHeightOffset = 125;     // How far the AI is allowed to go while in combat above the player
-        public const float AirWanderMaxHeight = 75;         // How far the AI is allowed to go while wandering randomly above the player
+        public const float AirWanderMaxHeightIngame = 75;         // How far the AI is allowed to go while wandering randomly above the player
+        public static float AirWanderMaxHeight => AIAttract ? 500 : AirWanderMaxHeightIngame;         // How far the AI is allowed to go while wandering randomly above the player
         public const float AirPromoteSpaceHeight = 150;     // The height the player, beyond passing, will encounter more spacecraft
         public const float AirMaxYaw = 0.2f; // 0 - 1 (float)
         public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
@@ -102,7 +314,9 @@ namespace TAC_AI
         /// <summary> IN m/s !!!</summary>
         public const int LargeAircraftSize = 15;            // The size of which we count an aircraft as large
         public const float AirStallSpeed = 42;//25          // The speed of which most wings begin to stall at
-        public const float GroundAttackStagingDist = 225;   // Distance to fly (in meters!) before turning back
+        public const float GroundAttackStagingDistMain = 275;
+        public static float GroundAttackStagingDist => AIAttract ? 120 : GroundAttackStagingDistMain;   // Distance to fly (in meters!) before turning back
+        public const float TechSplitDelay = 0.5f;
 
 
         // Item Handling
@@ -119,6 +333,7 @@ namespace TAC_AI
         public const float minimumChargeFractionToConsider = 0.75f;
 
         // Combat Parameters
+        public const int DefaultMaxTargetingRange = 150;
         public const float MaxRangeFireAll = 125;   // WEAPON AIMING RANGE
 
         // Combat target switching
@@ -142,12 +357,12 @@ namespace TAC_AI
         public const int BaseFounderMaxCombatRange = 60;     // 
         public const int BossMaxCombatRange = 250;        // 
         public const int InvaderMaxCombatRange = 250;        // 
-        public const float SpyperMaxCombatRange = 450;    // 
+        public const float SpyperMaxCombatRange = 175;    // 
 
         // Combat Minimum Spacing Ranges
         public const float MinCombatRangeDefault = 12;
-        public const float MinCombatRangeSpyper = 64;
-        public const float SpacingRangeSpyperAir = 82;
+        public const float MinCombatRangeSpyper = 60;
+        public const float SpacingRangeSpyperAir = 72;
         public const float SpacingRangeAircraft = 24;
         public const float SpacingRangeChopper = 12;
         public const float SpacingRangeHoverer = 18;
@@ -164,7 +379,8 @@ namespace TAC_AI
         public const int BaseExpandChance = 65;//18;
         public const int MinResourcesReqToCollect = 12;
         public const int EnemyBaseMiningMaxRange = 250;
-        public const int EnemyExtendActionRange = 500 + 32; //the extra 32 to account for tech sizes
+        public const int EnemyExtendActionRangeShort = 500;
+        public const int EnemyExtendActionRange = EnemyExtendActionRangeShort + 32; //the extra 32 to account for tech sizes
         public const float RetreatBelowTechDamageThreshold = 50;
         public const float RetreatBelowTeamDamageThreshold = 30;
 
@@ -179,23 +395,13 @@ namespace TAC_AI
         // ENEMY BASE TEAMS
         internal static Color EnemyColor = new Color(0.95f, 0.1f, 0.1f, 1);
 
-        public const int EnemyBaseTeamsStart = 256;
-        public const int EnemyBaseTeamsEnd = 356;
-
-        public const int SubNeutralBaseTeamsStart = 357;
-        public const int SubNeutralBaseTeamsEnd = 406;
-
         internal static Color NeutralColor = new Color(0.5f, 0, 0.5f, 1);
-        public const int NeutralBaseTeamsStart = 407;
-        public const int NeutralBaseTeamsEnd = 456;
-
         internal static Color FriendlyColor = new Color(0.2f, 0.95f, 0.2f, 1);
-        public const int FriendlyBaseTeamsStart = 457;
-        public const int FriendlyBaseTeamsEnd = 506;
 
-        public const int BaseTeamsStart = 256;
-        public const int BaseTeamsEnd = 506;
 
+        /// <summary> increments NEGATIVELY </summary>
+        public const int EnemyTeamsRangeStart = -1073741828;
+                                               //2147483647 
         internal static bool IsAttract => ManGameMode.inst.GetCurrentGameType() == ManGameMode.GameType.Attract;
         public static float BaseChanceGoodMulti => 1 - ((KickStart.difficulty + 50) / 200f); // 25%
         public static float NonHostileBaseChance => 0.5f * BaseChanceGoodMulti; // 50% at easiest
@@ -203,34 +409,83 @@ namespace TAC_AI
 
         internal static bool TurboAICheat
         {
-            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.Backspace); }
+            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.Slash); }
         }
 
 
         // Utilities
-        public static bool AtSceneTechMax()
+        public static bool TechIsSafelyRemoveable(Tank tech)
         {
-            int Counter = 0;
-            try
+            if (!tech)
+                return false;
+            int team = tech.Team;
+            return !IsPlayerTeam(team) && ManSpawn.NeutralTeam != team && !TankAIManager.MissionTechs.Contains(tech.visible.ID);
+        }
+        private static bool techSpawned = false;
+        public static bool CanSplitTech(float delay = TechSplitDelay)
+        {
+            if (techSpawned)
+                return false;
+            techSpawned = true;
+            InvokeHelper.InvokeSingle(ReAllowSplitTech, delay);
+            return true;
+        }
+        private static void ReAllowSplitTech()
+        {
+            techSpawned = false;
+        }
+        internal static int SceneTechCount = -1;
+        public static bool AtSceneTechMaxSpawnLimit()
+        {
+            if (SceneTechCount == -1)
             {
-                foreach (var tech in Singleton.Manager<ManTechs>.inst.IterateTechs())
+                try
                 {
-                    
-                    if (IsBaseTeam(tech.Team) || tech.Team == -1 || (tech.Team >= 1 && tech.Team <= 24))
-                        Counter++;
+                    SceneTechCount = ManTechs.inst.IterateTechsWhere(x => TechIsSafelyRemoveable(x)).Count();
+                }
+                catch (Exception e)
+                {
+                    SceneTechCount = 0;
+                    DebugTAC_AI.Log("TACtical_AI: AtSceneTechMax() - Error on IterateTechs Fetch");
+                    DebugTAC_AI.Log(e);
                 }
             }
-            catch (Exception e)
-            {
-                DebugTAC_AI.Log("TACtical_AI: AtSceneTechMax - Error on IterateTechs Fetch");
-                DebugTAC_AI.Log(e);
-            }
-            return Counter >= KickStart.MaxEnemyWorldCapacity;
+            return SceneTechCount >= KickStart.MaxEnemyWorldCapacity;
         }
+        public static bool SceneTechMaxNeedsRemoval(out int needsRemovalCount)
+        {
+            if (SceneTechCount == -1)
+            {
+                try
+                {
+                    SceneTechCount = ManTechs.inst.IterateTechsWhere(x => TechIsSafelyRemoveable(x)).Count();
+                }
+                catch (Exception e)
+                {
+                    SceneTechCount = 0;
+                    DebugTAC_AI.Log("TACtical_AI: BeyondSceneTechMax() - Error on IterateTechs Fetch");
+                    DebugTAC_AI.Log(e);
+                }
+            }
+            int threshold = KickStart.MaxEnemyWorldCapacity + KickStart.ForceRemoveOverEnemyMaxCap;
+            needsRemovalCount = Mathf.Max(0, SceneTechCount - threshold);
+            return SceneTechCount >= threshold;
+        }
+
+        public static bool IsPlayerTeam(int team)
+        {
+            return ManNetwork.IsNetworked ? IsMPPlayerTeam(team) : ManPlayer.inst.PlayerTeam == team;
+        }
+
+        public static bool IsMPPlayerTeam(int team)
+        {
+            return ManSpawn.LobbyTeamIDFromTechTeamID(team) != int.MaxValue;
+        }
+
 
         public static bool IsBaseTeam(int team)
         {
-            return (team >= BaseTeamsStart && team <= BaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
+            return ManBaseTeams.IsBaseTeam(team);
         }
         public static NP_Types GetNPTTeamType(int team)
         {
@@ -253,26 +508,11 @@ namespace TAC_AI
                 return NP_Types.NonNPT;
         }
 
-        public static bool IsEnemyBaseTeam(int team)
-        {
-            return (team >= EnemyBaseTeamsStart && team <= EnemyBaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
-        }
-        public static bool IsNonAggressiveTeam(int team)
-        {
-            return team >= SubNeutralBaseTeamsStart && team <= NeutralBaseTeamsEnd;
-        }
-        public static bool IsSubNeutralBaseTeam(int team)
-        {
-            return team >= SubNeutralBaseTeamsStart && team <= SubNeutralBaseTeamsEnd;
-        }
-        public static bool IsNeutralBaseTeam(int team)
-        {
-            return team >= NeutralBaseTeamsStart && team <= NeutralBaseTeamsEnd;
-        }
-        public static bool IsFriendlyBaseTeam(int team)
-        {
-            return team >= FriendlyBaseTeamsStart && team <= FriendlyBaseTeamsEnd;
-        }
+        public static Func<int, bool> IsEnemyBaseTeam => ManBaseTeams.IsEnemyBaseTeam;
+        public static Func<int, bool> IsNonAggressiveTeam => ManBaseTeams.IsNonAggressiveTeam;
+        public static Func<int, bool> IsSubNeutralBaseTeam => ManBaseTeams.IsSubNeutralBaseTeam;
+        public static Func<int, bool> IsNeutralBaseTeam => ManBaseTeams.IsNeutralBaseTeam;
+        public static Func<int, bool> IsFriendlyBaseTeam => ManBaseTeams.IsFriendlyBaseTeam;
 
 
         public static int GetRandomBaseTeam(bool forceValidTeam = false)
@@ -292,30 +532,43 @@ namespace TAC_AI
                     return GetRandomNeutralBaseTeam();
             }
 
-            if (UnityEngine.Random.Range(0f, 1f) <= NonHostileBaseChance)
+            if (ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.percentChanceExisting)
+                return ManBaseTeams.GetRandomExistingBaseTeam().teamID;
+            else
             {
-                if (UnityEngine.Random.Range(0f, 1f) <= FriendlyBaseChance)
-                    return GetRandomAllyBaseTeam();
-                else
-                    return GetRandomNeutralBaseTeam();
+                if (UnityEngine.Random.Range(0f, 1f) <= NonHostileBaseChance)
+                {
+                    if (UnityEngine.Random.Range(0f, 1f) <= FriendlyBaseChance)
+                        return GetRandomAllyBaseTeam();
+                    else
+                        return GetRandomNeutralBaseTeam();
+                }
+                return GetRandomEnemyBaseTeam();
             }
-            return GetRandomEnemyBaseTeam();
         }
         public static int GetRandomEnemyBaseTeam()
         {
-            return UnityEngine.Random.Range(EnemyBaseTeamsStart, EnemyBaseTeamsEnd);
+            var teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst.relations = TeamRelations.Enemy;
+            return teamInst.teamID;
         }
         public static int GetRandomSubNeutralBaseTeam()
         {
-            return UnityEngine.Random.Range(SubNeutralBaseTeamsStart, SubNeutralBaseTeamsEnd);
+            var teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst.relations = TeamRelations.HoldFire;
+            return teamInst.teamID;
         }
         public static int GetRandomNeutralBaseTeam()
         {
-            return UnityEngine.Random.Range(NeutralBaseTeamsStart, NeutralBaseTeamsEnd);
+            var teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst.relations = TeamRelations.Neutral;
+            return teamInst.teamID;
         }
         public static int GetRandomAllyBaseTeam()
         {
-            return UnityEngine.Random.Range(FriendlyBaseTeamsStart, FriendlyBaseTeamsEnd);
+            var teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst.SetFriendly(ManPlayer.inst.PlayerTeam);
+            return teamInst.teamID;
         }
 
 

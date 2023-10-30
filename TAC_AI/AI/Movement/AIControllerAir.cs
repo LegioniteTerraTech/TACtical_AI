@@ -28,8 +28,8 @@ namespace TAC_AI.AI
             get => _tank;
             internal set => _tank = value;
         }
-        private AIECore.TankAIHelper _helper;
-        public AIECore.TankAIHelper Helper
+        private TankAIHelper _helper;
+        public TankAIHelper Helper
         {
             get => _helper;
             internal set => _helper = value;
@@ -68,9 +68,9 @@ namespace TAC_AI.AI
 
 
         // Systems Check
-        public List<ModuleBooster> Engines;     // keep track of aircraft propultion
-        public List<ModuleAirBrake> Brakes;     // keep tracck of airbrakes
-        public List<ModuleWing> Wings;          // keep track of the wings
+        public BlockManager.BlockIterator<ModuleBooster> Engines => Tank.blockman.IterateBlockComponents<ModuleBooster>();     // keep track of aircraft propultion
+        public BlockManager.BlockIterator<ModuleAirBrake> Brakes => Tank.blockman.IterateBlockComponents<ModuleAirBrake>();     // keep tracck of airbrakes
+        public BlockManager.BlockIterator<ModuleWing> Wings => Tank.blockman.IterateBlockComponents<ModuleWing>();          // keep track of the wings
         public bool NoProps = false;            // Do we have to rely on fuel only?
         public bool SkewedFlightCenter = false; // Are we going to struggle when turning?
 
@@ -100,7 +100,7 @@ namespace TAC_AI.AI
         public bool LowerEngines = false;       // Choppers: Too high! Too high!  Airplanes: Conserve booster fuel
 
 
-        public void Initiate(Tank tank, AIECore.TankAIHelper thisInst, Enemy.EnemyMind mind = null)
+        public void Initiate(Tank tank, TankAIHelper thisInst, Enemy.EnemyMind mind = null)
         {
             Tank = tank;
             Helper = thisInst;
@@ -238,8 +238,7 @@ namespace TAC_AI.AI
             foreach (ModuleBooster module in Engines)
             {
                 //Get the slowest spooling one
-                List<FanJet> jets = module.transform.GetComponentsInChildren<FanJet>().ToList();
-                foreach (FanJet jet in jets)
+                foreach (FanJet jet in module.transform.GetComponentsInChildren<FanJet>())
                 {
                     if (jet.spinDelta <= 10)
                     {
@@ -254,8 +253,7 @@ namespace TAC_AI.AI
                         fanThrust += jet.force;
                     }
                 }
-                List<BoosterJet> boosts = module.transform.GetComponentsInChildren<BoosterJet>().ToList();
-                foreach (BoosterJet boost in boosts)
+                foreach (BoosterJet boost in module.transform.GetComponentsInChildren<BoosterJet>())
                 {
                     if (boost.ConsumesFuel)
                     {
@@ -313,8 +311,7 @@ namespace TAC_AI.AI
             foreach (ModuleWing module in Wings)
             {
                 //Get teh slowest spooling one
-                List<ModuleWing.Aerofoil> foils = module.m_Aerofoils.ToList();
-                foreach (ModuleWing.Aerofoil foil in foils)
+                foreach (ModuleWing.Aerofoil foil in module.m_Aerofoils)
                 {
                     if (foil.flapTurnSpeed > 0.01f)
                     {
@@ -362,21 +359,14 @@ namespace TAC_AI.AI
         private void CheckAllFlightBlocks()
         {
             // SETUP
-            UpdateStatus();
             CheckEngines();
             CheckWings();
-        }
-        private void UpdateStatus()
-        {
-            Engines = Tank.blockman.IterateBlockComponents<ModuleBooster>().ToList();
-            Brakes = Tank.blockman.IterateBlockComponents<ModuleAirBrake>().ToList();
-            Wings = Tank.blockman.IterateBlockComponents<ModuleWing>().ToList();
         }
 
         //Navigation Director - set airborne positions for the plane to fly to based on lastDestination
         public void DriveDirector(ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = this.Helper;
+            TankAIHelper thisInst = this.Helper;
             Tank tank = this.Tank;
 
             if (thisInst == null)
@@ -414,7 +404,7 @@ namespace TAC_AI.AI
         }
         public void DriveDirectorRTS(ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = this.Helper;
+            TankAIHelper thisInst = this.Helper;
             Tank tank = this.Tank;
 
             if (thisInst == null)
@@ -454,7 +444,7 @@ namespace TAC_AI.AI
         public void DriveMaintainer(TankControl thisControl, ref EControlCoreSet core)
         {
             //Universal handler
-            AIECore.TankAIHelper thisInst = this.Helper;
+            TankAIHelper thisInst = this.Helper;
             Tank tank = this.Tank;
 
             if (thisInst == null)
@@ -464,7 +454,7 @@ namespace TAC_AI.AI
             }
             if (Tank.beam.IsActive)
             {
-                KillAllControl(thisControl);
+                KillAllControl(Helper, thisControl);
                 return;
             } 
 
@@ -492,11 +482,10 @@ namespace TAC_AI.AI
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
         /// <param name="pilot"></param>
-        private bool TestForMayday(AIECore.TankAIHelper thisInst, Tank tank)
+        private bool TestForMayday(TankAIHelper thisInst, Tank tank)
         {
             if (thisInst.PendingDamageCheck)
             {
-                this.UpdateStatus();
                 bool damaged = false;
 
                 if (this.Engines.Count() < 1)
@@ -563,27 +552,27 @@ namespace TAC_AI.AI
                 this.Grounded = TestForMayday(tank.GetHelperInsured(), tank, this);
             */
         }
-        public void UpdateThrottle(AIECore.TankAIHelper thisInst, TankControl control)
+        public void UpdateThrottle(TankAIHelper thisInst, TankControl control)
         {
-            TankControl.ControlState control3D = (TankControl.ControlState)AirplaneUtils.controlGet.GetValue(control);
-
+            bool boostJets = false;
+            bool boostProps = false;
             if (this.NoProps)
             {
                 if (this.FlyStyle == FlightType.Aircraft)
                 {
                     if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(Helper.SafeVelocity).z < AIGlobals.AirStallSpeed + 5 && !this.Tank.beam.IsActive)
-                        control3D.m_State.m_BoostJets = true;
+                        boostJets = true;
                     else
-                        control3D.m_State.m_BoostJets = thisInst.FullBoost;
+                        boostJets = thisInst.FullBoost;
                 }
                 else // VTOL
                 {
                     if (this.MainThrottle > 0.1 && this.Tank.rootBlockTrans.InverseTransformVector(Helper.SafeVelocity).z < AIGlobals.AirStallSpeed + 5 && !this.Tank.beam.IsActive)
-                        control3D.m_State.m_BoostJets = true;
+                        boostJets = true;
                     else if (this.MainThrottle > 0.1 && !AIEPathing.AboveHeightFromGroundTech(thisInst, this.Helper.lastTechExtents * 2) && !this.Tank.beam.IsActive)
-                        control3D.m_State.m_BoostJets = true;
+                        boostJets = true;
                     else
-                        control3D.m_State.m_BoostJets = thisInst.FullBoost;
+                        boostJets = thisInst.FullBoost;
                 }
 
                 // Still try to move wheels and other things
@@ -617,23 +606,21 @@ namespace TAC_AI.AI
                 if (this.FlyStyle == FlightType.Aircraft)
                 {   // Some aircraft stall when pitching up - this should help avoid that
                     if (CurrentThrottle > 1f)
-                    {  
-                        control3D.m_State.m_BoostProps = true;
+                    {
+                        boostProps = true;
                     }
                     else
                     {
-                        control3D.m_State.m_BoostProps = false;
+                        boostProps = false;
                     }
                 }
             }
             this.CurrentThrottle = Mathf.Clamp(this.CurrentThrottle, -1, 1);
-            AirplaneUtils.controlGet.SetValue(control, control3D);
+            control.CollectMovementInput(Vector3.zero, Vector3.zero, Vector3.zero, boostProps, boostJets);
         }
-        public void KillAllControl(TankControl control)
+        public void KillAllControl(TankAIHelper thisInst, TankControl control)
         {
-            TankControl.ControlState control3D = (TankControl.ControlState)AirplaneUtils.controlGet.GetValue(control);
-            control3D.Reset();
-            AirplaneUtils.controlGet.SetValue(control, control3D);
+            thisInst.ProcessControl(Vector3.zero, Vector3.zero, Vector3.zero, false, false);
         }
     }
 }

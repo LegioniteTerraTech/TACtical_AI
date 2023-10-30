@@ -22,7 +22,11 @@ namespace TAC_AI
             //DelayedLoadRequest
             private static void OnDLCLoadComplete_Postfix(ManSpawn __instance)
             {
-                ManPlayerRTS.DelayedInitiate();
+                try
+                {
+                    ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManPlayerRTS.DelayedInitiate, KickStart.DeInitALL);
+                }
+                catch { }
             }
         }
 
@@ -96,6 +100,30 @@ namespace TAC_AI
             }
         }
 
+        internal static class ManSaveGamePatches
+        {
+            internal static Type target = typeof(ManSaveGame);
+
+            private static void RestoreVisible_Postfix(ManSaveGame.StoredTile __instance,
+                ref ManSaveGame.StoredVisible storedVisible, ref Visible __result)
+            {
+                if (__result)
+                    ManEnemyWorld.VisibleLoaded(__result);
+            }
+        }
+
+        internal static class ManSaveGame_StoredTilePatches
+        {
+            internal static Type target = typeof(ManSaveGame.StoredTile);
+
+            private static void AddStoredVisibleToTile_Postfix(ManSaveGame.StoredTile __instance, 
+                ref ManSaveGame.StoredVisible storedVisible, ref ObjectTypes objectType)
+            {
+                if (objectType == ObjectTypes.Vehicle)
+                    ManEnemyWorld.VisibleUnloaded(storedVisible);
+            }
+        }
+
         internal static class ManNetworkPatches
         {
             internal static Type target = typeof(ManNetwork);
@@ -107,7 +135,7 @@ namespace TAC_AI
                 try
                 {
                     if (ManNetwork.IsHost && KickStart.EnableBetterAI)
-                        AIECore.TankAIManager.inst.Invoke("WarnPlayers", 16);
+                        TankAIManager.inst.Invoke("WarnPlayers", 16);
                 }
                 catch { }
             }

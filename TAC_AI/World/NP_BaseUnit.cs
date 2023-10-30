@@ -9,12 +9,42 @@ using TAC_AI.Templates;
 
 namespace TAC_AI.World
 {
-    public class NP_BaseUnit : NP_TechUnit
+    public class NP_BaseUnit : NP_TechUnit, TeamBasePointer
     {
-        public int BuildBucks { get { return funds; } set { funds = value; SetBuildBucks(funds); } }
-        private int funds = 0;
+        public int BuildBucks
+        {
+            get => ManBaseTeams.GetTeamMoney(Team);
+        }
+        public void AddBuildBucks(int value)
+        {
+            if (ManBaseTeams.TryGetBaseTeam(Team, out var ETD))
+                ETD.AddBuildBucks(value);
+            else
+                DebugTAC_AI.Assert("BuildBucks was added but ManBaseTeams didn't have the base team " +
+                    Team + "! " + value + " was lost to oblivion!");
+        }
+        public void SpendBuildBucks(int value)
+        {
+            if (ManBaseTeams.TryGetBaseTeam(Team, out var ETD))
+                ETD.AddBuildBucks(value);
+            else
+                DebugTAC_AI.Assert("BuildBucks was added but ManBaseTeams didn't have the base team " +
+                    Team + "! " + value + " was lost to oblivion!");
+        }
+        public void SetBuildBucks(int value)
+        {
+            if (ManBaseTeams.TryGetBaseTeam(Team, out var ETD))
+                ETD.SetBuildBucks = value;
+        }
+        public int BlockCount => tech.m_TechData.m_BlockSpecs.Count;
+        public WorldPosition WorldPos => WorldPosition.FromScenePosition(tech.GetBackwardsCompatiblePosition());
+        public Tank tank => null;
+        public bool valid => this != null && Exists();
+
         private readonly int RechargeRate;
         private readonly int RechargeRateDay;
+
+        public bool IsHQ => ManBaseTeams.IsTeamHQ(this);
 
         public readonly int revenue;
         public readonly bool isDefense = false;
@@ -29,25 +59,24 @@ namespace TAC_AI.World
 
         public override bool Exists()
         {
-            return teamInst.EBUs.Contains(this);
+            return teamInst.IsValidAndRegistered() && teamInst.EBUs.Contains(this);
         }
-        public void TryPushMoneyToLoadedInstance()
+        public override float GetSpeed()
         {
-            if (funds == 0)
-                return;
-            RLoadedBases.EnemyBaseFunder EBF = RLoadedBases.EnemyBases.Find(delegate (RLoadedBases.EnemyBaseFunder cand) { return cand.Team == teamInst.Team && Name == cand.name; });
-            if (EBF)
-            {
-                DebugTAC_AI.Log("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " pushed funds to loaded tech of ID " + EBF.name);
-            }
-            else
-            {
-                DebugTAC_AI.LogError("TACtical_AI: EnemyBaseUnloaded - Base " + Name + " failed to update funds");
-            }
+            return 0;
+        }
+        public override float GetEvasion()
+        {
+            return ManEnemyWorld.BaseEvasion;
         }
 
-        public NP_BaseUnit(ManSaveGame.StoredTech techIn, NP_Presence team) :
-            base(techIn, team, ManEnemyWorld.BaseHealthMulti, 0)
+        internal override void MovementSceneDelta(float timeDelta)
+        { 
+        }
+
+
+        internal NP_BaseUnit(ManSaveGame.StoredTech techIn, NP_Presence team) :
+            base(techIn, team, techIn.m_TechData.GetMainCorporations().FirstOrDefault(), ManEnemyWorld.BaseHealthMulti)
         {
             //tilePos = tilePosition;
 
@@ -68,7 +97,7 @@ namespace TAC_AI.World
                                 (float)ManEnemyWorld.ProdDelay.GetValue(MIP));
                         }
                         var ME = TB.GetComponent<ModuleEnergy>();
-                        if (ME && ME.OutputEnergyType == EnergyRegulator.EnergyType.Electric)
+                        if (ME && ME.OutputEnergyType == TechEnergy.EnergyType.Electric)
                         {
                             ModuleEnergy.OutputConditionFlags flags = (ModuleEnergy.OutputConditionFlags)ManEnemyWorld.PowCond.GetValue(ME);
                             if ((flags & ModuleEnergy.OutputConditionFlags.DayTime) != 0)
@@ -79,10 +108,10 @@ namespace TAC_AI.World
                     }
                 }
                 level++;
-                BuildBucks = RLoadedBases.GetBuildBucksFromNameExt(tech.m_TechData.Name);
+                AddBuildBucks(RLoadedBases.GetBuildBucksFromNameExt(tech.m_TechData.Name));
                 SpawnBaseTypes SBT = RawTechLoader.GetEnemyBaseTypeFromName(RLoadedBases.EnemyBaseFunder.GetActualName(tech.m_TechData.Name));
                 HashSet<BasePurpose> BP = RawTechLoader.GetBaseTemplate(SBT).purposes;
-                Faction = tech.m_TechData.GetMainCorpExt();
+                Faction = tech.m_TechData.GetMainCorp();
 
                 level++;
                 if (BP.Contains(BasePurpose.Defense))
@@ -104,52 +133,8 @@ namespace TAC_AI.World
             RechargeRate = rechargeRate;
             RechargeRateDay = rechargeRateDay;
         }
-        public void SetBuildBucks(int newVal)
-        {
-            StringBuilder nameActual = new StringBuilder();
-            char lastIn = 'n';
-            bool doingBB = false;
-            foreach (char ch in Name)
-            {
-                if (!doingBB)
-                {
-                    if (ch == '¥' && lastIn == '¥')
-                    {
-                        nameActual.Remove(nameActual.Length - 2, 2);
-                        doingBB = true;
-                    }
-                    else
-                        nameActual.Append(ch);
-                    lastIn = ch;
-                }
-            }
-            if (newVal == -1)
-            {
-                nameActual.Append(" ¥¥ Inf");
-            }
-            else
-                nameActual.Append(" ¥¥" + newVal);
-            Name = nameActual.ToString();
-        }
-        public static string GetActualName(string name)
-        {
-            StringBuilder nameActual = new StringBuilder();
-            char lastIn = 'n';
-            foreach (char ch in name)
-            {
-                if (ch == '¥' && lastIn == '¥')
-                {
-                    nameActual.Remove(nameActual.Length - 2, 2);
-                    break;
-                }
-                else
-                    nameActual.Append(ch);
-                lastIn = ch;
-            }
-            return nameActual.ToString();
-        }
 
-        public long Generate(float deltaTime, bool isDay)
+        internal long Generate(float deltaTime, bool isDay)
         {
             if (isDay)
                 Shield += Mathf.RoundToInt(deltaTime * (RechargeRateDay + RechargeRate));
@@ -169,10 +154,26 @@ namespace TAC_AI.World
         /// </summary>
         /// <param name="dealt"></param>
         /// <returns>True if tech destroyed</returns>
-        public override bool TakeDamage(int Dealt)
+        public override bool RecieveDamage(int Dealt)
         {
             ManEnemyWorld.GetTeam(tech.m_TeamID).SetDefendMode(tilePos);
-            return base.TakeDamage(Dealt);
+            if (MaxShield > 0)
+            {
+                Shield -= Dealt;
+                if (Shield <= 0)
+                {
+                    Health += Shield;
+                    Shield = 0;
+                }
+                NP_Presence.ReportCombat("Base " + Name + " has received " + Dealt + " damage | Health " + Health
+                    + " | Shield " + Shield);
+            }
+            else
+            {
+                Health -= Dealt;
+                NP_Presence.ReportCombat("Base " + Name + " has received " + Dealt + " damage | Health " + Health);
+            }
+            return Health < 0;
         }
     }
 

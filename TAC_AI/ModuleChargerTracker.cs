@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace TAC_AI
 {
-    public class ModuleChargerTracker : MonoBehaviour
+    internal class ModuleChargerTracker : MonoBehaviour
     {
         TankBlock TankBlock;
         // Returns the position of itself in the world as a point the AI can pathfind to
@@ -49,14 +49,14 @@ namespace TAC_AI
         {
             if (tank == null)
                 return false;
-            EnergyRegulator.EnergyState energyThis = tank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+            TechEnergy.EnergyState energyThis = tank.EnergyRegulator.Energy(TechEnergy.EnergyType.Electric);
 
-            EnergyRegulator.EnergyState energyThat = toChargeTank.EnergyRegulator.Energy(EnergyRegulator.EnergyType.Electric);
+            TechEnergy.EnergyState energyThat = toChargeTank.EnergyRegulator.Energy(TechEnergy.EnergyType.Electric);
             float chargeFraction = (energyThat.storageTotal - energyThat.spareCapacity) / energyThat.storageTotal;
 
             return (energyThis.storageTotal - energyThis.spareCapacity) > minEnergyAmount && (energyThis.storageTotal - energyThis.spareCapacity) / energyThis.storageTotal > chargeFraction;
         }
-        public void RequestDocking(AIECore.TankAIHelper Approaching)
+        public void RequestDocking(TankAIHelper Approaching)
         {
             if (!DockingRequested)
             {
@@ -67,7 +67,7 @@ namespace TAC_AI
                 }
                 DockingRequested = true;
                 Invoke("StopDocking", 2);
-                tank.GetHelperInsured().AllowApproach(Approaching);
+                tank.GetHelperInsured().SlowForApproacher(Approaching);
             }
         }
         private void StopDocking()

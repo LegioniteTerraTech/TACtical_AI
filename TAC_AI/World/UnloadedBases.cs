@@ -12,7 +12,7 @@ namespace TAC_AI.World
 {
     public class UnloadedBases
     {
-        public static NP_BaseUnit GetSetTeamMainBase(NP_Presence EP)
+        public static NP_BaseUnit RefreshTeamMainBaseIfAnyPossible(NP_Presence EP)
         {
             if (EP.EBUs.Count == 0)
             {
@@ -40,24 +40,24 @@ namespace TAC_AI.World
                 EP.MainBase = funder;
                 return funder;
             }
-            EP.MainBase = EP.EBUs.First();
+            EP.MainBase = EP.EBUs.FirstOrDefault();
             return EP.MainBase;
         }
 
         public static void RecycleLoadedTechToTeam(Tank tank)
         {
-            if (RLoadedBases.GetTeamFunder(tank.Team))
+            if (ManBaseTeams.BaseTeamExists(tank.Team))
                 RLoadedBases.RecycleTechToTeam(tank);
             else
             {
                 NP_Presence EP = ManEnemyWorld.GetTeam(tank.Team);
                 if (EP == null)
                     return;
-                NP_BaseUnit EBU = GetSetTeamMainBase(EP);
+                NP_BaseUnit EBU = RefreshTeamMainBaseIfAnyPossible(EP);
                 if (EBU == null)
                     return;
                 int tankCost = RawTechTemplate.GetBBCost(tank);
-                EBU.BuildBucks += tankCost;
+                EBU.AddBuildBucks(tankCost);
                 SpecialAISpawner.Purge(tank);
             }
         }
@@ -69,9 +69,9 @@ namespace TAC_AI.World
 
             if (purpose == BasePurpose.Defense)
             {
-                foreach (NP_TechUnit ETU in EP.ETUs)
+                foreach (NP_TechUnit ETU in EP.EMUs)
                 {
-                    if (ETU.MoveSpeed < 10)
+                    if (ETU.GetSpeed() < 10)
                     {
                         Count++;
                     }
@@ -128,45 +128,6 @@ namespace TAC_AI.World
             return thisIsTrue;
         }
 
-        public static void PoolTeamMoney(NP_Presence EP)
-        {
-            int MoneyPool = 0;
-            foreach (NP_BaseUnit EBU in EP.EBUs)
-            {
-                MoneyPool += EBU.BuildBucks;
-                EBU.BuildBucks = 0;
-            }
-            var funder = GetSetTeamMainBase(EP);
-            if (funder != null)
-                funder.BuildBucks = MoneyPool;
-        }
-        public static int EmergencyMoveMoney(NP_BaseUnit aboutToDie)
-        {
-            NP_Presence EP = aboutToDie.teamInst;
-            int MoneyPool = 0;
-            foreach (NP_BaseUnit EBU in EP.EBUs)
-            {
-                MoneyPool += EBU.BuildBucks;
-                EBU.BuildBucks = 0;
-            }
-            long bestHealth = 0;
-            NP_BaseUnit EBUS = null;
-            foreach (NP_BaseUnit EBU in EP.EBUs)
-            {
-                if (bestHealth < EBU.Health && EBU != aboutToDie)
-                {
-                    bestHealth = EBU.Health;
-                    EBUS = EBU;
-                }
-            }
-            if (EBUS == null)
-            {
-                NP_Presence.ReportCombat("TACtical_AI: Team " + EBUS.tech.m_TeamID + " has lost their last base! " + MoneyPool + " was stolen!");
-                return MoneyPool;
-            }
-            EBUS.BuildBucks = MoneyPool;
-            return 0;
-        }
 
         /// <summary>
         /// Tile-based target-finding 
@@ -189,7 +150,7 @@ namespace TAC_AI.World
             SearchPatternCachFetch(scanPos, sightRadTiles, ref EP.scannedEnemyTiles);
         }
         private static List<Vector2> cachSearchPattern = new List<Vector2>();
-        public static void SearchPatternCachFetch(IntVector2 tilePos, int Dist, ref HashSet<IntVector2> SearchedTiles)
+        private static void SearchPatternCachFetch(IntVector2 tilePos, int Dist, ref HashSet<IntVector2> SearchedTiles)
         {
             cachSearchPattern.Clear();
             int sightRad = Dist;
@@ -216,7 +177,7 @@ namespace TAC_AI.World
             }
             //DebugTAC_AI.Log("TACtical_AI: SearchPatternCachFetch - Scanned a total of " + numScanned);
         }
-        public static bool SearchPatternCacheNoSort(NP_Presence EP, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
+        internal static bool SearchPatternCacheNoSort(NP_Presence EP, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
         {
             tilePosEnemy = IntVector2.zero;
             foreach (IntVector2 IV2 in SearchedTiles)
@@ -230,13 +191,11 @@ namespace TAC_AI.World
             }
             return false;
         }
-        public static bool SearchPatternCacheSort(NP_Presence EP, IntVector2 tilePos, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
+        internal static bool SearchPatternCacheSort(NP_Presence EP, IntVector2 tilePos, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
         {
             tilePosEnemy = IntVector2.zero;
-            var posToCheck = SearchedTiles.ToList().OrderBy(x => new Vector2(x.x - tilePos.x, x.y - tilePos.y).sqrMagnitude);
-
             int numScanned = 0;
-            foreach (IntVector2 IV2 in posToCheck)
+            foreach (IntVector2 IV2 in SearchedTiles.ToList().OrderBy(x => new Vector2(x.x - tilePos.x, x.y - tilePos.y).sqrMagnitude))
             {
                 if (TileHasTargetableEnemy(EP, IV2))
                 {
@@ -266,7 +225,7 @@ namespace TAC_AI.World
         {
             try
             {
-                return GetSetTeamMainBase(EP).tilePos;
+                return RefreshTeamMainBaseIfAnyPossible(EP).tilePos;
             }
             catch { return IntVector2.zero; }
         }
@@ -274,8 +233,8 @@ namespace TAC_AI.World
         {
             try
             {
-                ManEnemyWorld.RemoveTechFromTile(ETU);
-                ManEnemyWorld.RemoveTechFromTeam(ETU);
+                ManEnemyWorld.EntirelyRemoveUnitFromTile(ETU);
+                ManEnemyWorld.StopManagingUnit(ETU);
             }
             catch (Exception e) { DebugTAC_AI.Log("TACtical_AI: RemoteRemove - Fail for " + ETU.Name + " - " + e); }
         }
@@ -300,10 +259,10 @@ namespace TAC_AI.World
                 NP_BaseUnit EBUcase = EP.EBUs.ElementAt(0);
                 RemoteRemove(EBUcase);
             }
-            int count2 = EP.ETUs.Count;
+            int count2 = EP.EMUs.Count;
             for (int step = 0; step < count2; count2--)
             {
-                NP_TechUnit ETUcase = EP.ETUs.ElementAt(0);
+                NP_TechUnit ETUcase = EP.EMUs.ElementAt(0);
                 RemoteRemove(ETUcase);
             }
         }
@@ -343,10 +302,9 @@ namespace TAC_AI.World
             return false;
         }
 
-        public static void TryUnloadedBaseOperations(NP_Presence EP)
+        internal static void TryUnloadedBaseOperations(NP_Presence EP)
         {
-            PoolTeamMoney(EP);
-            GetSetTeamMainBase(EP);
+            RefreshTeamMainBaseIfAnyPossible(EP);
             if (EP.MainBase != null)
             {
                 if (PurgeIfNeeded(EP, EP.MainBase))
@@ -357,7 +315,7 @@ namespace TAC_AI.World
                 if (turboCheat)
                 {
                     if (EP.MainBase.BuildBucks < 1000000)
-                        EP.MainBase.BuildBucks += AIGlobals.MinimumBBToTryExpand;
+                        EP.MainBase.AddBuildBucks(AIGlobals.MinimumBBToTryExpand);
                 }
                 if (EP.MainBase.BuildBucks < AIGlobals.MinimumBBToTryExpand)
                     return; // Reduce expansion lag
@@ -367,7 +325,7 @@ namespace TAC_AI.World
             }
         }
 
-        public static void ImTakingThatExpansion(NP_Presence EP, NP_BaseUnit EBU)
+        internal static void ImTakingThatExpansion(NP_Presence EP, NP_BaseUnit EBU)
         {   // Expand the base!
             try
             {
@@ -379,7 +337,7 @@ namespace TAC_AI.World
                 try
                 {
                     if (!SpecialAISpawner.CreativeMode)
-                        grade = Singleton.Manager<ManLicenses>.inst.GetCurrentLevel(KickStart.CorpExtToCorp(EBU.Faction));
+                        grade = Singleton.Manager<ManLicenses>.inst.GetCurrentLevel(EBU.Faction);
                 }
                 catch { }
 
@@ -447,7 +405,7 @@ namespace TAC_AI.World
                 else
                 {   // Find new home base position
                     TryFreeUpBaseSlots(EP, lvl);
-                    EmergencyMoveMoney(GetSetTeamMainBase(EP));
+                    RefreshTeamMainBaseIfAnyPossible(EP);
                     if (EP.GlobalMobileTechCount() > KickStart.EnemyTeamTechLimit)
                         return;
                     if (!IsActivelySieging(EP))
@@ -481,11 +439,11 @@ namespace TAC_AI.World
                 DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Error on execution: " + e);
             }
         }
-        public static void TryFreeUpBaseSlots(NP_Presence EP, FactionLevel lvl)
+        internal static void TryFreeUpBaseSlots(NP_Presence EP, FactionLevel lvl)
         {   // Remove uneeeded garbage
             try
             {
-                NP_BaseUnit Main = GetSetTeamMainBase(EP);
+                NP_BaseUnit Main = RefreshTeamMainBaseIfAnyPossible(EP);
                 int TeamBaseCount = EP.GlobalMakerBaseCount();
                 //bool RemoveReceivers = FetchNearbyResourceCounts(tech.Team) == 0;
                 bool RemoveSpenders = EP.BuildBucks() < CheapestAutominerPrice(Main.Faction, lvl) / 2;
@@ -499,11 +457,8 @@ namespace TAC_AI.World
                     attempts = KickStart.MaxBasesPerTeam - TeamBaseCount;
                 }
 
-                List<NP_BaseUnit> basesSorted = EP.EBUs.ToList();
                 // Remove the lower-end first
-                basesSorted.OrderBy((F) => F.MaxHealth);
-
-                foreach (NP_BaseUnit fund in basesSorted)
+                foreach (NP_BaseUnit fund in EP.EBUs.ToList().OrderBy((F) => F.MaxHealth))
                 {
                     if (fund != Main)
                     {
@@ -536,9 +491,9 @@ namespace TAC_AI.World
                 DebugTAC_AI.Log("TACtical_AI: TryFreeUpBaseSlots - game is being stubborn");
             }
         }
-        public static BasePurpose PickBuildBasedOnPriorities(NP_Presence EP, FactionLevel lvl)
+        private static BasePurpose PickBuildBasedOnPriorities(NP_Presence EP, FactionLevel lvl)
         {   // Expand the base!
-            if (EP.BuildBucks() <= CheapestAutominerPrice(GetSetTeamMainBase(EP).Faction, lvl) && !HasTooMuchOfType(EP, BasePurpose.Autominer))
+            if (EP.BuildBucks() <= CheapestAutominerPrice(RefreshTeamMainBaseIfAnyPossible(EP).Faction, lvl) && !HasTooMuchOfType(EP, BasePurpose.Autominer))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
                 return BasePurpose.Autominer;
             }
@@ -599,7 +554,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        public static BasePurpose PickBuildNonDefense(NP_Presence EP)
+        private static BasePurpose PickBuildNonDefense(NP_Presence EP)
         {   // Expand the base!
             switch (UnityEngine.Random.Range(0, 5))
             {
@@ -816,7 +771,7 @@ namespace TAC_AI.World
             }
             return validLocation;
         }
-        private static int CheapestAutominerPrice(FactionTypesExt FST, FactionLevel lvl)
+        private static int CheapestAutominerPrice(FactionSubTypes FST, FactionLevel lvl)
         {
             List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(FST, lvl, BasePurpose.Autominer, BaseTerrain.Land);
             int lowest = 150000;
@@ -849,7 +804,8 @@ namespace TAC_AI.World
         {   // make autominers mine deep based on biome
             if (chunkConverter == null)
             {
-                chunkConverter = ((RecipeListWrapper[])ProdSys.GetValue(ManSpawn.inst.GetBlockPrefab(BlockTypes.GSORefinery_222).GetComponent<ModuleRecipeProvider>())).ToList();
+                chunkConverter = ((RecipeListWrapper[])ProdSys.GetValue(
+                    ManSpawn.inst.GetBlockPrefab(BlockTypes.GSORefinery_222).GetComponent<ModuleRecipeProvider>())).ToList();
                 foreach (RecipeListWrapper RLW in chunkConverter)
                 {
                     chunkConversion.AddRange(RLW.target.m_Recipes);
@@ -859,7 +815,7 @@ namespace TAC_AI.World
                 return ChunkTypes._deprecated_Stone;
             try
             {
-                return (ChunkTypes)chunkConversion.Find(delegate (RecipeTable.Recipe cand) { return cand.InputsContain(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT)); }).m_OutputItems.First().m_Item.ItemType;
+                return (ChunkTypes)chunkConversion.Find(x => x.InputsContain(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT))).m_OutputItems.FirstOrDefault().m_Item.ItemType;
             }
             catch { }
             return ChunkTypes._deprecated_Stone;

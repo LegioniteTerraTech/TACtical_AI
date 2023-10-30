@@ -10,10 +10,11 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public static class RScavenger
+    internal static class RScavenger
     {
-
-        public static void Scavenge(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        internal const int reverseFromResourceTime = 35;
+        internal const int reverseFromBaseTime = AIGlobals.ReverseDelay;
+        public static void Scavenge(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
             thisInst.IsMultiTech = false;
@@ -63,7 +64,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived in safety of the base.");
                     thisInst.AvoidStuff = false;
-                    thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                 }
                 else if (thisInst.recentSpeed < 3)
                 {
@@ -93,7 +94,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         }
                     }
                 }
-                thisInst.ActionPause = AIGlobals.ReverseDelay;
+                if (!thisInst.CollectedTarget)
+                    thisInst.actionPause = reverseFromResourceTime;
             }
             else
             {   // Gather materials
@@ -112,11 +114,20 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                 }
                 */
+                if (thisInst.CollectedTarget)
+                    thisInst.actionPause = reverseFromBaseTime;
             }
 
             //DebugTAC_AI.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
-            if (thisInst.CollectedTarget || thisInst.ActionPause > 10)
+            if (thisInst.CollectedTarget)
             {   // BRANCH - Return to base
+                if (thisInst.ActionPause > 0)
+                {   // BRANCH - Reverse from Resources
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from blocks...");
+                    direct.Reverse(thisInst);
+                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    return;
+                }
                 thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.rootBlockTrans.position, mind.MaxCombatRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
@@ -127,18 +138,17 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         mind.CommanderMind = EnemyAttitude.Default;
                         return; // There's no base! 
                     }
-                    direct.lastDestination = thisInst.theBase.boundsCentreWorld;
+                    direct.SetLastDest(thisInst.theBase.boundsCentreWorld);
                     dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestinationCore).magnitude;
                 }
                 thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = 1;
+                direct.DriveToFacingTowards();
 
                 float spacing = thisInst.lastBaseExtremes + AIGlobals.MaxBlockGrabRangeAlt + thisInst.lastTechExtents;
 
                 if (dist < spacing)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                    thisInst.theBase.GetComponent<TankAIHelper>().SlowForApproacher(thisInst);
                     if (thisInst.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -157,14 +167,14 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         }
                         catch { }
                         thisInst.AvoidStuff = false;
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
                 }
                 else if (dist < spacing + 8)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                    thisInst.theBase.GetComponent<TankAIHelper>().SlowForApproacher(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
@@ -181,14 +191,14 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
                         thisInst.AvoidStuff = false;
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                         thisInst.Yield = true;
                         thisInst.SettleDown();
                     }
                 }
                 else if (dist < spacing + 12)
                 {
-                    thisInst.theBase.GetComponent<AIECore.TankAIHelper>().AllowApproach(thisInst);
+                    thisInst.theBase.GetComponent<TankAIHelper>().SlowForApproacher(thisInst);
                     if (thisInst.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
@@ -197,7 +207,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base!");
-                        thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                         //thisInst.Yield = true;
                         thisInst.SettleDown();
                         if (needsToSlowDown)
@@ -215,14 +225,15 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 direct.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
-            else if (thisInst.ActionPause > 0)
-            {   // BRANCH - Reverse from Base
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = -1;
-            }
             else
             {   // BRANCH - Go look for blocks
+                if (thisInst.ActionPause > 0)
+                {   // BRANCH - Reverse from Base
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
+                    direct.Reverse(thisInst);
+                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    return;
+                }
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
@@ -235,7 +246,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Found a block...");
-                        direct.lastDestination = thisInst.theResource.centrePosition;
+                        direct.SetLastDest(thisInst.theResource.centrePosition);
                         direct.DriveDest = EDriveDest.ToBase;
                         BScrapper.StopByBase(thisInst, tank, dist, ref hasMessaged, ref direct);
                         return;
@@ -252,8 +263,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         return;
                     }
                 }
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = 1;
+                direct.DriveToFacingTowards();
 
                 float spacing = AIGlobals.MaxBlockGrabRange + thisInst.lastTechExtents;
                 if (dist <= spacing && thisInst.recentSpeed < 3)

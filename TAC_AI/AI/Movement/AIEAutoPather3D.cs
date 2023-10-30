@@ -187,15 +187,21 @@ namespace TAC_AI.AI.Movement
 
 
 
+        private static HashSet<IntVector3> pos = new HashSet<IntVector3>();
+        private static HashSet<IntVector3> posPre = new HashSet<IntVector3>();
+        private static HashSet<IntVector3> posPre2 = new HashSet<IntVector3>();
         private static List<IntVector3> IterateAroundExpand(int rad)
         {
-            HashSet<IntVector3> pos = new HashSet<IntVector3> { IntVector3.zero };
-            HashSet<IntVector3> posPre = new HashSet<IntVector3> { IntVector3.zero };
+            pos.Clear();
+            pos.Add(IntVector3.zero);
             for (int step = 0; step < rad; step++)
             {
-                var next = new HashSet<IntVector3>(posPre);
+                posPre2.Clear();
+                foreach (var item in posPre)
+                    posPre2.Add(item);
                 posPre.Clear();
-                foreach (var item in next)
+                posPre.Add(IntVector3.zero);
+                foreach (var item in posPre2)
                 {
                     foreach (var item2 in iterationsStr)
                     {
@@ -208,6 +214,8 @@ namespace TAC_AI.AI.Movement
                     }
                 }
             }
+            posPre.Clear();
+            posPre2.Clear();
             return pos.ToList();
         }
         private static List<IntVector3> iterationsAll = new List<IntVector3>
@@ -261,7 +269,7 @@ namespace TAC_AI.AI.Movement
         {
             try
             {
-                KeyValuePair<byte, IntVector3> best = toCheckAlt.OrderBy(x => x.Key).First();
+                KeyValuePair<byte, IntVector3> best = toCheckAlt.OrderBy(x => x.Key).FirstOrDefault();
                 Vector3 posScene = ToScene(best.Value);
                 DebugTAC_AI.Log("AIAutoPather - Type " + waterPath.ToString() + " | CurAlt is " + CurAlt + " vs best alt " + AIEPathMapper.GetAlt(posScene, false) +
                     " | Max Difficulty " + maxDiff + " vs best possible " + best.Key + " | Obst " + AIEPathMapper.HasObst(posScene));
@@ -471,7 +479,7 @@ namespace TAC_AI.AI.Movement
                 }
                 else
                 {
-                    KeyValuePair<byte, IntVector3> best = toCheck.OrderBy(x => x.Key).First();
+                    KeyValuePair<byte, IntVector3> best = toCheck.OrderBy(x => x.Key).FirstOrDefault();
                     CurPos = best.Value;
                     CurAlt = AIEPathMapper.GetAlt(ToScene(CurPos), false);
                     if (SpamNumbers)
@@ -604,8 +612,7 @@ namespace TAC_AI.AI.Movement
         }
         private byte CalcActiveObst(Vector3 posScene)
         {
-            foreach (var item in ManVisible.inst.VisiblesTouchingRadius(posScene, MoveGridScale,
-                new Bitfield<ObjectTypes>(new ObjectTypes[2] { ObjectTypes.Scenery, ObjectTypes.Vehicle })))
+            foreach (var item in ManVisible.inst.VisiblesTouchingRadius(posScene, MoveGridScale, AIGlobals.crashBitMask))
             {
                 if (item.isActive)
                 {

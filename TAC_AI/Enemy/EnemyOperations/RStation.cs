@@ -7,9 +7,9 @@ using UnityEngine;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public static class RStation
+    internal static class RStation
     {
-        public static void AttackWham(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void AttackWham(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
             BGeneral.ResetValues(thisInst, ref direct);
@@ -33,7 +33,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
                 direct.DriveDest = EDriveDest.ToLastDestination;
                 direct.DriveDir = EDriveFacing.Forwards;
-                direct.lastDestination = mind.sceneStationaryPos;
+                direct.SetLastDest(mind.sceneStationaryPos);
                 if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.75f)
                 {   //Move back because we have GONE TOO FAR BACKWARDS
                     thisInst.ForceSetDrive = true;
@@ -49,7 +49,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 direct.DriveDest = EDriveDest.ToLastDestination;
                 direct.DriveDir = EDriveFacing.Forwards;
                 thisInst.PivotOnly = true;
-                direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
             }
         }
     }

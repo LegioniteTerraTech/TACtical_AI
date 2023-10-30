@@ -14,7 +14,7 @@ namespace TAC_AI.Templates
         internal float Val;
         internal float Rad;
     }
-    public class OverrideManPop : MonoBehaviour
+    internal class OverrideManPop : MonoBehaviour
     {
         private static FieldInfo dayTechs = typeof(ManPop).GetField("m_DayFilter", BindingFlags.NonPublic | BindingFlags.Instance);
         private static FieldInfo nightTechs = typeof(ManPop).GetField("m_NightFilter", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -168,27 +168,35 @@ namespace TAC_AI.Templates
             TempFilterStore TFS = new TempFilterStore();
             try
             {
-                TFS.Bloc = (int)BigBloc.GetValue((TechSpawnFilter)toApplyTo.GetValue(inst));
+                TechSpawnFilter TSF = (TechSpawnFilter)toApplyTo.GetValue(inst);
+                try
+                {
+                    TFS.Bloc = (int)BigBloc.GetValue(TFS);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Failed to get Bloc");
+                }
+                try
+                {
+                    TFS.Rad = (float)BigRad.GetValue(TFS);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Failed to get Rad");
+                }
+                try
+                {
+                    TFS.Val = (float)BigVal.GetValue(TFS);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Failed to get Val");
+                }
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change Bloc");
-            }
-            try
-            {
-                TFS.Rad = (float)BigRad.GetValue((TechSpawnFilter)toApplyTo.GetValue(inst));
-            }
-            catch
-            {
-                DebugTAC_AI.Info("TACtical_AI: Failed to change Rad");
-            }
-            try
-            {
-                TFS.Val = (float)BigVal.GetValue((TechSpawnFilter)toApplyTo.GetValue(inst));
-            }
-            catch
-            {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change Val");
+                DebugTAC_AI.Log("TACtical_AI: Failed to get TechSpawnFilter");
             }
             return TFS;
         }
@@ -196,27 +204,35 @@ namespace TAC_AI.Templates
         {
             try
             {
-                BigBloc.SetValue((TechSpawnFilter)toApplyTo.GetValue(inst), TFS.Bloc);
+                TechSpawnFilter TSF = (TechSpawnFilter)toApplyTo.GetValue(inst);
+                try
+                {
+                    BigBloc.SetValue(TSF, TFS.Bloc);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Failed to change Bloc");
+                }
+                try
+                {
+                    BigRad.SetValue(TSF, TFS.Rad);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Failed to change Rad");
+                }
+                try
+                {
+                    BigVal.SetValue(TSF, TFS.Val);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log("TACtical_AI: Failed to change Val");
+                }
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change Bloc");
-            }
-            try
-            {
-                BigRad.SetValue((TechSpawnFilter)toApplyTo.GetValue(inst), TFS.Rad);
-            }
-            catch
-            {
-                DebugTAC_AI.Info("TACtical_AI: Failed to change Rad");
-            }
-            try
-            {
-                BigVal.SetValue((TechSpawnFilter)toApplyTo.GetValue(inst), TFS.Val);
-            }
-            catch
-            {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change Val");
+                DebugTAC_AI.Log("TACtical_AI: Failed to change TechSpawnFilter");
             }
         }
     }

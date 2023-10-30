@@ -17,6 +17,7 @@ namespace TAC_AI
     internal class GlobalPatches
     {
         // GAME
+        /*
         internal static class ManSpawnPatches
         {
             internal static Type target = typeof(ManSpawn);
@@ -34,8 +35,21 @@ namespace TAC_AI
                     }
                 }
             }
-        }
+        }*/
 
+        internal static class SpawnTechDataPatches
+        {
+            internal static Type target = typeof(SpawnTechData);
+
+            //Startup - On very late update
+            private static void SpawnTechInEncounter_Postfix(SpawnTechData __instance,  
+                ref Encounter encounterToSpawnInto, ref string nameOverride)
+            {
+                string text = !nameOverride.NullOrEmpty() ? nameOverride : __instance.UniqueName;
+                if (encounterToSpawnInto.GetVisibleState(text, out var vis) == Encounter.EncounterVisibleState.AliveAndSpawned)
+                    TankAIManager.RegisterMissionTechVisID(vis.ID);
+            }
+        }
         internal static class ModePatches
         {
             internal static Type target = typeof(Mode);
@@ -66,37 +80,6 @@ namespace TAC_AI
                 }
             }
         }
-        internal static class ModeAttractPatches
-        {
-            internal static Type target = typeof(ModeAttract);
-
-            // this is a VERY big mod
-            //   we must make it look big like it is
-            //RestartAttract - Checking title techs
-            private static void UpdateModeImpl_Prefix(ModeAttract __instance)
-            {
-                CustomAttract.CheckShouldRestart(__instance);
-            }
-
-            //SetupTerrainCustom -  Setup main menu scene
-            private static bool SetupTerrain_Prefix(ModeAttract __instance)
-            {
-                return CustomAttract.SetupTerrain(__instance);
-            }
-
-            //ThrowCoolAIInAttract - Setup main menu techs
-            private static bool SetupTechs_Prefix(ModeAttract __instance)
-            {
-                return CustomAttract.SetupTechsStart(__instance);
-            }
-            private static void SetupTechs_Postfix(ModeAttract __instance)
-            {
-                CustomAttract.SetupTechsEnd(__instance);
-            }
-
-        }
-
-
         internal static class NetTechPatches
         {
             internal static Type target = typeof(NetTech);
@@ -115,6 +98,15 @@ namespace TAC_AI
         internal static class TankControlPatches
         {
             internal static Type target = typeof(TankControl);
+            /*
+            private static void ApplyCollectedMovementInputs_Prefix(TankControl __instance, ref TankControl other)
+            {
+                try
+                {
+                }
+                catch
+                { }
+            }*/
             //SetMTAIAuto
             private static void CopySchemesFrom_Prefix(TankControl __instance, ref TankControl other)
             {
@@ -139,7 +131,7 @@ namespace TAC_AI
                 //DebugTAC_AI.Log("TACtical_AI: Patched TankBeam Update(TankAIHelper)");
                 if (__instance.IsActive && !ManNetwork.IsNetworked && !ManGameMode.inst.IsCurrent<ModeSumo>())
                 {
-                    var helper = __instance.GetComponent<AIECore.TankAIHelper>();
+                    var helper = __instance.GetComponent<TankAIHelper>();
                     if (helper != null && (!helper.tank.PlayerFocused || (ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS)))
                     {
                         if (helper.AIAlign != AIAlignment.Static && (helper.AIAlign != AIAlignment.Player || helper.ActuallyWorks))
@@ -192,7 +184,7 @@ namespace TAC_AI
                                     Clamp(-Vector2.one, Vector2.one)));
                                 return;
                             }
-                            else if (helper.IsDirectedMovingAnyDest)
+                            else if (helper.IsDirectedMoving)
                                 forceVal = 1.41f;
                             if (ReversedMove)
                                 beamPush.SetValue(__instance,
@@ -218,7 +210,7 @@ namespace TAC_AI
                 if (!KickStart.EnableBetterAI || !tankToFollow)
                     return;
                 var AICommand = tankToFollow.GetHelperInsured();
-                if (AICommand.lastLockedTarget)
+                if (AICommand.lastLockOnTarget)
                     __result = false;
             }
         }
@@ -232,18 +224,18 @@ namespace TAC_AI
                 if (!KickStart.EnableBetterAI)
                     return;
 
-                var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
+                var AICommand = __instance.transform.root.GetComponent<TankAIHelper>();
                 if (AICommand.IsNotNull())
                 {
                     if (__result == null)
                     {
-                        if (AICommand.lastLockedTarget)
-                            __result = AICommand.lastLockedTarget;
+                        if (AICommand.lastLockOnTarget)
+                            __result = AICommand.lastLockOnTarget;
                     }
                     else
                     {
-                        if (AICommand.lastLockedTarget)
-                            AICommand.lastLockedTarget = null;
+                        if (AICommand.lastLockOnTarget)
+                            AICommand.lastLockOnTarget = null;
                     }
                 }
             }
@@ -256,7 +248,7 @@ namespace TAC_AI
             //ForceAIToComplyAnchorCorrectly - (Allied AI state changing remotes) On Auto Setting Tech AI
             private static void UpdateAICategory_Postfix(TechAI __instance)
             {
-                var tAI = __instance.gameObject.GetComponent<AI.AIECore.TankAIHelper>();
+                var tAI = __instance.gameObject.GetComponent<AI.TankAIHelper>();
                 if (tAI.IsNotNull())
                 {
                     if (tAI.JustUnanchored && tAI.AIAlign == AIAlignment.Player)

@@ -79,7 +79,7 @@ namespace TAC_AI.AI.Movement
             return AIEAutoPather.CancelPathfinding(ref pathable);
         }
     }
-    public class AIEAutoPather
+    public abstract class AIEAutoPather
     {
         protected static bool endPrematureDebug = false;
         public const int DefaultMaxDifficulty = 48;
@@ -151,10 +151,7 @@ namespace TAC_AI.AI.Movement
             return true;
         }
 
-        public virtual byte GetDifficultyFromAlt(byte alt)
-        {
-            return 128;
-        }
+        public abstract byte GetDifficultyFromAlt(byte alt); // 128 max
 
 
         public virtual void Recalc(Vector3 startPosScene, Vector3 endPosScene)
@@ -162,22 +159,11 @@ namespace TAC_AI.AI.Movement
             if (!IsRegistered)
                 AIEPathMapper.RegisterPather(this);
         }
-        public virtual bool CanGetPath(int minCount = 0)
-        {
-            return false;
-        }
-        public virtual void GetPath(List<WorldPosition> pathCache, bool GetAccurateAlt = false)
-        {
-        }
+        public abstract bool CanGetPath(int minCount = 0);
+        public abstract void GetPath(List<WorldPosition> pathCache, bool GetAccurateAlt = false);
 
-        public virtual bool CalcRoute()
-        {
-            return false;
-        }
-        public virtual bool CanContinue()
-        {
-            return false;
-        }
+        public abstract bool CalcRoute();
+        public abstract bool CanContinue();
     }
 
 }

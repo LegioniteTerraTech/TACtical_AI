@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TAC_AI.AI
 {
-    public class CombatUtils
+    internal class CombatUtils
     {
     }
 }

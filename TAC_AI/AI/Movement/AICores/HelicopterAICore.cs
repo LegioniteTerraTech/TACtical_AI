@@ -10,10 +10,10 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI.AI.Movement.AICores
 {
-    public class HelicopterAICore : IMovementAICore
+    internal class HelicopterAICore : IMovementAICore
     {
         private AIControllerAir pilot;
-        internal AIECore.TankAIHelper Helper => pilot.Helper;
+        internal TankAIHelper Helper => pilot.Helper;
         private Tank tank;
         private float groundOffset => Helper.GroundOffsetHeight;
         private float groundOffsetEmerg => AIGlobals.GroundOffsetCrashWarnChopper + Helper.lastTechExtents;
@@ -26,7 +26,7 @@ namespace TAC_AI.AI.Movement.AICores
             this.pilot.FlyingChillFactor = Vector3.one * 30;
             Helper.GroundOffsetHeight = Helper.lastTechExtents + AIGlobals.GroundOffsetChopper;
         }
-        public bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
+        public bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
@@ -223,7 +223,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.PathPointSet = MultiTechUtils.HandleMultiTech(pilot.Helper, tank, ref core);
                 return true;
             }
-            if (Helper.RTSDestination == AIECore.TankAIHelper.RTSDisabled)
+            if (Helper.RTSDestination == TankAIHelper.RTSDisabled)
             {
                 if (!TryAdjustForCombat(false, ref pilot.PathPointSet, ref core)) // When set to chase then chase
                 {
@@ -311,7 +311,7 @@ namespace TAC_AI.AI.Movement.AICores
         public Vector3 AvoidAssist(Vector3 targetIn, Vector3 predictionOffset)
         {
             //The method to determine if we should avoid an ally nearby while navigating to the target
-            AIECore.TankAIHelper thisInst = pilot.Helper;
+            TankAIHelper thisInst = pilot.Helper;
             Tank tank = pilot.Tank;
 
             try
@@ -352,7 +352,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (targetIn.IsNaN())
             {
                 DebugTAC_AI.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
-                //AIECore.TankAIManager.FetchAllAllies();
+                //TankAIManager.FetchAllAllies();
             }
             return targetIn;
         }
@@ -360,13 +360,13 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool TryAdjustForCombat(bool between, ref Vector3 pos, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper thisInst = pilot.Helper;
+            TankAIHelper thisInst = pilot.Helper;
             bool output = false;
             if (thisInst.ChaseThreat && !thisInst.Retreat && thisInst.lastEnemyGet.IsNotNull())
             {
                 output = true;
                 core.DriveDir = EDriveFacing.Forwards;
-                Vector3 targPos = thisInst.LeadTargetAiming(thisInst.lastEnemyGet);
+                Vector3 targPos = thisInst.InterceptTargetDriving(thisInst.lastEnemyGet);
                 if (between && thisInst.theResource?.tank)
                 {
                     targPos = Between(targPos, thisInst.theResource.tank.boundsCentreWorldNoCheck);
@@ -439,7 +439,7 @@ namespace TAC_AI.AI.Movement.AICores
         }
         public bool TryAdjustForCombatEnemy(EnemyMind mind, ref Vector3 pos, ref EControlCoreSet core)
         {
-            AIECore.TankAIHelper Helper = pilot.Helper;
+            TankAIHelper Helper = pilot.Helper;
             bool output = false;
             if (!Helper.Retreat && Helper.lastEnemyGet.IsNotNull() && mind.CommanderMind != EnemyAttitude.OnRails)
             {

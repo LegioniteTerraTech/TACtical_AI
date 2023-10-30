@@ -48,7 +48,7 @@ namespace TAC_AI
                     return true;
                 try
                 {
-                    var AICommand = __instance.transform.root.GetComponent<AIECore.TankAIHelper>();
+                    var AICommand = __instance.transform.root.GetComponent<TankAIHelper>();
                     if (AICommand)
                     {
                         if (AICommand.ActiveAimState == AIWeaponState.Obsticle && AICommand.Obst.IsNotNull())
@@ -273,7 +273,7 @@ namespace TAC_AI
                         var tank = __instance.block.tank;
                         if (tank)
                         {
-                            var tankAIHelp = tank.gameObject.GetComponent<AIECore.TankAIHelper>();
+                            var tankAIHelp = tank.gameObject.GetComponent<TankAIHelper>();
                             if (tankAIHelp)
                             {
                                 if (tankAIHelp.ControlTech(__instance.block.tank.control))
@@ -287,7 +287,7 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AIECore.TankAIHelper.ControlTech() - Failure on handling AI!");
+                        DebugTAC_AI.Log("TACtical_AI: TankAIHelper.ControlTech() - Failure on handling AI!");
                         DebugTAC_AI.Log(e);
                     }
                 }

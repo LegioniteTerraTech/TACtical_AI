@@ -84,9 +84,9 @@ namespace TAC_AI.AI.Enemy
             return false;
         }
 
-        public static bool EnemyInstaRepair(Tank tank, EnemyMind mind, int RepairAttempts = 0)
+        internal static bool EnemyInstaRepair(Tank tank, EnemyMind mind, int RepairAttempts = 0)
         {
-            if (!KickStart.AllowAISelfRepair)
+            if (!KickStart.AISelfRepair)
                 return true;
             bool success = false;
 
@@ -127,7 +127,7 @@ namespace TAC_AI.AI.Enemy
             catch { } // it failed - [patch later]
             return success;
         }
-        public static bool EnemyRepairStepper(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
+        internal static bool EnemyRepairStepper(TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
         {
             /*
             DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ": - EnemyRepairStepper "
@@ -171,7 +171,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (!KickStart.AllowAISelfRepair)
+                    if (!KickStart.AISelfRepair)
                         return false;
                     if (mind.AIControl.Provoked == 0)
                     {
@@ -274,12 +274,13 @@ namespace TAC_AI.AI.Enemy
 
             if (mind.TechMemor.ReserveSuperGrabs < 0)
                 mind.TechMemor.ReserveSuperGrabs = 0;
+            thisInst.UpdateDamageThreshold();
             return thisInst.PendingDamageCheck;
         }
 
 
         // EXPERIMENTAL - AI-Based new Tech building
-        public static bool EnemyNewTechConstruction(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static bool EnemyNewTechConstruction(TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             if (thisInst.PendingDamageCheck)// && thisInst.AttemptedRepairs == 0)
             {

@@ -7,9 +7,9 @@ using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BBuccaneer {
+    internal static class BBuccaneer {
         //Same as Airship but levels out with the sea and avoids terrain
-        public static void MotivateBote(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MotivateBote(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the naval ship (Escort) what to do movement-wise
             thisInst.lastPlayer = thisInst.GetPlayerTech();
@@ -28,6 +28,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (thisInst.lastPlayer == null)
                 return;
             float playerExt = thisInst.lastPlayer.GetCheapBounds();
+            direct.SetLastDest(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck);
             float dist = thisInst.GetDistanceFromTask(thisInst.lastPlayer.tank.boundsCentreWorldNoCheck, thisInst.lastPlayer.GetCheapBounds());
             float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents + playerExt;
             bool hasMessaged = false;
@@ -133,7 +134,7 @@ namespace TAC_AI.AI.AlliedOperations
                     //bloody tree moment
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
                     thisInst.AvoidStuff = false;
-                    thisInst.FIRE_NOW = true;
+                    thisInst.FIRE_ALL = true;
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 0.5f;
                     thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;

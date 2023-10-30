@@ -7,72 +7,101 @@ using TAC_AI.AI.Enemy;
 
 namespace TAC_AI
 {
-    public static class TeamNamer
+    internal static class TeamNamer
     {
 
+        private const string lonely = "Lone Prospector";
+        private const string playerTeam = "Your Team";
+        private const string mPlayerTeam = "MP Player Team";
+        private const string neutralTeam = "Services Group";
+
         private static StringBuilder build = new StringBuilder();
+
         public static string GetTeamName(int Team)
         {
             //if (KickStart.isAnimeAIPresent)
             //    return AnimeAI.Dialect.ManDialogDetail.TeamName(Team);
             build.Clear();
-            int teamNameDetermine = Team;
-            if (teamNameDetermine == ManSpawn.FirstEnemyTeam || teamNameDetermine == ManSpawn.NewEnemyTeam)
+            int teamNameDetermine = Mathf.Abs(Team) % 10000;
+            if (Team == ManSpawn.FirstEnemyTeam || Team == ManSpawn.NewEnemyTeam)
             {
-                build.Append("Lone Prospector");
+                build.Append(lonely);
                 return build.ToString();
             }
-            else if (teamNameDetermine == ManPlayer.inst.PlayerTeam)
+            else if (Team == ManPlayer.inst.PlayerTeam)
             {
-                build.Append("Player Team");
+                build.Append(playerTeam);
                 return build.ToString();
             }
-            else if (teamNameDetermine == ManSpawn.NeutralTeam)
+            else if (AIGlobals.IsMPPlayerTeam(Team))
             {
-                build.Append("Services Group");
+                build.Append(mPlayerTeam);
                 return build.ToString();
             }
-            else if (teamNameDetermine < 1075)
+            else if (Team == ManSpawn.NeutralTeam)
             {
-                build.Append(Adjective.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), Adjective.Count)));
+                build.Append(neutralTeam);
+                return build.ToString();
+            }
+            else if (Mathf.Repeat(teamNameDetermine, 3) != 0)
+            {
+                int mod1 = teamNameDetermine % Adjective.Count;
+                int mod2 = teamNameDetermine % Noun.Count;
+                build.Append(Adjective.ElementAt(mod1));
                 build.Append(" ");
-                build.Append(Noun.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), Noun.Count)));
+                build.Append(Noun.ElementAt(mod2));
             }
             else
             {
-                build.Append(AdjectiveAlt.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), AdjectiveAlt.Count)));
+                int mod1 = teamNameDetermine % AdjectiveAlt.Count;
+                int mod2 = teamNameDetermine % NounAlt.Count;
+                build.Append(AdjectiveAlt.ElementAt(mod1));
                 build.Append(" ");
-                build.Append(NounAlt.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), NounAlt.Count)));
+                build.Append(NounAlt.ElementAt(mod2));
+               // DebugTAC_AI.Log("got val " + teamNameDetermine + " and name " + build.ToString() + " from mods [" + mod1 + ", " + mod2 + "]");
             }
 
             return build.ToString();
         }
         public static string EnemyTeamName(EnemyMind mind)
         {
-            //if (KickStart.isAnimeAIPresent)
-            //    return AnimeAI.Dialect.ManDialogDetail.EnemyTeamName(mind);
-
-            build.Clear();
-            int teamNameDetermine = mind.AIControl.tank.Team;
-            if (teamNameDetermine == -1)
+            try
             {
-                build.Append("Lone Prospector");
+                //if (KickStart.isAnimeAIPresent)
+                //    return AnimeAI.Dialect.ManDialogDetail.EnemyTeamName(mind);
+                if (mind.AIControl.tank.Team == -1)
+                {
+                    build.Append(lonely);
+                    return build.ToString();
+                }
+                else
+                {
+                    int teamNameDetermine = Mathf.Abs(mind.AIControl.tank.Team);
+                    if (Mathf.Repeat(teamNameDetermine, 3) != 0)
+                    {
+                        int mod1 = teamNameDetermine % Adjective.Count;
+                        int mod2 = teamNameDetermine % Noun.Count;
+                        build.Append(Adjective.ElementAt(mod1));
+                        build.Append(" ");
+                        build.Append(Noun.ElementAt(mod2));
+                    }
+                    else
+                    {
+                        int mod1 = teamNameDetermine % AdjectiveAlt.Count;
+                        int mod2 = teamNameDetermine % NounAlt.Count;
+                        build.Append(AdjectiveAlt.ElementAt(mod1));
+                        build.Append(" ");
+                        build.Append(NounAlt.ElementAt(mod2));
+                        // DebugTAC_AI.Log("got val " + teamNameDetermine + " and name " + build.ToString() + " from mods [" + mod1 + ", " + mod2 + "]");
+                    }
+                }
+
                 return build.ToString();
             }
-            else if (teamNameDetermine < 1075)
+            finally
             {
-                build.Append(Adjective.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), Adjective.Count)));
-                build.Append(" ");
-                build.Append(Noun.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), Noun.Count)));
+                build.Clear();
             }
-            else
-            {
-                build.Append(AdjectiveAlt.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), AdjectiveAlt.Count)));
-                build.Append(" ");
-                build.Append(NounAlt.ElementAt((int)Mathf.Repeat((int)(teamNameDetermine + 0.5f), NounAlt.Count)));
-            }
-
-            return build.ToString();
         }
 
 

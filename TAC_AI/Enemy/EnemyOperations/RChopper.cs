@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public static class RChopper
+    internal static class RChopper
     {
         // ENEMY CONTROLLERS
         /*  
@@ -18,7 +18,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             Pesterer,   // Randomly switch targets on 5 second intervals
             Spyper,     // OPPOSITE!!!  Bombs the enemy from high above instead! 
         */
-        public static void AttackShwa(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void AttackShwa(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             BGeneral.ResetValues(thisInst, ref direct);
             thisInst.Attempt3DNavi = false;
@@ -51,14 +51,14 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
             {
                 case EAttackMode.Safety:
                     range = AIGlobals.SpacingRangeHoverer;
-                    thisInst.AILimitSettings.ObjectiveRange = spacing + range;
-                    thisInst.SideToThreat = false;
+                    thisInst.AISetSettings.ObjectiveRange = spacing + range;
+                    thisInst.AISetSettings.SideToThreat = false;
                     thisInst.Retreat = true;
                     direct.DriveAwayFacingAway();
-                    direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - (Vector3.down * 50);
+                    direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - (Vector3.down * 50));
                     if (dist < spacing + (range / 4))
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
                         else
@@ -70,12 +70,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
                         else
                             thisInst.SettleDown();
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                     }
                     break;
                 case EAttackMode.Circle:
                     range = AIGlobals.SpacingRangeHoverer;
-                    thisInst.AILimitSettings.SideToThreat = true;
+                    thisInst.AISetSettings.SideToThreat = true;
                     thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                     if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                         thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
@@ -83,17 +83,17 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         thisInst.SettleDown();
                     if (dist < spacing + 2)
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         direct.DriveToFacingTowards();
                     }
                     else if (mind.MaxCombatRange < spacing + range)
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         direct.DriveToFacingPerp();
                     }
                     else
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         direct.DriveToFacingPerp();
                     }
                     break;
@@ -101,11 +101,11 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     if (mind.LikelyMelee)
                     {// Bomber
                         range = 8;
-                        thisInst.AILimitSettings.ObjectiveRange = spacing + range;
-                        thisInst.AILimitSettings.SideToThreat = false;
+                        thisInst.AISetSettings.ObjectiveRange = spacing + range;
+                        thisInst.AISetSettings.SideToThreat = false;
                         thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                         direct.DriveDest = EDriveDest.ToLastDestination;
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         if (dist < spacing + 2)
                         {
                             direct.DriveAwayFacingTowards();
@@ -128,11 +128,11 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     else
                     {
                         range = AIGlobals.SpacingRangeSpyperAir;
-                        thisInst.AILimitSettings.ObjectiveRange = spacing + range;
-                        thisInst.SideToThreat = false;
+                        thisInst.AISetSettings.ObjectiveRange = spacing + range;
+                        thisInst.AISetSettings.SideToThreat = false;
                         thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
                         direct.DriveDest = EDriveDest.ToLastDestination;
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         if (dist < spacing + range)
                         {
                             direct.DriveAwayFacingTowards();
@@ -161,13 +161,12 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     break;
                 default:    // Others
                     range = AIGlobals.SpacingRangeHoverer;
-                    thisInst.AILimitSettings.ObjectiveRange = spacing + range;
-                    thisInst.SideToThreat = false;
+                    thisInst.AISetSettings.ObjectiveRange = spacing + range;
+                    thisInst.AISetSettings.SideToThreat = false;
                     thisInst.Retreat = RGeneral.CanRetreat(thisInst, tank, mind);
-                    thisInst.AILimitSettings.ObjectiveRange = spacing + range;
                     if (dist < spacing + 2)
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         direct.DriveAwayFacingTowards();
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
@@ -176,13 +175,13 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                     else if (dist < spacing + range || needsToSlowDown)
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         thisInst.PivotOnly = true;
                         direct.DriveDest = EDriveDest.ToLastDestination;
                     }
                     else if (dist < spacing + (range * 1.25f))
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
                         else
@@ -191,7 +190,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     }
                     else
                     {
-                        direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                        direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                         if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                             thisInst.TryHandleObstruction(!AIECore.Feedback, dist, true, true, ref direct);
                         else

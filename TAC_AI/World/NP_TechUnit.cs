@@ -8,12 +8,13 @@ using TAC_AI.Templates;
 
 namespace TAC_AI.World
 {
-    public class NP_TechUnit
+    public abstract class NP_TechUnit
     {
         public readonly NP_Presence teamInst;
+        public int Team => tech.m_TeamID;
         public ManSaveGame.StoredTech tech { get; private set; }
         public TrackedVisible trackedVis { get; private set; }
-        public FactionTypesExt Faction = FactionTypesExt.GSO;
+        public FactionSubTypes Faction = FactionSubTypes.GSO;
         public IntVector2 tilePos => WorldPos.TileCoord;
         public int ID => trackedVis.ID;
 
@@ -72,21 +73,15 @@ namespace TAC_AI.World
 
         public long MaxHealth;
         public long MaxShield;
-        public readonly float MoveSpeed;
         private int BaseAttackPower;
         public int AttackPower => Mathf.CeilToInt(BaseAttackPower * ((float)Health / MaxHealth));
-        public readonly bool isFounder = false;
         public readonly bool isArmed = false;
         public readonly bool canHarvest = false;
 
-        public NP_TechUnit(ManSaveGame.StoredTech techIn, NP_Presence team, FactionTypesExt faction) : 
-            this(techIn, team, ManEnemyWorld.MobileHealthMulti, GetSpeed(techIn, faction))
-        {
-            Faction = faction;
-        }
-        protected NP_TechUnit(ManSaveGame.StoredTech techIn, NP_Presence team, float healthMulti, float moveSpeed)
+        protected NP_TechUnit(ManSaveGame.StoredTech techIn, NP_Presence team, FactionSubTypes faction, float healthMulti)
         {
             teamInst = team;
+            Faction = faction;
             int level = 0;
             long healthAll = 1;
             long shieldCoverAll = 0;
@@ -131,10 +126,8 @@ namespace TAC_AI.World
                     Shield = 0;
                 }
                 level++;
-                isFounder = tech.m_TechData.IsTeamFounder();
                 Health = (long)(healthAll * healthMulti);
                 MaxHealth = (long)(healthAll * healthMulti);
-                MoveSpeed = moveSpeed;
             }
             catch
             {
@@ -143,10 +136,10 @@ namespace TAC_AI.World
         }
 
 
-        public virtual bool Exists()
-        {
-            return teamInst.ETUs.Contains(this);
-        }
+        public abstract float GetSpeed();
+        public abstract float GetEvasion();
+        public abstract bool Exists();
+
         /*
         public bool SetPositionWorld(WorldPosition newPos)
         {
@@ -174,37 +167,17 @@ namespace TAC_AI.World
         }
 
 
-        public void MovementSceneDelta(float timeDelta)
-        {
-            trackedVis.StopTracking();
-            Vector3 actualPosScene = PosScene;
-            Vector3 posDelta = (trackedVis.GetWorldPosition().ScenePosition - actualPosScene) + (UnityEngine.Random.insideUnitCircle * MoveSpeed * timeDelta).ToVector3XZ();
-            Vector3 Max = Vector3.one * 64;
-            Vector3 finalPos = posDelta.Clamp(-Max, Max) + actualPosScene;
-            trackedVis.SetPos(finalPos);
-            //DebugTAC_AI.Log("MovementSceneDelta for " + Name + " with val " + finalPos);
-        }
-        public void SetFakeTVLocation(Vector3 posScene)
+        internal abstract void MovementSceneDelta(float timeDelta);
+        internal void SetFakeTVLocation(Vector3 posScene)
         {
             trackedVis.StopTracking();
             trackedVis.SetPos(posScene);
         }
-        public void UpdateTVLocation()
+        internal void UpdateTVLocation()
         {
             trackedVis.SetPos(WorldPos);
         }
 
-        public static float GetSpeed(ManSaveGame.StoredTech tech, FactionTypesExt faction)
-        {
-            float MoveSpeed = 0;
-            if (!tech.m_TechData.CheckIsAnchored() && !tech.m_TechData.Name.Contains(" " + RawTechLoader.turretChar))
-            {
-                MoveSpeed = 25;
-                if (ManEnemyWorld.corpSpeeds.TryGetValue(faction, out float sped))
-                    MoveSpeed = sped;
-            }
-            return MoveSpeed;
-        }
         public Tank GetActiveTech()
         {
             var iterit = ManTechs.inst.IterateTechsWhere(x => x.visible.ID == ID);
@@ -234,37 +207,17 @@ namespace TAC_AI.World
         /// </summary>
         /// <param name="dealt"></param>
         /// <returns>True if tech destroyed</returns>
-        public virtual bool TakeDamage(int Dealt)
-        {
-            //ManEnemyWorld.GetTeam(tech.m_TeamID).SetAttackMode(tilePos);
-            if (MaxShield > 0)
-            {
-                Shield -= Dealt;
-                if (Shield <= 0)
-                {
-                    Health += Shield;
-                    Shield = 0;
-                }
-                NP_Presence.ReportCombat("TACtical_AI: EnemyPresence - Tech " + Name + " has received " + Dealt + " damage | Health " + Health 
-                    + " | Shield " + Shield);
-            }
-            else
-            {
-                Health -= Dealt;
-                NP_Presence.ReportCombat("TACtical_AI: EnemyPresence - Tech " + Name + " has received " + Dealt + " damage | Health " + Health);
-            }
-            return Health < 0;
-        }
-        public void ApplyDamage()
+        public abstract bool RecieveDamage(int Dealt);
+        internal void ApplyDamage()
         {
             if (Health == MaxHealth)
                 return;
             float damagePercent = (float)Health / MaxHealth;
-            SpecialAISpawner.InflictPercentDamage(tech.m_TechData, damagePercent);
+            SpecialAISpawner.InflictPercentDamage(tech.m_TechData, 1 - damagePercent);
             BaseAttackPower = AttackPower;
             MaxHealth = Health;
         }
-        public bool ShouldApplyShields()
+        internal bool ShouldApplyShields()
         {
             if (MaxShield > 0)
             {
@@ -283,7 +236,7 @@ namespace TAC_AI.World
             }
             return false;
         }
-        public void DoApplyShields(Tank techActive)
+        internal void DoApplyShields(Tank techActive)
         {
             if (techActive == null)
                 return;

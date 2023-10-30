@@ -7,12 +7,9 @@ using UnityEngine;
 using TerraTechETCUtil;
 
 namespace TAC_AI.Templates
-{ 
-    public class PlayerSpawnAid
+{
+    internal class PlayerSpawnAid
     {   // if the player spawns in the water, we try to spawn them with a bote
-
-
-
         public static void TryBotePlayerSpawn()
         {
             if (Singleton.playerTank.IsNull())

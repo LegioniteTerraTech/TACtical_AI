@@ -8,9 +8,9 @@ using TAC_AI.AI.AlliedOperations;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
-    public static class RMiner
+    internal static class RMiner
     {
-        public static void MineYerOwnBusiness(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void MineYerOwnBusiness(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
 
@@ -28,6 +28,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             BGeneral.ResetValues(thisInst, ref direct);
 
+            // VALIDATION CHECKS OF TRACTOR BED FILL STATUS
             if (thisInst.CollectedTarget)
             {
                 thisInst.CollectedTarget = false;
@@ -40,7 +41,8 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         break;//Checking if tech is empty when unloading at base
                     }
                 }
-                thisInst.ActionPause = AIGlobals.ReverseDelay;
+                if (!thisInst.CollectedTarget)
+                    thisInst.actionPause = BProspector.reverseFromResourceTime;
             }
             else
             {
@@ -54,10 +56,19 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         break;//Checking if tech is full after destroying a node
                     }
                 }
+                if (thisInst.CollectedTarget)
+                    thisInst.actionPause = BProspector.reverseFromBaseTime;
             }
 
-            if (thisInst.CollectedTarget || thisInst.ActionPause > 10)
+            if (thisInst.CollectedTarget)
             {
+                if (thisInst.ActionPause > 0)
+                {
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from resources...");
+                    direct.Reverse(thisInst);
+                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    return;
+                }
                 thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, mind.MaxCombatRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
                 if (!thisInst.foundBase)
                 {
@@ -77,7 +88,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         float distFlat = (tank.boundsCentreWorldNoCheck - thisInst.theBase.boundsCentreWorldNoCheck).ToVector2XZ().magnitude;
                         if (distFlat < thisInst.lastBaseExtremes)
                         {   // Final approach - turn off avoidence
-                            thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
+                            thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
                             thisInst.AvoidStuff = false;
                             if (thisInst.recentSpeed == 1)
                             {
@@ -88,7 +99,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             else
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
-                                thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                                thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                                 thisInst.Yield = true;
                                 thisInst.SettleDown();
                                 thisInst.DropAllItemsInCollectors();
@@ -104,7 +115,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {   // Fly aircraft
                         if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + AIGlobals.AircraftHailMaryRange)
                         {   // Final approach - turn off avoidence
-                            thisInst.theBase.GetHelperInsured().AllowApproach(thisInst);
+                            thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
                             thisInst.AvoidStuff = false;
                             if (thisInst.recentSpeed == 1)
                             {
@@ -115,7 +126,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             else
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
-                                thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                                thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                                 thisInst.Yield = true;
                                 thisInst.SettleDown();
                                 thisInst.DropAllItemsInCollectors();
@@ -142,7 +153,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and unloading!");
                             thisInst.AvoidStuff = false;
-                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                            thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                             thisInst.Yield = true;
                             thisInst.SettleDown();
                         }
@@ -165,7 +176,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
                             thisInst.AvoidStuff = false;
-                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                            thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                             thisInst.Yield = true;
                             thisInst.SettleDown();
                         }
@@ -180,7 +191,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         else
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base!");
-                            thisInst.ActionPause -= KickStart.AIClockPeriod / 5;
+                            thisInst.actionPause -= KickStart.AIClockPeriod / 5;
                             //thisInst.Yield = true;
                             thisInst.SettleDown();
                             if (needsToSlowDown)
@@ -199,14 +210,15 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 direct.DriveDest = EDriveDest.ToBase;
                 thisInst.foundGoal = false;
             }
-            else if (thisInst.ActionPause > 0)
-            {
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = -1;
-            }
             else
             {
+                if (thisInst.ActionPause > 0)
+                {
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
+                    direct.Reverse(thisInst);
+                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    return;
+                }
                 if (!thisInst.foundGoal)
                 {
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg

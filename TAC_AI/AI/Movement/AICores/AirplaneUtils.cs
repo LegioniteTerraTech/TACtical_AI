@@ -14,9 +14,7 @@ namespace TAC_AI.AI.Movement.AICores
         private const float UprightBankNudgeMultiplierFighter = 0.5f;
         private const float UprightBankNudgeMultiplierSlow = 0.75f;
 
-        internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
-
-        public static void UTurn(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot)
+        public static void UTurn(TankControl thisControl, TankAIHelper thisInst, Tank tank, AIControllerAir pilot)
         {
             //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
             pilot.MainThrottle = 1;
@@ -39,16 +37,17 @@ namespace TAC_AI.AI.Movement.AICores
             }
             if (pilot.PerformUTurn == 1)
             {   // Accelerate
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " Executing U-Turn...");
+                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " Executing U-Turn...");
                // DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
-                AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
+                AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + 
+                    (tank.rootBlockTrans.forward.SetY(0).normalized.SetY(0.3f) * 300));
                 if (pilot.CurrentThrottle > 0.95)
                     pilot.PerformUTurn = 2;
             }
             else if (pilot.PerformUTurn == 2)
             {   // Pitch Up
                 //DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
-                AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
+                AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward.SetY(1.75f).normalized * 100));
                 if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
                     pilot.PerformUTurn = 3;
             }
@@ -149,11 +148,9 @@ namespace TAC_AI.AI.Movement.AICores
 
             return direct; // IS IN WORLD SPACE
         }
-        public static void AngleTowards(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
+        public static void AngleTowards(TankControl thisControl, TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
         {
             //AI Steering Rotational
-            TankControl.ControlState control3D = (TankControl.ControlState)controlGet.GetValue(thisControl);
-
             Transform root = tank.rootBlockTrans;
 
             bool EmergencyUp = false;
@@ -258,14 +255,14 @@ namespace TAC_AI.AI.Movement.AICores
 
             //Turn our work in to process
             turnVal.z = turnValUp.z;
-            control3D.m_State.m_InputRotation = turnVal.Clamp01Box();
+            Vector3 TurnVal = turnVal.Clamp01Box();
 
             // DRIVE
             Vector3 DriveVar = Vector3.forward * pilot.CurrentThrottle;
 
             //Turn our work in to processing
             //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
-            control3D.m_State.m_InputMovement = DriveVar.Clamp01Box();
+            Vector3 DriveVal = DriveVar.Clamp01Box();
             //if (pilot.SlowestPropLerpSpeed < 0.1f && pilot.PropBias.z > 0.75f && pilot.CurrentThrottle > 0.75f)
             //    control3D.m_State.m_BoostProps = true;
             //else
@@ -279,11 +276,10 @@ namespace TAC_AI.AI.Movement.AICores
             Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 1, thisInst.Navi3DDirect * pilot.Helper.lastTechExtents * 3, new Color(0, 0, 1));
             Templates.DebugRawTechSpawner.DrawDirIndicator(tank.gameObject, 2, thisInst.Navi3DUp * pilot.Helper.lastTechExtents * 3, new Color(1, 0, 0));
 
-
-            controlGet.SetValue(tank.control, control3D);
+            thisControl.CollectMovementInput(DriveVal, TurnVal, Vector3.zero, false, false);
             return;
         }
-        public static void AdviseThrottle(AIControllerAir pilot, AIECore.TankAIHelper thisInst, Tank tank, Vector3 target)
+        public static void AdviseThrottle(AIControllerAir pilot, TankAIHelper thisInst, Tank tank, Vector3 target)
         {
             if (pilot.AdvisedThrottle == -1)
             {
@@ -327,7 +323,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.AdvisedThrottle = 1;
             }
         }
-        public static void AdviseThrottleTarget(AIControllerAir pilot, AIECore.TankAIHelper thisInst, Tank tank, Visible target)
+        public static void AdviseThrottleTarget(AIControllerAir pilot, TankAIHelper thisInst, Tank tank, Visible target)
         {
             if (pilot.AdvisedThrottle == -1)
             {

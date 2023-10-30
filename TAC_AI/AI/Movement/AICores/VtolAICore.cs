@@ -10,7 +10,7 @@ using TAC_AI.AI;
 
 namespace TAC_AI.AI.Movement.AICores
 {
-    public class VtolAICore : AirplaneAICore, IMovementAICore
+    internal class VtolAICore : AirplaneAICore, IMovementAICore
     {
         public override void Initiate(Tank tank, IMovementAIController pilot)
         {
@@ -18,7 +18,7 @@ namespace TAC_AI.AI.Movement.AICores
             this.pilot.FlyStyle = AIControllerAir.FlightType.VTOL;
             pilot.Helper.GroundOffsetHeight = pilot.Helper.lastTechExtents + AIGlobals.GroundOffsetAircraft;
         }
-        public override bool DriveMaintainer(TankControl thisControl, AIECore.TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
+        public override bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now

@@ -7,20 +7,21 @@ using TAC_AI.Templates;
 
 namespace TAC_AI.AI
 {
-    public static class BGeneral
+    internal static class BGeneral
     {
-        public static void ResetValues(AIECore.TankAIHelper thisInst, ref EControlOperatorSet direct)
+        public static void ResetValues(TankAIHelper thisInst, ref EControlOperatorSet direct)
         {
             thisInst.Yield = false;
             thisInst.PivotOnly = false;
-            thisInst.FIRE_NOW = false;
+            thisInst.FIRE_ALL = false;
             thisInst.FullBoost = false;
             thisInst.FirePROPS = false;
             thisInst.ForceSetBeam = false;
             thisInst.ForceSetDrive = false;
             thisInst.LightBoost = false;
+            thisInst.DriveVar = 0;
 
-            direct.DriveToFacingTowards();
+            direct.FaceDest();
         }
 
         /// <summary>
@@ -28,7 +29,7 @@ namespace TAC_AI.AI
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static bool AidDefend(AIECore.TankAIHelper thisInst, Tank tank)
+        public static bool AidDefend(TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI
             if (thisInst.lastEnemyGet != null)
@@ -51,7 +52,7 @@ namespace TAC_AI.AI
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void AimDefend(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void AimDefend(TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             thisInst.AttackEnemy = false;
@@ -108,14 +109,14 @@ namespace TAC_AI.AI
             }
         }
 
-        public static void SelfDefend(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void SelfDefend(TankAIHelper thisInst, Tank tank)
         {
             // Alternative of the above - does not aim at enemies while mining
             if (thisInst.Obst == null)
             {
                 if (AidDefend(thisInst, tank))
                 {
-                    AIECore.RequestFocusFireALL(tank, thisInst.lastEnemyGet, RequestSeverity.ThinkMcFly);
+                    AIECore.RequestFocusFirePlayer(tank, thisInst.lastEnemyGet, RequestSeverity.ThinkMcFly);
                 }
                 else
                     thisInst.AttackEnemy = false;
@@ -129,7 +130,7 @@ namespace TAC_AI.AI
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void RTSCombat(AIECore.TankAIHelper thisInst, Tank tank)
+        public static void RTSCombat(TankAIHelper thisInst, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI
             if (thisInst.lastEnemyGet != null)

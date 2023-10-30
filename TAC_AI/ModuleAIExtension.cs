@@ -137,6 +137,69 @@ namespace TAC_AI
             if (block.IsAttached)
                 LoadToTech();
         }
+
+        private static ExtUsageHint.UsageHint hintGSOa = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintGSOa",
+            AltUI.ObjectiveString("GSO's") + " anchored A.I. has extended range and base capabilities.");
+        private static ExtUsageHint.UsageHint hintGSOm = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintGSOm",
+            AltUI.ObjectiveString("GSO's") + " mobile A.I. can " + AltUI.HighlightString("Mine") + ", " + 
+            AltUI.HighlightString("Protect") + " vehicles, " + AltUI.HighlightString("Build") +
+            " techs, and sail " + AltUI.HighlightString("Ships") + ".", 10);
+
+        private static ExtUsageHint.UsageHint hintGCm = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintGCm",
+            AltUI.ObjectiveString("GeoCorp's") + " mobile A.I. can " + AltUI.HighlightString("Mine") + ", " + 
+            AltUI.HighlightString("Mimic") + " all, block " + AltUI.HighlightString("Repair") + 
+            ", and " + AltUI.HighlightString("Fetch") + " blocks.", 10);
+
+        private static ExtUsageHint.UsageHint hintVENm = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintVENm",
+            AltUI.ObjectiveString("Venture's") + " mobile A.I. can " + AltUI.HighlightString("Plan") + " paths, " +
+            AltUI.HighlightString("Pilot") + " air, " + AltUI.HighlightString("Broadside") +
+            ", and sail " + AltUI.HighlightString("Ships") + ".", 10);
+
+        private static ExtUsageHint.UsageHint hintHEa = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintHEa",
+            AltUI.ObjectiveString("Hawkeye's") + " anchored A.I. has extended range and base capabilities.");
+        private static ExtUsageHint.UsageHint hintHEm = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintHEm",
+            AltUI.ObjectiveString("Hawkeye's") + " mobile A.I. " + AltUI.HighlightString("Plan") + " paths, " +
+            AltUI.HighlightString("Pilot") + " air, handle " + AltUI.HighlightString("Space") +
+            ", and " + AltUI.HighlightString("Scout") + " out " + AltUI.EnemyString("Enemies") + ".", 10);
+
+        private static ExtUsageHint.UsageHint hintBFm = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintBFm",
+            AltUI.ObjectiveString("Better Future's") + " mobile A.I. " + AltUI.HighlightString("Plan") + " paths, handle " +
+            AltUI.HighlightString("Space") + ", block " + AltUI.HighlightString("Repair") +
+            ", and use the " + AltUI.HighlightString("Inventory") + ".", 10);
+
+        public override void OnGrabbed()
+        {
+            switch (ManSpawn.inst.GetCorporation(block.BlockType))
+            {
+                case FactionSubTypes.GSO:
+                    if (GetComponent<ModuleAnchor>())
+                        hintGSOa.Show();
+                    else
+                        hintGSOm.Show();
+                    break;
+                case FactionSubTypes.GC:
+                    hintGCm.Show();
+                    break;
+                case FactionSubTypes.EXP:
+                    break;
+                case FactionSubTypes.VEN:
+                    hintVENm.Show();
+                    break;
+                case FactionSubTypes.HE:
+                    if (GetComponent<ModuleAnchor>())
+                        hintHEa.Show();
+                    else
+                        hintHEm.Show();
+                    break;
+                case FactionSubTypes.SPE:
+                    break;
+                case FactionSubTypes.BF:
+                    hintBFm.Show();
+                    break;
+                default:
+                    break;
+            }
+        }
         public override void OnAttach()
         {
             block.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
@@ -303,6 +366,8 @@ namespace TAC_AI
                     MaxCombatRange = 400;
                 }
                 */
+                if (tank.Team == ManPlayer.inst.PlayerTeam)
+                    OnGrabbed();
             }
             catch (Exception e)
             {
@@ -311,7 +376,7 @@ namespace TAC_AI
             }
         }
 
-        public void SaveRTS(AIECore.TankAIHelper help, IntVector3 posInternal)
+        public void SaveRTS(TankAIHelper help, IntVector3 posInternal)
         {
             RTSActive = help.RTSControlled;
             WorldPosition WP = WorldPosition.FromScenePosition(posInternal);
@@ -330,7 +395,7 @@ namespace TAC_AI
         }
         public Vector3 GetRTSScenePos()
         {
-            DebugTAC_AI.Log("GetRTSScenePos - " + RTSPosTile + " | " + RTSInTilePos);
+            //DebugTAC_AI.Info("GetRTSScenePos - " + RTSPosTile + " | " + RTSInTilePos);
             return new WorldPosition(RTSPosTile, RTSInTilePos).ScenePosition;
         }
         private bool LoadToTech()
@@ -373,11 +438,11 @@ namespace TAC_AI
             {
                 var help = tank.GetHelperInsured();
                 SaveRTS(help, help.RTSDestination);
-                AISettings.StringSerial(tank, true, ref BooleanSerial);
+                AISettingsSet.StringSerial(tank, true, ref BooleanSerial);
                 return this.SerializeToSafe();
             }
             bool deserial = this.DeserializeFromSafe();
-            AISettings.StringSerial(tank, false, ref BooleanSerial);
+            AISettingsSet.StringSerial(tank, false, ref BooleanSerial);
             //DebugTAC_AI.Log("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
             //DebugTAC_AI.Log("GetRTSScenePos - " + RTSPosTile + " | " + RTSInTilePos);
             return deserial;
@@ -468,11 +533,11 @@ namespace TAC_AI
             if (saving)
             {
                 tank.GetHelperInsured().AISetSettings.SaveFromAI(blockSpec);
-                DebugTAC_AI.Log("AI State(SNAPSHOT) was saved");
+                DebugTAC_AI.Info("AI State(SNAPSHOT) was saved");
             }
             else
             {
-                new AISettings(blockSpec).LoadToAI(tank);
+                new AISettingsSet(blockSpec).LoadToAI(tank);
             }
 
         }

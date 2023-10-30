@@ -11,15 +11,12 @@ namespace TAC_AI.AI
     {
         public EDriveDest DriveDest;
         public EDriveFacing DriveDir;
-        public Vector3 lastDestination
+        public Vector3 lastDestination => lastDest;
+        public void SetLastDest(Vector3 posScene)
         {
-            get => lastDest;
-            set
-            {
-                if (value.IsNaN())
-                    DebugTAC_AI.Exception("EControlOperatorSet - lastDestination was NaN!");
-                lastDest = value;
-            }
+            if (posScene.IsNaN())
+                DebugTAC_AI.Exception("EControlOperatorSet - lastDestination was NaN!");
+            lastDest = posScene;
         }
         private Vector3 lastDest;
 
@@ -38,6 +35,33 @@ namespace TAC_AI.AI
             lastDest = prev.lastDestination;
         }
 
+        public void Forwards(TankAIHelper thisInst)
+        {
+            DriveDest = EDriveDest.Override;
+            DriveDir = EDriveFacing.Forwards;
+            thisInst.ForceSetDrive = true;
+            thisInst.DriveVar = 1;
+        }
+        public void Reverse(TankAIHelper thisInst)
+        {
+            DriveDest = EDriveDest.Override;
+            DriveDir = EDriveFacing.Forwards;
+            thisInst.ForceSetDrive = true;
+            thisInst.DriveVar = -1;
+        }
+
+
+        public void ResetActions()
+        {
+            DriveDest = EDriveDest.None;
+            DriveDir = EDriveFacing.Stop;
+        }
+
+        public void FaceDest()
+        {
+            DriveDest = EDriveDest.ToLastDestination;
+            DriveDir = EDriveFacing.Neutral;
+        }
         public void DriveToFacingTowards()
         {
             DriveDest = EDriveDest.ToLastDestination;
@@ -96,7 +120,7 @@ namespace TAC_AI.AI
             set
             {
                 if (value.IsNaN())
-                    DebugTAC_AI.Exception("EControlCoreSet - lastDestination was NaN!");
+                    DebugTAC_AI.Exception("EControlCoreSet.SetLastDest - lastDestination was NaN!");
                 lastDest = value;
             }
         }
@@ -158,6 +182,11 @@ namespace TAC_AI.AI
             DriveDest = EDriveDest.ToLastDestination;
             DriveDir = EDriveFacing.Backwards;
         }
+        public void FlagBusyUnstucking()
+        {
+            DriveDest = EDriveDest.AvoidenceActive;
+            DriveDir = EDriveFacing.Neutral;
+        }
 
         public void DriveAwayFacingTowards()
         {
@@ -195,19 +224,25 @@ namespace TAC_AI.AI
     /// </summary>
     public enum EAttackMode
     {
-        Circle,     // Circle the enemy while shooting at them
-        // !! Only active with TweakTech or WeaponAimMod (because no target leading) !!
-        // Use for: Skirmishers, Mid-long-ranged units with fast turrets [GSO Gigaton, VEN Rapid Cannon, HE HG Cannon, BF Arc Missiles, RR Sonic Blaster TAC Terminator]
-        Chase,     // Chase last assailant head-on until death regardless of range [default for SuicideMissile]
-        // Use for: Homing missiles, Dualling units, Eradicators hellbent on removing the player from existance
-        Strong,      // Attack the weakest tech in range
-        // Use for: Riots, Area Denial
-        Random,   // Attack random techs
-        // Use for: Interceptors, Raiders
-        Ranged,     // Attack player from afar because we are a F^bro-fracker
-        // Use for: Artillery, Motherships
-        Safety,     // Avoid danger
-        // Use for: Any Non-Combat Tech
+        /// <summary> Circle the enemy while shooting at them
+        /// <para>Use for: Skirmishers, Mid-long-ranged units with fast turrets [GSO Gigaton, VEN Rapid Cannon, HE HG Cannon, BF Arc Missiles, RR Sonic Blaster TAC Terminator] </para>
+        /// <para>!! Only active with TweakTech or WeaponAimMod (because no target leading) !! </para></summary>
+        Circle,
+        /// <summary> Chase last assailant head-on until death regardless of range [default for SuicideMissile]
+        /// <para>Use for: Homing missiles, Dualling units, Eradicators hellbent on removing the player from existance</para> </summary>
+        Chase,
+        /// <summary> Attack the weakest tech in range. 
+        /// <para>Use for: Riots, Area Denial</para> </summary>
+        Strong,
+        /// <summary> Attack random techs. 
+        /// <para>Use for: Interceptors, Raiders</para> </summary>
+        Random,
+        /// <summary> Attack player from afar because we are a F^bro-fracker. 
+        /// <para>Use for: Artillery, Motherships</para> </summary>
+        Ranged,
+        /// <summary> Avoid danger.  
+        /// <para>Use for: Any Non-Combat Tech </para></summary>
+        Safety,
     }
 
     /// <summary>
@@ -216,7 +251,6 @@ namespace TAC_AI.AI
     public enum EDriveDest
     {   //Control the AI drive direction
         None, // No target
-
 
         // Coordinate-Based Targets
         /// <summary>
@@ -229,6 +263,11 @@ namespace TAC_AI.AI
         /// </summary>
         ToLastDestination,
 
+        /// <summary>
+        /// The avoidence system is trying to unstuck tech
+        /// </summary>
+        AvoidenceActive,
+
 
         // Dynamically Changing Targets
         /// <summary>
@@ -239,7 +278,12 @@ namespace TAC_AI.AI
         /// <summary>
         /// Counts also as [loose block, target enemy, target to charge]
         /// </summary>
-        ToMine
+        ToMine,
+
+        /// <summary>
+        /// Allows ForceSetDrive to pass through unhindered
+        /// </summary>
+        Override
     }
 
     /// <summary>

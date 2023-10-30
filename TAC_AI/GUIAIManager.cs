@@ -12,7 +12,7 @@ using TerraTechETCUtil;
 
 namespace TAC_AI
 {
-    public class GUIAIManager : MonoBehaviour
+    internal class GUIAIManager : MonoBehaviour
     {
         //Handles the display that's triggered on AI change 
         //  Circle hud wheel when the player assigns a new AI state
@@ -24,7 +24,8 @@ namespace TAC_AI
         private static AIType fetchAI = AIType.Escort;
         private static AIDriverType AIDriver = AIDriverType.Tank;
         private static AIType changeAI = AIType.Escort;
-        internal static AIECore.TankAIHelper lastTank;
+        internal static TankAIHelper lastTank;
+
 
         // Mode - Setting
         private static GameObject GUIWindow;
@@ -39,7 +40,7 @@ namespace TAC_AI
         private const int AIManagerID = 8001;
 
 
-        public static void Initiate()
+        internal static void Initiate()
         {
             if (inst)
                 return;
@@ -55,7 +56,7 @@ namespace TAC_AI
                 yMenu = 0;
             }
         }
-        public static void DeInit()
+        internal static void DeInit()
         {
             if (!inst)
                 return;
@@ -313,7 +314,7 @@ namespace TAC_AI
                     int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
                     for (int step = 0; amount > step; step++)
                     {
-                        AIECore.TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                        TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
                         if ((bool)tankInst && tankInst != lastTank)
                         {
                             select++;
@@ -493,9 +494,11 @@ namespace TAC_AI
             //string textEscort = "<color=#ffffffff>Escort</color>";
             GUILayout.BeginHorizontal(GLH);
             //Texture texEscort = ManPlayerRTS.GetLineMat().mainTexture;
-            string texEscort = "<color=#ffffffff>Escort</color>";
-            if (GUILayout.Button(fetchAI == AIType.Escort ? 
-                new GUIContent(texEscort, "ACTIVE") : new GUIContent(texEscort, "Escort player"),
+            //string texEscort = "<color=#ffffffff>Escort</color>";
+            //if (GUILayout.Button(fetchAI == AIType.Escort ?
+            if (GUILayout.Button(fetchAI == AIType.Escort ?
+                new GUIContent(RawTechExporter.GuardAIIcon.texture, "ACTIVE") :
+                new GUIContent(RawTechExporter.GuardAIIcon.texture, "Escort player"),
                 fetchAI == AIType.Escort ? AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
             {
                 changeAI = AIType.Escort;
@@ -515,7 +518,7 @@ namespace TAC_AI
                     int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
                     for (int step = 0; amount > step; step++)
                     {
-                        AIECore.TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                        TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
                         if ((bool)tankInst && tankInst != lastTank)
                         {
                             select++;
@@ -735,25 +738,39 @@ namespace TAC_AI
         /// </summary>
         private static void GUIOptionsDisplay(bool stuckAnchored, bool CantPerformActions)
         {
+            bool delta = false;
+
             var lim = lastTank.AILimitSettings;
             var set = lastTank.AISetSettings;
-            set.ChaseRange = GUI.HorizontalSlider(new Rect(25, 30, 150, 30), lastTank.MaxCombatRange, 0, lim.ChaseRange);
+            
             StatusLabel(new Rect(20, 30, 160, 30), "Range: " + lastTank.MaxCombatRange, "Maximum combat range");
-            set.CombatRange = GUI.HorizontalSlider(new Rect(25, 60, 150, 30), lastTank.MinCombatRange, 0, lim.CombatRange);
+            set.ChaseRange = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 30, 150, 30), lastTank.MaxCombatRange,
+                0, lim.ChaseRange, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
+            if (!lastTank.MinCombatRange.Approximately(set.ChaseRange))
+                delta = true;
+
             StatusLabel(new Rect(20, 60, 160, 30), "Spacing: " + lastTank.MinCombatRange, "Spacing from target");
+            set.CombatRange = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 60, 150, 30), lastTank.MinCombatRange,
+               0, lim.CombatRange, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
+            if (!lastTank.MinCombatRange.Approximately(set.CombatRange))
+                delta = true;
 
-            StatusLabelButton(new Rect(20, 115, 80, 30), "Aware", lastTank.SecondAvoidence, "Better pathing", "Need Non-Anchor AI");
-            StatusLabelButton(new Rect(100, 115, 80, 30), "Crafty", lastTank.AutoAnchor, "Anchor when idle", "Need GC AI");
 
-            StatusLabelButtonToggle(new Rect(20, 145, 80, 30), "Ram", lim.FullMelee, ref set.FullMelee, "Melee with target", "Need GC AI");
-            StatusLabelButtonToggle(new Rect(100, 145, 80, 30), "Side", lim.SideToThreat, ref set.SideToThreat, "Side to Target", "Need VEN AI");
-            StatusLabelButtonToggle(new Rect(20, 175, 80, 30), "CPU+", lim.AdvancedAI, ref set.AdvancedAI, "Smarter Logic", "Need HE or VEN AI");
-            StatusLabelButtonToggle(new Rect(100, 175, 80, 30), "Multi+", lim.AllMT, ref set.AllMT, "MT Responds to non-player", "Need GC AI");
-            StatusLabelButtonToggle(new Rect(20, 205, 80, 30), "Repair", lim.AutoRepair, ref set.AutoRepair, "Replace missing blocks", "Need BF AI");
-            StatusLabelButtonToggle(new Rect(100, 205, 80, 30), "SCU", lim.UseInventory, ref set.UseInventory, "Use inventory items", "Need BF AI");
+            StatusLabelButton(new Rect(20, 115, 80, 30), "Aware", lastTank.SecondAvoidence, 
+                "Better pathing", "Need Non-Anchor AI", ref delta);
+            StatusLabelButton(new Rect(100, 115, 80, 30), "Crafty", lastTank.AutoAnchor, 
+                "Anchor when idle", "Need GC AI", ref delta);
+
+            set.GUIDisplay(lim, ref delta);
+
             lastTank.AttackMode = (EAttackMode)Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 235, 150, 30), (int)lastTank.AttackMode, 0, (int)EAttackMode.Ranged));
             StatusLabel(new Rect(20, 235, 160, 30), "Mode: " + lastTank.AttackMode, "Attack method");
-            lastTank.AISetSettings = set;
+
+            if (delta)
+            {
+                set.Sync(lastTank, lastTank.AILimitSettings);
+                lastTank.AISetSettings = set;
+            }
         }
 
         private static void StatusLabel(Rect pos, string title, string desc)
@@ -761,7 +778,8 @@ namespace TAC_AI
             string label = "<color=#ffffffff>" + title + "</color>";
             GUI.Label(pos, new GUIContent(label, desc), AltUI.ButtonBlue);
         }
-        private static void StatusLabelButton(Rect pos, string title, bool status, string desc, string requirement)
+        private static void StatusLabelButton(Rect pos, string title, bool status, string desc, 
+            string requirement, ref bool delta)
         {
             string label = "<color=#ffffffff>" + title + "</color>";
             if (status)
@@ -774,7 +792,8 @@ namespace TAC_AI
             {
             }
         }
-        private static void StatusLabelButtonToggle(Rect pos, string title, bool can, ref bool CurState, string desc, string requirement)
+        internal static void StatusLabelButtonToggle(Rect pos, string title, bool can, ref bool CurState, 
+            string desc, string requirement, ref bool delta)
         {
             string label = "<color=#ffffffff>" + title + "</color>";
             if (can)
@@ -785,6 +804,7 @@ namespace TAC_AI
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
                         CurState = false;
+                        delta = true;
                     }
                 }
                 else
@@ -793,6 +813,7 @@ namespace TAC_AI
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
                         CurState = true;
+                        delta = true;
                     }
                 }
             }
@@ -801,7 +822,8 @@ namespace TAC_AI
             }
         }
 
-        private static void DriverButton(string title, AIDriverType type, AIType displayType, bool isAvail, string Desc, string reqAI, ref bool clickedDriver)
+        private static void DriverButton(string title, AIDriverType type, AIType displayType, bool isAvail, 
+            string Desc, string reqAI, ref bool clickedDriver)
         {
             GUILayoutOption GLO = GUILayout.MinWidth(HotWindow.width / 2.5f);
             GUILayoutOption GLH = GUILayout.Height(HotWindow.width / 6f);
@@ -893,7 +915,7 @@ namespace TAC_AI
         /// Only sets the first unit
         /// </summary>
         /// <param name="driver"></param>
-        public static void SetOptionDriver(AIDriverType driver, bool playSFX = true)
+        internal static void SetOptionDriver(AIDriverType driver, bool playSFX = true)
         {
             try
             {
@@ -986,7 +1008,7 @@ namespace TAC_AI
                 int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
                 for (int step = 0; amount > step; step++)
                 {
-                    AIECore.TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                    TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
                     if ((bool)tankInst && tankInst != lastTank)
                     {
                         select++;
@@ -998,7 +1020,7 @@ namespace TAC_AI
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionDriverCase(AIECore.TankAIHelper tankInst, AIDriverType driver)
+        private static void SetOptionDriverCase(TankAIHelper tankInst, AIDriverType driver)
         {
             if (tankInst.IsNull())
                 return;
@@ -1175,7 +1197,7 @@ namespace TAC_AI
                 int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
                 for (int step = 0; amount > step; step++)
                 {
-                    AIECore.TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                    TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
                     if ((bool)tankInst && tankInst != lastTank)
                     {
                         select++;
@@ -1187,7 +1209,7 @@ namespace TAC_AI
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionCase(AIECore.TankAIHelper tankInst, AIType dediAI)
+        private static void SetOptionCase(TankAIHelper tankInst, AIType dediAI)
         {
             if (tankInst.IsNull())
                 return;
@@ -1272,7 +1294,7 @@ namespace TAC_AI
                 tankInst.ForceRebuildAlignment();
             }
         }
-        public void DelayedExtraNoise()
+        internal void DelayedExtraNoise()
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
         }
@@ -1289,7 +1311,7 @@ namespace TAC_AI
         private static bool isAstrotechAvail = false;
         private static bool isBuccaneerAvail = false;
 
-        public static void ResetInfo()
+        internal static void ResetInfo()
         {
             isAegisAvail = false;
             isAssassinAvail = false;
@@ -1302,7 +1324,7 @@ namespace TAC_AI
             isAviatorAvail = false;
             isBuccaneerAvail = false;
         }
-        public static void GetInfo(AIECore.TankAIHelper AIEx)
+        internal static void GetInfo(TankAIHelper AIEx)
         {
             if (AIEx.isAegisAvail)
                 isAegisAvail = true;
@@ -1327,7 +1349,7 @@ namespace TAC_AI
         }
 
 
-        public static void LaunchSubMenuClickableRTS()
+        internal static void LaunchSubMenuClickableRTS()
         {
             if (!KickStart.EnableBetterAI || !ManPlayerRTS.inst.IsNotNull())
             {
@@ -1378,7 +1400,7 @@ namespace TAC_AI
             windowTimer = 0.25f;
             GUIWindow.SetActive(true);
         }
-        public static void LaunchSubMenuClickable(bool centerOnMouse = false)
+        internal static void LaunchSubMenuClickable(bool centerOnMouse = false)
         {
             if (!KickStart.EnableBetterAI)
             {
@@ -1404,7 +1426,7 @@ namespace TAC_AI
                 windowTimer = 2.25f;
             GUIWindow.SetActive(true);
         }
-        public static void CloseSubMenuClickable()
+        internal static void CloseSubMenuClickable()
         {
             if (isCurrentlyOpen)
             {
@@ -1417,7 +1439,7 @@ namespace TAC_AI
             }
         }
 
-        public static void MoveMenuToCursor(bool centerOnMouse)
+        internal static void MoveMenuToCursor(bool centerOnMouse)
         {
             if (centerOnMouse)
             {
@@ -1430,7 +1452,7 @@ namespace TAC_AI
             HotWindow.x = xMenu;
             HotWindow.y = yMenu;
         }
-        public static bool MouseIsOverSubMenu()
+        internal static bool MouseIsOverSubMenu()
         {
             if (!KickStart.EnableBetterAI)
             {

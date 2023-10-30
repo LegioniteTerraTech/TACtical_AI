@@ -10,53 +10,44 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RBolts
     {
-        /*  EnemyBolts
-        Default,        // Explode IMMEDEATELY
-        AtFull,         // Explode when tech is fully-built (requires smrt or above to utilize nicely)
-        AtFullOnAggro,  // Explode when tech is fully-built and enemy in range (requires smrt or above to utilize nicely)
-        Countdown,      // Explode after # of ingame FixedUpdate ticks
-        MissionTrigger, // Hold until triggered by mission event (basically no internal fire)
-         */
-
-        public static void ManageBolts(AIECore.TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        internal static void ManageBolts(TankAIHelper thisInst, Tank tank, EnemyMind mind)
         {
             //if (tank.IsSleeping)
             //    return;
             switch (mind.CommanderBolts)
             {
-                case EnemyBolts.Default:        // Blow up like default - first enemy sighting on spacebar
-                    if (thisInst.lastEnemyGet.IsNotNull() && thisInst.FIRE_NOW)
-                        BlowBolts(tank, mind);
-                    break;
-                case EnemyBolts.MissionTrigger:  // do nothing
+                case EnemyBolts.MissionTrigger:  // do nothing - Mission tells us what to do!
                     break;
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
-                    if (RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !thisInst.PendingDamageCheck)
-                        BlowBolts(tank, mind);
+                    if (RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && 
+                        !thisInst.PendingDamageCheck && AIGlobals.CanSplitTech())
+                        mind.BlowBolts();
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemyGet.IsNotNull() && RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && !thisInst.PendingDamageCheck)
-                        BlowBolts(tank, mind);
+                    if (thisInst.lastEnemyGet.IsNotNull() && RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && 
+                        !thisInst.PendingDamageCheck && AIGlobals.CanSplitTech())
+                        mind.BlowBolts();
                     break;
+                case EnemyBolts.Default:        // Blow up like default - first enemy sighting
                 default:                        // Unimplemented
-                    if (thisInst.lastEnemyGet.IsNotNull())
-                        BlowBolts(tank, mind);
+                    if (thisInst.lastEnemyGet.IsNotNull() && AIGlobals.CanSplitTech())
+                        mind.BlowBolts();
                     break;
             }
             if (mind.BoltsQueued > 0)
                 mind.BoltsQueued--;
         }
-        public static void BlowBolts(Tank tank, EnemyMind mind)
+        public static void BlowBolts(this EnemyMind mind)
         {
-            if (AIGlobals.AtSceneTechMax())
+            if (AIGlobals.AtSceneTechMaxSpawnLimit())
                 return; // world is too stressed to handle more
             if (mind.TechMemor)
             {
                 mind.TechMemor.ReserveSuperGrabs = -256;
             }
             mind.BoltsQueued = 2;
-            tank.control.ServerDetonateExplosiveBolt();
+            mind.AIControl.tank.control.ServerDetonateExplosiveBolt();
         }
 
 

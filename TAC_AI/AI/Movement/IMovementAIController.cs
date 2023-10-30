@@ -21,7 +21,7 @@ namespace TAC_AI.AI {
             get;
         }
 
-        AIECore.TankAIHelper Helper
+        TankAIHelper Helper
         {
             get;
         }
@@ -33,7 +33,7 @@ namespace TAC_AI.AI {
 
         Vector3 PathPoint { get; }// WHere the Tech is moving towards, not the target's exact location
 
-        void Initiate(Tank tank, AIECore.TankAIHelper helper, Enemy.EnemyMind mind = null);
+        void Initiate(Tank tank, TankAIHelper helper, Enemy.EnemyMind mind = null);
         void UpdateEnemyMind(Enemy.EnemyMind mind);
 
         void DriveDirector(ref EControlCoreSet core);

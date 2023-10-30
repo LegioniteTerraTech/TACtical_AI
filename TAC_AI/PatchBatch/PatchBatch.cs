@@ -51,7 +51,7 @@ namespace TAC_AI
         }
         public IEnumerable<float> InitIterator()
         {
-            return (IEnumerable<float>)KickStart.MainOfficialInitIterate();
+            return KickStart.MainOfficialInitIterate();
         }
         public override void Init()
         {
@@ -62,14 +62,19 @@ namespace TAC_AI
             {
                 if (oInst == null)
                     oInst = this;
-                KickStart.MainOfficialInit();
+                try
+                {
+                    TerraTechETCUtil.ModStatusChecker.EncapsulateSafeInit("Advanced AI", 
+                        KickStart.MainOfficialInit, KickStart.DeInitALL);
+                }
+                catch { }
                 isInit = true;
             }
             else
             {
                 KickStart.VALIDATE_MODS();
                 SpecialAISpawner.DetermineActiveOnModeType();
-                AIECore.TankAIManager.inst.CorrectBlocksList();
+                TankAIManager.inst.CorrectBlocksList();
             }
         }
         public override void DeInit()
@@ -87,6 +92,8 @@ namespace TAC_AI
             if (ManUI.inst.HasInitialised)
                 DebugTAC_AI.DoShowWarnings();
         }
+
+
     }
 #endif
 
@@ -105,6 +112,70 @@ namespace TAC_AI
 
     internal static class Patches
     {
+        [HarmonyPatch(typeof(ManMusic))]
+        [HarmonyPatch("SetDanger", new Type[1] { typeof(ManMusic.DangerContext.Circumstance) })]
+        private class AdvancedMenuMusiks
+        {
+            private static bool Prefix(ManMusic __instance, ManMusic.DangerContext.Circumstance circumstance)
+            {
+                if (circumstance == ManMusic.DangerContext.Circumstance.Generic)
+                {
+                    switch (KickStart.factionAttractOST)
+                    {
+                        case FactionSubTypes.GSO:
+                        case FactionSubTypes.GC:
+                        case FactionSubTypes.EXP:
+                        case FactionSubTypes.VEN:
+                        case FactionSubTypes.HE:
+                        case FactionSubTypes.BF:
+                            __instance.SetDanger(ManMusic.DangerContext.Circumstance.SetPiece, KickStart.factionAttractOST);
+                            return false;
+                        case FactionSubTypes.NULL:
+                        case FactionSubTypes.SPE:
+                        default:
+                            return true;
+                    }
+                }
+                return true;
+            }
+        }
+        [HarmonyPatch(typeof(ManMusic))]
+        [HarmonyPatch("PlayMusicEvent")]
+        private class AdvancedMenuMusiks2
+        {
+            private static void Prefix(ManMusic __instance, ref ManMusic.MusicTypes musicType)
+            {
+                if (musicType == ManMusic.MusicTypes.Attract)
+                {
+                    if (KickStart.factionAttractOST == FactionSubTypes.NULL)
+                    {
+                        KickStart.factionAttractOST = (FactionSubTypes)UnityEngine.Random.Range(1, Enum.GetValues(typeof(FactionSubTypes)).Length);
+                        DebugTAC_AI.Log("Attract OST set to " + KickStart.factionAttractOST);
+                    }
+                    switch (KickStart.factionAttractOST)
+                    {
+                        case FactionSubTypes.GSO:
+                        case FactionSubTypes.GC:
+                        case FactionSubTypes.EXP:
+                        case FactionSubTypes.VEN:
+                        case FactionSubTypes.HE:
+                        case FactionSubTypes.BF:
+                            musicType = ManMusic.MusicTypes.Main;
+                            __instance.EnableSequencing = true;
+                            var prof = ManProfile.inst.GetCurrentUser();
+                            if (prof != null)
+                            {
+                                __instance.SetMusicMixerVolume(prof.m_SoundSettings.m_MusicVolume * 0.75f);
+                            }
+                            break;
+                        case FactionSubTypes.NULL:
+                        case FactionSubTypes.SPE:
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
 #if DEBUG
         [HarmonyPatch(typeof(Tank))]
         [HarmonyPatch("IsEnemy", typeof(int), typeof(int))]
@@ -116,12 +187,10 @@ namespace TAC_AI
             {
                 bool team1Player = ManSpawn.IsPlayerTeam(teamID1);
                 bool team2Player = ManSpawn.IsPlayerTeam(teamID2);
-                if ((team1Player && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (team2Player && AIGlobals.IsFriendlyBaseTeam(teamID1)))
-                {
-                    __result = false;
-                    return false;
-                }
-                if (DebugRawTechSpawner.DevCheatNoAttackPlayer && (team1Player || team2Player) && !ManNetwork.IsNetworked)
+                if ((team1Player && AIGlobals.IsFriendlyBaseTeam(teamID2)) || 
+                (team2Player && AIGlobals.IsFriendlyBaseTeam(teamID1)) ||
+                ManBaseTeams.IsUnattackable(teamID1, teamID2) ||
+                (DebugRawTechSpawner.DevCheatNoAttackPlayer && (team1Player || team2Player) && !ManNetwork.IsNetworked))
                 {
                     __result = false;
                     return false;
@@ -136,7 +205,9 @@ namespace TAC_AI
 
             private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
-                if (DebugRawTechSpawner.DevCheatPlayerEnemyBaseTeam && (ManSpawn.IsPlayerTeam(teamID1) || ManSpawn.IsPlayerTeam(teamID2)) && !ManNetwork.IsNetworked)
+                if (DebugRawTechSpawner.DevCheatPlayerEnemyBaseTeam && (ManSpawn.IsPlayerTeam(teamID1) || 
+                ManSpawn.IsPlayerTeam(teamID2)) && !ManNetwork.IsNetworked ||
+                ManBaseTeams.IsTeammate(teamID1, teamID2))
                 {
                     __result = true;
                     return false;
@@ -193,7 +264,7 @@ namespace TAC_AI
         {
             private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
-                if ((ManSpawn.IsPlayerTeam(teamID1) && AIGlobals.IsFriendlyBaseTeam(teamID2)) || (ManSpawn.IsPlayerTeam(teamID2) && AIGlobals.IsFriendlyBaseTeam(teamID1)))
+                if (ManBaseTeams.IsUnattackable(teamID1, teamID2))
                 {
                     __result = false;
                     return false;
@@ -201,7 +272,36 @@ namespace TAC_AI
                 return true;
             }
         }
+        [HarmonyPatch(typeof(Tank))]
+        [HarmonyPatch("IsFriendly", typeof(int), typeof(int))]
+        internal static class TankTeamPatch2
+        {
+            private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
+            {
+                if (ManBaseTeams.IsTeammate(teamID1, teamID2))
+                {
+                    __result = true;
+                    return false;
+                }
+                return true;
+            }
+        }
 #endif
+        /*
+        [HarmonyPatch(typeof(TankControl))]
+        [HarmonyPatch("ActiveScheme", methodType: MethodType.Getter)]
+        internal static class LetAIUseProperSteering
+        {
+            private static bool Prefix(TankControl __instance, ref ControlScheme __result)
+            {
+                if (__instance.Tech.GetHelperInsured().AIDriving)
+                {
+                    __result = null;
+                    return false;
+                }
+                return true;
+            }
+        }*/
 
         /*
         [HarmonyPatch(typeof(LocatorPanel))]

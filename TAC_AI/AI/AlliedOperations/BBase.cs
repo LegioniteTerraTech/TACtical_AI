@@ -5,14 +5,14 @@ using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    public static class BBase
+    internal static class BBase
     {
         /// <summary>
         /// Incomplete - artillery support mode
         /// </summary>
         /// <param name="thisInst"></param>
         /// <param name="tank"></param>
-        public static void HoldSupport(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void HoldSupport(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Base) what to do movement-wise
             thisInst.IsMultiTech = false;
@@ -29,16 +29,16 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 direct.DriveDest = EDriveDest.ToLastDestination;
                 direct.DriveDir = EDriveFacing.Forwards;
-                direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
             }
             else
             {
                 if (thisInst.ActionPause <= 0)
                 {
-                    thisInst.ActionPause = UnityEngine.Random.Range(50, 300);
+                    thisInst.actionPause = UnityEngine.Random.Range(50, 300);
                     direct.DriveDest = EDriveDest.None;
                     direct.DriveDir = EDriveFacing.Neutral;
-                    direct.lastDestination = tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50));
+                    direct.SetLastDest(tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50)));
                 }
                 else if (thisInst.ActionPause < 160)
                 {
@@ -52,7 +52,7 @@ namespace TAC_AI.AI.AlliedOperations
                 }
             }
         }
-        public static void HoldProtect(AIECore.TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void HoldProtect(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Base) what to do movement-wise
             thisInst.IsMultiTech = false;
@@ -69,16 +69,16 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 direct.DriveDest = EDriveDest.ToLastDestination;
                 direct.DriveDir = EDriveFacing.Forwards;
-                direct.lastDestination = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
             }
             else
             {
                 if (thisInst.ActionPause <= 0)
                 {
-                    thisInst.ActionPause = UnityEngine.Random.Range(50, 300);
+                    thisInst.actionPause = UnityEngine.Random.Range(50, 300);
                     direct.DriveDest = EDriveDest.None;
                     direct.DriveDir = EDriveFacing.Neutral;
-                    direct.lastDestination = tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50));
+                    direct.SetLastDest(tank.boundsCentreWorldNoCheck + new Vector3(UnityEngine.Random.Range(-50, 50), 0, UnityEngine.Random.Range(-50, 50)));
                 }
                 else if (thisInst.ActionPause < 160)
                 {

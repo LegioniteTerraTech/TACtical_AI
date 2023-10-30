@@ -18,7 +18,8 @@ namespace TAC_AI.AI.Movement
 
     /// <summary>
     /// Evaluates world tiles (in smaller tiles) to figure out how path-findable they are.
-    ///   Hosted in AIECore.TankAIManager.
+    ///   It's a heightmap of the terrain accounting for obsticles.
+    ///   Hosted in TankAIManager.
     /// </summary>
     public class AIEPathMapper : MonoBehaviour
     {
@@ -40,7 +41,12 @@ namespace TAC_AI.AI.Movement
         private static float Delta = 1f / chunksPerTileWH;
         private static float EvalRad = 1.42f * Delta * THVMD;
         private static bool sub = false;
-        internal static bool ShowGIZMO = true;
+
+#if DEBUG
+        internal static bool ShowPathingGIZMO = true;
+#else
+        internal static bool ShowPathingGIZMO = false;
+#endif
 
         private static readonly FieldInfo posGet = typeof(SceneryBlocker).GetField("m_Centre", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly FieldInfo shape = typeof(SceneryBlocker).GetField("m_Shape", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -49,18 +55,15 @@ namespace TAC_AI.AI.Movement
 
         private static readonly Dictionary<IntVector2, AIPathTileCached> tilesMapped = new Dictionary<IntVector2, AIPathTileCached>();
 
-        public void Update()
-        {
-            DrawObsticles(Input.GetKey(KeyCode.Space));
-        }
         private static float lastDrawTime = 0;
         private static float drawDelay = 1;
-        private void DrawObsticles(bool showUnpathable)
+        public void Update()
         {
             try
             {
-                if (ShowGIZMO)
+                if (DebugRawTechSpawner.ShowDebugFeedBack && ShowPathingGIZMO)
                 {
+                    bool showUnpathable = Input.GetKey(KeyCode.Space);
                     bool drawFrame = false;
                     if (lastDrawTime < Time.time)
                     {
@@ -128,7 +131,7 @@ namespace TAC_AI.AI.Movement
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Assert("DrawObsticles() - FAILED!!!!!!!!!!!!!!!!!!!!!! " + e);
+                DebugTAC_AI.Assert("AIEPathMapper.Update() - (debugging) DrawObsticles FAILED!!!!!!!!!!!!!!!!!!!!!! " + e);
             }
         }
 
@@ -273,19 +276,23 @@ namespace TAC_AI.AI.Movement
                 sub = true;
                 inst = new GameObject("PathMapper").AddComponent<AIEPathMapper>();
                 ManWorld.inst.TileManager.TileDestroyedEvent.Subscribe(UnregisterTile);
+                WorldDeformer.OnTerrainDeformed.Subscribe(UnregisterTile);
             }
-            if (tilesMapped.TryGetValue(tile.Coord, out _))
+            if (tilesMapped.ContainsKey(tile.Coord))
                 throw new Exception("AIPathMapper(RegisterTile) - Tried to add a WorldTile that is already present");
             //DebugTAC_AI.Log("AIEPathMapper: Registered tile " + tile.Coord.ToString());
-            tilesMapped.Add(tile.Coord, new AIPathTileCached(tile));
+            tilesMapped.Add(tile.Coord, AIPathTileCached.GetAIPathTileCached(tile));
         }
         public static void UnregisterTile(WorldTile tile)
         {
             if (tile == null)
                 return;
             IntVector2 coord = tile.Coord;
-            if (tilesMapped.TryGetValue(coord, out _))
+            if (tilesMapped.TryGetValue(coord, out AIPathTileCached inst))
+            {
+                inst.Reset();
                 tilesMapped.Remove(coord);
+            }
         }
         public static void ResetAll()
         {
@@ -878,75 +885,114 @@ namespace TAC_AI.AI.Movement
         }
 
 
+        internal static void DepoolUnusedTiles()
+        {
+            AIPathTileCached.UnusedTiles.Clear();
+        }
         private class AIPathTileCached
         {
             internal static FieldInfo blockersGet = typeof(WorldTile).GetField("m_SceneryBlockers", BindingFlags.NonPublic | BindingFlags.Instance);
 
-            public readonly WorldTile tile;
+            internal static Queue<AIPathTileCached> UnusedTiles = new Queue<AIPathTileCached>();
+
+            public WorldTile tile { get; private set; } = null;
             public readonly HashSet<Collider> LooselyAddedBlockers;
             public readonly HashSet<TerrainObject> Objects;
             public readonly HashSet<SceneryBlocker> blockers;
             private readonly byte[] chunkBytes;
             private List<WorldPosition> unpathable = null;
 
-            internal AIPathTileCached(WorldTile tile)
+            internal static AIPathTileCached GetAIPathTileCached(WorldTile tile)
             {
-                if (tile == null)
-                    throw new Exception("new AIPathTile() - The WorldTile given was null!?!  \nAll AIPathMapper operations will cascade fail!");
-                chunkBytes = new byte[chunksPerTileWH * chunksPerTileWH];
+                if (!UnusedTiles.Any())
+                    new AIPathTileCached().Reset();
+                var newInst = UnusedTiles.Dequeue();
+                newInst.SetupAIPathTileCached(tile);
+                return newInst;
+            }
+            internal void Reset()
+            {
                 for (int step = 0; step < chunkBytes.Length; step++)
                 {
                     chunkBytes[step] = 0;
                 }
+                LooselyAddedBlockers.Clear();
+                Objects.Clear();
+                blockers.Clear();
+
+                UnusedTiles.Enqueue(this);
+            }
+
+            private void SetupAIPathTileCached(WorldTile tile)
+            {
+                if (tile == null)
+                    throw new Exception("new AIPathTile() - The WorldTile given was null!?!  \nAll AIPathMapper operations will cascade fail!");
                 this.tile = tile;
-                LooselyAddedBlockers = new HashSet<Collider>();
                 if (tile.ManuallyAddedTerrainObjects != null)
-                    Objects = new HashSet<TerrainObject>(tile.ManuallyAddedTerrainObjects);
-                else
-                    Objects = new HashSet<TerrainObject>();
-                blockers = new HashSet<SceneryBlocker>();
+                {
+                    foreach (var item in tile.ManuallyAddedTerrainObjects)
+                    {
+                        Objects.Add(item);
+                    }
+                }
                 GatherAllPossibleBlockers();
+            }
+
+            private AIPathTileCached()
+            {
+                chunkBytes = new byte[chunksPerTileWH * chunksPerTileWH];
+                LooselyAddedBlockers = new HashSet<Collider>();
+                Objects = new HashSet<TerrainObject>();
+                blockers = new HashSet<SceneryBlocker>();
             }
             private void GatherAllPossibleBlockers()
             {
-                Vector2 MinExt = (-Vector2.one * ManWorld.inst.TileSize) + tile.WorldCentre.ToVector2XZ();
-                Vector2 MaxExt = (Vector2.one * ManWorld.inst.TileSize) + tile.WorldCentre.ToVector2XZ();
-                ManWorld.inst.TileManager.GetTileCoordRange(new Bounds(tile.CalcSceneCentre(), Vector3.one * ManWorld.inst.TileSize * 1.75f),
-                       out IntVector2 min, out IntVector2 max);
-                foreach (var item in ManWorld.inst.TileManager.IterateTiles(min, max, WorldTile.State.Created))
+                try
                 {
-                    foreach (var item2 in (List<SceneryBlocker>)blockersGet.GetValue(item))
+                    Vector2 MinExt = (-Vector2.one * ManWorld.inst.TileSize) + tile.WorldCentre.ToVector2XZ();
+                    Vector2 MaxExt = (Vector2.one * ManWorld.inst.TileSize) + tile.WorldCentre.ToVector2XZ();
+                    ManWorld.inst.TileManager.GetTileCoordRange(new Bounds(tile.CalcSceneCentre(), Vector3.one * ManWorld.inst.TileSize * 1.75f),
+                           out IntVector2 min, out IntVector2 max);
+                    foreach (var item in ManWorld.inst.TileManager.IterateTiles(min, max, WorldTile.State.Created))
                     {
-                        if (!blockers.Contains(item2))
-                            blockers.Add(item2);
-                    }
-                }
-                foreach (var item in ManWorld.inst.LandmarkSpawner.SceneryBlockersOverlappingWorldCoords(MinExt, MaxExt))
-                {
-                    if (!blockers.Contains(item))
-                        blockers.Add(item);
-                }
-                foreach (var item in ManWorld.inst.VendorSpawner.SceneryBlockersOverlappingWorldCoords(MinExt, MaxExt))
-                {
-                    if (!blockers.Contains(item))
-                        blockers.Add(item);
-                }
-                foreach (var item in Objects.ToList().FindAll(x => x == null))
-                {
-                    Objects.Remove(item);
-                }
-                foreach (var item in Objects)
-                {
-                    foreach (var col in item.GetComponentsInChildren<Collider>())
-                    {
-                        LooselyAddedBlockers.Add(col);
-                        if (!IsBlocked(col.transform.position) && MakeBlocker(col, out var SB))
+                        var blockersList = (List<SceneryBlocker>)blockersGet.GetValue(item);
+                        if (blockersList != null)
                         {
-                            blockers.Add(SB);
+                            foreach (var item2 in blockersList)
+                            {
+                                if (!blockers.Contains(item2))
+                                    blockers.Add(item2);
+                            }
                         }
                     }
+                    foreach (var item in ManWorld.inst.LandmarkSpawner.SceneryBlockersOverlappingWorldCoords(MinExt, MaxExt))
+                    {
+                        if (!blockers.Contains(item))
+                            blockers.Add(item);
+                    }
+                    foreach (var item in ManWorld.inst.VendorSpawner.SceneryBlockersOverlappingWorldCoords(MinExt, MaxExt))
+                    {
+                        if (!blockers.Contains(item))
+                            blockers.Add(item);
+                    }
+                    foreach (var item in Objects.TakeWhile(x => x == null))
+                    {
+                        Objects.Remove(item);
+                    }
+                    foreach (var item in Objects)
+                    {
+                        foreach (var col in item.GetComponentsInChildren<Collider>())
+                        {
+                            LooselyAddedBlockers.Add(col);
+                            if (!IsBlocked(col.transform.position) && MakeBlocker(col, out var SB))
+                            {
+                                blockers.Add(SB);
+                            }
+                        }
+                    }
+                    //DebugTAC_AI.Log("GatherAllPossibleBlockers() - On tile " + tile.Coord + " Searching from " + min + " to " + max +  " Gathered " + blockers.Count + " blockers.");
                 }
-                //DebugTAC_AI.Log("GatherAllPossibleBlockers() - On tile " + tile.Coord + " Searching from " + min + " to " + max +  " Gathered " + blockers.Count + " blockers.");
+                catch { };
             }
 
             internal bool BelowWater(WorldPosition pos, bool Throws)
@@ -1180,6 +1226,7 @@ namespace TAC_AI.AI.Movement
                     enabledTabs = new HashSet<WaterPathing>();
                 }
                 GUILayout.Box("--- Advanced Pathing  --- ");
+                ShowPathingGIZMO = AltUI.Toggle(ShowPathingGIZMO, "Show Pathing Grid");
                 GUILayout.Label("  Auto Pathers: " + autoPathers.Count);
                 GUILayout.Label("  Total Pathers: " + pathRequests.Count);
                 int activeCount = 0;

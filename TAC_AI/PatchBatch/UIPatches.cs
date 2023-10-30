@@ -40,28 +40,28 @@ namespace TAC_AI
                     switch (ManPlayerRTS.cursorState)
                     {
                         case RTSCursorState.Empty:
-                            //__result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[1];
+                            //__result = CursorChanger.CursorIndexCache[1];
                             break;
                         case RTSCursorState.Moving:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[2];
+                            __result = CursorChanger.CursorIndexCache[2];
                             break;
                         case RTSCursorState.Attack:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[0];
+                            __result = CursorChanger.CursorIndexCache[0];
                             break;
                         case RTSCursorState.Select:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[3];
+                            __result = CursorChanger.CursorIndexCache[3];
                             break;
                         case RTSCursorState.Fetch:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[4];
+                            __result = CursorChanger.CursorIndexCache[4];
                             break;
                         case RTSCursorState.Mine:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[5];
+                            __result = CursorChanger.CursorIndexCache[5];
                             break;
                         case RTSCursorState.Protect:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[6];
+                            __result = CursorChanger.CursorIndexCache[6];
                             break;
                         case RTSCursorState.Scout:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[7];
+                            __result = CursorChanger.CursorIndexCache[7];
                             break;
                         default:
                             break;
@@ -72,28 +72,28 @@ namespace TAC_AI
                     switch (ManPlayerRTS.cursorState)
                     {
                         case RTSCursorState.Empty:
-                            //__result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[1];
+                            //__result = CursorChanger.CursorIndexCache[1];
                             break;
                         case RTSCursorState.Moving:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[2];
+                            __result = CursorChanger.CursorIndexCache[2];
                             break;
                         case RTSCursorState.Attack:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[0];
+                            __result = CursorChanger.CursorIndexCache[0];
                             break;
                         case RTSCursorState.Select:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[3];
+                            __result = CursorChanger.CursorIndexCache[3];
                             break;
                         case RTSCursorState.Fetch:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[4];
+                            __result = CursorChanger.CursorIndexCache[4];
                             break;
                         case RTSCursorState.Mine:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[5];
+                            __result = CursorChanger.CursorIndexCache[5];
                             break;
                         case RTSCursorState.Protect:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[6];
+                            __result = CursorChanger.CursorIndexCache[6];
                             break;
                         case RTSCursorState.Scout:
-                            __result = (GameCursor.CursorState)CursorChanger.CursorIndexCache[7];
+                            __result = CursorChanger.CursorIndexCache[7];
                             break;
                         default:
                             break;
@@ -120,12 +120,20 @@ namespace TAC_AI
                     try
                     {
                         Tank tank = (Tank)tech.GetValue(__instance);
-                        //RawTechExporter.lastTech = tank.GetComponent<AIECore.TankAIHelper>();
+                        //RawTechExporter.lastTech = tank.GetComponent<TankAIHelper>();
 
                         LocatorPanel Panel = (LocatorPanel)panel.GetValue(__instance);
+                        InvokeHelper.Invoke(() =>
+                        {
+                            try
+                            {
+                            }
+                            catch { }
+                        }, 0.125f);
+
                         if (KickStart.EnableBetterAI && tank.IsNotNull() && Panel.IsNotNull())
                         {
-                            AIECore.TankAIHelper lastTech = tank.GetComponent<AIECore.TankAIHelper>();
+                            TankAIHelper lastTech = tank.GetComponent<TankAIHelper>();
                             if (lastTech.IsNotNull())
                             {
                                 Image cache = (Image)icon.GetValue(Panel);
@@ -286,9 +294,9 @@ namespace TAC_AI
                         //DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp - sent!");
                         //return false;
                     }
-                    catch
+                    catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp - Player not close enough");
+                        DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp - Player not close enough - " + e);
                     }
                 }
             }

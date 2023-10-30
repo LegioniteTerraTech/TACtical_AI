@@ -26,12 +26,33 @@ namespace TAC_AI.Templates
     {
         private static readonly bool Enabled = true;
 
-        internal static bool CanOpenDebugSpawnMenu = false;
+        internal static bool CanOpenDebugSpawnMenu
+        {
+            get 
+            { 
+                if (inst)
+                    return inst.enabled;
+                return false;
+            }
+            set
+            {
+                if (inst)
+                {
+                    if (!value)
+                    {
+                        CloseSubMenuClickable();
+                        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Plus))
+                            DestroyAllInvalidVisibles();
+                    }
+                    inst.enabled = value;
+                }
+            }
+        }
         private static DebugMenus menu = DebugMenus.Prefabs;
 
         private static Vector3 PlayerLoc = Vector3.zero;
         private static Vector3 PlayerFow = Vector3.forward;
-        private static bool UIIsCurrentlyOpen = false;
+        private static bool UIIsCurrentlyOpen => GUIWindow.activeSelf;
         private static bool toggleDebugLock = false;
         private static bool InstantLoad = false;
         internal static bool DevCheatNoAttackPlayer = false;
@@ -39,10 +60,12 @@ namespace TAC_AI.Templates
         private static bool ShowLocal = true;
 
         private static GameObject GUIWindow;
+        private static DebugRawTechSpawner inst;
         private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
         private const int RawTechSpawnerID = 8002;
 
         private const string redStart = "<color=#ffcccbff><b>";//"<color=#f23d3dff><b>";
+        private static List<Tank> techCache = new List<Tank>();
 
         public static void Initiate()
         {
@@ -53,9 +76,9 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Log("TACtical_AI: Raw Techs Debugger launched (DEV)");
             #else
                 DebugTAC_AI.Log("TACtical_AI: Raw Techs Debugger launched");
-            #endif
+#endif
 
-            Instantiate(new GameObject()).AddComponent<DebugRawTechSpawner>();
+            inst = Instantiate(new GameObject()).AddComponent<DebugRawTechSpawner>();
             GUIWindow = new GameObject();
             GUIWindow.AddComponent<GUIDisplayTechLoader>();
             GUIWindow.SetActive(false);
@@ -83,16 +106,24 @@ namespace TAC_AI.Templates
             {
                 if (UIIsCurrentlyOpen && KickStart.CanUseMenu)
                 {
+                    Action CloseCallback;
+                    if (toggleDebugLock)
+                        CloseCallback = ForceCloseSubMenuClickable;
+                    else
+                        CloseCallback = null;
                     switch (menu)
                     {
                         case DebugMenus.Prefabs:
-                            HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPreset, "<b>Debug Prefab Spawns</b>");
+                            HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPreset, 
+                                "DEBUG Prefab Spawns", CloseCallback);
                             break;
                         case DebugMenus.Local:
-                            HotWindow = GUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, "<b>Debug Local Spawns</b>");
+                            HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, 
+                                "DEBUG Local Spawns", CloseCallback);
                             break;
                         default:
-                            HotWindow = GUILayout.Window(RawTechSpawnerID, HotWindow, GUIHandlerDebug, "<b>Debug Mod Info</b>");
+                            HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerDebug, 
+                                "DEBUG Mod Info", CloseCallback);
                             break;
                     }
                 }
@@ -105,7 +136,7 @@ namespace TAC_AI.Templates
         private const int MaxCountWidth = 4;
         private const int MaxWindowHeight = 500;
         private static readonly int MaxWindowWidth = MaxCountWidth * ButtonWidth;
-        private static List<FactionTypesExt> openedFactions = new List<FactionTypesExt>();
+        private static List<FactionSubTypes> openedFactions = new List<FactionSubTypes>();
 
 
         private static void GUIHandlerDebug(int ID)
@@ -115,13 +146,14 @@ namespace TAC_AI.Templates
             scrolll = GUILayout.BeginScrollView(scrolll);
             GUILayout.BeginHorizontal();
             GUILayout.BeginVertical(GUILayout.Width(HotWindow.width / 2));
-            AIECore.TankAIManager.GUIManaged.GUIGetTotalManaged();
+            TankAIManager.GUIManaged.GUIGetTotalManaged();
             SpecialAISpawner.GUIManaged.GUIGetTotalManaged();
             AIEPathMapper.GUIManaged.GUIGetTotalManaged();
             GUILayout.EndVertical();
             GUILayout.BeginVertical();
             ManPlayerRTS.GUIGetTotalManaged();
             ManEnemyWorld.GUIManaged.GUIGetTotalManaged();
+            ManBaseTeams.GUIManaged.GUIGetTotalManaged();
             ManEnemySiege.GUIGetTotalManaged();
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
@@ -143,7 +175,7 @@ namespace TAC_AI.Templates
             else
                 listTemp = TempManager.ExternalEnemyTechsMods;
 
-            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width -20, HotWindow.height - 40), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width -20, HotWindow.height - 64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
             {
                 RemoveAllEnemies();
@@ -317,7 +349,7 @@ namespace TAC_AI.Templates
                         basetypeNames.Add(nameBaseType);
                         toWrite.Add("{ SpawnBaseTypes." + nameBaseType + ", new BaseTemplate {");
                         toWrite.Add("    techName = \"" + BT.techName + "\",");
-                        toWrite.Add("    faction = FactionTypesExt." + BT.faction.ToString() + ",");
+                        toWrite.Add("    faction = FactionSubTypes." + BT.faction.ToString() + ",");
                         toWrite.Add("    IntendedGrade = " + BT.IntendedGrade + ",");
                         toWrite.Add("    terrain = BaseTerrain." + BT.terrain.ToString() + ",");
                         SB.Clear();
@@ -665,7 +697,7 @@ namespace TAC_AI.Templates
             bool MaxExtensionY = false;
             SpawnBaseTypes type = SpawnBaseTypes.NotAvail;
 
-            scrolll = GUI.BeginScrollView(new Rect(0, 30, HotWindow.width - 20, HotWindow.height -40), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height -64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
             {
                 DebugTAC_AI.Log("TACtical AI: RemoveAllEnemies - CALLED");
@@ -682,6 +714,23 @@ namespace TAC_AI.Templates
                 ShowDebugFeedBack = !ShowDebugFeedBack;
             }
             HoriPosOff += ButtonWidth;
+
+#if !DEBUG
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AIEPathMapper.ShowPathingGIZMO ? redStart + "Hide Pathing</b></color>" : redStart + "Show Pathing</b></color>"))
+            {
+                AIEPathMapper.ShowPathingGIZMO = !AIEPathMapper.ShowPathingGIZMO;
+            }
+            HoriPosOff += ButtonWidth;
+
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+#endif
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Priced</b></color>"))
             {
@@ -710,7 +759,7 @@ namespace TAC_AI.Templates
             }
             HoriPosOff += ButtonWidth;
 #endif
-            FactionTypesExt currentFaction = FactionTypesExt.NULL;
+            FactionSubTypes currentFaction = (FactionSubTypes)(-1);
             string disp;
             foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> temp in TempManager.techBases)
             {
@@ -722,19 +771,19 @@ namespace TAC_AI.Templates
                     if (VertPosOff >= MaxWindowHeight)
                         MaxExtensionY = true;
                 }
-                if (currentFaction != temp.Value.faction)
+                FactionSubTypes FST = RawTechUtil.CorpExtToCorp(temp.Value.faction);
+                if (currentFaction != FST)
                 {
-                    currentFaction = temp.Value.faction;
+                    currentFaction = FST;
 
                     if (HoriPosOff > 0)
                     {
                         VertPosOff += 30;
                         HoriPosOff = 0;
                     }
-                    FactionSubTypes FST = KickStart.CorpExtToCorp(temp.Value.faction);
                     if (FST == FactionSubTypes.EXP)
                         disp = "RR";
-                    else if (KickStart.IsFactionExtension(temp.Value.faction))
+                    else if (RawTechUtil.IsFactionExtension(temp.Value.faction))
                         disp = temp.Value.faction.ToString();
                     else if (ManMods.inst.IsModdedCorp(FST))
                         disp = ManMods.inst.FindCorpShortName(FST);
@@ -759,24 +808,24 @@ namespace TAC_AI.Templates
                         switch (temp.Value.terrain)
                         {
                             case BaseTerrain.Land:
-                                disp = "<color=#90ee90ff>" + temp.Key.ToString() + "</color>";
+                                disp = "<color=#90ee90ff>" + temp.Value.techName.ToString() + "</color>";
                                 break;
                             case BaseTerrain.Air:
-                                disp = "<color=#ffa500ff>" + temp.Key.ToString() + "</color>";
+                                disp = "<color=#ffa500ff>" + temp.Value.techName.ToString() + "</color>";
                                 break;
                             case BaseTerrain.Sea:
-                                disp = "<color=#add8e6ff>" + temp.Key.ToString() + "</color>";
+                                disp = "<color=#add8e6ff>" + temp.Value.techName.ToString() + "</color>";
                                 break;
                             case BaseTerrain.Space:
-                                disp = "<color=#ffff00ff>" + temp.Key.ToString() + "</color>";
+                                disp = "<color=#ffff00ff>" + temp.Value.techName.ToString() + "</color>";
                                 break;
                             default:
-                                disp = temp.Key.ToString();
+                                disp = temp.Value.techName.ToString();
                                 break;
                         }
                     }
                     else
-                        disp = temp.Key.ToString();
+                        disp = temp.Value.techName.ToString();
 
                     if (temp.Value.purposes.Contains(BasePurpose.NANI))
                     {
@@ -891,7 +940,8 @@ namespace TAC_AI.Templates
                         val2 = TempManager.ExternalEnemyTechs[index2];
                         extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), Vector3.forward, team, val2, false);
                         */
-                        RawTechLoader.SpawnBase(GetPlayerPos(), Vector3.forward, team, val, true, ExtraBB: extraBB);
+                        int BB = RawTechLoader.SpawnBase(GetPlayerPos(), Vector3.forward, team, val, true, ExtraBB: extraBB);
+                        ManBaseTeams.InsureBaseTeam(team).AddBuildBucks(BB);
                         Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                     else
@@ -978,11 +1028,16 @@ namespace TAC_AI.Templates
                             {
                                 extraBB += RawTechLoader.SpawnBase(GetPlayerPos() - (Vector3.right * 64), team, type2, false);
                             }*/
-                            RawTechLoader.SpawnBase(GetPlayerPos(), team, type, true, extraBB);
+                            int BB = RawTechLoader.SpawnBase(GetPlayerPos(), team, type, true, extraBB);
+                            ManBaseTeams.InsureBaseTeam(team).AddBuildBucks(BB);
                             Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                         }
                         else
-                            RawTechLoader.SpawnBase(GetPlayerPos(), AIGlobals.GetRandomBaseTeam(), type, true);
+                        {
+                            int team = AIGlobals.GetRandomBaseTeam();
+                            int BB = RawTechLoader.SpawnBase(GetPlayerPos(), team, type, true);
+                            ManBaseTeams.InsureBaseTeam(team).AddBuildBucks(BB);
+                        }
                     }
                 }
                 if (tank)
@@ -996,25 +1051,26 @@ namespace TAC_AI.Templates
         {
             try
             {
-                List<Tank> toRemove = new List<Tank>();
                 foreach (var item in Singleton.Manager<ManTechs>.inst.IterateTechsWhere(x => x.visible.isActive &&
                 (AIGlobals.IsBaseTeam(x.Team) || x.IsPopulation) && x.name != "DPS Target"))
                 {
-                    toRemove.Add(item);
+                    techCache.Add(item);
                 }
-                foreach (var tech in toRemove)
+                foreach (var tech in techCache)
                 {
                     SpecialAISpawner.Purge(tech);
                 }
             }
             catch { }
+            techCache.Clear();
         }
 
+        private static List<TrackedVisible> toDestroy = new List<TrackedVisible>();
         public static void RemoveOrphanTrackedVisibles()
         {
             try
             {
-                List<TrackedVisible> toDestroy = ManVisible.inst.AllTrackedVisibles.ToList();
+                toDestroy.AddRange(ManVisible.inst.AllTrackedVisibles);
                 int length = toDestroy.Count;
                 int removed = 0;
                 for (int step = 0; step < length;)
@@ -1037,16 +1093,16 @@ namespace TAC_AI.Templates
 
                         if (AIGlobals.IsBaseTeam(remove.TeamID) && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
                         {
-                            DebugTAC_AI.Log("TACtical_AI: RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | " 
-                                + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | " 
+                            DebugTAC_AI.Log("TACtical_AI: RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | "
+                                + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | "
                                 + (remove.visible ? "active" : "inactive"));
-                            
+
                             toDestroy.RemoveAt(step);
                             try
                             {
                                 //ManVisible.inst.ObliterateTrackedVisibleFromWorld(remove.ID); 
                                 ManWorld.inst.TileManager.GetStoredTileIfNotSpawned(remove.Position, false).RemoveSavedVisible(ObjectTypes.Vehicle, remove.ID);
-                                
+
                             }
                             catch { }
                             try
@@ -1066,6 +1122,10 @@ namespace TAC_AI.Templates
                     DebugTAC_AI.Log("TACtical_AI: RemoveOrphanTrackedVisibles - removed " + removed);
             }
             catch { }
+            finally
+            {
+                toDestroy.Clear();
+            }
         }
 
         public static void LaunchSubMenuClickable()
@@ -1074,7 +1134,6 @@ namespace TAC_AI.Templates
             {
                 RawTechExporter.ReloadExternal();
                 DebugTAC_AI.Log("TACtical_AI: Opened Raw Techs Debug menu!");
-                UIIsCurrentlyOpen = true;
                 GUIWindow.SetActive(true);
             }
         }
@@ -1082,93 +1141,78 @@ namespace TAC_AI.Templates
         {
             if (UIIsCurrentlyOpen)
             {
-                UIIsCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
                 DebugTAC_AI.Log("TACtical_AI: Closed Raw Techs Debug menu!");
             }
         }
+        public static void ForceCloseSubMenuClickable()
+        {
+            toggleDebugLock = false;
+            GUIWindow.SetActive(false);
+            KickStart.ReleaseControl();
+            DebugTAC_AI.Log("TACtical_AI: Force-Closed Raw Techs Debug menu!");
+        }
 
 
         private void Update()
         {
-            if (CanOpenDebugSpawnMenu)
+            if (Input.GetKey(KeyCode.LeftControl))
             {
-                if (Input.GetKey(KeyCode.LeftControl))
+                if (Input.GetKeyDown(KeyCode.Backspace))
                 {
-                    if (Input.GetKey(KeyCode.Y))
+                    if (menu == DebugMenus.DebugLog || !toggleDebugLock)
                     {
-                        toggleDebugLock = false;
-                        menu = DebugMenus.Local;
+                        toggleDebugLock = !toggleDebugLock;
+                    }
+                    menu = DebugMenus.DebugLog;
+                    if (toggleDebugLock)
                         LaunchSubMenuClickable();
-                    }
-                    else if (Input.GetKey(KeyCode.U))
+                }
+                else if (Input.GetKeyDown(KeyCode.Minus))
+                {
+                    if (menu == DebugMenus.Local || !toggleDebugLock)
                     {
-                        toggleDebugLock = false;
-                        menu = DebugMenus.Prefabs;
+                        toggleDebugLock = !toggleDebugLock;
+                    }
+                    menu = DebugMenus.Local;
+                    if (toggleDebugLock)
                         LaunchSubMenuClickable();
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Backspace))
+                }
+                else if (Input.GetKeyDown(KeyCode.Equals))
+                {
+                    if (menu == DebugMenus.Prefabs || !toggleDebugLock)
                     {
-                        if (menu == DebugMenus.DebugLog || !toggleDebugLock)
-                        {
-                            toggleDebugLock = !toggleDebugLock;
-                        }
-                        menu = DebugMenus.DebugLog;
-                        if (toggleDebugLock)
-                            LaunchSubMenuClickable();
+                        toggleDebugLock = !toggleDebugLock;
                     }
-                    else if (Input.GetKeyDown(KeyCode.Minus))
-                    {
-                        if (menu == DebugMenus.Local || !toggleDebugLock)
-                        {
-                            toggleDebugLock = !toggleDebugLock;
-                        }
-                        menu = DebugMenus.Local;
-                        if (toggleDebugLock)
-                            LaunchSubMenuClickable();
-                    }
-                    else if (Input.GetKeyDown(KeyCode.Equals))
-                    {
-                        if (menu == DebugMenus.Prefabs || !toggleDebugLock)
-                        {
-                            toggleDebugLock = !toggleDebugLock;
-                        }
-                        menu = DebugMenus.Prefabs;
-                        if (toggleDebugLock)
-                            LaunchSubMenuClickable();
-                    }
-                    else if (toggleDebugLock)
-                    {
+                    menu = DebugMenus.Prefabs;
+                    if (toggleDebugLock)
                         LaunchSubMenuClickable();
-                    }
-                    else if (!toggleDebugLock)
-                    {
-                        CloseSubMenuClickable();
-                    }
                 }
                 else if (toggleDebugLock)
                 {
                     LaunchSubMenuClickable();
-                    if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Y))
-                    {
-                        toggleDebugLock = false;
-                    }
-                    else if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.U))
-                    {
-                        toggleDebugLock = false;
-                    }
                 }
                 else if (!toggleDebugLock)
                 {
                     CloseSubMenuClickable();
                 }
             }
-            else
+            else if (toggleDebugLock)
+            {
+                LaunchSubMenuClickable();
+                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Y))
+                {
+                    toggleDebugLock = false;
+                }
+                else if (Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.U))
+                {
+                    toggleDebugLock = false;
+                }
+            }
+            else if (!toggleDebugLock)
             {
                 CloseSubMenuClickable();
-                if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Plus))
-                    DestroyAllInvalidVisibles();
             }
         }
 
@@ -1186,17 +1230,17 @@ namespace TAC_AI.Templates
                         {
                             if (AIGlobals.IsBaseTeam(item.TeamID))
                             {
-                                DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                DebugTAC_AI.Info("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                                 ManVisible.inst.StopTrackingVisible(item.ID);
                             }
                             else
-                                DebugTAC_AI.Log("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                DebugTAC_AI.Info("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                         }
                         else
-                            DebugTAC_AI.Log("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                            DebugTAC_AI.Info("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                     }
                     else
-                        DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                        DebugTAC_AI.Info("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                 }
             }
         }
@@ -1208,32 +1252,6 @@ namespace TAC_AI.Templates
 #else
         internal static bool ShowDebugFeedBack = false;
 #endif
-        private static GameObject DirPrefab = null;
-        private static void InsureDirPrefab()
-        {
-            if (DirPrefab != null)
-                return;
-            DirPrefab = Instantiate(new GameObject("DebugLine"), null, false);
-            var trans = DirPrefab.transform;
-            trans.rotation = Quaternion.identity;
-            trans.position = Vector3.zero;
-            trans.localScale = Vector3.one;
-
-            var lr = trans.GetComponent<LineRenderer>();
-            if (!(bool)lr)
-            {
-                lr = DirPrefab.AddComponent<LineRenderer>();
-                lr.material = new Material(Shader.Find("Sprites/Default"));
-                lr.positionCount = 2;
-                lr.startWidth = 0.5f;
-                lr.useWorldSpace = false;
-            }
-            lr.startColor = Color.green;
-            lr.endColor = Color.green;
-            Vector3[] vecs = new Vector3[2] { Vector3.zero, Vector3.up };
-            lr.SetPositions(vecs);
-            DirPrefab.SetActive(false);
-        }
         /// <summary>
         /// endPosGlobal is GLOBAL ROTATION in relation to local tech.
         /// </summary>
@@ -1245,46 +1263,13 @@ namespace TAC_AI.Templates
         {
             if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
                 return;
-            GameObject gO;
-            var line = obj.transform.Find("DebugLine " + num);
-            if (!(bool)line)
-            { 
-                gO = Instantiate(new GameObject("DebugLine " + num), obj.transform, false);
-            }
-            else
-                gO = line.gameObject;
-
-            var lr = gO.GetComponent<LineRenderer>();
-            if (!(bool)lr)
-            {
-                lr = gO.AddComponent<LineRenderer>();
-                lr.material = new Material(Shader.Find("Sprites/Default"));
-                lr.positionCount = 2;
-                lr.startWidth = 0.5f;
-            }
-            lr.startColor = color;
-            lr.endColor = color;
-            Vector3 pos = obj.transform.position;
-            Vector3[] vecs = new Vector3[2] { pos, endPosGlobalSpaceOffset + pos };
-            lr.SetPositions(vecs);
-            Destroy(gO, Time.deltaTime);
+            DebugExtUtilities.DrawDirIndicator(obj, num, endPosGlobalSpaceOffset, color);
         }
         public static void DrawDirIndicator(Vector3 startPos, Vector3 endPos, Color color, float decayTime = 0)
         {
             if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
                 return;
-            InsureDirPrefab();
-            GameObject gO;
-            gO = Instantiate(DirPrefab, null);
-
-            var lr = gO.GetComponent<LineRenderer>();
-            lr.startColor = color;
-            lr.endColor = color;
-            gO.transform.position = startPos;
-            Vector3[] vecs = new Vector3[2] { Vector3.zero, gO.transform.InverseTransformPoint(endPos) };
-            lr.SetPositions(vecs);
-            gO.SetActive(true);
-            Destroy(gO, (decayTime <= 0) ? Time.deltaTime : decayTime);
+            DebugExtUtilities.DrawDirIndicator(startPos, endPos, color, decayTime);
             //DebugTAC_AI.Log("SPAWN DrawDirIndicator(World)");
         }
         private const int circleEdgeCount = 32;
@@ -1292,111 +1277,32 @@ namespace TAC_AI.Templates
         {
             if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
                 return;
-            InsureDirPrefab();
-            GameObject gO;
-            gO = Instantiate(DirPrefab, null);
-
-            var lr = gO.GetComponent<LineRenderer>();
-            lr.startColor = color;
-            lr.endColor = color;
-            gO.transform.position = center;
-            gO.transform.rotation = Quaternion.identity;
-            lr.positionCount = circleEdgeCount + 1;
-            Vector3[] vecs = new Vector3[circleEdgeCount + 1];
-            for (int step = 0; step <= circleEdgeCount; step++)
-            {
-                vecs[step] = Quaternion.AngleAxis(360 * ((float)step / circleEdgeCount), normal) * flat * radius;
-            }
-            lr.SetPositions(vecs);
-            gO.SetActive(true);
-            Destroy(gO, (decayTime <= 0) ? Time.deltaTime : decayTime);
+            DebugExtUtilities.DrawDirIndicatorCircle(center, normal, flat, radius, color, decayTime);
             //DebugTAC_AI.Log("SPAWN DrawDirIndicator(World)");
         }
         public static void DrawDirIndicatorSphere(Vector3 center, float radius, Color color, float decayTime = 0)
         {
-            DrawDirIndicatorCircle(center, Vector3.up, Vector3.forward, radius, color, decayTime);
-            DrawDirIndicatorCircle(center, Vector3.right, Vector3.forward, radius, color, decayTime);
-            DrawDirIndicatorCircle(center, Vector3.forward, Vector3.up, radius, color, decayTime);
+            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
+                return;
+            DebugExtUtilities.DrawDirIndicatorSphere(center, radius, color, decayTime);
         }
         public static void DrawDirIndicatorRecPriz(Vector3 center, Vector3 size, Color color, float decayTime = 0)
         {
-            Vector3 sizeCons = size / 2;
-            Vector3 fruCorner = new Vector3(sizeCons.x, sizeCons.y, sizeCons.z);
-            Vector3 frdCorner = new Vector3(sizeCons.x, -sizeCons.y, sizeCons.z);
-            Vector3 rruCorner = new Vector3(sizeCons.x, sizeCons.y, -sizeCons.z);
-            Vector3 rrdCorner = new Vector3(sizeCons.x, -sizeCons.y, -sizeCons.z);
-            Vector3 fluCorner = new Vector3(-sizeCons.x, sizeCons.y, sizeCons.z);
-            Vector3 fldCorner = new Vector3(-sizeCons.x, -sizeCons.y, sizeCons.z);
-            Vector3 rluCorner = new Vector3(-sizeCons.x, sizeCons.y, -sizeCons.z);
-            Vector3 rldCorner = new Vector3(-sizeCons.x, -sizeCons.y, -sizeCons.z);
-
-            DrawDirIndicator(center + fruCorner, center + frdCorner, color, decayTime);
-            DrawDirIndicator(center + fluCorner, center + fldCorner, color, decayTime);
-            DrawDirIndicator(center + fruCorner, center + fluCorner, color, decayTime);
-            DrawDirIndicator(center + frdCorner, center + fldCorner, color, decayTime);
-
-            DrawDirIndicator(center + fruCorner, center + rruCorner, color, decayTime);
-            DrawDirIndicator(center + fluCorner, center + rluCorner, color, decayTime);
-            DrawDirIndicator(center + frdCorner, center + rrdCorner, color, decayTime);
-            DrawDirIndicator(center + fldCorner, center + rldCorner, color, decayTime);
-
-            DrawDirIndicator(center + rruCorner, center + rrdCorner, color, decayTime);
-            DrawDirIndicator(center + rluCorner, center + rldCorner, color, decayTime);
-            DrawDirIndicator(center + rruCorner, center + rluCorner, color, decayTime);
-            DrawDirIndicator(center + rrdCorner, center + rldCorner, color, decayTime);
+            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
+                return;
+            DebugExtUtilities.DrawDirIndicatorRecPriz(center, size, color, decayTime);
         }
         public static void DrawDirIndicatorRecPriz(Vector3 center, Quaternion rotation, Vector3 size, Color color, float decayTime = 0)
         {
-            Vector3 sizeCons = size / 2;
-            Vector3 fruCorner = rotation * new Vector3(sizeCons.x, sizeCons.y, sizeCons.z);
-            Vector3 frdCorner = rotation * new Vector3(sizeCons.x, -sizeCons.y, sizeCons.z);
-            Vector3 rruCorner = rotation * new Vector3(sizeCons.x, sizeCons.y, -sizeCons.z);
-            Vector3 rrdCorner = rotation * new Vector3(sizeCons.x, -sizeCons.y, -sizeCons.z);
-            Vector3 fluCorner = rotation * new Vector3(-sizeCons.x, sizeCons.y, sizeCons.z);
-            Vector3 fldCorner = rotation * new Vector3(-sizeCons.x, -sizeCons.y, sizeCons.z);
-            Vector3 rluCorner = rotation * new Vector3(-sizeCons.x, sizeCons.y, -sizeCons.z);
-            Vector3 rldCorner = rotation * new Vector3(-sizeCons.x, -sizeCons.y, -sizeCons.z);
-
-            DrawDirIndicator(center + fruCorner, center + frdCorner, color, decayTime);
-            DrawDirIndicator(center + fluCorner, center + fldCorner, color, decayTime);
-            DrawDirIndicator(center + fruCorner, center + fluCorner, color, decayTime);
-            DrawDirIndicator(center + frdCorner, center + fldCorner, color, decayTime);
-
-            DrawDirIndicator(center + fruCorner, center + rruCorner, color, decayTime);
-            DrawDirIndicator(center + fluCorner, center + rluCorner, color, decayTime);
-            DrawDirIndicator(center + frdCorner, center + rrdCorner, color, decayTime);
-            DrawDirIndicator(center + fldCorner, center + rldCorner, color, decayTime);
-
-            DrawDirIndicator(center + rruCorner, center + rrdCorner, color, decayTime);
-            DrawDirIndicator(center + rluCorner, center + rldCorner, color, decayTime);
-            DrawDirIndicator(center + rruCorner, center + rluCorner, color, decayTime);
-            DrawDirIndicator(center + rrdCorner, center + rldCorner, color, decayTime);
+            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
+                return;
+            DebugExtUtilities.DrawDirIndicatorRecPriz(center, rotation, size, color, decayTime);
         }
         public static void DrawDirIndicatorRecPrizExt(Vector3 center, Vector3 extents, Color color, float decayTime = 0)
         {
-            Vector3 fruCorner = new Vector3(extents.x, extents.y, extents.z);
-            Vector3 frdCorner = new Vector3(extents.x, -extents.y, extents.z);
-            Vector3 rruCorner = new Vector3(extents.x, extents.y, -extents.z);
-            Vector3 rrdCorner = new Vector3(extents.x, -extents.y, -extents.z);
-            Vector3 fluCorner = new Vector3(-extents.x, extents.y, extents.z);
-            Vector3 fldCorner = new Vector3(-extents.x, -extents.y, extents.z);
-            Vector3 rluCorner = new Vector3(-extents.x, extents.y, -extents.z);
-            Vector3 rldCorner = new Vector3(-extents.x, -extents.y, -extents.z);
-
-            DrawDirIndicator(center + fruCorner, center + frdCorner, color, decayTime);
-            DrawDirIndicator(center + fluCorner, center + fldCorner, color, decayTime);
-            DrawDirIndicator(center + fruCorner, center + fluCorner, color, decayTime);
-            DrawDirIndicator(center + frdCorner, center + fldCorner, color, decayTime);
-
-            DrawDirIndicator(center + fruCorner, center + rruCorner, color, decayTime);
-            DrawDirIndicator(center + fluCorner, center + rluCorner, color, decayTime);
-            DrawDirIndicator(center + frdCorner, center + rrdCorner, color, decayTime);
-            DrawDirIndicator(center + fldCorner, center + rldCorner, color, decayTime);
-
-            DrawDirIndicator(center + rruCorner, center + rrdCorner, color, decayTime);
-            DrawDirIndicator(center + rluCorner, center + rldCorner, color, decayTime);
-            DrawDirIndicator(center + rruCorner, center + rluCorner, color, decayTime);
-            DrawDirIndicator(center + rrdCorner, center + rldCorner, color, decayTime);
+            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
+                return;
+            DebugExtUtilities.DrawDirIndicatorRecPrizExt(center, extents, color, decayTime);
         }
 
         private static bool CheckValidMode()
