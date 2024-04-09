@@ -8,19 +8,23 @@ namespace TAC_AI
 {
     internal static class DebugTAC_AI
     {
-        internal static bool LogAll = true;
         internal static bool ShouldLog = true;
-        internal static bool ShouldLogPathing = false;
-        private static bool ShouldLogNet = true;
+        internal static bool DoLogInfos = false;
+        internal static bool DoLogAISetup = true;
+        internal static bool DoLogPathing = false;
+        internal static bool DoLogSpawning = false;
+        private static bool DoLogNet = true;
 #if DEBUG
         private static bool LogDev = true;
 #else
         private static bool LogDev = false;
 #endif
 
+
+
         internal static void Info(string message)
         {
-            if (!ShouldLog || !LogAll)
+            if (!ShouldLog || !DoLogInfos)
                 return;
             UnityEngine.Debug.Log(message);
         }
@@ -30,10 +34,24 @@ namespace TAC_AI
                 return;
             UnityEngine.Debug.Log(message);
         }
-        internal static bool NoLogPathing => !ShouldLog || !ShouldLogPathing;
+        internal static bool NoInfoAISetup => !ShouldLog || !DoLogAISetup;
+        internal static void LogAISetup(string message)
+        {
+            if (NoInfoAISetup)
+                return;
+            UnityEngine.Debug.Log(message);
+        }
+        internal static bool NoLogPathing => !ShouldLog || !DoLogPathing;
         internal static void LogPathing(string message)
         {
             if (NoLogPathing)
+                return;
+            UnityEngine.Debug.Log(message);
+        }
+        internal static bool NoLogSpawning => !ShouldLog || !DoLogSpawning;
+        internal static void LogSpawn(string message)
+        {
+            if (!NoLogSpawning)
                 return;
             UnityEngine.Debug.Log(message);
         }
@@ -46,7 +64,7 @@ namespace TAC_AI
 
         internal static void LogNet(string message)
         {
-            if (!ShouldLogNet)
+            if (!DoLogNet)
                 return;
             UnityEngine.Debug.Log(message);
         }
@@ -77,7 +95,7 @@ namespace TAC_AI
         }
         internal static void Exception(string message)
         {
-            throw new Exception("TACtical_AI: Exception - ", new Exception(message));
+            throw new Exception(KickStart.ModID + ": Exception - ", new Exception(message));
         }
         private static List<string> warning = new List<string>();
         private static bool postStartup = false;
@@ -113,15 +131,15 @@ namespace TAC_AI
         }
         internal static void FatalError()
         {
-            ManUI.inst.ShowErrorPopup("TACtical_AI: ENCOUNTERED CRITICAL ERROR");
-            UnityEngine.Debug.Log("TACtical_AI: ENCOUNTERED CRITICAL ERROR");
-            UnityEngine.Debug.Log("TACtical_AI: MAY NOT WORK PROPERLY AFTER THIS ERROR, PLEASE REPORT!");
+            ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ENCOUNTERED CRITICAL ERROR");
+            UnityEngine.Debug.Log(KickStart.ModID + ": ENCOUNTERED CRITICAL ERROR");
+            UnityEngine.Debug.Log(KickStart.ModID + ": MAY NOT WORK PROPERLY AFTER THIS ERROR, PLEASE REPORT!");
         }
         internal static void FatalError(string e)
         {
-            ManUI.inst.ShowErrorPopup("TACtical_AI: ENCOUNTERED CRITICAL ERROR: " + e);
-            UnityEngine.Debug.Log("TACtical_AI: ENCOUNTERED CRITICAL ERROR");
-            UnityEngine.Debug.Log("TACtical_AI: MAY NOT WORK PROPERLY AFTER THIS ERROR, PLEASE REPORT!");
+            ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ENCOUNTERED CRITICAL ERROR: " + e);
+            UnityEngine.Debug.Log(KickStart.ModID + ": ENCOUNTERED CRITICAL ERROR");
+            UnityEngine.Debug.Log(KickStart.ModID + ": MAY NOT WORK PROPERLY AFTER THIS ERROR, PLEASE REPORT!");
         }
     }
 }

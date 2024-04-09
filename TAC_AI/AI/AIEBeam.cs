@@ -97,7 +97,7 @@ namespace TAC_AI.AI
                 }
             }
             catch (Exception e)
-            { DebugTAC_AI.Log("TACtical_AI: Error in AIEBeam - " + e); }
+            { DebugTAC_AI.Log(KickStart.ModID + ": Error in AIEBeam - " + e); }
         }
 
         /*

@@ -267,7 +267,7 @@ namespace TAC_AI
             {
                 if (KickStart.EnableBetterAI)
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AIEnhanced enabled");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AIEnhanced enabled");
                     try
                     {
                         var tank = __instance.block.tank;
@@ -287,7 +287,7 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: TankAIHelper.ControlTech() - Failure on handling AI!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": TankAIHelper.ControlTech() - Failure on handling AI!");
                         DebugTAC_AI.Log(e);
                     }
                 }
@@ -305,11 +305,11 @@ namespace TAC_AI
             {
                 try
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: Added resource to list (InitState)");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Added resource to list (InitState)");
                     if (!AIECore.Minables.Contains(__instance.visible))
                         AIECore.Minables.Add(__instance.visible);
                     //else
-                    //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (InitState)");
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": RESOURCE WAS ALREADY ADDED! (InitState)");
                 }
                 catch { } // null call
             }
@@ -317,7 +317,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: Added resource to list (Restore)");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Added resource to list (Restore)");
                     if (!state.removedFromWorld)
                     {
                         if (!AIECore.Minables.Contains(__instance.visible))
@@ -329,7 +329,7 @@ namespace TAC_AI
                             AIECore.Minables.Remove(__instance.visible);
                     }
                     //else
-                    //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY ADDED! (Restore)");
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": RESOURCE WAS ALREADY ADDED! (Restore)");
                 }
                 catch { } // null call
             }
@@ -337,38 +337,38 @@ namespace TAC_AI
             {
                 try
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: Removed resource from list (Die)");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Removed resource from list (Die)");
                     if (AI.AIECore.Minables.Contains(__instance.visible))
                     {
                         AI.AIECore.Minables.Remove(__instance.visible);
                     }
                     else
-                        DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Die)");
+                        DebugTAC_AI.Log(KickStart.ModID + ": RESOURCE WAS ALREADY REMOVED! (Die)");
                 }
                 catch { } // null call
             }
             private static void OnRecycle_Prefix(ResourceDispenser __instance)
             {
-                //DebugTAC_AI.Log("TACtical_AI: Removed resource from list (OnRecycle)");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Removed resource from list (OnRecycle)");
                 if (AIECore.Minables.Contains(__instance.visible))
                 {
                     AIECore.Minables.Remove(__instance.visible);
                 }
                 //else
-                //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (OnRecycle)");
+                //    DebugTAC_AI.Log(KickStart.ModID + ": RESOURCE WAS ALREADY REMOVED! (OnRecycle)");
 
             }
             private static void Deactivate_Prefix(ResourceDispenser __instance)
             {
                 try
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: Removed resource from list (Deactivate)");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Removed resource from list (Deactivate)");
                     if (AIECore.Minables.Contains(__instance.visible))
                     {
                         AIECore.Minables.Remove(__instance.visible);
                     }
                     //else
-                    //    DebugTAC_AI.Log("TACtical_AI: RESOURCE WAS ALREADY REMOVED! (Deactivate)");
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": RESOURCE WAS ALREADY REMOVED! (Deactivate)");
 
                 }
                 catch { } // null call

@@ -23,30 +23,30 @@ namespace TAC_AI.Templates
 
         internal static string FetchPublicFromFile()
         {
-            string directed = (new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent) + RawTechExporter.up;
-            string clusterHold = directed + "commBatch.RTList";
+            string directed = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.ToString();
+            string clusterHold = Path.Combine(directed, "commBatch.RTList");
             if (File.Exists(clusterHold))
             {
                 return RawTechExporter.LoadCommunityDeployedTechs(clusterHold);
             }
             else
             {
-                string clusterHold2 = directed + "batchTechs.json";
+                string clusterHold2 = Path.Combine(directed, "batchTechs.json");
                 if (File.Exists(clusterHold2))
                 {
                     return File.ReadAllText(clusterHold2);
                 }
                 else
-                    DebugTAC_AI.LogError("TACtical_AI: LoadFromDeployed(CommunityCluster) - Files missing or compromized.");
+                    DebugTAC_AI.LogError(KickStart.ModID + ": LoadFromDeployed(CommunityCluster) - Files missing or compromized.");
             }
             return "{}";
         }
         internal static void PushDeployedToPublicFile()
         {
-            string clusterHold = (new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent) + RawTechExporter.up + "commBatch.RTList";
+            string clusterHold = Path.Combine(new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.ToString(), "commBatch.RTList");
             string compressedSerial = JsonConvert.SerializeObject(ClusterF, Formatting.None);
             RawTechExporter.SaveExternalRawTechListFileToDisk(clusterHold, compressedSerial);
-            string clusterHold2 = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport" + RawTechExporter.up + "commBatch.RTList";
+            string clusterHold2 = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport", "commBatch.RTList");
             RawTechExporter.SaveExternalRawTechListFileToDisk(clusterHold2, compressedSerial);
         }
 
@@ -84,7 +84,7 @@ namespace TAC_AI.Templates
                     needsToAddToSpawnBaseTypes = true;
             }
             if (needsToAddToSpawnBaseTypes)
-                ManUI.inst.ShowErrorPopup("TAC_AI: Please update the SpawnBaseTypes with the new additions, which can be found in MassExport in your TerraTech Directory by the name of \"ESpawnBaseTypes.json\"");
+                ManUI.inst.ShowErrorPopup(KickStart.ModID + ": Please update the SpawnBaseTypes with the new additions, which can be found in MassExport in your TerraTech Directory by the name of \"ESpawnBaseTypes.json\"");
             Organize(ref dictSorted);
             ClusterF = dictSorted;
         }

@@ -30,7 +30,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.foundBase = AIECore.FetchClosestBlockReceiver(tank.boundsCentreWorldNoCheck,
                         thisInst.JobSearchRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, 
                         out Tank theBase, tank.Team);
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  There's no base nearby!  I AM LOST!!!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (theBase == null)
                         return; // There's no base!
@@ -105,7 +105,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.actionPause = reverseFromBaseTime;
             }
 
-            //DebugTAC_AI.Log("TACtical_AI: Block is Present: " + thisInst.foundGoal);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Block is Present: " + thisInst.foundGoal);
             if (thisInst.CollectedTarget)
             {   // BRANCH - Return to base
                 if (thisInst.ActionPause > 0)
@@ -289,7 +289,7 @@ namespace TAC_AI.AI.AlliedOperations
                         thisInst.theResource = null;
                         thisInst.DropBlock(Vector3.up);
                         thisInst.foundGoal = false;
-                        DebugTAC_AI.Log("TACtical_AI: Block was removed from targeting");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Block was removed from targeting");
                         return;
                     }
                 }

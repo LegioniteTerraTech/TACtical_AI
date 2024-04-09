@@ -36,7 +36,7 @@ namespace TAC_AI.AI.Movement
         /// <summary>
         /// TerrainHeightVarianceMaxDifference
         /// </summary>
-        public static float THVMD => ManWorld.inst.TileSize;
+        public static float THVMD => KickStart.TerrainHeight;
         public const byte maxAltByte = 128;
         private static float Delta = 1f / chunksPerTileWH;
         private static float EvalRad = 1.42f * Delta * THVMD;
@@ -949,9 +949,9 @@ namespace TAC_AI.AI.Movement
             {
                 try
                 {
-                    Vector2 MinExt = (-Vector2.one * ManWorld.inst.TileSize) + tile.WorldCentre.ToVector2XZ();
-                    Vector2 MaxExt = (Vector2.one * ManWorld.inst.TileSize) + tile.WorldCentre.ToVector2XZ();
-                    ManWorld.inst.TileManager.GetTileCoordRange(new Bounds(tile.CalcSceneCentre(), Vector3.one * ManWorld.inst.TileSize * 1.75f),
+                    Vector2 MinExt = (-Vector2.one * KickStart.TerrainHeight) + tile.WorldCentre.ToVector2XZ();
+                    Vector2 MaxExt = (Vector2.one * KickStart.TerrainHeight) + tile.WorldCentre.ToVector2XZ();
+                    ManWorld.inst.TileManager.GetTileCoordRange(new Bounds(tile.CalcSceneCentre(), Vector3.one * KickStart.TerrainHeight * 1.75f),
                            out IntVector2 min, out IntVector2 max);
                     foreach (var item in ManWorld.inst.TileManager.IterateTiles(min, max, WorldTile.State.Created))
                     {

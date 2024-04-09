@@ -35,22 +35,22 @@ namespace TAC_AI.AI.Enemy
                 {
                     case EnemyHandling.Chopper:
                     case EnemyHandling.Airplane:
-                        AIControl.DriverType = AIDriverType.Pilot;
+                        AIControl.SetDriverType(AIDriverType.Pilot);
                         break;
                     case EnemyHandling.Starship:
-                        AIControl.DriverType = AIDriverType.Astronaut;
+                        AIControl.SetDriverType(AIDriverType.Astronaut);
                         break;
                     case EnemyHandling.Naval:
-                        AIControl.DriverType = AIDriverType.Sailor;
+                        AIControl.SetDriverType(AIDriverType.Sailor);
                         break;
                     case EnemyHandling.SuicideMissile:
-                        AIControl.DriverType = AIDriverType.Pilot;
+                        AIControl.SetDriverType(AIDriverType.Pilot);
                         break;
                     case EnemyHandling.Stationary:
-                        AIControl.DriverType = AIDriverType.Stationary;
+                        AIControl.SetDriverType(AIDriverType.Stationary);
                         break;
                     default:
-                        AIControl.DriverType = AIDriverType.Tank;
+                        AIControl.SetDriverType(AIDriverType.Tank);
                         break;
                 }
                 evilCommander = value;
@@ -116,7 +116,7 @@ namespace TAC_AI.AI.Enemy
 
         public void Initiate()
         {
-            //DebugTAC_AI.Log("TACtical_AI: Launching Enemy AI for " + Tank.name);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Launching Enemy AI for " + Tank.name);
             Tank = gameObject.GetComponent<Tank>();
             AIControl = gameObject.GetComponent<TankAIHelper>();
             AIControl.FinishedRepairEvent.Subscribe(OnFinishedRepairs);
@@ -131,9 +131,9 @@ namespace TAC_AI.AI.Enemy
         public void Refresh()
         {
             if (GetComponents<EnemyMind>().Count() > 1)
-                DebugTAC_AI.Log("TACtical_AI: ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
 
-            //DebugTAC_AI.Log("TACtical_AI: Refreshing Enemy AI for " + Tank.name);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Refreshing Enemy AI for " + Tank.name);
             EnemyOpsController = new EnemyOperationsController(this);
             AIControl.MovementController.UpdateEnemyMind(this);
             AIControl.AvoidStuff = true;
@@ -150,7 +150,7 @@ namespace TAC_AI.AI.Enemy
         }
         public void SetForRemoval()
         {
-            //DebugTAC_AI.Log("TACtical_AI: Removing Enemy AI for " + Tank.name);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Removing Enemy AI for " + Tank.name);
             Tank.DamageEvent.Unsubscribe(OnHit);
             if (AIControl)
                 Tank.DamageEvent.Subscribe(AIControl.OnHit);
@@ -269,16 +269,16 @@ namespace TAC_AI.AI.Enemy
         {
             try
             {
-                //DebugTAC_AI.Log("TACtical_AI: OnFinishedRepair");
+                //DebugTAC_AI.Log(KickStart.ModID + ": OnFinishedRepair");
                 if (TechMemor)
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: TechMemor");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": TechMemor");
                     if (Tank.name.Contains('⟰'))
                     {
                         Tank.SetName(Tank.name.Replace(" ⟰", ""));
-                        RCore.RandomizeBrain(AIControl, Tank);
+                        RCore.GenerateEnemyAI(AIControl, Tank);
                         AIControl.AIAlign = AIAlignment.NonPlayer;
-                        DebugTAC_AI.Log("TACtical_AI: (Rechecking blocks) Enemy AI " + Tank.name + " of Team " + Tank.Team + ":  Ready to kick some Tech!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": (Rechecking blocks) Enemy AI " + Tank.name + " of Team " + Tank.Team + ":  Ready to kick some Tech!");
                         BuildAssist = false;
                     }
                 }

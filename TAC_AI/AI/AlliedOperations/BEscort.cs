@@ -60,7 +60,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (dist < thisInst.lastTechExtents + playerExt + 2)
             {
                 thisInst.DelayedAnchorClock = 0;
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  Giving the player some room...");
+                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving the player some room...");
                 direct.DriveAwayFacingTowards();
                 if (thisInst.unanchorCountdown > 0)
                     thisInst.unanchorCountdown--;
@@ -85,7 +85,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (tank.Anchors.NumIsAnchored > 0)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Time to pack up and move out!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Time to pack up and move out!");
                         thisInst.unanchorCountdown = 15;
                         thisInst.UnAnchor();
                     }
@@ -107,7 +107,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.ForceSetDrive = true;
                     thisInst.DriveVar = 1f;
                     thisInst.LightBoost = true;
-                    //DebugTAC_AI.Log("TACtical_AI: AI drive " + tank.control.DriveControl);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI drive " + tank.control.DriveControl);
                     if (thisInst.UrgencyOverload > 0)
                         thisInst.UrgencyOverload -= KickStart.AIClockPeriod / 5f;
                 }
@@ -186,7 +186,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
+                        AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
                         thisInst.TryAnchor();
                         thisInst.anchorAttempts++;
                     }
@@ -210,7 +210,7 @@ namespace TAC_AI.AI.AlliedOperations
                 {
                     if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Setting camp!");
+                        AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
                         thisInst.TryAnchor();
                         thisInst.anchorAttempts++;
                     }

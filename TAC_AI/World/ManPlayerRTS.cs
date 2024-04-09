@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using TAC_AI.AI;
-using TAC_AI.AI.Movement;
+using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
-using UnityEngine;
 using TerraTechETCUtil;
+using UnityEngine;
 
 namespace TAC_AI.World
 {
@@ -108,7 +108,7 @@ namespace TAC_AI.World
                             UpdateVisual(RTSHaloState.Hover);
                         else
                         {
-                            if (ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS)
+                            if (KickStart.AutopilotPlayer)
                                 UpdateVisual(RTSHaloState.Select);
                             else
                                 UpdateVisual(RTSHaloState.Default);
@@ -212,12 +212,13 @@ namespace TAC_AI.World
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: SelectHalo - Removal failiure - was it edited but something else?!? " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": SelectHalo - Removal failiure - was it edited but something else?!? " + e);
             }
         }
     }
     internal class ManPlayerRTS : MonoBehaviour
     {
+
         public static ManPlayerRTS inst;
         public static int MaxCommandDistance = 9001;//500;
         public static int MaxAllowedSizeForHighlight = 3;
@@ -239,13 +240,12 @@ namespace TAC_AI.World
         private static bool ControlState = false;
 
 
-        private bool dirty = false;
+        internal static bool dirty = false;
 
-        private TankAIHelper GrabbedThisFrame;
+        internal static TankAIHelper GrabbedThisFrame;
         public TankAIHelper Leading => LocalPlayerTechsControlled.FirstOrDefault();
         public TankAIHelper PlayerHovered { get; private set; }
-        public List<TankAIHelper> LocalPlayerTechsControlled { get; private set; } = new List<TankAIHelper>();
-        public HashSet<TankAIHelper> LocalPlayerTechsControlledFast { get; private set; } = new HashSet<TankAIHelper>();
+        public ListHashSet<TankAIHelper> LocalPlayerTechsControlled { get; private set; } = new ListHashSet<TankAIHelper>();
         public TankAIHelper OtherHovered { get; private set; }
         public List<TankAIHelper> EnemyTargets { get; private set; } = new List<TankAIHelper>();
 
@@ -269,7 +269,7 @@ namespace TAC_AI.World
             if (!KickStart.AllowStrategicAI || inst)
                 return;
             inst = new GameObject("PlayerRTSControl").AddComponent<ManPlayerRTS>();
-            DebugTAC_AI.Log("TACtical_AI: Created PlayerRTSControl.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Created PlayerRTSControl.");
             //ManPointer.inst.MouseEvent.Subscribe(OnMouseEvent); - Only updates when in active game, not spectator
             Singleton.Manager<ManGameMode>.inst.ModeSwitchEvent.Subscribe(OnWorldReset);
             Singleton.Manager<CameraManager>.inst.CameraSwitchEvent.Subscribe(OnCameraChange);
@@ -292,7 +292,7 @@ namespace TAC_AI.World
             SelectWindow = null;
             autoWindow = null;
             inst = null;
-            DebugTAC_AI.Log("TACtical_AI: Removed PlayerRTSControl.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Removed PlayerRTSControl.");
 
         }
         public static void DelayedInitiate()
@@ -302,14 +302,14 @@ namespace TAC_AI.World
                 return;
             if (SelectHalo.SelectCirclePrefab == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: Creating SelectCircle.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Creating SelectCircle.");
                 SelectHalo.SelectCirclePrefab = new GameObject("SelectCircle");
                 SelectHalo.SelectCirclePrefab.AddComponent<SelectHalo>();
                 Material[] mats = Resources.FindObjectsOfTypeAll<Material>();
                 mats = mats.Where(cases => cases.name == "MAT_SFX_Explosion_01_Shockwave").ToArray();
                 foreach (Material matcase in mats)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Getting " + matcase.name + "...");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Getting " + matcase.name + "...");
                 }
                 Material mat = mats.ElementAt(0);
                 SelectHalo.halos.Add(RTSHaloState.Default, mat);
@@ -353,7 +353,7 @@ namespace TAC_AI.World
                 psr.maxParticleSize = 3000;
                 ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
                 SelectHalo.SelectCirclePrefab.SetActive(false);
-                DebugTAC_AI.Log("TACtical_AI: Created SelectCircle.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Created SelectCircle.");
             }
 
             SelectWindow = Instantiate(new GameObject("TechSelectRect"));
@@ -366,7 +366,6 @@ namespace TAC_AI.World
             if ((bool)inst)
             {
                 inst.LocalPlayerTechsControlled.Clear();
-                inst.LocalPlayerTechsControlledFast.Clear();
                 int numOp = inst.SavedGroups.Count;
                 try
                 {
@@ -387,7 +386,9 @@ namespace TAC_AI.World
                     PlayerIsInRTS = true;
                     PlayerRTSUI.ResetPos();
                     PlayerRTSUI.SetActive(true);
-                    DebugTAC_AI.Log("TACtical AI: Player is in RTS view!");
+                    TankAIManager.toggleAuto.SetToggleState(KickStart.AutopilotPlayer);
+                    UpdatePlayerTechControlOnSwitch();
+                    DebugTAC_AI.Log(KickStart.ModID + ": Player is in RTS view!");
                 }
             }
             else
@@ -396,7 +397,8 @@ namespace TAC_AI.World
                 {
                     PlayerIsInRTS = false;
                     PlayerRTSUI.SetActive(false);
-                    RemovePlayerTech();
+                    TankAIManager.toggleAuto.SetToggleState(KickStart.AutopilotPlayer);
+                    UpdatePlayerTechControlOnSwitch();
                 }
             }
         }
@@ -407,7 +409,6 @@ namespace TAC_AI.World
                 if (TechUnit != null)
                 {
                     inst.LocalPlayerTechsControlled.Remove(TechUnit);
-                    inst.LocalPlayerTechsControlledFast.Remove(TechUnit);
                     int numOp = inst.SavedGroups.Count;
                     try
                     {
@@ -434,10 +435,9 @@ namespace TAC_AI.World
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: ERROR ON SETTING ReleaseControl");
+                        DebugTAC_AI.Log(KickStart.ModID + ": ERROR ON SETTING ReleaseControl");
                     }
                     inst.LocalPlayerTechsControlled.Remove(TechUnit);
-                    inst.LocalPlayerTechsControlledFast.Remove(TechUnit);
                     inst.TechMovementQueue.Remove(TechUnit);
                 }
             }
@@ -466,7 +466,7 @@ namespace TAC_AI.World
 
                 if (click == ManPointer.Event.LMB)
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: LEFT MOUSE BUTTON");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": LEFT MOUSE BUTTON");
 
                     Vector3 pos = Camera.main.transform.position;
                     Vector3 posD = Singleton.camera.ScreenPointToRay(Input.mousePosition).direction.normalized;
@@ -497,7 +497,7 @@ namespace TAC_AI.World
                                 }
                                 else
                                 {
-                                    inst.HandleSelectTank(rayman);
+                                    inst.SelectTankPlayer(Visible.FindVisibleUpwards(rayman.collider), inst.LocalPlayerTechsControlled);
                                 }
                             }
                             else
@@ -507,14 +507,14 @@ namespace TAC_AI.World
                                     if (QueuedRelease)
                                     {
                                         inst.ClearList();
-                                        //DebugTAC_AI.Log("TACtical_AI: Cleared Tech Selection.");
+                                        //DebugTAC_AI.Log(KickStart.ModID + ": Cleared Tech Selection.");
                                     }
                                     QueuedRelease = !QueuedRelease;
                                 }
                                 else
                                 {
                                     QueuedRelease = false;
-                                    inst.HandleSelectTank(rayman);
+                                    inst.SelectTankPlayer(Visible.FindVisibleUpwards(rayman.collider), inst.LocalPlayerTechsControlled);
                                 }
                             }
                         }
@@ -535,6 +535,9 @@ namespace TAC_AI.World
                     Physics.Raycast(pos, posD, out rayman, MaxCommandDistance, layerMask);
                     if ((bool)rayman.collider)
                     {
+                        QueuedRelease = false;
+                        inst.HandleSelection(rayman.point, Visible.FindVisibleUpwards(rayman.collider), inst.LocalPlayerTechsControlled);
+                        /*
                         int layer = rayman.collider.gameObject.layer;
                         if (layer == gInst.layerTerrain || layer == gInst.layerLandmark)
                         {
@@ -550,7 +553,7 @@ namespace TAC_AI.World
                         {
                             QueuedRelease = false;
                             inst.HandleSelectTargetTank(rayman);
-                        }
+                        }*/
                     }
                     ControlState = false;
                 }
@@ -558,7 +561,7 @@ namespace TAC_AI.World
         }
         public void HandleBoxSelectUnits()
         {
-            //DebugTAC_AI.Log("TACtical_AI: GROUP Select ACTIVATED");
+            //DebugTAC_AI.Log(KickStart.ModID + ": GROUP Select ACTIVATED");
             Vector3 ScreenBoxEnd = Input.mousePosition;
             float HighX = ScreenBoxStart.x >= ScreenBoxEnd.x ? ScreenBoxStart.x : ScreenBoxEnd.x;
             float LowX = ScreenBoxStart.x < ScreenBoxEnd.x ? ScreenBoxStart.x : ScreenBoxEnd.x;
@@ -572,7 +575,7 @@ namespace TAC_AI.World
                 ClearList();
                 if (GrabbedThisFrame.IsNotNull())
                 {
-                    if (SelectTank(GrabbedThisFrame))
+                    if (StartControlling(GrabbedThisFrame, LocalPlayerTechsControlled))
                     {
                         SetSelectHalo(GrabbedThisFrame, true);
                         GrabbedThisFrame.SetRTSState(true);
@@ -588,9 +591,9 @@ namespace TAC_AI.World
                 var TechUnit = Tech.GetHelperInsured();
                 if (TechUnit != null && GrabbedThisFrame != TechUnit)
                 {
-                    if (Tech.Team == Singleton.Manager<ManPlayer>.inst.PlayerTeam)
+                    if (Tech.Team == ManPlayer.inst.PlayerTeam || DebugRawTechSpawner.CanCommandOtherTeams)
                     {
-                        if (!PlayerIsInRTS && Tech == Singleton.playerTank)
+                        if (!PlayerIsInRTS && !KickStart.AutopilotPlayerMain && Tech == Singleton.playerTank)
                             continue;
                         Vector3 camPos = Singleton.camera.WorldToScreenPoint(Tech.boundsCentreWorldNoCheck);
                         if (LowX <= camPos.x && camPos.x <= HighX && LowY <= camPos.y && camPos.y <= HighY && camPos.z > 0)
@@ -598,16 +601,16 @@ namespace TAC_AI.World
                             Selects++;
                             if (KickStart.UseClassicRTSControls)
                             {
-                                if (!LocalPlayerTechsControlledFast.Contains(TechUnit))
+                                if (!LocalPlayerTechsControlled.Contains(TechUnit))
                                 {
-                                    if (SelectTank(TechUnit))
+                                    if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                                     {
                                         SetSelectHalo(TechUnit, true);
                                     }
                                 }
                                 else if (shift)
                                 {
-                                    if (UnselectTank(TechUnit))
+                                    if (StopControlling(TechUnit, LocalPlayerTechsControlled))
                                     {
                                         SetSelectHalo(TechUnit, false);
                                         unselect = true;
@@ -616,16 +619,16 @@ namespace TAC_AI.World
                             }
                             else
                             {
-                                if (!LocalPlayerTechsControlledFast.Contains(TechUnit))
+                                if (!LocalPlayerTechsControlled.Contains(TechUnit))
                                 {
-                                    if (SelectTank(TechUnit))
+                                    if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                                     {
                                         SetSelectHalo(TechUnit, true);
                                     }
                                 }
                                 else if (!shift)
                                 {
-                                    if (UnselectTank(TechUnit))
+                                    if (StopControlling(TechUnit, LocalPlayerTechsControlled))
                                     {
                                         SetSelectHalo(TechUnit, false);
                                         unselect = true;
@@ -636,11 +639,11 @@ namespace TAC_AI.World
                     }
                 }
             }
-            DebugTAC_AI.Log("TACtical_AI: GROUP Selected " + Selects);
+            DebugTAC_AI.Log(KickStart.ModID + ": GROUP Selected " + Selects);
             if (Selects > 0)
             {
                 LocalPlayerTechsControlled = LocalPlayerTechsControlled.
-                    OrderByDescending(x => x.ActuallyWorks).ThenByDescending(x => x.tank.PlayerFocused).ToList();
+                    OrderBy(x => x.ActuallyWorks).ThenByDescending(x => x.tank.PlayerFocused).ToList();
                 if (Leading)
                 {
                     GUIAIManager.GetInfo(Leading);
@@ -688,13 +691,13 @@ namespace TAC_AI.World
                 PurgeAllNull();
                 SavedGroups[groupNum].Clear();
                 SavedGroups[groupNum].AddRange(LocalPlayerTechsControlled);
-                DebugTAC_AI.Log("TACtical_AI: GROUP SAVED " + groupNum + ".");
+                DebugTAC_AI.Log(KickStart.ModID + ": GROUP SAVED " + groupNum + ".");
                 working = true;
             }
             else
             {
                 ClearList();
-                DebugTAC_AI.Log("TACtical_AI: GROUP SELECTED " + groupNum + ".");
+                DebugTAC_AI.Log(KickStart.ModID + ": GROUP SELECTED " + groupNum + ".");
                 foreach (TankAIHelper TechUnit in SavedGroups[groupNum])
                 {
                     if (!(bool)TechUnit)
@@ -708,12 +711,12 @@ namespace TAC_AI.World
                         if (!(PlayerIsInRTS && TechUnit.tank == Singleton.playerTank) && TechUnit.AIAlign != AIAlignment.Player)
                             continue;
 
-                        if (!LocalPlayerTechsControlledFast.Contains(TechUnit))
+                        if (!LocalPlayerTechsControlled.Contains(TechUnit))
                         {
-                            if (SelectTank(TechUnit))
+                            if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                             {
                                 SetSelectHalo(TechUnit, true);
-                                DebugTAC_AI.Log("TACtical_AI: Selected Tank " + TechUnit.tank.name + ".");
+                                DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + TechUnit.tank.name + ".");
                                 working = true;
                             }
                         }
@@ -725,28 +728,28 @@ namespace TAC_AI.World
                 SelectUnitSFX();
         }
 
-        public void HandleSelectTank(RaycastHit rayman)
+        private void SelectTankPlayer(Visible vis, ListHashSet<TankAIHelper> controlled)
         {
-            Tank grabbedTech = rayman.collider.transform.root.GetComponent<Tank>();
+            Tank grabbedTech = vis.tank;
             if ((bool)grabbedTech)
             {
-                if (grabbedTech.Team == Singleton.Manager<ManPlayer>.inst.PlayerTeam)
+                if (grabbedTech.Team == ManPlayer.inst.PlayerTeam || DebugRawTechSpawner.CanCommandOtherTeams)
                 {
-                    if (!PlayerIsInRTS && grabbedTech == Singleton.playerTank)
+                    if (!PlayerIsInRTS && !KickStart.AutopilotPlayerMain && grabbedTech == Singleton.playerTank)
                         return;
                     var TechUnit = grabbedTech.GetHelperInsured();
 
                     if (KickStart.UseClassicRTSControls)
                     {
                         bool shift = GroupSelecting;
-                        if (!LocalPlayerTechsControlledFast.Contains(TechUnit))
+                        if (!controlled.Contains(TechUnit))
                         {
                             if (!shift)
                                 ClearList();
-                            if (SelectTank(TechUnit))
+                            if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                             {
                                 SetSelectHalo(TechUnit, true);
-                                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
                                 SelectUnitSFX();
                             }
                             QueuedRelease = false;
@@ -762,24 +765,24 @@ namespace TAC_AI.World
                                 if (!shift)
                                 {
                                     ClearList();
-                                    if (SelectTank(TechUnit))
+                                    if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                                     {
                                         SetSelectHalo(TechUnit, true);
-                                        //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                        //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
                                         SelectUnitSFX();
                                     }
                                 }
                                 else
                                 {
-                                    if (UnselectTank(TechUnit))
+                                    if (StopControlling(TechUnit, LocalPlayerTechsControlled))
                                     {
                                         GrabbedThisFrame = TechUnit;
                                         SetSelectHalo(TechUnit, false);
-                                        //DebugTAC_AI.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
+                                        //DebugTAC_AI.Log(KickStart.ModID + ": Unselected Tank " + grabbedTech.name + ".");
                                         UnSelectUnitSFX();
                                     }
                                 }
-                                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
                             }
                             QueuedRelease = !QueuedRelease;
                         }
@@ -787,13 +790,13 @@ namespace TAC_AI.World
                     else
                     {
                         bool shift = GroupSelecting;
-                        if (LocalPlayerTechsControlledFast.Contains(TechUnit) && !shift)
+                        if (controlled.Contains(TechUnit) && !shift)
                         {
-                            if (UnselectTank(TechUnit))
+                            if (StopControlling(TechUnit, LocalPlayerTechsControlled))
                             {
                                 GrabbedThisFrame = TechUnit;
                                 SetSelectHalo(TechUnit, false);
-                                //DebugTAC_AI.Log("TACtical_AI: Unselected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Unselected Tank " + grabbedTech.name + ".");
                                 UnSelectUnitSFX();
                             }
                         }
@@ -804,10 +807,10 @@ namespace TAC_AI.World
                                 GrabAllSameName(TechUnit);
                                 return;
                             }
-                            if (SelectTank(TechUnit))
+                            if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                             {
                                 SetSelectHalo(TechUnit, true);
-                                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
                                 SelectUnitSFX();
                             }
                         }
@@ -819,16 +822,119 @@ namespace TAC_AI.World
                 }
             }
         }
-        public void HandleSelectTargetTank(RaycastHit rayman)
+        public void SelectTankAI(Tank Tech, ListHashSet<TankAIHelper> controlled)
         {
-            //DebugTAC_AI.Log("TACtical_AI: HandleSelectTargetTank.");
-            Tank grabbedTech = rayman.collider.transform.root.GetComponent<Tank>();
+            if ((bool)Tech)
+            {
+                if (Tech.Team != ManPlayer.inst.PlayerTeam || DebugRawTechSpawner.CanCommandOtherTeams)
+                {
+                    if (!PlayerIsInRTS && Tech == Singleton.playerTank)
+                        return;
+                    var TechUnit = Tech.GetHelperInsured();
+
+                    if (KickStart.UseClassicRTSControls)
+                    {
+                        bool shift = GroupSelecting;
+                        if (!controlled.Contains(TechUnit))
+                        {
+                            if (!shift)
+                                ClearList();
+                            if (StartControlling(TechUnit, LocalPlayerTechsControlled))
+                            {
+                                SetSelectHalo(TechUnit, true);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
+                                SelectUnitSFX();
+                            }
+                            QueuedRelease = false;
+                        }
+                        else
+                        {
+                            if (!QueuedRelease)
+                            {
+                                GrabAllSameName(TechUnit);
+                            }
+                            else
+                            {
+                                if (!shift)
+                                {
+                                    ClearList();
+                                    if (StartControlling(TechUnit, LocalPlayerTechsControlled))
+                                    {
+                                        SetSelectHalo(TechUnit, true);
+                                        //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
+                                        SelectUnitSFX();
+                                    }
+                                }
+                                else
+                                {
+                                    if (StopControlling(TechUnit, LocalPlayerTechsControlled))
+                                    {
+                                        GrabbedThisFrame = TechUnit;
+                                        SetSelectHalo(TechUnit, false);
+                                        //DebugTAC_AI.Log(KickStart.ModID + ": Unselected Tank " + grabbedTech.name + ".");
+                                        UnSelectUnitSFX();
+                                    }
+                                }
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
+                            }
+                            QueuedRelease = !QueuedRelease;
+                        }
+                    }
+                    else
+                    {
+                        bool shift = GroupSelecting;
+                        if (controlled.Contains(TechUnit) && !shift)
+                        {
+                            if (StopControlling(TechUnit, LocalPlayerTechsControlled))
+                            {
+                                GrabbedThisFrame = TechUnit;
+                                SetSelectHalo(TechUnit, false);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Unselected Tank " + grabbedTech.name + ".");
+                                UnSelectUnitSFX();
+                            }
+                        }
+                        else
+                        {
+                            if (shift)
+                            {
+                                GrabAllSameName(TechUnit);
+                                return;
+                            }
+                            if (StartControlling(TechUnit, LocalPlayerTechsControlled))
+                            {
+                                SetSelectHalo(TechUnit, true);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
+                                SelectUnitSFX();
+                            }
+                        }
+                    }
+                }
+                else if (AIGlobals.IsBaseTeam(Tech.Team))
+                {
+                    GUINPTInteraction.GetTank(Tech);
+                }
+            }
+        }
+
+        public void HandleSelection(Vector3 point, Visible vis, ListHashSet<TankAIHelper> controlled)
+        {
+            if (vis?.resdisp)
+                inst.HandleSelectScenery(point, vis, controlled);
+            else if (vis?.tank)
+                inst.HandleSelectTargetTank(point, vis, controlled);
+            else
+                inst.HandleSelectTerrain(point, controlled);
+        }
+        private void HandleSelectTargetTank(Vector3 point, Visible vis, ListHashSet<TankAIHelper> controlled)
+        {
+            //DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectTargetTank.");
+            Tank grabbedTech = vis.tank;
             if ((bool)grabbedTech)
             {
                 bool responded = false;
-                if (grabbedTech.IsEnemy(Singleton.Manager<ManPlayer>.inst.PlayerTeam))
+                if (grabbedTech.IsEnemy(ManPlayer.inst.PlayerTeam))
                 {   // Attack Move
-                    foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                    foreach (TankAIHelper help in controlled)
                     {
                         if (help != null)
                         {
@@ -837,7 +943,7 @@ namespace TAC_AI.World
                             if (GroupSelecting)
                             {
                                 help.SetRTSState(true);
-                                QueueNextDestination(help, rayman.point);
+                                QueueNextDestination(help, point);
                                 if (ManNetwork.IsNetworked)
                                     NetworkHandler.TryBroadcastRTSAttack(help.tank.netTech.netId.Value, grabbedTech.netTech.netId.Value);
                                 help.lastEnemy = grabbedTech.visible;
@@ -857,11 +963,11 @@ namespace TAC_AI.World
                     if (responded)
                         Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.LockOn);
                 }
-                else if (grabbedTech.IsFriendly(Singleton.Manager<ManPlayer>.inst.PlayerTeam))
+                else if (grabbedTech.IsFriendly(ManPlayer.inst.PlayerTeam))
                 {
                     if (grabbedTech.IsPlayer)
                     {   // Reset to working order
-                        foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                        foreach (TankAIHelper help in controlled)
                         {
                             if (help != null)
                             {
@@ -881,7 +987,7 @@ namespace TAC_AI.World
                         {
                             if (grabbedTech.IsAnchored)
                             {
-                                foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                                foreach (TankAIHelper help in controlled)
                                 {
                                     if (help != null)
                                     {
@@ -910,7 +1016,7 @@ namespace TAC_AI.World
                             }
                             else
                             {
-                                foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                                foreach (TankAIHelper help in controlled)
                                 {
                                     if (help != null)
                                     {
@@ -942,10 +1048,10 @@ namespace TAC_AI.World
                         }
                         catch
                         {
-                            DebugTAC_AI.Log("TACtical_AI: Error on Protect/Defend - Techs");
-                            foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                            DebugTAC_AI.Log(KickStart.ModID + ": Error on Protect/Defend - Techs");
+                            foreach (TankAIHelper help in controlled)
                             {
-                                DebugTAC_AI.Log("TACtical_AI: " + help.name);
+                                DebugTAC_AI.Log(KickStart.ModID + ": " + help.name);
                             }
                         }
                     }
@@ -955,15 +1061,15 @@ namespace TAC_AI.World
             }
             else
             {
-                HandleSelectBlock(rayman);
+                HandleSelectBlock(point, vis, controlled);
             }
         }
-        public void HandleSelectTerrain(RaycastHit rayman)
+        private void HandleSelectTerrain(Vector3 point, ListHashSet<TankAIHelper> controlled)
         {
-            Vector3 terrainPoint = GetPlayerTargetOffset(rayman.point);
-            if (!GroupSelecting && LocalPlayerTechsControlled.Count == 1)
+            Vector3 terrainPoint = GetPlayerTargetOffset(point);
+            if (!GroupSelecting && controlled.Count == 1)
             {
-                TankAIHelper help = LocalPlayerTechsControlled.FirstOrDefault();
+                TankAIHelper help = controlled.FirstOrDefault();
                 if (help != null)
                 {
                     help.RTSDestination = terrainPoint;
@@ -978,7 +1084,7 @@ namespace TAC_AI.World
             {
                 if (GroupSelecting)
                 {
-                    foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                    foreach (TankAIHelper help in controlled)
                     {
                         if (help != null)
                         {
@@ -991,7 +1097,7 @@ namespace TAC_AI.World
                 }
                 else
                 {
-                    foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                    foreach (TankAIHelper help in controlled)
                     {
                         if (help != null)
                         {
@@ -1004,16 +1110,15 @@ namespace TAC_AI.World
                     }
                 }
             }
-            //DebugTAC_AI.Log("TACtical_AI: HandleSelectTerrain.");
-            if (LocalPlayerTechsControlled.Any())
+            //DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectTerrain.");
+            if (controlled.Any())
                 Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AcceptMission);
         }
-        public void HandleSelectScenery(RaycastHit rayman)
+        private void HandleSelectScenery(Vector3 point, Visible vis, ListHashSet<TankAIHelper> controlled)
         {
-            //DebugTAC_AI.Log("TACtical_AI: HandleSelectScenery.");
+            //DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectScenery.");
 
             bool responded = false;
-            Visible vis = Visible.FindVisibleUpwards(rayman.collider);
             if (vis)
             {
                 ResourceDispenser node = vis.GetComponent<ResourceDispenser>();
@@ -1021,7 +1126,7 @@ namespace TAC_AI.World
                 {
                     if (!node.GetComponent<Damageable>().Invulnerable)
                     {   // Mine Move
-                        foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                        foreach (TankAIHelper help in controlled)
                         {
                             if (help != null)
                             {
@@ -1053,15 +1158,15 @@ namespace TAC_AI.World
                     }
                     else
                     {   // Just issue a movement command, it's a flattened rock or "landmark"
-                        HandleSelectTerrain(rayman);
+                        HandleSelectTerrain(point, controlled);
                     }
                     return;
                 }
             }
             try
             {
-                Vector3 terrainPoint = GetPlayerTargetOffset(rayman.point);
-                foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                Vector3 terrainPoint = GetPlayerTargetOffset(point);
+                foreach (TankAIHelper help in controlled)
                 {
                     if (help != null)
                     {
@@ -1077,18 +1182,17 @@ namespace TAC_AI.World
             }
             catch { }
         }
-        public void HandleSelectBlock(RaycastHit rayman)
+        private void HandleSelectBlock(Vector3 point, Visible vis, ListHashSet<TankAIHelper> controlled)
         {
-            DebugTAC_AI.Log("TACtical_AI: HandleSelectScenery.");
+            //DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectBlock.");
 
             bool responded = false;
-            Visible vis = Visible.FindVisibleUpwards(rayman.collider);
             if (vis)
             {
                 TankBlock block = vis.GetComponent<TankBlock>();
                 if ((bool)block)
                 {
-                    foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                    foreach (TankAIHelper help in controlled)
                     {
                         if (help != null)
                         {
@@ -1122,13 +1226,13 @@ namespace TAC_AI.World
             }
             try
             {
-                foreach (TankAIHelper help in LocalPlayerTechsControlled)
+                foreach (TankAIHelper help in controlled)
                 {
                     if (help != null)
                     {
                         if (help.lastAIType != AITreeType.AITypes.Escort)
                             help.ForceAllAIsToEscort(true, false);
-                        help.RTSDestination = GetPlayerTargetOffset(rayman.point);
+                        help.RTSDestination = GetPlayerTargetOffset(point);
                         help.SetRTSState(true);
                         responded = true;
                     }
@@ -1139,7 +1243,8 @@ namespace TAC_AI.World
             catch { }
         }
 
-        public bool SelectTank(TankAIHelper TechUnit)
+
+        public bool StartControlling(TankAIHelper TechUnit, ListHashSet<TankAIHelper> controlled)
         {
             if (TechUnit.tank.netTech?.NetPlayer)
             {
@@ -1150,23 +1255,21 @@ namespace TAC_AI.World
             //    return false;
             if (GrabbedThisFrame == null)
                 GrabbedThisFrame = TechUnit;
-            if (LocalPlayerTechsControlledFast.Add(TechUnit))
-                LocalPlayerTechsControlled.Add(TechUnit);
+            controlled.Add(TechUnit);
             dirty = true;
             return true;
         }
-        public bool UnselectTank(TankAIHelper TechUnit)
+        public bool StopControlling(TankAIHelper TechUnit, ListHashSet<TankAIHelper> controlled)
         {
             if (TechUnit.tank.netTech?.NetPlayer)
             {
                 return false;// cannot grab other player tech
             }
-            LocalPlayerTechsControlled.Remove(TechUnit);
-            LocalPlayerTechsControlledFast.Remove(TechUnit);
+            controlled.Remove(TechUnit);
             dirty = true;
             return true;
         }
-        public void SelectAllPlayer()
+        public void ControlAllPlayer()
         {
             bool selected = false;
             ClearList();
@@ -1184,14 +1287,14 @@ namespace TAC_AI.World
                     }
                     var TechUnit = tech.GetHelperInsured();
 
-                    if (!LocalPlayerTechsControlledFast.Contains(TechUnit))
+                    if (!LocalPlayerTechsControlled.Contains(TechUnit))
                     {
-                        if (SelectTank(TechUnit))
+                        if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                         {
                             selected = true;
                             SetSelectHalo(TechUnit, true);
                             //TechUnit.SetRTSState(true);
-                            DebugTAC_AI.Log("TACtical_AI: Selected Tank " + tech.name + ".");
+                            DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + tech.name + ".");
                         }
                     }
                 }
@@ -1284,14 +1387,14 @@ namespace TAC_AI.World
                         if (!(PlayerIsInRTS && tech == Singleton.playerTank) && TechUnit.AIAlign != AIAlignment.Player)
                             continue;
 
-                        if (!LocalPlayerTechsControlledFast.Contains(TechUnit))
+                        if (!LocalPlayerTechsControlled.Contains(TechUnit))
                         {
-                            if (SelectTank(TechUnit))
+                            if (StartControlling(TechUnit, LocalPlayerTechsControlled))
                             {
                                 working = true;
                                 SetSelectHalo(TechUnit, true);
                                 //TechUnit.SetRTSState(true);
-                                DebugTAC_AI.Log("TACtical_AI: Selected Tank " + tech.name + ".");
+                                DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + tech.name + ".");
                             }
                         }
                     }
@@ -1315,7 +1418,7 @@ namespace TAC_AI.World
                     help.PendingDamageCheck = true;
                 }
             }
-            DebugTAC_AI.Log("TACtical_AI: HandleSelectTerrain.");
+            DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectTerrain.");
             if (LocalPlayerTechsControlled.Any())
                 Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.SendToInventory);
         }
@@ -1336,8 +1439,56 @@ namespace TAC_AI.World
             }
         }
 
-        public void SetOptionAuto(TankAIHelper lastTank, AIType dediAI)
+        public void SetOptionAuto(TankAIHelper lastTank, AIType dediAI, bool force = false)
         {
+            var enemy = lastTank.GetComponent<EnemyMind>();
+            if (enemy)
+            {
+                switch (dediAI)
+                {
+                    case AIType.Assault:
+                        enemy.CommanderMind = EnemyAttitude.Homing;
+                        break;
+                    case AIType.Aegis:
+                        enemy.CommanderMind = EnemyAttitude.Guardian;
+                        if (force)
+                            enemy.MaxCombatRange = 0;
+                        break;
+                    case AIType.Prospector:
+                        enemy.CommanderMind = EnemyAttitude.Miner;
+                        if (force)
+                            enemy.MaxCombatRange = 0;
+                        break;
+                    case AIType.Scrapper:
+                        enemy.CommanderMind = EnemyAttitude.Junker;
+                        if (force)
+                            enemy.MaxCombatRange = 0;
+                        break;
+                    case AIType.Energizer:
+                        throw new InvalidOperationException("Enemy equivalent for AIType.Energizer does not exist");
+                    case AIType.MTTurret:
+                        enemy.CommanderMind = EnemyAttitude.PartTurret;
+                        break;
+                    case AIType.MTStatic:
+                        enemy.CommanderMind = EnemyAttitude.PartStatic;
+                        break;
+                    case AIType.MTMimic:
+                        enemy.CommanderMind = EnemyAttitude.PartMimic;
+                        break;
+                    case AIType.Aviator:
+                        throw new InvalidOperationException("Enemy equivalent for AIType.Aviator does not exist (too many outcomes)");
+                    case AIType.Buccaneer:
+                        enemy.EvilCommander = EnemyHandling.Naval;
+                        break;
+                    case AIType.Astrotech:
+                        enemy.EvilCommander = EnemyHandling.Starship;
+                        break;
+                    default:
+                        enemy.CommanderMind = EnemyAttitude.Default;
+                        break;
+                }
+            }
+            else
             if (ManNetwork.IsNetworked)
             {
                 try
@@ -1352,14 +1503,13 @@ namespace TAC_AI.World
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     lastTank.DediAI = dediAI;
-                    lastTank.RecalibrateMovementAIController();
 
                     //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
                     //overlay.Update();
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on sending AI Option change!!!\n" + e);
                 }
             }
             else
@@ -1373,7 +1523,6 @@ namespace TAC_AI.World
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 lastTank.DediAI = dediAI;
-                lastTank.RecalibrateMovementAIController();
 
                 //TankDescriptionOverlay overlay = (TankDescriptionOverlay)GUIAIManager.bubble.GetValue(lastTank.tank);
                 //overlay.Update();
@@ -1396,23 +1545,21 @@ namespace TAC_AI.World
                     SetSelectHalo(TechUnit, false);
             }
             inst.LocalPlayerTechsControlled.Clear();
-            inst.LocalPlayerTechsControlledFast.Clear();
             GUIAIManager.ResetInfo();
             UnSelectUnitSFX();
         }
-        public static void RemovePlayerTech()
+        public static void UpdatePlayerTechControlOnSwitch()
         {
             try
             {
                 if ((bool)inst)
                 {
                     inst.PurgeAllNull();
-                    if ((bool)Singleton.playerTank)
+                    if (!KickStart.AutopilotPlayer && (bool)Singleton.playerTank)
                     {
                         var TechUnit = Singleton.playerTank.GetHelperInsured();
                         SetSelectHalo(TechUnit, false);
                         inst.LocalPlayerTechsControlled.Remove(TechUnit);
-                        inst.LocalPlayerTechsControlledFast.Remove(TechUnit);
                         TechUnit.SetRTSState(false);
                         UnSelectUnitSFX();
                     }
@@ -1433,13 +1580,11 @@ namespace TAC_AI.World
                     if (help?.tank?.visible == null || !help.tank.visible.isActive)
                     {
                         LocalPlayerTechsControlled.RemoveAt(step);
-                        LocalPlayerTechsControlledFast.Remove(help);
                         numStep--;
                     }
                     else if (help.tank.blockman.blockCount == 0)
                     {
                         LocalPlayerTechsControlled.RemoveAt(step);
-                        LocalPlayerTechsControlledFast.Remove(help);
                         numStep--;
                     }
                     else
@@ -1635,7 +1780,7 @@ namespace TAC_AI.World
             }
             else
             {
-                if (PlayerHovered && !LocalPlayerTechsControlledFast.Contains(PlayerHovered))
+                if (PlayerHovered && !LocalPlayerTechsControlled.Contains(PlayerHovered))
                 {
                     if (PlayerHovered.MovingAndOrHasTarget)
                     {
@@ -1672,7 +1817,7 @@ namespace TAC_AI.World
                 foreach (KeyValuePair<TankAIHelper, Queue<WorldPosition>> extended in TechMovementQueue)
                 {
                     TankAIHelper helper = extended.Key;
-                    if (helper != null && (LocalPlayerTechsControlledFast.Contains(helper) || PlayerHovered == helper))
+                    if (helper != null && (LocalPlayerTechsControlled.Contains(helper) || PlayerHovered == helper))
                     {
                         Vector3 lastPoint = helper.RTSDestination;
                         foreach (var item in extended.Value)
@@ -1736,13 +1881,13 @@ namespace TAC_AI.World
                 {
                     if (vis.block.tank)
                     {
-                        if (vis.block.tank.Team == ManPlayer.inst.PlayerTeam)
+                        if (vis.block.tank.Team == ManPlayer.inst.PlayerTeam || DebugRawTechSpawner.CanCommandOtherTeams)
                         {
                             var helper = vis.block.tank.GetHelperInsured();
                             if (helper && helper.ActuallyWorks && (!helper.tank.PlayerFocused || PlayerIsInRTS))
                             {
                                 SetPlayerHovered(helper);
-                                bool isAlreadySelected = LocalPlayerTechsControlledFast.Contains(helper);
+                                bool isAlreadySelected = LocalPlayerTechsControlled.Contains(helper);
                                 if (!LocalPlayerTechsControlled.Any() ||
                                     (GroupSelecting && !isAlreadySelected))
                                 {
@@ -1890,7 +2035,7 @@ namespace TAC_AI.World
                 {
                     if (PlayerHovered)
                     {
-                        if (!LocalPlayerTechsControlledFast.Contains(PlayerHovered))
+                        if (!LocalPlayerTechsControlled.Contains(PlayerHovered))
                             SetSelectHalo(PlayerHovered, false);
                     }
                     PlayerHovered = helper;
@@ -1899,7 +2044,7 @@ namespace TAC_AI.World
             }
             else
             {
-                if (!LocalPlayerTechsControlledFast.Contains(PlayerHovered))
+                if (!LocalPlayerTechsControlled.Contains(PlayerHovered))
                     SetSelectHalo(PlayerHovered, false);
                 PlayerHovered = null;
             }
@@ -2096,7 +2241,7 @@ namespace TAC_AI.World
         }
         private void DrawSelectBox(Vector3 startPosGlobal, Vector3 endPosGlobal)
         {
-            //DebugTAC_AI.Log("TACtical_AI: DrawSelectBox - " + startPosGlobal + " | " + endPosGlobal);
+            //DebugTAC_AI.Log(KickStart.ModID + ": DrawSelectBox - " + startPosGlobal + " | " + endPosGlobal);
             Vector3 sPos = startPosGlobal;
             Vector3 ePos = endPosGlobal;
             Vector3 ePosVert = ePos.SetY(sPos.y);
@@ -2163,7 +2308,7 @@ namespace TAC_AI.World
                     mats = mats.Where(cases => cases.name == "UI_CHECKBOX_OFF").ToArray();//GUI_DottedSquare
                     foreach (Texture2D matcase in mats)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Getting " + matcase.name + "...");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Getting " + matcase.name + "...");
                     }
                     matRect = mats.ElementAt(0);
                 }
@@ -2213,7 +2358,7 @@ namespace TAC_AI.World
                 if (PlayerIsInRTS && !ManPauseGame.inst.IsPaused && !AIGlobals.HideHud && 
                     Singleton.playerTank?.GetHelperInsured())
                 {
-                    if (inst.LocalPlayerTechsControlledFast.Contains(Singleton.playerTank.GetHelperInsured()))
+                    if (inst.LocalPlayerTechsControlled.Contains(Singleton.playerTank.GetHelperInsured()))
                     {
                         AltUI.StartUI();
                         autopilotMenu = GUI.Window(PlayerAutopilotID, autopilotMenu, GUIHandlerPlayerAutopilot, "", AltUI.MenuLeft);
@@ -2230,24 +2375,22 @@ namespace TAC_AI.World
         internal static DebugCameraLock DevCamLock = DebugCameraLock.None;
 #if DEBUG
         private static Rect autopilotMenu = new Rect(0, 0, 160, 110);   // the "window"
-        internal static bool autopilotPlayer = true;
 #else
         private static Rect autopilotMenu = new Rect(0, 0, 160, 80);   // the "window"
-        internal static bool autopilotPlayer = false;
 #endif
 
         private static void GUIHandlerPlayerAutopilot(int ID)
         {
-            if (GUI.Button(new Rect(10, 10, 140, 30), autopilotPlayer ? "<b>AUTOPILOT ON</b>" : "AUTOPILOT Off", autopilotPlayer ? AltUI.ButtonGreen : AltUI.ButtonBlue))
+            if (GUI.Button(new Rect(10, 10, 140, 30), KickStart.AutopilotPlayerRTS ? "<b>AUTOPILOT ON</b>" : "AUTOPILOT Off", KickStart.AutopilotPlayerRTS ? AltUI.ButtonGreen : AltUI.ButtonBlue))
             {
-                autopilotPlayer = !autopilotPlayer;
+                KickStart.AutopilotPlayerRTS = !KickStart.AutopilotPlayerRTS;
                 if (Singleton.playerTank)
                 {
                     var tankInst = Singleton.playerTank.GetHelperInsured();
                     if (tankInst)
                     {
                         tankInst.ForceAllAIsToEscort(true, false);
-                        tankInst.RecalibrateMovementAIController();
+                        tankInst.MovementAIControllerDirty = true;
                     }
                 }
             }

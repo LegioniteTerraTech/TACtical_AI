@@ -45,7 +45,7 @@ namespace TAC_AI.Templates
             else if (trackVis != null)
                 ManVisible.inst.ObliterateTrackedVisibleFromWorld(trackVis);
             else
-                DebugTAC_AI.LogError("TACtical_AI: TrackedAirborneAI - Could not remove an aircraft from the world!");
+                DebugTAC_AI.LogError(KickStart.ModID + ": TrackedAirborneAI - Could not remove an aircraft from the world!");
 
         }
     }
@@ -101,7 +101,7 @@ namespace TAC_AI.Templates
                 return;
             inst = new GameObject("AISpawnerAux").AddComponent<SpecialAISpawner>();
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(DetermineActiveOnMode);
-            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Initated!");
+            DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Initated!");
             inst.gameObject.SetActive(false);
             RawTechLoader.Initiate();
 
@@ -115,7 +115,7 @@ namespace TAC_AI.Templates
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Unsubscribe(DetermineActiveOnMode);
             Destroy(inst);
             inst = null;
-            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - DeInitated");
+            DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - DeInitated");
         }
 
         public static void DetermineActiveOnModeType()
@@ -193,12 +193,11 @@ namespace TAC_AI.Templates
                     AIWiki.hintADV.Show();
                     if (!KickStart.isPopInjectorPresent)
                     {
-                        RawTechLoader.UseFactionSubTypes = true;
                         TechData newTech = TSP.m_TechToSpawn;
                         FactionSubTypes FST = TSP.m_TechToSpawn.GetMainCorp();
                         FactionLevel lvl = RawTechLoader.TryGetPlayerLicenceLevel();
                         if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(pos) &&
-                            RawTechTemplate.GetBaseTerrain(TSP.m_TechToSpawn, TSP.m_TechToSpawn.CheckIsAnchored()) == BaseTerrain.Land)
+                            RawTechTemplate.GetBaseTerrain(TSP.m_TechToSpawn, TSP.m_TechToSpawn.CheckIsAnchored()) == BaseTerrain.Sea)
                         {
                             SetSpawnSea(TSP, FST, FST, lvl, ref newTech);
                         }
@@ -206,8 +205,6 @@ namespace TAC_AI.Templates
                         {
                             SetSpawnLand(TSP, FST, FST, lvl, ref newTech);
                         }
-
-                        RawTechLoader.UseFactionSubTypes = false;
                     }
                 }
             }
@@ -245,12 +242,13 @@ namespace TAC_AI.Templates
                         DebugTAC_AI.Exception("Land Tech spawning override failed as no blocks are present on modified spawning Tech.  Please report this.");
                         return;
                     }
-                    DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
+                    DebugTAC_AI.Log(KickStart.ModID + ":  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
                     TSP.m_TechToSpawn = newTech;
                 }
                 else
                 {
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, 
+                        maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
                     if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                     {
                         newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
@@ -270,7 +268,7 @@ namespace TAC_AI.Templates
                             return;
                         }
 
-                        DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
+                        DebugTAC_AI.Log(KickStart.ModID + ":  Tech " + TSP.m_TechToSpawn.Name + " has been swapped out for land tech " + newTech.Name + " instead");
                         TSP.m_TechToSpawn = newTech;
                     }
                     // Else we don't do anything.
@@ -278,7 +276,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Assert(true, "TACtical_AI: Attempt to swap Land tech failed!");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ": Attempt to swap Land tech failed!");
             }
         }
         public static void SetSpawnSea(ManSpawn.TechSpawnParams TSP, FactionSubTypes FTE, FactionSubTypes FST, 
@@ -316,7 +314,7 @@ namespace TAC_AI.Templates
                         DebugTAC_AI.Exception("Water Tech spawning override failed as no blocks are present on modified spawning Tech.  Please report this.");
                         return;
                     }
-                    DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
+                    DebugTAC_AI.Log(KickStart.ModID + ":  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
                     TSP.m_TechToSpawn = newTech;
                     AIWiki.hintShip.Show();
                 }
@@ -341,7 +339,7 @@ namespace TAC_AI.Templates
                             DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as no blocks are present on modified spawning Tech.  Please report this.");
                             return;
                         }
-                        DebugTAC_AI.Log("TACtical_AI:  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
+                        DebugTAC_AI.Log(KickStart.ModID + ":  Tech " + TSP.m_TechToSpawn.Name + " landed in water and was likely not water-capable, naval Tech " + newTech.Name + " was substituted for the spawn instead");
 
                         TSP.m_TechToSpawn = newTech;
                     }
@@ -350,7 +348,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Assert(true, "TACtical_AI:  Attempt to swap sea tech failed!");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ":  Attempt to swap sea tech failed!");
             }
         }
 
@@ -363,7 +361,7 @@ namespace TAC_AI.Templates
             Licences = Singleton.Manager<ManLicenses>.inst;
             if (Licences.IsNull() && ManGameMode.inst.IsCurrentModeCampaign())
             {   // The game tried to enable creative spawns whilist no licences were active!?!?
-                DebugTAC_AI.Log("TACtical_AI: TrySpawnAirborneAIInAir - It's campaign mode but no licences were found?!?");
+                DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAirborneAIInAir - It's campaign mode but no licences were found?!?");
                 return;
             }
 
@@ -418,7 +416,7 @@ namespace TAC_AI.Templates
             }
             if (newAirborneAI == null)
             {
-                //DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Could not spawn airborneAI - Player has no corps unlocked!?!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Could not spawn airborneAI - Player has no corps unlocked!?!");
                 return;
             }
             TrackedAirborneAI newAir = new TrackedAirborneAI(newAirborneAI, IsSpace);
@@ -494,10 +492,9 @@ namespace TAC_AI.Templates
                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Unidentified flying object spotted!</b>");
                 }
                 catch { }
-                DebugTAC_AI.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
+                DebugTAC_AI.Log(KickStart.ModID + ": There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 if (unProvoked)
                 {
-                    RawTechLoader.UseFactionSubTypes = true;
                     if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, snapTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching))
                     {
                         AIWiki.hintAir.Show();
@@ -511,11 +508,10 @@ namespace TAC_AI.Templates
                         return null;
                 }
                 // else we do default spawn
-                RawTechLoader.UseFactionSubTypes = true;
                 return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, finalFaction, BaseTerrain.Air, unProvoked, snapTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
             }
             catch { }
-            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
+            DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionSubTypes.NULL, BaseTerrain.Air, snapTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
 
@@ -572,8 +568,7 @@ namespace TAC_AI.Templates
                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>HUGE unidentified flying object spotted!</b>");
                 }
                 catch { }
-                DebugTAC_AI.Log("TACtical_AI: There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
-                RawTechLoader.UseFactionSubTypes = true;
+                DebugTAC_AI.Log(KickStart.ModID + ": There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, snapTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
                 if (worked)
                 {
@@ -586,7 +581,7 @@ namespace TAC_AI.Templates
                 return tech;
             }
             catch { }
-            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Could not fetch corps, resorting to random spawns");
+            DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             worked = true;
             return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), FactionSubTypes.NULL, BaseTerrain.Space, snapTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
         }
@@ -594,7 +589,7 @@ namespace TAC_AI.Templates
         public static void TrySpawnTraderTroll(Vector3 pos)
         {   // Spawn trader trolls to make bigger techs fight harder
 
-            DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Queued request at " + pos + "!");
+            DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Queued request at " + pos + "!");
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return;
 
@@ -626,7 +621,6 @@ namespace TAC_AI.Templates
                 if (!AIEBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos3))
                     return;
 
-                RawTechLoader.UseFactionSubTypes = true;
                 int licence = Licences.GetLicense(factionSelect).CurrentLevel;
                 if (AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
                 {
@@ -644,7 +638,7 @@ namespace TAC_AI.Templates
                         new HashSet<BasePurpose> { BasePurpose.Defense }, faction: factionSelect,
                         maxGrade: licence,  maxPrice: KickStart.EnemySpawnPriceMatching, isPopulation: true);
 
-                DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+                DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
                 try
                 {
                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
@@ -654,14 +648,13 @@ namespace TAC_AI.Templates
                 return;
             }
             catch { }
-            DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Could not fetch corps, resorting to random spawns");
+            DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Could not fetch corps, resorting to random spawns");
 
             if (!AIEBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos2))
                 return;
-            RawTechLoader.UseFactionSubTypes = true;
             RawTechLoader.SpawnSpecificTechSafe(pos2, Vector3.forward, trollTeam, new HashSet<BasePurpose> { BasePurpose.Defense }, faction: FactionSubTypes.NULL, isPopulation: true);
 
-            DebugTAC_AI.Log("TACtical_AI: TrySpawnTraderTroll - Spawned!");
+            DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
             try
             {
                 Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
@@ -712,7 +705,7 @@ namespace TAC_AI.Templates
                     if (AirPool[step] == null)
                     {
                         AirPool.RemoveAt(step);
-                        DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Removed and recycled a tech from AirPool as it was NULL.");
+                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled a tech from AirPool as it was NULL.");
                         step--;
                         count--;
                         deadairborneAICount++;
@@ -723,7 +716,7 @@ namespace TAC_AI.Templates
                     if (airborneAI.IsNull() || !airborneAI.visible.isActive)
                     {
                         AirPool.RemoveAt(step);
-                        DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it may have despawned.");
+                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it may have despawned.");
                         step--;
                         count--;
                         deadairborneAICount++;
@@ -731,12 +724,12 @@ namespace TAC_AI.Templates
                     else if (airborneAI.IsSleeping)
                     {
                         airborneAI.SetSleeping(false);
-                        DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Awakened " + airborneAI.name + " in AirPool as it froze.");
+                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Awakened " + airborneAI.name + " in AirPool as it froze.");
                     }
                     else if (AIGlobals.IsBaseTeam(airborneAI.Team) && AIGlobals.SceneTechMaxNeedsRemoval(out int remove))
                     {
                         AirPool.RemoveAt(step);
-                        DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as we have bypassed the max tech limit.");
+                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as we have bypassed the max tech limit.");
                         Purge(airborneAI);
                         step--;
                         count--;
@@ -744,7 +737,7 @@ namespace TAC_AI.Templates
                     else if (airborneAI.trans.position.y > AIGlobals.AirNPTMaxHeightOffset + Singleton.playerPos.y)
                     {
                         AirPool.RemoveAt(step);
-                        DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above player distance.");
+                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above player distance.");
                         Purge(airborneAI);
                         step--;
                         count--;
@@ -752,7 +745,7 @@ namespace TAC_AI.Templates
                     else if ((airborneAI.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude > AirDespawnDist * AirDespawnDist)
                     {
                         AirPool.RemoveAt(step);
-                        DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it left AirDespawnDist radius.");
+                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it left AirDespawnDist radius.");
                         Purge(airborneAI);
                         step--;
                         count--;
@@ -760,7 +753,7 @@ namespace TAC_AI.Templates
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Removed and recycled a tech from AirPool as it was errored. " + e);
+                    DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled a tech from AirPool as it was errored. " + e);
                     AirPool.RemoveAt(step);
                     step--;
                     count--;
@@ -768,7 +761,7 @@ namespace TAC_AI.Templates
                 }
             }
             if (deadairborneAICount > 0)
-                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Removed " + deadairborneAICount + " dead airborneAI(s) from AirPool");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Removed " + deadairborneAICount + " dead airborneAI(s) from AirPool");
         }
         private static void DestroyAllPooledAirborneAI(bool onlyPopulation)
         {   // 
@@ -799,7 +792,7 @@ namespace TAC_AI.Templates
                         Purge(airborneAI.tank);
                 }
                 AirPool.Clear();
-                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Destroyed all non-mission pooled airborneAI");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Destroyed all non-mission pooled airborneAI");
             }
         }
         private static void CollectPossibleAirborneAI()
@@ -820,7 +813,7 @@ namespace TAC_AI.Templates
                         }
                         catch
                         {
-                            DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Error on handling enemy airborne AI pool");
+                            DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Error on handling enemy airborne AI pool");
                         }
                     }
                 }
@@ -847,7 +840,7 @@ namespace TAC_AI.Templates
                         float sqrMag = (tank.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude;
                         if (AIGlobals.TechIsSafelyRemoveable(tank))
                         {
-                            DebugTAC_AI.Info("TACtical_AI: SpecialAISpawner - Removed and recycled " + tank.name + 
+                            DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + tank.name + 
                                 " from world as we have bypassed the max tech limit.");
                             Purge(tank);
                             removal--;
@@ -866,7 +859,7 @@ namespace TAC_AI.Templates
                     }
                 }
                 if (removedCount > 0)
-                    DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Removed " + removedCount + " managed Tech(s) from active population");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Removed " + removedCount + " managed Tech(s) from active population");
             }
         }
 
@@ -885,7 +878,7 @@ namespace TAC_AI.Templates
             {
                 tech.m_BlockSpecs.RemoveAt(step);
             }
-            DebugTAC_AI.Log("TACtical_AI: InflictPercentDamage target " + tech.Name + " removed " + (curCount * percent) + "!");
+            DebugTAC_AI.Log(KickStart.ModID + ": InflictPercentDamage target " + tech.Name + " removed " + (curCount * percent) + "!");
         }
 
 
@@ -904,7 +897,7 @@ namespace TAC_AI.Templates
             {
                 if (!PurgeHost(tech.visible.ID, tech.name))
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Purge - Trying to Purge by visible " + tech.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Trying to Purge by visible " + tech.name);
                     tech.visible.RemoveFromGame();
                 }
             }
@@ -917,8 +910,8 @@ namespace TAC_AI.Templates
         internal static bool PurgeHost(int HostID, string name)
         {   // 
             if (!ManNetwork.IsHost)
-                throw new Exception("TACtical_AI: SpecialAISpawner.PurgeHost called on non-host");
-            DebugTAC_AI.Info("TACtical_AI: PurgeHost - Name " + name +  " | " + HostID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
+                throw new Exception(KickStart.ModID + ": SpecialAISpawner.PurgeHost called on non-host");
+            DebugTAC_AI.Info(KickStart.ModID + ": PurgeHost - Name " + name +  " | " + HostID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
             if (ManNetwork.IsNetworked)
             {
                 try
@@ -930,13 +923,13 @@ namespace TAC_AI.Templates
                         m_CheatBypassInventory = true,
                     }
                     );
-                    DebugTAC_AI.Log("TACtical_AI: Purge - PURGED " + name + " (MP)");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name + " (MP)");
                     AIGlobals.SceneTechCount = -1;
                     return true;
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Purge - Failed to purge " + name + " (MP)");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Failed to purge " + name + " (MP)");
                     foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
                     {
                         if (item == null)
@@ -978,7 +971,7 @@ namespace TAC_AI.Templates
                         else
                             DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                     }*/
-                    DebugTAC_AI.Log("TACtical_AI: Purge - Error backtrace - " + e);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Error backtrace - " + e);
                 }
             }
             else
@@ -986,13 +979,13 @@ namespace TAC_AI.Templates
                 try
                 {
                     ManVisible.inst.ObliterateTrackedVisibleFromWorld(HostID);
-                    DebugTAC_AI.Log("TACtical_AI: Purge - PURGED " + name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name);
                     AIGlobals.SceneTechCount = -1;
                     return true;
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Purge - Failed to purge " + name + " (SINGLE player)");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Failed to purge " + name + " (SINGLE player)");
                     foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
                     {
                         if (item == null)
@@ -1034,7 +1027,7 @@ namespace TAC_AI.Templates
                         else
                             DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                     }*/
-                    DebugTAC_AI.Log("TACtical_AI: Purge - Error backtrace - " + e);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Error backtrace - " + e);
                 }
             }
             return false;
@@ -1092,7 +1085,7 @@ namespace TAC_AI.Templates
                 Singleton.Manager<ManPauseGame>.inst.PauseEvent.Subscribe(inst.OnPaused);
                 inst.OnPaused(ManPauseGame.inst.IsPaused);
                 inst.gameObject.SetActive(true);
-                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Activated special enemy spawns");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Activated special enemy spawns");
                 thisActive = true;
             }
             CollectPossibleAirborneAI();
@@ -1107,7 +1100,7 @@ namespace TAC_AI.Templates
                 Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Unsubscribe(PlayerTankDeathCheck);
                 inst.counter = 0;
                 Licences = null;
-                DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Deactivated special enemy spawns");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Deactivated special enemy spawns");
                 thisActive = false;
             }
         }
@@ -1117,7 +1110,7 @@ namespace TAC_AI.Templates
         }
         public void Update()
         {   // 
-            //DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - ACTIVE!!!  time" + counter);
+            //DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - ACTIVE!!!  time" + counter);
             if (Singleton.Manager<ManPop>.inst.IsSpawningEnabled || forceOn)
             {   // determine if we should spawn new one, also manage existing pooled airborneAIs
                 bool doubleSpawnRate = false;
@@ -1128,7 +1121,7 @@ namespace TAC_AI.Templates
                 catch { }
                 if (counter > (AirSpawnInterval / (doubleSpawnRate ? 2 : 1)) / ((KickStart.Difficulty / 100) + 1.5f))
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: SpecialAISpawner - Spawn lerp");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Spawn lerp");
                     if (KickStart.EnableBetterAI && KickStart.enablePainMode && !AIGlobals.AtSceneTechMaxSpawnLimit())
                     {
                         if (KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(0, AirborneSpawnChance) < AirborneAISpawnOdds)
@@ -1192,10 +1185,10 @@ namespace TAC_AI.Templates
                 List<PresetInfo> PIs = (List<PresetInfo>)spawnable.GetValue(item);
                 if (PIs == null)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Found null pool");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Found null pool");
                     continue;
                 }
-                DebugTAC_AI.Log("TACtical_AI: Found 1 pool with " + PIs.Count + " techs(s) in it");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found 1 pool with " + PIs.Count + " techs(s) in it");
                 foreach (var item2 in PIs)
                 {
                     if (item2 == null)

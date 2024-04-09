@@ -31,7 +31,7 @@ namespace TAC_AI
 
 				cached = true;
 
-				//DebugTAC_AI.Log("TACtical_AI: Saved " + name);
+				//DebugTAC_AI.Log(KickStart.ModID + ": Saved " + name);
                 try
                 {
                     Tank tank = transform.root.GetComponent<Tank>();
@@ -44,7 +44,7 @@ namespace TAC_AI
                         help.TryReallyAnchor();
                         if (!tank.IsAnchored)
                         {
-                            DebugTAC_AI.Log("TACtical_AI: Anchor is being stubborn");
+                            DebugTAC_AI.Log(KickStart.ModID + ": Anchor is being stubborn");
                             help.TryReallyAnchor();
                         }
                     }
@@ -52,7 +52,7 @@ namespace TAC_AI
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: fired prematurely");
+                    DebugTAC_AI.Log(KickStart.ModID + ": fired prematurely");
                 }
 			}
 		}
@@ -60,7 +60,7 @@ namespace TAC_AI
 		{   
 			mineOut.SetValue(GetComponent<ModuleItemProducer>(), chunks);
 			minerOp.SetValue(GetComponent<ModuleItemProducer>(), flags);
-			//DebugTAC_AI.Log("TACtical_AI: Loaded " + name);
+			//DebugTAC_AI.Log(KickStart.ModID + ": Loaded " + name);
 			cached = false;
             GetComponent<TankBlock>().UnSubToBlockAttachConnected(LoadNow, null);
             DestroyImmediate(this);

@@ -7,6 +7,8 @@ using UnityEngine;
 using TerraTechETCUtil;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy.EnemyOperations;
+using TAC_AI.Enemy.EnemyOperations;
+using TAC_AI.AI.AlliedOperations;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -81,7 +83,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs < 3)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else
@@ -104,7 +106,7 @@ namespace TAC_AI.AI.Enemy
                             thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                             //thisInst.AttemptedRepairs++;
                         }
-                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else
@@ -116,7 +118,7 @@ namespace TAC_AI.AI.Enemy
                 thisInst.anchorAttempts = 0;
             }
 
-            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
+            //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
                 direct.SetLastDest(mind.sceneStationaryPos);
@@ -142,6 +144,31 @@ namespace TAC_AI.AI.Enemy
                     //The case below I still have to think of a reason for them to do the things
                     case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
                         RScavenger.Scavenge(thisInst, tank, mind, ref direct);
+                        break;
+                    case EnemyAttitude.OnRails:
+                        break;
+                    case EnemyAttitude.Invader:
+                        break;
+                    case EnemyAttitude.Guardian:
+                        RGuardian.MotivateDefend(thisInst, tank, mind, ref direct);
+                        break;
+                    case EnemyAttitude.PartTurret:
+                        // Load, Aim,    FIIIIIRRRRRRRRRRRRRRRRRRRRRRRRRRRE!!!
+                        BMultiTech.MimicDefend(thisInst, thisInst.tank);
+                        BMultiTech.MTStatic(thisInst, thisInst.tank, ref direct);
+                        //EMultiTech.FollowTurretBelow(helper, helper.tank, ref direct);
+                        BMultiTech.BeamLockWithinBounds(thisInst, thisInst.tank); //lock rigidbody with closest non-MT Tech on build beam
+                        break;
+                    case EnemyAttitude.PartStatic:
+                        // Defend and sit like good guard dog
+                        BMultiTech.MimicDefend(thisInst, thisInst.tank);
+                        BMultiTech.MTStatic(thisInst, thisInst.tank, ref direct);
+                        BMultiTech.BeamLockWithinBounds(thisInst, thisInst.tank); //lock rigidbody with closest non-MT Tech on build beam
+                        break;
+                    case EnemyAttitude.PartMimic:
+                        BMultiTech.MimicAllClosestAlly(thisInst, thisInst.tank, ref direct);
+                        break;
+                    default:
                         break;
                 }
             }

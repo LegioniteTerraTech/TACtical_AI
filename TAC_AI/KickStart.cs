@@ -53,6 +53,8 @@ namespace TAC_AI
         public static int ModeSelectKeySav = (int)ModeSelect;//
         //internal static bool testEnemyAI = true; // OBSOLETE
 
+        public static float TerrainHeight = ManWorld.inst.TileSize;
+
         internal static int EnemyTeamTechLimit = 6;// Allow the bases plus 6 additional capacity of the AIs' choosing
 
         public static float SavedDefaultEnemyFragility;
@@ -95,6 +97,17 @@ namespace TAC_AI
 #else
         public static bool EnableBetterAI = true;
 #endif
+        internal static bool AutopilotPlayer
+        {
+            get
+            {
+                if (ManPlayerRTS.PlayerIsInRTS)
+                    return AllowStrategicAI && AutopilotPlayerRTS;
+                return AutopilotPlayerMain;
+            }
+        }
+        internal static bool AutopilotPlayerMain = false;
+        internal static bool AutopilotPlayerRTS = false;
 
         /// <summary>
         /// For handing Directors
@@ -226,7 +239,7 @@ namespace TAC_AI
             string focused = GUI.GetNameOfFocusedControl();
             if (Name == null)
             {
-                DebugTAC_AI.Info("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
+                DebugTAC_AI.Info(KickStart.ModID + ": GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
                 GUI.FocusControl(null);
                 GUI.UnfocusWindow();
                 GUIUtility.hotControl = 0;
@@ -235,7 +248,7 @@ namespace TAC_AI
             {
                 if (focused == Name)
                 {
-                    DebugTAC_AI.Info("TACtical_AI: GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
+                    DebugTAC_AI.Info(KickStart.ModID + ": GUI - Releasing control of " + (focused.NullOrEmpty() ? "unnamed" : focused));
                     GUI.FocusControl(null);
                     GUI.UnfocusWindow();
                     GUIUtility.hotControl = 0;
@@ -255,7 +268,7 @@ namespace TAC_AI
         {
             get
             {
-                float outValue = -100;
+                float outValue = -9001;
                 try
                 {
                     if (isWaterModPresent)
@@ -305,62 +318,62 @@ namespace TAC_AI
 
             if (LookForMod("RandomAdditions"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found RandomAdditions!  Enabling advanced AI for parts!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found RandomAdditions!  Enabling advanced AI for parts!");
                 IsRandomAdditionsPresent = true;
             }
             else IsRandomAdditionsPresent = false;
 
             if (LookForMod("WaterMod"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found Water Mod!  Enabling water-related features!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found Water Mod!  Enabling water-related features!");
                 isWaterModPresent = true;
             }
             else isWaterModPresent = false;
 
             if (LookForMod("Control Block"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Control Blocks!  Letting RawTech loader override unassigned swivels to auto-target!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Control Blocks!  Letting RawTech loader override unassigned swivels to auto-target!");
                 isControlBlocksPresent = true;
             }
             else isControlBlocksPresent = false;
 
             if (LookForMod("WeaponAimMod"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found WeaponAimMod!  Halting aim-related changes and letting WeaponAimMod take over!");
                 isWeaponAimModPresent = true;
             }
             else isWeaponAimModPresent = false;
 
             if (LookForMod("TweakTech"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found TweakTech!  Applying changes to AI!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found TweakTech!  Applying changes to AI!");
                 isTweakTechPresent = true;
             }
             else isTweakTechPresent = false;
             /*
             if (LookForMod("TougherEnemies"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found Tougher Enemies!  MAKING THE PAIN REAL!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found Tougher Enemies!  MAKING THE PAIN REAL!");
                 isTougherEnemiesPresent = true;
             }*/
 
             if (LookForMod("BlockInjector"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found Block Injector!  Setting up modded base support!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found Block Injector!  Setting up modded base support!");
                 isBlockInjectorPresent = true;
             }
             else isBlockInjectorPresent = false;
 
             if (LookForMod("PopulationInjector"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found Population Injector!  Holding off on using built-in spawning system!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found Population Injector!  Holding off on using built-in spawning system!");
                 isPopInjectorPresent = true;
             }
             else isPopInjectorPresent = false;
 
             if (LookForMod("AnimeAI"))
             {
-                DebugTAC_AI.Log("TACtical_AI: Found Anime AI!  Hooking into commentary system and actions!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Found Anime AI!  Hooking into commentary system and actions!");
                 isAnimeAIPresent = true;
             }
             else isAnimeAIPresent = false;
@@ -369,7 +382,7 @@ namespace TAC_AI
 
         public static void PatchMod()
         {
-            DebugTAC_AI.Log("TACtical_AI: Patch Call");
+            DebugTAC_AI.Log(KickStart.ModID + ": Patch Call");
             if (!hasPatched)
             {
                 try
@@ -384,12 +397,12 @@ namespace TAC_AI
                         DebugTAC_AI.ErrorReport("Error on patching ModulePatches");
 
                     harmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
-                    DebugTAC_AI.Log("TACtical_AI: Patched");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Patched");
                     hasPatched = true;
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on patch");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on patch");
                     DebugTAC_AI.Log(e);
                     DebugTAC_AI.ErrorReport("Error on patching base game");
                 }
@@ -401,12 +414,12 @@ namespace TAC_AI
             try
             {
                 Assembly assemble = Assembly.GetExecutingAssembly();
-                DebugTAC_AI.Log("TACtical_AI: DLL is " + assemble.GetName());
+                DebugTAC_AI.Log(KickStart.ModID + ": DLL is " + assemble.GetName());
                 ManSafeSaves.RegisterSaveSystem(assemble, OnSaveManagers, OnLoadManagers);
                 HasHookedUpToSafeSaves = true;
             }
             catch { 
-                DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem");
+                DebugTAC_AI.Log(KickStart.ModID + ": Error on RegisterSaveSystem");
                 DebugTAC_AI.ErrorReport("Error on hooking to SafeSaves");
             }
         }
@@ -415,13 +428,13 @@ namespace TAC_AI
         {
             //Where the fun begins
 #if STEAM
-            DebugTAC_AI.Log("TACtical_AI: MAIN (Steam Workshop Version) startup");
+            DebugTAC_AI.Log(KickStart.ModID + ": MAIN (Steam Workshop Version) startup");
             if (!VALIDATE_MODS())
             {
                 return;
             }
 #else
-            DebugTAC_AI.Log("TACtical_AI: Startup was invoked by TTSMM!  Set-up to handle LATE initialization.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Startup was invoked by TTSMM!  Set-up to handle LATE initialization.");
 #endif
             //throw new NullReferenceException("CrashHandle");
 
@@ -475,7 +488,7 @@ namespace TAC_AI
         public static IEnumerable<float> MainOfficialInitIterate()
         {
             //Where the fun begins
-            DebugTAC_AI.Log("TACtical_AI: MAIN [ITERATOR] (Steam Workshop Version) startup");
+            DebugTAC_AI.Log(KickStart.ModID + ": MAIN [ITERATOR] (Steam Workshop Version) startup");
             if (!VALIDATE_MODS())
             {
                 yield return 1f;
@@ -543,7 +556,7 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on Option & Config setup");
                     DebugTAC_AI.Log(e);
                     DebugTAC_AI.ErrorReport("Error on hooks with ConfigHelper/NativeOptions");
                 }
@@ -556,7 +569,7 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on NativeOptions setup");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on NativeOptions setup");
                     DebugTAC_AI.Log(e);
                     DebugTAC_AI.ErrorReport("Error on hooks with NativeOptions");
                 }
@@ -569,7 +582,7 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on ConfigHelper setup");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on ConfigHelper setup");
                     DebugTAC_AI.Log(e);
                     DebugTAC_AI.ErrorReport("Error on hooks with ConfigHelper");
                 }
@@ -590,7 +603,7 @@ namespace TAC_AI
         {
             ManGameMode.inst.ModeSwitchEvent.Unsubscribe(OnModeSwitch);
             float timeStart = Time.realtimeSinceStartup;
-            DebugTAC_AI.Log("TAC_AI: Doing mod DeInit. Garbage Cleanup... current " + GC.GetTotalMemory(false));
+            DebugTAC_AI.Log(KickStart.ModID + ": Doing mod DeInit. Garbage Cleanup... current " + GC.GetTotalMemory(false));
             EnableBetterAI = false;
             if (hasPatched)
             {
@@ -613,7 +626,7 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on un-patch");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on un-patch");
                     DebugTAC_AI.Log(e);
                 }
             }
@@ -636,15 +649,15 @@ namespace TAC_AI
             catch { }
             GC.Collect();
             GC.WaitForPendingFinalizers();
-            DebugTAC_AI.Log("TAC_AI: Garbage Cleanup finished with " + GC.GetTotalMemory(false) + " remaining.");
-            DebugTAC_AI.Log("TAC_AI: Operation took " + (Time.realtimeSinceStartup - timeStart) + " seconds.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Garbage Cleanup finished with " + GC.GetTotalMemory(false) + " remaining.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Operation took " + (Time.realtimeSinceStartup - timeStart) + " seconds.");
         }
 
 #else
         public static void Main()
         {
             //Where the fun begins
-            DebugTAC_AI.Log("TACtical_AI: MAIN (TTMM Version) startup");
+            DebugTAC_AI.Log(KickStart.ModID + ": MAIN (TTMM Version) startup");
             if (!VALIDATE_MODS())
                 return;
             //Initiate the madness
@@ -680,7 +693,7 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on Option & Config setup");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on Option & Config setup");
                     DebugTAC_AI.Log(e);
                 }
             }
@@ -688,7 +701,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on TTMM Init setup - there are missing dependancies!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on TTMM Init setup - there are missing dependancies!");
                     DebugTAC_AI.FatalError("Make sure you have installed SafeSaves (and RandomAdditions if it crashes again on start) in TTMM.");
                 }
                 catch { };
@@ -700,7 +713,7 @@ namespace TAC_AI
 
         public static void DelayedBaseLoader()
         {
-            DebugTAC_AI.Log("TACtical_AI: LAUNCHED MODDED BLOCKS BASE VALIDATOR");
+            DebugTAC_AI.Log(KickStart.ModID + ": LAUNCHED MODDED BLOCKS BASE VALIDATOR");
             BlockIndexer.ConstructBlockLookupList();
             TempManager.ValidateAllStringTechs();
             DebugRawTechSpawner.Initiate();
@@ -753,7 +766,7 @@ namespace TAC_AI
                     ManSafeSaves.RegisterSaveSystem(Assembly.GetExecutingAssembly());
                     HasHookedUpToSafeSaves = true;
                 }
-                catch { DebugTAC_AI.Log("TACtical_AI: Error on RegisterSaveSystem"); }
+                catch { DebugTAC_AI.Log(KickStart.ModID + ": Error on RegisterSaveSystem"); }
             }
         }
 
@@ -1202,178 +1215,6 @@ namespace TAC_AI
             PushExtModOptionsHandling();
             if (thisModConfig != null)
                 NativeOptionsMod.onOptionsSaved.AddListener(() => { thisModConfig.WriteConfigJsonFile(); });
-        }
-    }
-    public static class TankExtentions
-    {
-        public static bool IsTeamFounder(this TechData tank)
-        {
-            if (tank == null)
-            {
-                DebugTAC_AI.LogError("TACtical_AI: IsTeamFounder - CALLED ON NULL OBJECT");
-                return false;
-            }
-            return tank.Name.Contains('Ω') || tank.Name.Contains('⦲');
-        }
-        public static bool IsTeamFounder(this Tank tank)
-        {
-            if (!tank)
-            {
-                DebugTAC_AI.LogError("TACtical_AI: IsTeamFounder - CALLED ON NULL OBJECT");
-                return false;
-            }
-            return tank.name.Contains('Ω') || tank.name.Contains('⦲');
-        }
-        public static bool IsBase(this TechData tank)
-        {
-            if (tank == null)
-            {
-                DebugTAC_AI.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
-                return false;
-            }
-            return tank.CheckIsAnchored() || tank.Name.Contains('¥') || tank.Name.Contains(RawTechLoader.turretChar);
-        }
-        public static bool IsBase(this Tank tank)
-        {
-            if (!tank)
-            {
-                DebugTAC_AI.LogError("TACtical_AI: IsBase - CALLED ON NULL OBJECT");
-                return false;
-            }
-            return tank.IsAnchored || tank.name.Contains('¥') || tank.name.Contains(RawTechLoader.turretChar);
-        }
-        public static TankAIHelper GetHelperInsured(this Tank tank)
-        {
-            TankAIHelper help = tank.GetComponent<TankAIHelper>();
-            if (!help)
-            {
-                help = tank.gameObject.AddComponent<TankAIHelper>().Subscribe();
-            }
-            return help;
-        }
-        public static float GetCheapBounds(this Visible vis)
-        {
-            if (!vis)
-            {
-                DebugTAC_AI.LogError("TACtical_AI: GetCheapBounds - CALLED ON NULL OBJECT");
-                return 1;
-            }
-            if (!vis.tank)
-                return vis.Radius;
-            TankAIHelper help = vis.GetComponent<TankAIHelper>();
-            if (!help)
-            {
-                help = vis.gameObject.AddComponent<TankAIHelper>().Subscribe();
-            }
-            return help.lastTechExtents;
-        }
-        public static float GetCheapBounds(this Tank tank)
-        {
-            return tank.GetHelperInsured().lastTechExtents;
-        }
-        private static List<FactionSubTypes> toSortCache = new List<FactionSubTypes>();
-        public static FactionSubTypes GetMainCorp(this Tank tank)
-        {
-            try
-            {
-                foreach (TankBlock BlocS in tank.blockman.IterateBlocks())
-                {
-                    toSortCache.Add(ManSpawn.inst.GetCorporation(BlocS.BlockType));
-                }
-                toSortCache = SortCorps(toSortCache);
-                FactionSubTypes final = toSortCache.FirstOrDefault();
-                //DebugTAC_AI.Log("TACtical_AI: GetMainCorpExt - Selected " + final + " for main corp")
-                return final;//(FactionSubTypes)tank.GetMainCorporations().FirstOrDefault();
-            }
-            finally
-            {
-                toSortCache.Clear();
-            }
-        }
-        public static FactionSubTypes GetMainCorp(this TechData tank)
-        {
-            try
-            {
-                foreach (TankPreset.BlockSpec BlocS in tank.m_BlockSpecs)
-                {
-                    toSortCache.Add(ManSpawn.inst.GetCorporation(BlocS.m_BlockType));
-                }
-                toSortCache = SortCorps(toSortCache);
-                var first = toSortCache.FirstOrDefault();
-                return first;//(FactionSubTypes)tank.GetMainCorporations().FirstOrDefault();
-            }
-            finally
-            {
-                toSortCache.Clear();
-            }
-        }
-
-        private static List<KeyValuePair<int, FactionSubTypes>> sorter = new List<KeyValuePair<int, FactionSubTypes>>();
-        private static List<FactionSubTypes> distinct = new List<FactionSubTypes>();
-        private static List<FactionSubTypes> SortCorps(List<FactionSubTypes> unsorted)
-        {
-            foreach (FactionSubTypes FTE in unsorted.Distinct())
-            {
-                int countOut = unsorted.Count(delegate (FactionSubTypes cand) { return cand == FTE; });
-                sorter.Add(new KeyValuePair<int, FactionSubTypes>(countOut, FTE));
-            }
-            distinct.Clear();
-            foreach (KeyValuePair<int, FactionSubTypes> intBT in sorter.OrderByDescending(x => x.Key))
-            {
-                distinct.Add(intBT.Value);
-            }
-            sorter.Clear();
-            return distinct;
-        }
-
-        private const ModuleItemHolder.AcceptFlags flagB = ModuleItemHolder.AcceptFlags.Blocks;
-        internal static bool BlockLoaded(this ModuleItemHolder MIH)
-        {
-            ModuleItemHolderMagnet mag = MIH.GetComponent<ModuleItemHolderMagnet>();
-            if (mag)
-            {
-                if (!mag.IsOperating)
-                    return false;
-            }
-            else
-            {
-                if (!MIH.IsEmpty && MIH.Acceptance == flagB && MIH.IsFlag(ModuleItemHolder.Flags.Collector))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-        internal static bool BlockNotFullAndAvail(this ModuleItemHolder MIH)
-        {
-            ModuleItemHolderMagnet mag = MIH.GetComponent<ModuleItemHolderMagnet>();
-            if (MIH.GetComponent<ModuleItemHolderMagnet>())
-            {
-                if (!mag.IsOperating)
-                    return false;
-
-            }
-            else
-            {
-                if (!MIH.IsFull && MIH.Acceptance == flagB && MIH.IsFlag(ModuleItemHolder.Flags.Collector))
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-
-        private static readonly List<BlockManager.BlockAttachment> tempCache = new List<BlockManager.BlockAttachment>(64);
-        internal static bool CanAttachBlock(this Tank tank, TankBlock TB, IntVector3 posOnTechGrid, OrthoRotation rotOnTech)
-        {
-            if (tank.blockman.blockCount != 0)
-            {
-                tempCache.Clear();
-                tank.blockman.TryGetBlockAttachments(TB, posOnTechGrid, rotOnTech, tempCache);
-                return tempCache.Count != 0;
-            }
-            return false;
         }
     }
     public static class VectorExtentions

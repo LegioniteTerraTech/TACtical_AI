@@ -579,7 +579,7 @@ namespace TAC_AI.AI
             {
                 return;
             }
-            DebugTAC_AI.Log("TACtical_AI: Opened Eviction menu!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Opened Eviction menu!");
             isCurrentlyOpen = true;
             xMenu = Mathf.Clamp(xMenu, 0, Display.main.renderingWidth - HotWindow.width);
             yMenu = Mathf.Clamp(yMenu, 0, Display.main.renderingHeight - HotWindow.height);
@@ -596,7 +596,7 @@ namespace TAC_AI.AI
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
-                DebugTAC_AI.Log("TACtical_AI: Closed AI menu!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Closed AI menu!");
             }
         }
 

@@ -30,7 +30,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
             if (dist > 6)
             {
-                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  HOLDING GROUND (or space)!!!");
                 direct.DriveDest = EDriveDest.ToLastDestination;
                 direct.DriveDir = EDriveFacing.Forwards;
                 direct.SetLastDest(mind.sceneStationaryPos);

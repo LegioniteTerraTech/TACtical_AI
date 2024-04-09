@@ -18,16 +18,16 @@ namespace TAC_AI.AI.Movement.AICores
             this.controller.WaterPathing = WaterPathing.AllowWater;
             this.tank = tank;
             controller.Helper.GroundOffsetHeight = controller.Helper.lastTechExtents + AIGlobals.GroundOffsetGeneralAir;
-            //DebugTAC_AI.Info("TACtical_AI: SpaceAICore - Init");
+            //DebugTAC_AI.Info(KickStart.ModID + ": SpaceAICore - Init");
 
             if (controller.Helper.Allied && controller.Helper.AutoAnchor)
             {
                 if (tank.IsAnchored && !controller.Helper.PlayerAllowAutoAnchoring)
-                    DebugTAC_AI.Log("TACtical_AI: SpaceAICore - Should NOT be active when anchored UNLESS we have autoAnchor! StaticAICore should be in control!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpaceAICore - Should NOT be active when anchored UNLESS we have autoAnchor! StaticAICore should be in control!");
             }
             else if (tank.IsAnchored)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpaceAICore - Should NOT be active when anchored UNLESS we have autoAnchor! StaticAICore should be in control!");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpaceAICore - Should NOT be active when anchored UNLESS we have autoAnchor! StaticAICore should be in control!");
             }
         }
 
@@ -228,7 +228,7 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
-            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
+            // DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " normal drive was called");
             float driveMulti = 1;
 
             //AI Steering Rotational
@@ -256,7 +256,7 @@ namespace TAC_AI.AI.Movement.AICores
 
                 turnVal.y = 0;
 
-                //DebugTAC_AI.Log("TACtical_AI: TurnVal UP " + turnVal);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurnVal UP " + turnVal);
             }
             else
             {   //for special cases we want to angle at the enemy
@@ -268,7 +268,7 @@ namespace TAC_AI.AI.Movement.AICores
                 Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
                 if (thisInst.Navi3DUp == Vector3.up)
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: Forwards");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Forwards");
                     if (!thisInst.FullMelee && Vector3.Dot(thisInst.Navi3DDirect, tank.rootBlockTrans.forward) < 0.6f)
                     {
                         //If overtilt then try get back upright again
@@ -301,11 +301,11 @@ namespace TAC_AI.AI.Movement.AICores
                             turnVal.z = -((turnVal.z - 360) / 180);
                         else
                             turnVal.z = -(turnVal.z / 180);
-                        //DebugTAC_AI.Log("TACtical_AI: Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
                     }
                     else
                     {
-                        //DebugTAC_AI.Log("TACtical_AI: Broadside Z-tilt active");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Broadside Z-tilt active");
                         if (turnVal.z > 180)
                             turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / 60), -1, 1);
                         else
@@ -324,7 +324,7 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                     turnVal.y = Mathf.Clamp(-(turnVal.y / 60), -1, 1);
 
-                //DebugTAC_AI.Log("TACtical_AI: TurnVal AIM " + turnVal);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurnVal AIM " + turnVal);
             }
 
             thisInst.Navi3DDirect = Vector3.zero;
@@ -355,13 +355,13 @@ namespace TAC_AI.AI.Movement.AICores
                             {
                                 thisInst.Navi3DDirect = Vector3.Cross(Vector3.up, (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
                                 thisInst.Navi3DUp = Vector3.Cross((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, thisInst.Navi3DDirect).normalized;
-                                //DebugTAC_AI.Log("TACtical_AI: Broadside Left A  up is " + thisInst.Navi3DUp);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Broadside Left A  up is " + thisInst.Navi3DUp);
                             }
                             else
                             {
                                 thisInst.Navi3DDirect = Vector3.Cross((thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, Vector3.up).normalized;
                                 thisInst.Navi3DUp = Vector3.Cross(thisInst.Navi3DDirect, (thisInst.lastEnemy.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
-                                //DebugTAC_AI.Log("TACtical_AI: Broadside Right A  up is " + thisInst.Navi3DUp);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Broadside Right A  up is " + thisInst.Navi3DUp);
                             }
                         }
                         else
@@ -403,13 +403,13 @@ namespace TAC_AI.AI.Movement.AICores
                             {
                                 thisInst.Navi3DDirect = Vector3.Cross(Vector3.up, (thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
                                 thisInst.Navi3DUp = Vector3.Cross((thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, thisInst.Navi3DDirect).normalized;
-                                //DebugTAC_AI.Log("TACtical_AI: Broadside Left  up is " + thisInst.Navi3DUp);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Broadside Left  up is " + thisInst.Navi3DUp);
                             }
                             else
                             {
                                 thisInst.Navi3DDirect = Vector3.Cross((thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized, Vector3.up).normalized;
                                 thisInst.Navi3DUp = Vector3.Cross(thisInst.Navi3DDirect, (thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized).normalized;
-                                //DebugTAC_AI.Log("TACtical_AI: Broadside Right  up is " + thisInst.Navi3DUp);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Broadside Right  up is " + thisInst.Navi3DUp);
                             }
                         }
                         else
@@ -465,12 +465,12 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             Vector3 driveVal;
-            //DebugTAC_AI.Log("TACtical_AI: VehicleAICore for " + tank.name + " | " + thisInst.GetCoreControlString());
+            //DebugTAC_AI.Log(KickStart.ModID + ": VehicleAICore for " + tank.name + " | " + thisInst.GetCoreControlString());
             if (thisInst.AdviseAwayCore)
             {   //Move from target
                 if (thisInst.lastEnemyGet.IsNotNull() && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: REVEREEE");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": REVEREEE");
                     driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(InvertHorizontalPlane(distDiff.normalized)));
 
                     if (!CloseToGroundWarning)
@@ -487,7 +487,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            //DebugTAC_AI.Log("TACtical_AI: leveling");
+                            //DebugTAC_AI.Log(KickStart.ModID + ": leveling");
                             float enemyOffsetH = thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck.y + thisInst.lastEnemyGet.tank.GetCheapBounds() + thisInst.GroundOffsetHeight;
                             float leveler = Mathf.Clamp((enemyOffsetH - tank.boundsCentreWorldNoCheck.y) / 6, -1, 1);
                             if (leveler > -1f)
@@ -499,7 +499,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: REVEREEE2");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": REVEREEE2");
                     driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(InvertHorizontalPlane(distDiff.normalized)));
                 }
             }
@@ -507,7 +507,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 if (thisInst.lastEnemyGet.IsNotNull() && !thisInst.IsMultiTech && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
                 {   //level alt with enemy
-                    //DebugTAC_AI.Log("TACtical_AI: FWD");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": FWD");
                     driveVal = InertiaTranslation(tank.rootBlockTrans.InverseTransformVector(distDiff));
                     if (!CloseToGroundWarning)
                     {
@@ -534,7 +534,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: FWD2");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": FWD2");
                     float range = thisInst.lastOperatorRange;
                     if (range < thisInst.MinimumRad - 1)
                     {

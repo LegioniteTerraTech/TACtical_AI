@@ -69,7 +69,6 @@ namespace TAC_AI.Templates
         private static Rect HotWindow = new Rect(0, 0, 200, 230);   // the "window"
         public static bool isOpen;
         public static bool pendingInGameReload;
-        public static string up = "\\";
 
         public static bool ExportJSONInsteadOfRAWTECH = false;
 
@@ -96,6 +95,15 @@ namespace TAC_AI.Templates
         // GUI
         private const int RawTechExporterID = 846321;
         internal static Sprite GuardAIIcon;
+
+        static void AddHooksToActiveGameInterop()
+        {
+            ActiveGameInterop.OnRecieve.Add("RetreiveTechPop", (string x) =>
+            {
+                ActiveGameInterop.TryTransmit("RetreiveTechPop", Path.Combine(RawTechsDirectory,
+                    "Bundled", "RawTechs.RTList"));
+            });
+        }
         public static void Initiate()
         {
             if (inst)
@@ -107,7 +115,8 @@ namespace TAC_AI.Templates
             // Steam does not support RawTech loading the same way as Unofficial.
             if (!firstInit)
             {
-                SetupWorkingDirectoriesSteam(); 
+                SetupWorkingDirectoriesSteam();
+                AddHooksToActiveGameInterop();
                 GUIWindow = new GameObject();
                 GUIWindow.AddComponent<GUIRawDisplay>();
                 GUIWindow.SetActive(false);
@@ -137,7 +146,10 @@ namespace TAC_AI.Templates
                     {EnemySmarts.IntAIligent,  LoadSprite("E_Intel.png") },
                 };
                 firstInit = true;
-                DebugTAC_AI.Log("TACtical_AI: FirstInit RawTechExporter");
+                DebugTAC_AI.Log(KickStart.ModID + ": FirstInit RawTechExporter");
+                TankAIManager.toggleAuto = new ManToolbar.ToolbarToggle("Autopilot", aiIconsEnemy[EnemySmarts.Meh],
+                    TankAIManager.TogglePlayerAutopilot);
+                    //new AbilityToggle("Autopilot", aiIconsEnemy[EnemySmarts.IntAIligent], TankAIManager.TogglePlayerAutopilot, 0.2f);
             }
             inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
             inst.Invoke("LateInitiate", 0.001f);
@@ -188,7 +200,7 @@ namespace TAC_AI.Templates
             if (!inst)
                 return;
             ManPauseGame.inst.PauseEvent.Unsubscribe(inst.UpdatePauseStatus);
-            DebugTAC_AI.Log("TACtical_AI: RawTechExporter - Unsubscribing from Pause Screen");
+            DebugTAC_AI.Log(KickStart.ModID + ": RawTechExporter - Unsubscribing from Pause Screen");
             isSubbed = false;
             Destroy(inst.gameObject);
             inst = null;
@@ -201,7 +213,7 @@ namespace TAC_AI.Templates
             if (!inst || isSubbed)
                 return;
             ManPauseGame.inst.PauseEvent.Subscribe(inst.UpdatePauseStatus);
-            DebugTAC_AI.Log("TACtical_AI: RawTechExporter - Subscribing to Pause Screen");
+            DebugTAC_AI.Log(KickStart.ModID + ": RawTechExporter - Subscribing to Pause Screen");
             if (KickStart.isBlockInjectorPresent)
                 BlockIndexer.ConstructModdedIDList();
             isSubbed = true;
@@ -242,40 +254,40 @@ namespace TAC_AI.Templates
         public void ReloadRawTechLoaderInsured()
         {
             float timeDelay = Time.time;
-            DebugTAC_AI.Log("TACtical_AI: Rebuilding Raw Tech Loader!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Rebuilding Raw Tech Loader!");
             BlockIndexer.ConstructBlockLookupList();
             TempManager.ValidateAndAddAllExternalTechs(true);
             timeDelay = Time.time - timeDelay;
-            DebugTAC_AI.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+            DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
         }
         public void ReloadRawTechLoader()
         {
             float timeDelay = Time.time;
-            DebugTAC_AI.Log("TACtical_AI: Rebuilding Raw Tech Loader!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Rebuilding Raw Tech Loader!");
             BlockIndexer.ConstructBlockLookupList();
             TempManager.ValidateAndAddAllExternalTechs(true);
             timeDelay = Time.time - timeDelay;
-            DebugTAC_AI.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+            DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
         }
         public static void Reload()
         {
             if (pendingInGameReload)
             {
                 float timeDelay = Time.time;
-                DebugTAC_AI.Log("TACtical_AI: Reloading All Raw Enemy Techs (Ingame)!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Reloading All Raw Enemy Techs (Ingame)!");
                 TempManager.ValidateAndAddAllExternalTechs(true);
                 timeDelay = Time.time - timeDelay;
-                DebugTAC_AI.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+                DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
                 pendingInGameReload = false;
             }
         }
         public static void ReloadExternal()
         {
             float timeDelay = Time.time;
-            DebugTAC_AI.Log("TACtical_AI: Reloading All Raw Enemy Techs!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Reloading All Raw Enemy Techs!");
             TempManager.ValidateAndAddAllExternalTechs();
             timeDelay = Time.time - timeDelay;
-            DebugTAC_AI.Log("TACtical_AI: Done in " + timeDelay + " seconds");
+            DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
             pendingInGameReload = false;
         }
         
@@ -326,11 +338,11 @@ namespace TAC_AI.Templates
         {
             if (Singleton.playerTank.IsNull() || !KickStart.EnableBetterAI)
             {
-                //DebugTAC_AI.Log("TACtical_AI: TANK IS NULL!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": TANK IS NULL!");
                 CloseSubMenu();
                 return;
             }
-            //DebugTAC_AI.Log("TACtical_AI: Opened RawJSON menu");
+            //DebugTAC_AI.Log(KickStart.ModID + ": Opened RawJSON menu");
             isOpen = true;
             GUIWindow.SetActive(true);
         }
@@ -341,7 +353,7 @@ namespace TAC_AI.Templates
                 isOpen = false;
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
-                //DebugTAC_AI.Log("TACtical_AI: Closed RawJSON menu");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Closed RawJSON menu");
             }
         }
 
@@ -355,10 +367,10 @@ namespace TAC_AI.Templates
             di = di.Parent; // out of the DLL folder
             di = di.Parent; // out of QMods
             BaseDirectory = di.ToString();
-            RawTechsDirectory = di.ToString() + up + "Raw Techs";
+            RawTechsDirectory = Path.Combine(di.ToString(), "Raw Techs");
 #if DEBUG
-            DebugTAC_AI.Log("TACtical_AI: DLL folder is at: " + DLLDirectory);
-            DebugTAC_AI.Log("TACtical_AI: Raw Techs is at: " + RawTechsDirectory);
+            DebugTAC_AI.Log(KickStart.ModID + ": DLL folder is at: " + DLLDirectory);
+            DebugTAC_AI.Log(KickStart.ModID + ": Raw Techs is at: " + RawTechsDirectory);
 #endif
             ValidateEnemyFolder();
         }
@@ -371,7 +383,7 @@ namespace TAC_AI.Templates
             DirectoryInfo Navi = new DirectoryInfo(Application.dataPath);
             Navi = Navi.Parent; // out of the GAME folder
             BaseDirectory = Navi.ToString();
-            RawTechsDirectory = Navi.ToString() + up + "Raw Techs";
+            RawTechsDirectory = Path.Combine(Navi.ToString(), "Raw Techs");
 
             ValidateEnemyFolder();
         }
@@ -384,14 +396,14 @@ namespace TAC_AI.Templates
             int count = 0;
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
-            DebugTAC_AI.LogDevOnly("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            DebugTAC_AI.LogDevOnly(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
                 try
                 {
                     string GO;
                     string fileName = "RawTechs.RTList";
-                    GO = directoryLoc + up + fileName;
+                    GO = Path.Combine(directoryLoc, fileName);
                     if (File.Exists(GO))
                     {
                         count++;
@@ -430,10 +442,10 @@ namespace TAC_AI.Templates
         internal static string LoadCommunityDeployedTechs(string location)
         {
             string toAdd = "";
-            //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
             try
             {
-                //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - looked in " + GO);
                 if (File.Exists(location))
                 {
                     using (FileStream FS = File.Open(location, FileMode.Open, FileAccess.Read))
@@ -449,11 +461,11 @@ namespace TAC_AI.Templates
                 }
             }
             catch (Exception e)
-            { DebugTAC_AI.Log("TACtical_AI: LoadCommunityDeployedTechs - ERROR " + e);}
+            { DebugTAC_AI.Log(KickStart.ModID + ": LoadCommunityDeployedTechs - ERROR " + e);}
             if (!toAdd.NullOrEmpty())
-                DebugTAC_AI.Log("TACtical_AI: LoadCommunityDeployedTechs - Added Techs");
+                DebugTAC_AI.Log(KickStart.ModID + ": LoadCommunityDeployedTechs - Added Techs");
             else
-                DebugTAC_AI.Log("TACtical_AI: LoadCommunityDeployedTechs - No bundled techs found");
+                DebugTAC_AI.Log(KickStart.ModID + ": LoadCommunityDeployedTechs - No bundled techs found");
             return toAdd;
         }
 
@@ -463,14 +475,14 @@ namespace TAC_AI.Templates
             List<RawTechTemplate> toAdd = new List<RawTechTemplate>();
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
-            //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - searching in " + location);
+            //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
                 try
                 {
                     string fileName = "RawTechs.RTList";
-                    string GO = directoryLoc + up + fileName;
-                    //DebugTAC_AI.Log("TACtical_AI: RegisterExternalCorpTechs - looked in " + GO);
+                    string GO = Path.Combine(directoryLoc, fileName);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - looked in " + GO);
                     if (File.Exists(GO))
                     {
                         using (FileStream FS = File.Open(GO, FileMode.Open, FileAccess.Read))
@@ -486,12 +498,12 @@ namespace TAC_AI.Templates
                         }
                     }
                 }
-                catch (Exception e) { DebugTAC_AI.Log("TACtical_AI: LoadAllEnemyTechsExternalMods - ERROR " + e); }
+                catch (Exception e) { DebugTAC_AI.Log(KickStart.ModID + ": LoadAllEnemyTechsExternalMods - ERROR " + e); }
             }
             if (toAdd.Count > 0)
-                DebugTAC_AI.Log("TACtical_AI: LoadAllEnemyTechsExternalMods - Added " + toAdd.Count + " techs from mods");
+                DebugTAC_AI.Log(KickStart.ModID + ": LoadAllEnemyTechsExternalMods - Added " + toAdd.Count + " techs from mods");
             else
-                DebugTAC_AI.Log("TACtical_AI: LoadAllEnemyTechsExternalMods - No bundled techs found");
+                DebugTAC_AI.Log(KickStart.ModID + ": LoadAllEnemyTechsExternalMods - No bundled techs found");
             return toAdd;
 #else
             return new List<BaseTemplate>();
@@ -500,14 +512,14 @@ namespace TAC_AI.Templates
         public static List<RawTechTemplate> LoadAllEnemyTechs()
         {
             ValidateEnemyFolder();
-            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
+            List<string> Dirs = GetALLDirectoriesInFolder(Path.Combine(RawTechsDirectory, "Enemies"));
             List<RawTechTemplate> temps = new List<RawTechTemplate>();
             List<string> names;
-            DebugTAC_AI.Log("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
+            DebugTAC_AI.Log(KickStart.ModID + ": LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
             foreach (string Dir in Dirs)
             {
                 names = GetTechNameListDir(Dir);
-                DebugTAC_AI.Log("TACtical_AI: LoadAllEnemyTechs - Total RAW Techs found in " + GetNameDirectory(Dir) + ": " + names.Count());
+                DebugTAC_AI.Log(KickStart.ModID + ": LoadAllEnemyTechs - Total RAW Techs found in " + GetNameDirectory(Dir) + ": " + names.Count());
                 foreach (string name in names)
                 {
                     int errorLevel = 0;
@@ -536,11 +548,11 @@ namespace TAC_AI.Templates
                         temp.terrain = terra;
 
                         temps.Add(temp);
-                        DebugTAC_AI.Info("TACtical_AI: Added " + name + " to the RAW Enemy Tech Pool, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
+                        DebugTAC_AI.Info(KickStart.ModID + ": Added " + name + " to the RAW Enemy Tech Pool, grade " + minCorpGrade + " " + MainCorp.ToString() + ", of BB Cost " + temp.startingFunds + ".");
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Could not add " + name + " to the RAW Enemy Tech Pool!  Corrupted BuilderExternal(Or tech too small)!! - Error Level " + errorLevel + " ERROR " + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Could not add " + name + " to the RAW Enemy Tech Pool!  Corrupted BuilderExternal(Or tech too small)!! - Error Level " + errorLevel + " ERROR " + e);
                     }
                 }
             }
@@ -571,11 +583,11 @@ namespace TAC_AI.Templates
             List<string> Cleaned;
             if (altDirectoryFromBaseDirectory == null)
             {
-                search = RawTechsDirectory + up + "Enemies";
+                search = Path.Combine(RawTechsDirectory, "Enemies");
             }
             else
             {
-                search = BaseDirectory + up + altDirectoryFromBaseDirectory;
+                search = Path.Combine(BaseDirectory, altDirectoryFromBaseDirectory);
             }
             List<string> toClean = Directory.GetFiles(search).ToList();
             Cleaned = CleanNames(toClean, false);
@@ -583,7 +595,7 @@ namespace TAC_AI.Templates
         }
         internal static int GetTechCounts()
         {
-            List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
+            List<string> Dirs = GetALLDirectoriesInFolder(Path.Combine(RawTechsDirectory, "Enemies"));
             int techCount = 0;
             foreach (string Dir in Dirs)
             {
@@ -610,7 +622,7 @@ namespace TAC_AI.Templates
             {
                 foreach (char ch in FolderDirectory)
                 {
-                    if (ch == up.ToCharArray()[0])
+                    if (ch == Path.DirectorySeparatorChar)
                     {
                         SB.Clear();
                     }
@@ -646,7 +658,7 @@ namespace TAC_AI.Templates
             }
             if (ExistingCost <= 0)
             {
-                DebugTAC_AI.Log("TACtical_AI: ValidateCost - Invalid tech cost encountered ~ could not handle!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ValidateCost - Invalid tech cost encountered ~ could not handle!");
                 ExistingCost = 0;
             }
 
@@ -655,33 +667,33 @@ namespace TAC_AI.Templates
 
         internal static void ValidateEnemyFolder()
         {
-            string destination = RawTechsDirectory + up + "Enemies";
+            string destination = Path.Combine(RawTechsDirectory, "Enemies");
             if (!Directory.Exists(RawTechsDirectory))
             {
-                DebugTAC_AI.Log("TACtical_AI: Generating Raw Techs folder.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Generating Raw Techs folder.");
                 try
                 {
                     Directory.CreateDirectory(RawTechsDirectory);
-                    DebugTAC_AI.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Raw Techs folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
             }
             if (!Directory.Exists(destination))
             {
-                DebugTAC_AI.Log("TACtical_AI: Generating Enemies folder.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Generating Enemies folder.");
                 try
                 {
                     Directory.CreateDirectory(destination);
-                    DebugTAC_AI.Log("TACtical_AI: Made new Enemies folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Enemies folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
@@ -693,7 +705,7 @@ namespace TAC_AI.Templates
         {
             try
             {
-                List<Binding.SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
+                List<SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
                 if (Snaps.Count > 0)
                     return true;
             }
@@ -707,10 +719,10 @@ namespace TAC_AI.Templates
         }
         public static void SaveEnemyTechsToRawBLK()
         {
-            List<Binding.SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
+            List<SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
             if (Snaps.Count == 0)
                 return;
-            foreach (Binding.SnapshotLiveData snap in Snaps)
+            foreach (SnapshotLiveData snap in Snaps)
             {
                 try
                 {
@@ -718,14 +730,14 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: SaveEnemyTechsToRawBLK - Export Failure reported!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SaveEnemyTechsToRawBLK - Export Failure reported!");
                     try
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Error tech name " + snap.m_Snapshot.techData.Name);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Error tech name " + snap.m_Snapshot.techData.Name);
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: SaveEnemyTechsToRawBLK - COULD NOT FETCH TECHDATA!!!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": SaveEnemyTechsToRawBLK - COULD NOT FETCH TECHDATA!!!");
                     }
                 }
             }
@@ -805,15 +817,15 @@ namespace TAC_AI.Templates
         {
             if (!Directory.Exists(RawTechsDirectory))
             {
-                DebugTAC_AI.Log("TACtical_AI: Generating Raw Techs folder.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Generating Raw Techs folder.");
                 try
                 {
                     Directory.CreateDirectory(RawTechsDirectory);
-                    DebugTAC_AI.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Raw Techs folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
@@ -822,18 +834,18 @@ namespace TAC_AI.Templates
             {
                 if (ExportJSONInsteadOfRAWTECH)
                 {
-                    File.WriteAllText(RawTechsDirectory + up + TechName + ".JSON", RawTechJSON);
-                    DebugTAC_AI.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
+                    File.WriteAllText(Path.Combine(RawTechsDirectory, TechName + ".JSON"), RawTechJSON);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Saved RawTech.JSON for " + TechName + " successfully.");
                 }
                 else
                 {
-                    File.WriteAllText(RawTechsDirectory + up + TechName + ".RAWTECH", RawTechJSON);
-                    DebugTAC_AI.Log("TACtical_AI: Saved RawTech.RAWTECH for " + TechName + " successfully.");
+                    File.WriteAllText(Path.Combine(RawTechsDirectory, TechName +".RAWTECH"), RawTechJSON);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Saved RawTech.RAWTECH for " + TechName + " successfully.");
                 }
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not edit RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not edit RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                 return;
             }
         }
@@ -843,145 +855,145 @@ namespace TAC_AI.Templates
             if (altFolderName == "")
                 destination = RawTechsDirectory;
             else
-                destination = BaseDirectory + up + altFolderName;
+                destination = Path.Combine(BaseDirectory, altFolderName);
             try
             {
                 string output;
-                if (File.Exists(destination + up + TechName + ".JSON"))
+                if (File.Exists(Path.Combine(destination, TechName + ".JSON")))
                 {
-                    output = File.ReadAllText(destination + up + TechName + ".JSON");
-                    DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                    output = File.ReadAllText(Path.Combine(destination, TechName + ".JSON"));
+                    DebugTAC_AI.Info(KickStart.ModID + ": Loaded RawTech.JSON for " + TechName + " successfully.");
                 }
                 else
                 {
-                    output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
-                    DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                    output = File.ReadAllText(Path.Combine(destination, TechName + ".RAWTECH"));
+                    DebugTAC_AI.Info(KickStart.ModID + ": Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                 }
                 return output;
             }
             catch
             {
-                DebugTAC_AI.LogError("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                DebugTAC_AI.LogError(KickStart.ModID + ": Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
 
-                DebugTAC_AI.LogDevOnly("TACtical_AI: Attempted directory - |" + destination + up + TechName + ".JSON");
+                DebugTAC_AI.LogDevOnly(KickStart.ModID + ": Attempted directory - |" + Path.Combine(destination, TechName + ".JSON"));
                 return null;
             }
         }
         private static void SaveEnemyTechToFile(string TechName, string RawBaseTechJSON)
         {
-            string destination = RawTechsDirectory + up + "Enemies" + up + "eLocal";
+            string destination = Path.Combine(RawTechsDirectory, "Enemies", "eLocal");
             if (!Directory.Exists(RawTechsDirectory))
             {
-                DebugTAC_AI.Info("TACtical_AI: Generating Raw Techs folder.");
+                DebugTAC_AI.Info(KickStart.ModID + ": Generating Raw Techs folder.");
                 try
                 {
                     Directory.CreateDirectory(RawTechsDirectory);
-                    DebugTAC_AI.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Raw Techs folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
             }
-            if (!Directory.Exists(RawTechsDirectory + up + "Enemies"))
+            if (!Directory.Exists(Path.Combine(RawTechsDirectory, "Enemies")))
             {
-                DebugTAC_AI.Info("TACtical_AI: Generating Enemies folder.");
+                DebugTAC_AI.Info(KickStart.ModID + ": Generating Enemies folder.");
                 try
                 {
-                    Directory.CreateDirectory(RawTechsDirectory + up + "Enemies");
-                    DebugTAC_AI.Log("TACtical_AI: Made new Enemies folder successfully.");
+                    Directory.CreateDirectory(Path.Combine(RawTechsDirectory, "Enemies"));
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Enemies folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
             }
             if (!Directory.Exists(destination))
             {
-                DebugTAC_AI.Info("TACtical_AI: Generating eLocal folder.");
+                DebugTAC_AI.Info(KickStart.ModID + ": Generating eLocal folder.");
                 try
                 {
                     Directory.CreateDirectory(destination);
-                    DebugTAC_AI.Log("TACtical_AI: Made new eLocal folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new eLocal folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new eLocal folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new eLocal folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
             }
             try
             {
-                File.WriteAllText(destination + up + TechName + ".JSON", RawBaseTechJSON);
-                DebugTAC_AI.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
+                File.WriteAllText(Path.Combine(destination, TechName + ".JSON"), RawBaseTechJSON);
+                DebugTAC_AI.Log(KickStart.ModID + ": Saved RawTech.JSON for " + TechName + " successfully.");
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not edit RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not edit RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                 return;
             }
         }
         private static void SaveEnemyTechToFileBLK(string TechName, string RawBaseTechJSON)
         {
-            string destination = RawTechsDirectory + up + "Enemies" + up + "eBulk";
+            string destination = Path.Combine(RawTechsDirectory, "Enemies", "eBulk");
             if (!Directory.Exists(RawTechsDirectory))
             {
-                DebugTAC_AI.Log("TACtical_AI: Generating Raw Techs folder.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Generating Raw Techs folder.");
                 try
                 {
                     Directory.CreateDirectory(RawTechsDirectory);
-                    DebugTAC_AI.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Raw Techs folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
             }
-            if (!Directory.Exists(RawTechsDirectory + up + "Enemies"))
+            if (!Directory.Exists(Path.Combine(RawTechsDirectory, "Enemies")))
             {
-                DebugTAC_AI.Log("TACtical_AI: Generating Enemies folder.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Generating Enemies folder.");
                 try
                 {
-                    Directory.CreateDirectory(RawTechsDirectory + up + "Enemies");
-                    DebugTAC_AI.Log("TACtical_AI: Made new Enemies folder successfully.");
+                    Directory.CreateDirectory(Path.Combine(RawTechsDirectory, "Enemies"));
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Enemies folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
             }
             if (!Directory.Exists(destination))
             {
-                DebugTAC_AI.Log("TACtical_AI: Generating eBulk folder.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Generating eBulk folder.");
                 try
                 {
                     Directory.CreateDirectory(destination);
-                    DebugTAC_AI.Log("TACtical_AI: Made new eBulk folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new eBulk folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new eBulk folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new eBulk folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return;
                 }
 
             }
             try
             {
-                File.WriteAllText(destination + up + TechName + ".JSON", RawBaseTechJSON);
-                DebugTAC_AI.Log("TACtical_AI: Saved RawTech.JSON for " + TechName + " successfully.");
+                File.WriteAllText(Path.Combine(destination, TechName + ".JSON"), RawBaseTechJSON);
+                DebugTAC_AI.Log(KickStart.ModID + ": Saved RawTech.JSON for " + TechName + " successfully.");
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not edit RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not edit RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                 return;
             }
         }
@@ -990,33 +1002,33 @@ namespace TAC_AI.Templates
             string destination;
             if (AltDirectory == "")
             {
-                destination = RawTechsDirectory + up + "Enemies";
+                destination = Path.Combine(RawTechsDirectory, "Enemies");
                 if (!Directory.Exists(RawTechsDirectory))
                 {
-                    DebugTAC_AI.Info("TACtical_AI: Generating Raw Techs folder.");
+                    DebugTAC_AI.Info(KickStart.ModID + ": Generating Raw Techs folder.");
                     try
                     {
                         Directory.CreateDirectory(RawTechsDirectory);
-                        DebugTAC_AI.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Made new Raw Techs folder successfully.");
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
                         return null;
                     }
 
                 }
                 if (!Directory.Exists(destination))
                 {
-                    DebugTAC_AI.Info("TACtical_AI: Generating Enemies folder.");
+                    DebugTAC_AI.Info(KickStart.ModID + ": Generating Enemies folder.");
                     try
                     {
                         Directory.CreateDirectory(destination);
-                        DebugTAC_AI.Log("TACtical_AI: Made new Enemies folder successfully.");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Made new Enemies folder successfully.");
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
                         return null;
                     }
 
@@ -1024,21 +1036,21 @@ namespace TAC_AI.Templates
                 try
                 {
                     string output;
-                    if (File.Exists(destination + up + TechName + ".JSON"))
+                    if (File.Exists(Path.Combine(destination, TechName + ".JSON")))
                     {
-                        output = File.ReadAllText(destination + up + TechName + ".JSON");
-                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                        output = File.ReadAllText(Path.Combine(destination, TechName + ".JSON"));
+                        DebugTAC_AI.Info(KickStart.ModID + ": Loaded RawTech.JSON for " + TechName + " successfully.");
                     }
                     else
                     {
-                        output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
-                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                        output = File.ReadAllText(Path.Combine(destination, TechName + ".RAWTECH"));
+                        DebugTAC_AI.Info(KickStart.ModID + ": Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                     }
                     return output;
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                     return null;
                 }
             }
@@ -1048,63 +1060,63 @@ namespace TAC_AI.Templates
                 try
                 {
                     string output;
-                    if (File.Exists(destination + up + TechName + ".JSON"))
+                    if (File.Exists(Path.Combine(destination, TechName + ".JSON")))
                     {
-                        output = File.ReadAllText(destination + up + TechName + ".JSON");
-                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.JSON for " + TechName + " successfully.");
+                        output = File.ReadAllText(Path.Combine(destination, TechName + ".JSON"));
+                        DebugTAC_AI.Info(KickStart.ModID + ": Loaded RawTech.JSON for " + TechName + " successfully.");
                     }
                     else
                     {
-                        output = File.ReadAllText(destination + up + TechName + ".RAWTECH");
-                        DebugTAC_AI.Info("TACtical_AI: Loaded RawTech.RAWTECH for " + TechName + " successfully.");
+                        output = File.ReadAllText(Path.Combine(destination, TechName + ".RAWTECH"));
+                        DebugTAC_AI.Info(KickStart.ModID + ": Loaded RawTech.RAWTECH for " + TechName + " successfully.");
                     }
                     return output;
                 }
                 catch { }
-                DebugTAC_AI.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                 return null;
             }
         }
         private static string FindAndLoadEnemyTechFromFile(string TechName)
         {
             string destination;
-            destination = RawTechsDirectory + up + "Enemies";
+            destination = Path.Combine(RawTechsDirectory, "Enemies");
             if (!Directory.Exists(RawTechsDirectory))
             {
-                DebugTAC_AI.Info("TACtical_AI: Generating Raw Techs folder.");
+                DebugTAC_AI.Info(KickStart.ModID + ": Generating Raw Techs folder.");
                 try
                 {
                     Directory.CreateDirectory(RawTechsDirectory);
-                    DebugTAC_AI.Log("TACtical_AI: Made new Raw Techs folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Raw Techs folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Raw Techs folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return null;
                 }
 
             }
             if (!Directory.Exists(destination))
             {
-                DebugTAC_AI.Info("TACtical_AI: Generating Enemies folder.");
+                DebugTAC_AI.Info(KickStart.ModID + ": Generating Enemies folder.");
                 try
                 {
                     Directory.CreateDirectory(destination);
-                    DebugTAC_AI.Log("TACtical_AI: Made new Enemies folder successfully.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Made new Enemies folder successfully.");
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not create new Enemies folder.  \n   This could be due to a bug with this mod or file permissions.");
                     return null;
                 }
 
             }
             try
             {
-                List<string> Dirs = GetALLDirectoriesInFolder(RawTechsDirectory + up + "Enemies");
+                List<string> Dirs = GetALLDirectoriesInFolder(Path.Combine(RawTechsDirectory, "Enemies"));
                 List<RawTechTemplate> temps = new List<RawTechTemplate>();
                 List<string> names;
-                DebugTAC_AI.Info("TACtical_AI: LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
+                DebugTAC_AI.Info(KickStart.ModID + ": LoadAllEnemyTechs - Total directories found in Enemies Folder: " + Dirs.Count());
                 foreach (string Dir in Dirs)
                 {
                     names = GetTechNameListDir(Dir);
@@ -1117,7 +1129,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
                 return null;
             }
 
@@ -1128,23 +1140,23 @@ namespace TAC_AI.Templates
             Texture2D tex = null;
             try
             {
-                ModContainer MC = ManMods.inst.FindMod("Advanced AI");
+                ModContainer MC = ManMods.inst.FindMod(KickStart.ModID);
                 //ResourcesHelper.LookIntoModContents(MC);
                 if (MC != null)
                     tex = ResourcesHelper.GetTextureFromModAssetBundle(MC, pngName.Replace(".png", ""), false);
                 else
-                    DebugTAC_AI.Log("TACtical_AI: ModContainer for Advanced AI DOES NOT EXIST");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ModContainer for Advanced AI DOES NOT EXIST");
                 if (!tex)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Icon " + pngName.Replace(".png", "") + " did not exist in AssetBundle, using external...");
-                    string destination = DLLDirectory + up + "AI_Icons" + up + pngName;
+                    DebugTAC_AI.Log(KickStart.ModID + ": Icon " + pngName.Replace(".png", "") + " did not exist in AssetBundle, using external...");
+                    string destination = Path.Combine(DLLDirectory, "AI_Icons", pngName);
                     tex = FileUtils.LoadTexture(destination);
                 }
                 if (tex)
                     return tex;
             }
             catch { }
-            DebugTAC_AI.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   File is missing!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Could not load Icon " + pngName + "!  \n   File is missing!");
             return null;
         }
         private static Sprite LoadSprite(string pngName, bool RemoveBlackOutline = false)
@@ -1167,12 +1179,12 @@ namespace TAC_AI.Templates
                 }
                 else
                     output = Sprite.Create(texRef, new Rect(0, 0, texRef.width, texRef.height), Vector2.zero, refS.pixelsPerUnit, 0, SpriteMeshType.FullRect, refS.border);
-                DebugTAC_AI.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Loaded Icon " + pngName + " successfully.");
                 return output;
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   File is missing!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not load Icon " + pngName + "!  \n   File is missing!");
                 return null;
             }
         }
@@ -1182,12 +1194,12 @@ namespace TAC_AI.Templates
             {
                 Material mat = new Material(prefab);
                 mat.mainTexture = FetchTexture(pngName);
-                DebugTAC_AI.Log("TACtical_AI: Loaded Icon " + pngName + " successfully.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Loaded Icon " + pngName + " successfully.");
                 return mat;
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not load Icon " + pngName + "!  \n   Fail on material creation!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not load Icon " + pngName + "!  \n   Fail on material creation!");
                 return null;
             }
         }
@@ -1197,7 +1209,7 @@ namespace TAC_AI.Templates
             {
                 foreach (char ch in FolderDirectory)
                 {
-                    if (ch == up.ToCharArray()[0])
+                    if (ch == Path.DirectorySeparatorChar)
                     {
                         SB.Clear();
                     }
@@ -1216,7 +1228,7 @@ namespace TAC_AI.Templates
                 int offsetRemove = 0;
                 foreach (char ch in FolderDirectory)
                 {
-                    if (ch == up.ToCharArray()[0])
+                    if (ch == Path.DirectorySeparatorChar)
                     {
                         offsetRemove = 1;
                     }

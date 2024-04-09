@@ -35,11 +35,11 @@ namespace TAC_AI.AI.Movement.AICores
                     targPos = AIEPathing.GetDriveApproxAirDirector(help.theResource.tank, help, out bool IsMoving);
                     if (IsMoving)//!(help.lastDestination - this.controller.Tank.boundsCentreWorld).Approximately(Vector3.zero, 0.75f)
                     {
-                        //DebugTAC_AI.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.lastCloseAlly.name + " and idle.");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.lastCloseAlly.name + " and idle.");
                         help.MinimumRad = 0.1f;
                         if (Vector3.Dot(tank.rootBlockTrans.forward, (targPos - tank.boundsCentreWorldNoCheck).normalized) >= 0)
                         {
-                            //DebugTAC_AI.Log("TACtical_AI:AI " + this.controller.Tank.name + ": Forwards");
+                            //DebugTAC_AI.Log(KickStart.ModID + ":AI " + this.controller.Tank.name + ": Forwards");
                             core.DriveToFacingTowards();
                             help.PivotOnly = false;
                             help.ForceSetDrive = true;
@@ -57,7 +57,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {
-                        //DebugTAC_AI.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.lastCloseAlly.name + " and idle.");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": MTMimic - AI " + this.controller.Tank.name + ": In range of " + help.lastCloseAlly.name + " and idle.");
                         help.MinimumRad = 0f;
                         targPos = tank.boundsCentreWorldNoCheck;
                         help.ForceSetDrive = true;
@@ -68,7 +68,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": MTMimic - AI " + this.controller.Tank.name + ": Out of range of any possible target");
                     help.MinimumRad = 0f;
                     targPos = tank.boundsCentreWorldNoCheck;
                     help.ForceSetDrive = false;

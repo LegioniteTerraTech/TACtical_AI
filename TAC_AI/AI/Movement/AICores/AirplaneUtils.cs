@@ -16,37 +16,37 @@ namespace TAC_AI.AI.Movement.AICores
 
         public static void UTurn(TankControl thisControl, TankAIHelper thisInst, Tank tank, AIControllerAir pilot)
         {
-            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
             pilot.MainThrottle = 1;
             pilot.UpdateThrottle(thisInst, thisControl);
             if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIGlobals.AirStallSpeed)
             {   //ABORT!!!
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
                 pilot.PerformUTurn = -1;
                 pilot.ErrorsInUTurn++;
                 if (pilot.ErrorsInUTurn > 3)
-                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
             }
             else if (Vector3.Dot(Vector3.down, tank.rbody.velocity.normalized) > 0.6f)
             {   //ABORT!!!
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
                 pilot.PerformUTurn = -1;
                 pilot.ErrorsInUTurn++;
                 if (pilot.ErrorsInUTurn > 3)
-                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " has failed to U-Turn/Immelmann over 3 times and will no longer try");
             }
             if (pilot.PerformUTurn == 1)
             {   // Accelerate
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " Executing U-Turn...");
-               // DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " Executing U-Turn...");
+               // DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), KickStart.ModID + ": ASSERT - " + tank.name + " is UTurning above max allowed altitude");
                 AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + 
-                    (tank.rootBlockTrans.forward.SetY(0).normalized.SetY(0.3f) * 300));
+                    (tank.rootBlockTrans.forward.SetY(0).normalized.SetY(0.4f) * 300));
                 if (pilot.CurrentThrottle > 0.95)
                     pilot.PerformUTurn = 2;
             }
             else if (pilot.PerformUTurn == 2)
             {   // Pitch Up
-                //DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), "TACtical_AI: ASSERT - " + tank.name + " is UTurning above max allowed altitude");
+                //DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), KickStart.ModID + ": ASSERT - " + tank.name + " is UTurning above max allowed altitude");
                 AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward.SetY(1.75f).normalized * 100));
                 if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
                     pilot.PerformUTurn = 3;
@@ -77,19 +77,19 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 direct = Vector3.up;
             if (pilot.PerformUTurn == 3)
             {
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Stage 3 Immelmann");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Stage 3 Immelmann");
                 direct = Vector3.down;
             }
             else if (tank.rootBlockTrans.up.y < -0.4f)
             {   // handle invalid request to go upside down
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
                 // Stay upright
             }
             else if ((pilot.PerformUTurn > 0 && !pilot.LargeAircraft && !pilot.BankOnly) || pilot.ForcePitchUp)
             {
                 // Stay upright
             }
-            else if (fwdHeading < -0.5f && PitchNotNeeded && pilot.PerformUTurn == 0 && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
+            else if (fwdHeading < -0.325f && PitchNotNeeded && pilot.PerformUTurn == 0 && AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck))
             {
                 //DebugTAC_AI.Log("directed is " + Navi3DDirect);
                 if (pilot.ErrorsInUTurn > 3)    // Aircraft failed Immelmann over 3 times in a row
@@ -106,7 +106,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (Heading.x > 0f)
                     { // We roll to aim at target
-                      //DebugTAC_AI.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Right");
+                      //DebugTAC_AI.Log(KickStart.ModID + ": (HVY) Tech " + tank.name + "  Roll turn Right");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, false);
                         rFlat.y = -pilot.RollStrength / 2;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
@@ -114,7 +114,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (Heading.x < 0f)
                     { // We roll to aim at target
-                      //DebugTAC_AI.Log("TACtical_AI: (HVY) Tech " + tank.name + "  Roll turn Left");
+                      //DebugTAC_AI.Log(KickStart.ModID + ": (HVY) Tech " + tank.name + "  Roll turn Left");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, false);
                         rFlat.y = pilot.RollStrength / 2;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
@@ -128,7 +128,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     if (Heading.x > 0f)
                     { // We roll to aim at target
-                      //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Right");
+                      //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Roll turn Right");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, true);
                         rFlat.y = -pilot.RollStrength;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
@@ -136,7 +136,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else if (Heading.x < 0f)
                     { // We roll to aim at target
-                      //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Roll turn Left");
+                      //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Roll turn Left");
                         Vector3 rFlat = GetExactRightAlignedWorld(tank, true);
                         rFlat.y = pilot.RollStrength;
                         direct = Vector3.Cross(tank.rootBlockTrans.forward, rFlat.normalized).normalized;
@@ -144,16 +144,16 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                 }
             }
-            //DebugTAC_AI.Log("TACtical_AI: upwards direction " + tank.name + "  is " + direct.y);
+            //DebugTAC_AI.Log(KickStart.ModID + ": upwards direction " + tank.name + "  is " + direct.y);
 
             return direct; // IS IN WORLD SPACE
         }
-        public static void AngleTowards(TankControl thisControl, TankAIHelper thisInst, Tank tank, AIControllerAir pilot, Vector3 position)
+        public static void AngleTowards(TankControl thisControl, TankAIHelper thisInst, Tank tank,
+            AIControllerAir pilot, Vector3 position, bool EmergencyUp = false)
         {
             //AI Steering Rotational
             Transform root = tank.rootBlockTrans;
 
-            bool EmergencyUp = false;
             if (pilot.LargeAircraft)
             {
                 if (!AIEPathing.AboveHeightFromGround(pilot.Helper.DodgeSphereCenter, AIGlobals.GroundOffsetAircraft))
@@ -168,7 +168,7 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 insureUpright = (position - tank.boundsCentreWorldNoCheck).normalized;
             if (root.forward.y < -AIGlobals.AircraftDangerDive || EmergencyUp)
             {   // CRASH LIKELY, PULL UP! 
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is trying to break from a crash-dive " + root.forward.y);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is trying to break from a crash-dive " + root.forward.y);
                 insureUpright = new Vector3(0, 1.45f, 0) + root.forward.SetY(0).normalized;
             }
             else if (insureUpright.y < -AIGlobals.AircraftMaxDive)
@@ -207,7 +207,7 @@ namespace TAC_AI.AI.Movement.AICores
             //Vector3 forwardFlat = tank.rootBlockTrans.forward;
             //forwardFlat.y = 0;
 
-            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " steering RAW" + turnVal);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " steering RAW" + turnVal);
 
             //Convert turnVal to runnable format
             // PITCH
@@ -247,9 +247,9 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (tank.rootBlockTrans.up.y < 0)
             {   // upside down due to a unfindable oversight in code - just override the bloody thing when it happens
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  IS UPSIDE DOWN AND IS TRYING TO GET UPRIGHT");
 
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " steering" + turnVal);
                 //turnVal.z = -Mathf.Clamp(turnVal.z * 10, -1, 1);
             }
 
@@ -261,7 +261,7 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 DriveVar = Vector3.forward * pilot.CurrentThrottle;
 
             //Turn our work in to processing
-            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " steering" + turnVal);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " steering" + turnVal);
             Vector3 DriveVal = DriveVar.Clamp01Box();
             //if (pilot.SlowestPropLerpSpeed < 0.1f && pilot.PropBias.z > 0.75f && pilot.CurrentThrottle > 0.75f)
             //    control3D.m_State.m_BoostProps = true;
@@ -336,7 +336,7 @@ namespace TAC_AI.AI.Movement.AICores
                         float Extremes = target.GetCheapBounds() + thisInst.lastTechExtents + 5;
                         if (foreTarg > 0)
                             throttleToSet = (foreTarg - Extremes) / pilot.PropLerpValue;
-                        //DebugTAC_AI.Log("TACtical_AI: throttle " + throttleToSet + " | position offset enemy " + foreTarg);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": throttle " + throttleToSet + " | position offset enemy " + foreTarg);
                         pilot.AdvisedThrottle = Mathf.Clamp(throttleToSet, 0, 1);
 
                         if (pilot.NoProps)
@@ -356,11 +356,11 @@ namespace TAC_AI.AI.Movement.AICores
                         return;
                     }
                     //else
-                    //DebugTAC_AI.Log("TACtical_AI: not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AIControllerAir.Stallspeed);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": not fast enough, velocity" + tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z + " vs " + AIControllerAir.Stallspeed);
                 }
                 pilot.AdvisedThrottle = 1;
             }
-            //DebugTAC_AI.Log("TACtical_AI: throttle is already " + pilot.AdvisedThrottle);
+            //DebugTAC_AI.Log(KickStart.ModID + ": throttle is already " + pilot.AdvisedThrottle);
         }
        
         public static Vector3 TryGetVelocityOffset(Tank tank, AIControllerAir pilot)

@@ -69,7 +69,7 @@ namespace TAC_AI.AI
             if (!tank.IsAnchored)
                 helper.TryReallyAnchor(true);
 
-            DebugTAC_AI.Info("TACtical_AI: Added static AI for " + Tank.name);
+            DebugTAC_AI.LogAISetup(KickStart.ModID + ": Added static (anchored) AI for " + Tank.name);
         }
         public void UpdateEnemyMind(EnemyMind mind)
         {
@@ -81,7 +81,7 @@ namespace TAC_AI.AI
             if (Helper == null)
             {
                 string tankName = Tank.IsNotNull() ? Tank.name : "UNKNOWN_TANK";
-                DebugTAC_AI.Assert(true, "TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -90,7 +90,7 @@ namespace TAC_AI.AI
                 if (AICore == null)
                 {
                     string tankName = Tank.IsNotNull() ? Tank.name : "UNKNOWN_TANK";
-                    DebugTAC_AI.Assert(true, "TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
+                    DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
                     return;
                 }
                 AICore.DriveDirector(ref core);
@@ -106,7 +106,7 @@ namespace TAC_AI.AI
             if (Helper == null)
             {
                 string tankName = Tank.IsNotNull() ? Tank.name : "UNKNOWN_TANK";
-                DebugTAC_AI.Assert(true, "TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -115,7 +115,7 @@ namespace TAC_AI.AI
                 if (AICore == null)
                 {
                     string tankName = Tank.IsNotNull() ? Tank.name : "UNKNOWN_TANK";
-                    DebugTAC_AI.Assert(true, "TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
+                    DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
                     return;
                 }
                 AICore.DriveDirectorRTS(ref core);
@@ -146,7 +146,7 @@ namespace TAC_AI.AI
             AICore = null;
             if (this.IsNotNull())
             {
-                //DebugTAC_AI.Log("TACtical_AI: Removed static AI from " + Tank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Removed static AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }

@@ -17,6 +17,7 @@ namespace TAC_AI.AI.AlliedOperations
         void Init(TankAIHelper thisInst);
         void DeInit(TankAIHelper thisInst);
         void MovementActions(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct);
+        void OnSerialize(TankAIHelper thisInst, Tank tank, bool saving);
     }
 
     internal class AlliedOperationsController
@@ -96,16 +97,16 @@ namespace TAC_AI.AI.AlliedOperations
 
                             case AIDriverType.AutoSet:
                                 // Set ourselves up automatically
-                                DebugTAC_AI.Log("TACtical_AI: AIDriver is set to AutoSet, but this should have been handled beforehand!");
-                                DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
-                                helper.DriverType = AIDriverType.Tank;
+                                DebugTAC_AI.Log(KickStart.ModID + ": AIDriver is set to AutoSet, but this should have been handled beforehand!");
+                                DebugTAC_AI.Log(KickStart.ModID + ": RESETTING TO DEFAULTS");
+                                helper.SetDriverType(AIDriverType.Tank);
                                 break;
 
 
                             default:
-                                DebugTAC_AI.Log("TACtical_AI: AIDriver is set to an invalid state - " + helper.DriverType);
-                                DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
-                                helper.DriverType = AIDriverType.Tank;
+                                DebugTAC_AI.Log(KickStart.ModID + ": AIDriver is set to an invalid state - " + helper.DriverType);
+                                DebugTAC_AI.Log(KickStart.ModID + ": RESETTING TO DEFAULTS");
+                                helper.SetDriverType(AIDriverType.Tank);
                                 break;
                         }
                         break;
@@ -160,8 +161,8 @@ namespace TAC_AI.AI.AlliedOperations
                         break;
 
                     default:
-                        DebugTAC_AI.Log("TACtical_AI: AIType is set to an invalid state - " + helper.DediAI);
-                        DebugTAC_AI.Log("TACtical_AI: RESETTING TO DEFAULTS");
+                        DebugTAC_AI.Log(KickStart.ModID + ": AIType is set to an invalid state - " + helper.DediAI);
+                        DebugTAC_AI.Log(KickStart.ModID + ": RESETTING TO DEFAULTS");
                         helper.DediAI = AIType.Escort;
                         break;
                 }

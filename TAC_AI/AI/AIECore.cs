@@ -119,11 +119,11 @@ namespace TAC_AI.AI
                     var res = trans.GetComponent<ResourceDispenser>();
                     if (!res.IsDeactivated && res.visible.isActive)
                     {
-                        //DebugTAC_AI.Log("TACtical_AI:Skipped over inactive");
+                        //DebugTAC_AI.Log(KickStart.ModID + ":Skipped over inactive");
                         if (!trans.GetComponent<Damageable>().Invulnerable && 
                             !IndestructableScenery.Contains(res.GetSceneryType()))
                         {
-                            //DebugTAC_AI.Log("TACtical_AI: Skipped over invincible");
+                            //DebugTAC_AI.Log(KickStart.ModID + ": Skipped over invincible");
                             float temp = (trans.trans.position - tankPos).sqrMagnitude;
                             if (bestValue > temp && temp != 0)
                             {
@@ -226,11 +226,11 @@ namespace TAC_AI.AI
                 if (bestStep == -1)
                     return false;
                 ToFetch = AlliesAlt.ElementAt(bestStep).visible;
-                //DebugTAC_AI.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ":ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
             {
-                //DebugTAC_AI.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Crash on ClosestAllyProcess " + e);
             }
             return fired;
         }
@@ -310,11 +310,11 @@ namespace TAC_AI.AI
                     }
                 }
                 toCharge = AlliesAlt.ElementAt(bestStep).visible;
-                //DebugTAC_AI.Log("TACtical_AI:ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ":ClosestAllyProcess " + closestTank.name);
             }
             catch //(Exception e)
             {
-                //DebugTAC_AI.Log("TACtical_AI: Crash on ClosestAllyProcess " + e);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Crash on ClosestAllyProcess " + e);
             }
             return fired;
         }
@@ -368,7 +368,7 @@ namespace TAC_AI.AI
             if (!hasMessaged && Feedback)
             {
                 hasMessaged = true;
-                DebugTAC_AI.Log("TACtical_AI: AI " + message);
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + message);
             }
             return hasMessaged;
         }
@@ -376,7 +376,7 @@ namespace TAC_AI.AI
         {
             AIMessageEvent.Send(tech, message);
             if (Feedback)
-                DebugTAC_AI.Log("TACtical_AI: AI " + message);
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + message);
         }
         public static void TeamRetreat(int Team, bool Retreat, bool Sending = false)
         {
@@ -475,7 +475,7 @@ namespace TAC_AI.AI
                     }
                 }
             }
-            catch { DebugTAC_AI.Log("TACtical_AI: TeamRetreat encountered an error, perhaps in Attract?"); }
+            catch { DebugTAC_AI.Log(KickStart.ModID + ": TeamRetreat encountered an error, perhaps in Attract?"); }
         }
         internal static void ToggleTeamRetreat(int Team)
         {
@@ -516,7 +516,7 @@ namespace TAC_AI.AI
 
         public static bool HasOmniCore(TankBlock block)
         {
-            return block.GetComponent<ModuleOmniCore>() && !block.GetComponent<ModuleWheels>();
+            return block.GetComponent<RandomAdditions.ModuleOmniCore>() && !block.GetComponent<ModuleWheels>();
         }
 
         public static bool ShouldBeStationary(Tank tank, TankAIHelper helper)
@@ -590,7 +590,7 @@ namespace TAC_AI.AI
                 if (biasDirection.y > 0.6)
                     isFlyingDirectionForwards = false;
             }
-            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
+            DebugTAC_AI.Info(KickStart.ModID + ": Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
 
             int FoilCount = 0;
             int MovingFoilCount = 0;
@@ -630,7 +630,7 @@ namespace TAC_AI.AI
                 if (bloc.GetComponent<ModuleDrill>())
                     modDrillCount++;
             }
-            //Debug.Info("TACtical_AI: Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
+            //Debug.Info(KickStart.ModID + ": Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
 
 
             if (tank.IsAnchored)

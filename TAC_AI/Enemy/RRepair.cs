@@ -21,16 +21,16 @@ namespace TAC_AI.AI.Enemy
             List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
             if (mind.TechMemor.IsNull())
             {
-                DebugTAC_AI.LogError("TACtical_AI: EnemyRepairLerp called with no valid EnemyDesignMemory!!!");
+                DebugTAC_AI.LogError(KickStart.ModID + ": EnemyRepairLerp called with no valid EnemyDesignMemory!!!");
                 mind.AIControl.InsureTechMemor("PreRepairPrep", true);
                 return false;
             }
             int savedBCount = mind.TechMemor.IterateReturnContents().Count;
             int cBCount = cBlocks.Count;
-            //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
+            //DebugTAC_AI.Log(KickStart.ModID + ": saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount < cBCount)
             {
-                DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ":  New blocks were added without " +
+                DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + ":  New blocks were added without " +
                     "being saved before building.  Was the player messing with the Tech?");
                 mind.TechMemor.SaveTech();
                 return false;
@@ -47,14 +47,14 @@ namespace TAC_AI.AI.Enemy
         private static bool EnemyRepairLerp(Tank tank, EnemyMind mind, bool canUseInventory, ref List<TankBlock> fBlocks, ref List<BlockTypes> typesMissing)
         {
             bool hardest = KickStart.EnemyBlockDropChance == 0;
-            //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
+            //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + ":  Trying to repair");
 
             if (mind.TechMemor.TryAttachExistingBlockFromListInst(ref typesMissing, ref fBlocks, hardest))
                 return true;
 
             if (canUseInventory)
             {
-                //DebugTAC_AI.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
+                //DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairLerp - trying to fix from inventory);
                 RawTechLoader.ResetSkinIDSet();
                 if (mind.TechMemor.TrySpawnAndAttachBlockFromListWithSkinInst(ref typesMissing, false, true))
                     return true;
@@ -66,17 +66,17 @@ namespace TAC_AI.AI.Enemy
             if (ManNetwork.IsNetworked)
                 return EnemyRepairLerp(tank, mind, canUseInventory, ref fBlocks, ref typesMissing);
             bool hardest = KickStart.EnemyBlockDropChance == 0;
-            //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ":  Trying to repair");
+            //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + ":  Trying to repair");
 
             //int attachAttempts = fBlocks.Count();
-            //DebugTAC_AI.Log("TACtical AI: EnemyRepairLerp - Found " + attachAttempts + " loose blocks to use");
+            //DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairLerp - Found " + attachAttempts + " loose blocks to use");
 
             if (mind.TechMemor.TryAttachExistingBlockFromList(ref typesMissing, ref fBlocks, hardest))
                 return true;
 
             if (canUseInventory)
             {
-                //DebugTAC_AI.Log("TACtical AI: EnemyRepairLerp - trying to fix from inventory);
+                //DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairLerp - trying to fix from inventory);
                 RawTechLoader.ResetSkinIDSet();
                 if (mind.TechMemor.TrySpawnAndAttachBlockFromListWithSkin(ref typesMissing, false, true))
                     return true;
@@ -129,13 +129,10 @@ namespace TAC_AI.AI.Enemy
         }
         internal static bool EnemyRepairStepper(TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
         {
-            /*
-            DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + ": - EnemyRepairStepper "
-                + mind.TechMemor.blockIntegrityDirty + " | " + thisInst.PendingSystemsCheck);
-            */
+            //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + ": - EnemyRepairStepper " + mind.TechMemor.blockIntegrityDirty + " | " + thisInst.PendingDamageCheck);
             if (!(bool)mind.TechMemor)
             {
-                DebugTAC_AI.Assert("TACtical_AI: Enemy AI " + tank.name + ":  Tried to call EnemyRepairStepper when TechMemor is NULL");
+                DebugTAC_AI.Assert(KickStart.ModID + ": Enemy AI " + tank.name + ":  Tried to call EnemyRepairStepper when TechMemor is NULL");
                 return false;
             }
             if (mind.TechMemor.ReserveSuperGrabs > 0)
@@ -248,15 +245,15 @@ namespace TAC_AI.AI.Enemy
                             thisInst.FinishedRepairEvent.Send(thisInst);
                             if (mind.TechMemor.IsDesignComplete())
                             {
-                                DebugTAC_AI.Log("TACtical_AI: EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
+                                DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
                             }
                             else
                             {
                                 if (mind.TechMemor.ranOutOfParts)
-                                    DebugTAC_AI.Log("TACtical_AI: EnemyRepairStepper - Unfinished for " + tank.name + ": No more funds.");
+                                    DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairStepper - Unfinished for " + tank.name + ": No more funds.");
                                 else
                                 {
-                                    DebugTAC_AI.Log("TACtical_AI: EnemyRepairStepper - Unfinished for " + tank.name 
+                                    DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairStepper - Unfinished for " + tank.name 
                                         + ": Floating or invalid blocks in memory.  Purging...");
                                     mind.TechMemor.SaveTech();
                                 }
@@ -265,7 +262,7 @@ namespace TAC_AI.AI.Enemy
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: EnemyRepairStepper(Main) - Error on handling Enemy AI " + tank.name + ":  " + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairStepper(Main) - Error on handling Enemy AI " + tank.name + ":  " + e);
                     }
                 }
             }

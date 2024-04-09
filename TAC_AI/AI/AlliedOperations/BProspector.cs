@@ -35,7 +35,7 @@ namespace TAC_AI.AI.AlliedOperations
                 if (!thisInst.foundBase)
                 {
                     thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.boundsCentreWorldNoCheck, thisInst.JobSearchRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out Tank theBase, tank.Team);
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, "TACtical_AI:AI " + tank.name + ":  There's no base nearby!  I AM LOST!!!");
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  There's no base nearby!  I AM LOST!!!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (theBase == null)
                         return; // There's no base!
@@ -118,7 +118,10 @@ namespace TAC_AI.AI.AlliedOperations
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
                     thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
                     if (thisInst.theBase == null)
+                    {
+                        direct.STOP(thisInst);
                         return; // There's no base!
+                    }
                     thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
                     direct.SetLastDest(thisInst.theBase.boundsCentreWorld);
                     dist = (tank.boundsCentreWorldNoCheck - thisInst.lastDestinationCore).magnitude;

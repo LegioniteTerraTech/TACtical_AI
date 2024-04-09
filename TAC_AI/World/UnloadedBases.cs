@@ -12,11 +12,11 @@ namespace TAC_AI.World
 {
     public class UnloadedBases
     {
-        public static NP_BaseUnit RefreshTeamMainBaseIfAnyPossible(NP_Presence EP)
+        public static NP_BaseUnit RefreshTeamMainBaseIfAnyPossible(NP_Presence_Automatic EP)
         {
             if (EP.EBUs.Count == 0)
             {
-                //DebugTAC_AI.Log("TACtical_AI: " + Team + " CALLED GetTeamFunds WITH NO BASE!!!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": " + Team + " CALLED GetTeamFunds WITH NO BASE!!!");
                 EP.MainBase = null;
                 return null;
             }
@@ -26,7 +26,7 @@ namespace TAC_AI.World
             }
             else if (EP.EBUs.Count > 1)
             {
-                //DebugTAC_AI.Log("TACtical_AI: " + EP.Team + " has " + EP.EBUs.Count + " bases on scene. The richest will be selected.");
+                //DebugTAC_AI.Log(KickStart.ModID + ": " + EP.Team + " has " + EP.EBUs.Count + " bases on scene. The richest will be selected.");
                 NP_BaseUnit funder = null;
                 int highestFunds = -1;
                 foreach (NP_BaseUnit funds in EP.EBUs)
@@ -50,7 +50,7 @@ namespace TAC_AI.World
                 RLoadedBases.RecycleTechToTeam(tank);
             else
             {
-                NP_Presence EP = ManEnemyWorld.GetTeam(tank.Team);
+                NP_Presence_Automatic EP = ManEnemyWorld.GetTeam(tank.Team);
                 if (EP == null)
                     return;
                 NP_BaseUnit EBU = RefreshTeamMainBaseIfAnyPossible(EP);
@@ -62,7 +62,7 @@ namespace TAC_AI.World
             }
         }
 
-        public static bool HasTooMuchOfType(NP_Presence EP, BasePurpose purpose)
+        public static bool HasTooMuchOfType(NP_Presence_Automatic EP, BasePurpose purpose)
         {
             int Count = 0;
             int Team = EP.Team;
@@ -105,24 +105,24 @@ namespace TAC_AI.World
             {
                 thisIsTrue = Count >= RLoadedBases.MaxDefenses;
                 if (thisIsTrue)
-                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many defenses and cannot make more");
+                    DebugTAC_AI.Log(KickStart.ModID + ": HasTooMuchOfType - Team " + Team + " already has too many defenses and cannot make more");
             }
             else if (purpose == BasePurpose.Autominer)
             {
                 thisIsTrue = Count >= RLoadedBases.MaxAutominers;
                 if (thisIsTrue)
-                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
+                    DebugTAC_AI.Log(KickStart.ModID + ": HasTooMuchOfType - Team " + Team + " already has too many autominers and cannot make more");
             }
             else if (purpose == BasePurpose.HasReceivers && RLoadedBases.FetchNearbyResourceCounts(Team) < AIGlobals.MinResourcesReqToCollect)
             {
                 thisIsTrue = false;
-                DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " Does not have enough mineables in range to build Reciever bases.");
+                DebugTAC_AI.Log(KickStart.ModID + ": HasTooMuchOfType - Team " + Team + " Does not have enough mineables in range to build Reciever bases.");
             }
             else
             {
                 thisIsTrue = Count >= RLoadedBases.MaxSingleBaseType;
                 if (thisIsTrue)
-                    DebugTAC_AI.Log("TACtical_AI: HasTooMuchOfType - Team " + Team + " already has too many of type " + purpose.ToString() + " and cannot make more");
+                    DebugTAC_AI.Log(KickStart.ModID + ": HasTooMuchOfType - Team " + Team + " already has too many of type " + purpose.ToString() + " and cannot make more");
             }
 
             return thisIsTrue;
@@ -135,14 +135,14 @@ namespace TAC_AI.World
         /// <param name="ETU"></param>
         public static void GetScannedTilesAroundTech(NP_TechUnit ETU)
         {
-            NP_Presence EP = ETU.teamInst;
+            NP_Presence_Automatic EP = ETU.teamInst;
             IntVector2 scanPos = ETU.tilePos;
             int dist = ManEnemyWorld.UnitSightRadius;
             if (ETU is NP_BaseUnit)
                 dist = ManEnemyWorld.BaseSightRadius;
             GetScannedTilesAtCoord(EP, scanPos, dist);
         }
-        public static void GetScannedTilesAtCoord(NP_Presence EP, IntVector2 scanPos, int sightRadTiles = ManEnemyWorld.UnitSightRadius)
+        public static void GetScannedTilesAtCoord(NP_Presence_Automatic EP, IntVector2 scanPos, int sightRadTiles = ManEnemyWorld.UnitSightRadius)
         {
             if (EP.attackStarted || EP.scannedPositions.Contains(scanPos))
                 return;
@@ -172,12 +172,12 @@ namespace TAC_AI.World
             {
                 if (!SearchedTiles.Contains(IV2))
                     SearchedTiles.Add(IV2);
-                //DebugTAC_AI.Log("TACtical_AI: SearchPatternCachFetch - Scanned " + IV2);
+                //DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCachFetch - Scanned " + IV2);
                 numScanned++;
             }
-            //DebugTAC_AI.Log("TACtical_AI: SearchPatternCachFetch - Scanned a total of " + numScanned);
+            //DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCachFetch - Scanned a total of " + numScanned);
         }
-        internal static bool SearchPatternCacheNoSort(NP_Presence EP, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
+        internal static bool SearchPatternCacheNoSort(NP_Presence_Automatic EP, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
         {
             tilePosEnemy = IntVector2.zero;
             foreach (IntVector2 IV2 in SearchedTiles)
@@ -185,13 +185,13 @@ namespace TAC_AI.World
                 if (TileHasTargetableEnemy(EP, IV2))
                 {
                     tilePosEnemy = IV2;
-                    DebugTAC_AI.Log("TACtical_AI: SearchPatternCacheNoSort - Enemy found at " + tilePosEnemy);
+                    DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCacheNoSort - Enemy found at " + tilePosEnemy);
                     return true;
                 }
             }
             return false;
         }
-        internal static bool SearchPatternCacheSort(NP_Presence EP, IntVector2 tilePos, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
+        internal static bool SearchPatternCacheSort(NP_Presence_Automatic EP, IntVector2 tilePos, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
         {
             tilePosEnemy = IntVector2.zero;
             int numScanned = 0;
@@ -200,19 +200,19 @@ namespace TAC_AI.World
                 if (TileHasTargetableEnemy(EP, IV2))
                 {
                     tilePosEnemy = IV2;
-                    //DebugTAC_AI.Log("TACtical_AI: SearchPatternCacheSort - Enemy found at " + tilePosEnemy);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCacheSort - Enemy found at " + tilePosEnemy);
                     return true;
                 }
-                //DebugTAC_AI.Log("TACtical_AI: SearchPatternCacheSort - Scanned " + IV2);
+                //DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCacheSort - Scanned " + IV2);
                 numScanned++;
             }
-            //DebugTAC_AI.Log("TACtical_AI: SearchPatternCacheSort - Scanned a total of " + numScanned);
+            //DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCacheSort - Scanned a total of " + numScanned);
             return false;
         }
-        public static bool TileHasTargetableEnemy(NP_Presence EP, IntVector2 tilePos)
+        public static bool TileHasTargetableEnemy(NP_Presence_Automatic EP, IntVector2 tilePos)
         {
             List<NP_TechUnit> ETUe = ManEnemyWorld.GetUnloadedTechsInTile(tilePos);
-            //DebugTAC_AI.Log("TACtical_AI: TileHasEnemy - Tile count " + ETUe.Count());
+            //DebugTAC_AI.Log(KickStart.ModID + ": TileHasEnemy - Tile count " + ETUe.Count());
             return ETUe.Exists(delegate (NP_TechUnit cand) {
                 DebugTAC_AI.Assert(cand == null, "TileHasEnemy - cand IS NULL");
                 if (cand.tech == null)
@@ -221,7 +221,7 @@ namespace TAC_AI.World
                 && Tank.IsEnemy(cand.tech.m_TeamID, EP.Team); 
             });
         }
-        public static IntVector2 FindTeamBaseTile(NP_Presence EP)
+        public static IntVector2 FindTeamBaseTile(NP_Presence_Automatic EP)
         {
             try
             {
@@ -236,11 +236,11 @@ namespace TAC_AI.World
                 ManEnemyWorld.EntirelyRemoveUnitFromTile(ETU);
                 ManEnemyWorld.StopManagingUnit(ETU);
             }
-            catch (Exception e) { DebugTAC_AI.Log("TACtical_AI: RemoteRemove - Fail for " + ETU.Name + " - " + e); }
+            catch (Exception e) { DebugTAC_AI.Log(KickStart.ModID + ": RemoteRemove - Fail for " + ETU.Name + " - " + e); }
         }
         public static void RemoteRecycle(NP_TechUnit ETU)
         {
-            NP_Presence EP = ManEnemyWorld.GetTeam(ETU.tech.m_TeamID);
+            NP_Presence_Automatic EP = ManEnemyWorld.GetTeam(ETU.tech.m_TeamID);
             if (EP != null)
                 EP.AddBuildBucks(RawTechTemplate.GetBBCost(ETU.tech));
             RemoteRemove(ETU);
@@ -251,7 +251,7 @@ namespace TAC_AI.World
             RemoteRemove(ETU);
         }
 
-        public static void PurgeAllUnder(NP_Presence EP)
+        public static void PurgeAllUnder(NP_Presence_Automatic EP)
         {
             int count = EP.EBUs.Count;
             for (int step = 0; step < count; count--)
@@ -281,7 +281,7 @@ namespace TAC_AI.World
 
 
         // Base Operations
-        public static bool PurgeIfNeeded(NP_Presence EP, NP_BaseUnit EBU)
+        public static bool PurgeIfNeeded(NP_Presence_Automatic EP, NP_BaseUnit EBU)
         {
             try
             {
@@ -302,7 +302,7 @@ namespace TAC_AI.World
             return false;
         }
 
-        internal static void TryUnloadedBaseOperations(NP_Presence EP)
+        internal static void TryUnloadedBaseOperations(NP_Presence_Automatic EP)
         {
             RefreshTeamMainBaseIfAnyPossible(EP);
             if (EP.MainBase != null)
@@ -325,7 +325,7 @@ namespace TAC_AI.World
             }
         }
 
-        internal static void ImTakingThatExpansion(NP_Presence EP, NP_BaseUnit EBU)
+        internal static void ImTakingThatExpansion(NP_Presence_Automatic EP, NP_BaseUnit EBU)
         {   // Expand the base!
             try
             {
@@ -354,13 +354,13 @@ namespace TAC_AI.World
                             int spawnIndex = valid.GetRandomEntry();
                             if (spawnIndex == -1)
                             {
-                                DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                                DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                             }
                             else
                             {
                                 RawTechTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
                                 ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
-                                //DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
                                 return;
                             }
                         }
@@ -368,7 +368,7 @@ namespace TAC_AI.World
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type);
-                        //DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                     }
                     return;
                 }
@@ -386,13 +386,13 @@ namespace TAC_AI.World
                         int spawnIndex = valid.GetRandomEntry();
                         if (spawnIndex == -1)
                         {
-                            DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion - UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                            DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs(ImTakingThatExpansion - UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                         }
                         else
                         {
                             RawTechTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
                             ManEnemyWorld.ConstructNewExpansionExt(pos, EBU, EP, BTemp);
-                            //DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
+                            //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
                             return;
                         }
                     }
@@ -400,7 +400,7 @@ namespace TAC_AI.World
                     if (RawTechLoader.IsFallback(type))
                         return;
                     ManEnemyWorld.ConstructNewExpansion(pos, EBU, EP, type);
-                    //DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
                 }
                 else
                 {   // Find new home base position
@@ -416,13 +416,13 @@ namespace TAC_AI.World
                             int spawnIndex = valid.GetRandomEntry();
                             if (spawnIndex == -1)
                             {
-                                DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                                DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                             }
                             else
                             {
                                 RawTechTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
                                 ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
-                                //DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                                //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
                                 return;
                             }
                         }
@@ -430,16 +430,16 @@ namespace TAC_AI.World
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type);
-                        //DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                     }
                 }
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: ImTakingThatExpansion - Error on execution: " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Error on execution: " + e);
             }
         }
-        internal static void TryFreeUpBaseSlots(NP_Presence EP, FactionLevel lvl)
+        internal static void TryFreeUpBaseSlots(NP_Presence_Automatic EP, FactionLevel lvl)
         {   // Remove uneeeded garbage
             try
             {
@@ -488,10 +488,10 @@ namespace TAC_AI.World
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: TryFreeUpBaseSlots - game is being stubborn");
+                DebugTAC_AI.Log(KickStart.ModID + ": TryFreeUpBaseSlots - game is being stubborn");
             }
         }
-        private static BasePurpose PickBuildBasedOnPriorities(NP_Presence EP, FactionLevel lvl)
+        private static BasePurpose PickBuildBasedOnPriorities(NP_Presence_Automatic EP, FactionLevel lvl)
         {   // Expand the base!
             if (EP.BuildBucks() <= CheapestAutominerPrice(RefreshTeamMainBaseIfAnyPossible(EP).Faction, lvl) && !HasTooMuchOfType(EP, BasePurpose.Autominer))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
@@ -554,7 +554,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        private static BasePurpose PickBuildNonDefense(NP_Presence EP)
+        private static BasePurpose PickBuildNonDefense(NP_Presence_Automatic EP)
         {   // Expand the base!
             switch (UnityEngine.Random.Range(0, 5))
             {
@@ -787,7 +787,7 @@ namespace TAC_AI.World
         }
 
 
-        private static bool IsActivelySieging(NP_Presence EP)
+        private static bool IsActivelySieging(NP_Presence_Automatic EP)
         {
             if (ManEnemySiege.SiegingEnemyTeam != null)
             {

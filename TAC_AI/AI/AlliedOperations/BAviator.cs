@@ -19,13 +19,13 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (thisInst.lastPlayer == null)
             {
-                DebugTAC_AI.LogError("TACtical_AI: AI " + tank.name + ":  MotivateFly could not get valid lastPlayer");
+                DebugTAC_AI.LogError(KickStart.ModID + ": AI " + tank.name + ":  MotivateFly could not get valid lastPlayer");
                 return;
             }
 
             if (!(thisInst.MovementController is AIControllerAir))
             {
-                DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  FIRED MotivateFly WITHOUT THE REQUIRED AIControllerAir MODULE!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  FIRED MotivateFly WITHOUT THE REQUIRED AIControllerAir MODULE!!!");
                 return;
             }
 

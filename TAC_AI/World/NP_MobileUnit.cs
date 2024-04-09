@@ -14,7 +14,7 @@ namespace TAC_AI.World
         public bool IsAirborne { get; internal set; } = false;
         public readonly bool isFounder = false;
 
-        public NP_MobileUnit(ManSaveGame.StoredTech techIn, NP_Presence team, FactionSubTypes FST) :
+        public NP_MobileUnit(ManSaveGame.StoredTech techIn, NP_Presence_Automatic team, FactionSubTypes FST) :
             base(techIn, team, FST, ManEnemyWorld.MobileHealthMulti)
         {
             isFounder = tech.m_TechData.IsTeamFounder();
@@ -77,13 +77,13 @@ namespace TAC_AI.World
                     Health += Shield;
                     Shield = 0;
                 }
-                NP_Presence.ReportCombat("Tech " + Name + " has received " + Dealt + " damage | Health " + Health
+                NP_Presence_Automatic.ReportCombat("Tech " + Name + " has received " + Dealt + " damage | Health " + Health
                     + " | Shield " + Shield);
             }
             else
             {
                 Health -= Dealt;
-                NP_Presence.ReportCombat("Tech " + Name + " has received " + Dealt + " damage | Health " + Health);
+                NP_Presence_Automatic.ReportCombat("Tech " + Name + " has received " + Dealt + " damage | Health " + Health);
             }
             return Health < 0;
         }

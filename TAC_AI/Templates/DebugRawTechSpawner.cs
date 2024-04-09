@@ -53,10 +53,12 @@ namespace TAC_AI.Templates
         private static Vector3 PlayerLoc = Vector3.zero;
         private static Vector3 PlayerFow = Vector3.forward;
         private static bool UIIsCurrentlyOpen => GUIWindow.activeSelf;
+        internal static bool CanCommandOtherTeams => DevCheatCommandEnemies && CanOpenDebugSpawnMenu;
         private static bool toggleDebugLock = false;
         private static bool InstantLoad = false;
         internal static bool DevCheatNoAttackPlayer = false;
         internal static bool DevCheatPlayerEnemyBaseTeam = false;
+        internal static bool DevCheatCommandEnemies = false;
         private static bool ShowLocal = true;
 
         private static GameObject GUIWindow;
@@ -73,9 +75,9 @@ namespace TAC_AI.Templates
                 return;
 
             #if DEBUG
-                DebugTAC_AI.Log("TACtical_AI: Raw Techs Debugger launched (DEV)");
+                DebugTAC_AI.Log(KickStart.ModID + ": Raw Techs Debugger launched (DEV)");
             #else
-                DebugTAC_AI.Log("TACtical_AI: Raw Techs Debugger launched");
+                DebugTAC_AI.Log(KickStart.ModID + ": Raw Techs Debugger launched");
 #endif
 
             inst = Instantiate(new GameObject()).AddComponent<DebugRawTechSpawner>();
@@ -138,6 +140,36 @@ namespace TAC_AI.Templates
         private static readonly int MaxWindowWidth = MaxCountWidth * ButtonWidth;
         private static List<FactionSubTypes> openedFactions = new List<FactionSubTypes>();
 
+        private static bool clicked = false;
+        private static int VertPosOff = 0;
+        private static int HoriPosOff = 0;
+        private static bool MaxExtensionX = false;
+        private static bool MaxExtensionY = false;
+        private static SpawnBaseTypes type = SpawnBaseTypes.NotAvail;
+        private static int index = 0;
+
+        private static void ResetMenuPlacer()
+        {
+            clicked = false;
+            VertPosOff = 0;
+            HoriPosOff = 0;
+            MaxExtensionX = false;
+            MaxExtensionY = false;
+            type = SpawnBaseTypes.NotAvail;
+            index = 0;
+        }
+        private static void StepMenuPlacer()
+        {
+            HoriPosOff += ButtonWidth;
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+        }
 
         private static void GUIHandlerDebug(int ID)
         {
@@ -162,12 +194,7 @@ namespace TAC_AI.Templates
         }
         private static void GUIHandlerPlayer(int ID)
         {
-            bool clicked = false;
-            int VertPosOff = 0;
-            int HoriPosOff = 0;
-            bool MaxExtensionX = false;
-            bool MaxExtensionY = false;
-            int index = 0;
+            ResetMenuPlacer();
 
             List<RawTechTemplate> listTemp;
             if (ShowLocal)
@@ -246,22 +273,14 @@ namespace TAC_AI.Templates
                         OrganizeDeploy(ref listTemp);
 
                         RawTechExporter.ValidateEnemyFolder();
-                        string export = RawTechExporter.RawTechsDirectory + RawTechExporter.up + "Bundled";
+                        string export = Path.Combine(RawTechExporter.RawTechsDirectory, "Bundled");
                         Directory.CreateDirectory(export);
 
-                        RawTechExporter.MakeExternalRawTechListFile(export + RawTechExporter.up + "RawTechs.RTList", listTemp);
+                        RawTechExporter.MakeExternalRawTechListFile(Path.Combine(export, "RawTechs.RTList"), listTemp);
                     }
                     catch { }
                 }
-                HoriPosOff += ButtonWidth;
-                if (HoriPosOff >= MaxWindowWidth)
-                {
-                    HoriPosOff = 0;
-                    VertPosOff += 30;
-                    MaxExtensionX = true;
-                    if (VertPosOff >= MaxWindowHeight)
-                        MaxExtensionY = true;
-                }
+                StepMenuPlacer();
                 if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * 2, 30), redStart + "Bundle Active Player Techs for Mod</b></color>"))
                 {
                     try
@@ -281,24 +300,20 @@ namespace TAC_AI.Templates
                         OrganizeDeploy(ref temps);
 
                         RawTechExporter.ValidateEnemyFolder();
-                        string export = RawTechExporter.RawTechsDirectory + RawTechExporter.up + "Bundled";
+                        string export = Path.Combine(RawTechExporter.RawTechsDirectory, "Bundled");
                         Directory.CreateDirectory(export);
 
-                        RawTechExporter.MakeExternalRawTechListFile(export + RawTechExporter.up + "RawTechs.RTList", listTemp);
+                        RawTechExporter.MakeExternalRawTechListFile(Path.Combine(export, "RawTechs.RTList"), listTemp);
                     }
                     catch { }
                 }
-
                 HoriPosOff += ButtonWidth;
-                HoriPosOff += ButtonWidth;
-                if (HoriPosOff >= MaxWindowWidth)
-                {
-                    HoriPosOff = 0;
-                    VertPosOff += 30;
-                    MaxExtensionX = true;
-                    if (VertPosOff >= MaxWindowHeight)
-                        MaxExtensionY = true;
-                }
+                StepMenuPlacer();
+                if (ActiveGameInterop.inst && ActiveGameInterop.IsReady && 
+                    GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * 2, 30), redStart + "Push To Editor</b></color>"))
+                    ActiveGameInterop.TryTransmit("RetreiveTechPop", Path.Combine(RawTechExporter.RawTechsDirectory,
+                        "Bundled", "RawTechs.RTList"));
+                StepMenuPlacer();
             }
             if (HoriPosOff >= MaxWindowWidth)
             {
@@ -313,16 +328,7 @@ namespace TAC_AI.Templates
             {
                 DestroyAllInvalidVisibles();
             }
-
-            HoriPosOff += ButtonWidth;
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
+            StepMenuPlacer();
 
 #if DEBUG
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "LOCAL TO COM</b></color>"))
@@ -331,7 +337,7 @@ namespace TAC_AI.Templates
                 {
                     OrganizeDeploy(ref listTemp);
 
-                    string export = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    string export = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
                     Directory.CreateDirectory(export);
 
                     List<string> toWrite = new List<string>();
@@ -366,8 +372,8 @@ namespace TAC_AI.Templates
                     toWrite.Add("");
                     toWrite.Add("-----------------------------------------------------------");
                     toWrite.Add("");
-                    File.WriteAllText(export + RawTechExporter.up + "Techs.json", ""); // CLEAR
-                    File.AppendAllLines(export + RawTechExporter.up + "Techs.json", toWrite);
+                    File.WriteAllText(Path.Combine(export, "Techs.json"), ""); // CLEAR
+                    File.AppendAllLines(Path.Combine(export, "Techs.json"), toWrite);
                     toWrite.Clear();
 
                     foreach (string str in basetypeNames)
@@ -379,10 +385,10 @@ namespace TAC_AI.Templates
                     toWrite.Add("-----------------------------------------------------------");
                     toWrite.Add("---------------- <<< END EXPORTING >>> --------------------");
                     toWrite.Add("-----------------------------------------------------------");
-                    File.WriteAllText(export + RawTechExporter.up + "ESpawnBaseTypes.json", ""); // CLEAR
-                    File.AppendAllLines(export + RawTechExporter.up + "ESpawnBaseTypes.json", toWrite);
+                    File.WriteAllText(Path.Combine(export, "ESpawnBaseTypes.json"), ""); // CLEAR
+                    File.AppendAllLines(Path.Combine(export, "ESpawnBaseTypes.json"), toWrite);
 
-                    File.WriteAllText(export + RawTechExporter.up + "batchNew.json", CommunityCluster.GetLocalToPublic());
+                    File.WriteAllText(Path.Combine(export, "batchNew.json"), CommunityCluster.GetLocalToPublic());
                 }
                 catch { }
             }
@@ -401,17 +407,17 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    string export = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    string export = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
                     if (!Directory.Exists(export))
                         Directory.CreateDirectory(export);
                     Dictionary<SpawnBaseTypes, RawTechTemplate> BTs = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, RawTechTemplate>>(CommunityCluster.FetchPublicFromFile());
                     CommunityCluster.Organize(ref BTs);
                     Dictionary<int, RawTechTemplate> BTsInt = BTs.ToList().ToDictionary(x => (int)x.Key, x => x.Value);
-                    File.WriteAllText(export + RawTechExporter.up + "batchEdit.json", JsonConvert.SerializeObject(BTsInt, Formatting.Indented, RawTechExporter.JSONDEV));
+                    File.WriteAllText(Path.Combine(export, "batchEdit.json"), JsonConvert.SerializeObject(BTsInt, Formatting.Indented, RawTechExporter.JSONDEV));
                 }
                 catch (Exception e) {
-                    Debug.LogError("TAC_AI: ERROR - " + e);
-                    ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - " + e); 
+                    Debug.LogError(KickStart.ModID + ": ERROR - " + e);
+                    ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - " + e); 
                 }
             }
 
@@ -429,20 +435,20 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    string import = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    string import = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
                     if (Directory.Exists(import))
                     {
-                        string importJSON = import + RawTechExporter.up + "batchEdit.json";
+                        string importJSON = Path.Combine(import, "batchEdit.json");
                         if (File.Exists(importJSON))
                         {
                             CommunityCluster.DeployUncompressed(importJSON);
                             TempManager.ValidateAndAddAllInternalTechs(false);
                         }
                         else
-                            ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - Please pull existing first.");
+                            ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - Please pull existing first.");
                     }
                 }
-                catch(Exception e) { ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - " + e); }
+                catch(Exception e) { ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - " + e); }
             }
 
             HoriPosOff += ButtonWidth;
@@ -460,10 +466,10 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    string import = new DirectoryInfo(Application.dataPath).Parent.ToString() + RawTechExporter.up + "MassExport";
+                    string import = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
                     if (Directory.Exists(import))
                     {
-                        string importJSON = import + RawTechExporter.up + "batchEdit.json";
+                        string importJSON = Path.Combine(import, "batchEdit.json");
                         if (File.Exists(importJSON))
                         {
                             CommunityCluster.DeployUncompressed(importJSON);
@@ -471,10 +477,10 @@ namespace TAC_AI.Templates
                             TempManager.ValidateAndAddAllInternalTechs();
                         }
                         else
-                            ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - Please pull existing first.");
+                            ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - Please pull existing first.");
                     }
                 }
-                catch (Exception e) { ManUI.inst.ShowErrorPopup("TAC_AI: ERROR - " + e); }
+                catch (Exception e) { ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - " + e); }
             }
 
 
@@ -589,16 +595,7 @@ namespace TAC_AI.Templates
                     {
                         SpawnTech(SpawnBaseTypes.NotAvail);
                     }
-                    HoriPosOff += ButtonWidth;
-
-                    if (HoriPosOff >= MaxWindowWidth)
-                    {
-                        HoriPosOff = 0;
-                        VertPosOff += 30;
-                        MaxExtensionX = true;
-                        if (VertPosOff >= MaxWindowHeight)
-                            MaxExtensionY = true;
-                    }
+                    StepMenuPlacer();
                     if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "The Enemies Folder!"))
                     {
                         SpawnTech(SpawnBaseTypes.NotAvail);
@@ -690,17 +687,12 @@ namespace TAC_AI.Templates
         }
         private static void GUIHandlerPreset(int ID)
         {
-            bool clicked = false;
-            int VertPosOff = 0;
-            int HoriPosOff = 0;
-            bool MaxExtensionX = false;
-            bool MaxExtensionY = false;
-            SpawnBaseTypes type = SpawnBaseTypes.NotAvail;
+            ResetMenuPlacer();
 
             scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height -64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
             {
-                DebugTAC_AI.Log("TACtical AI: RemoveAllEnemies - CALLED");
+                DebugTAC_AI.Log(KickStart.ModID + ": RemoveAllEnemies - CALLED");
                 RemoveAllEnemies();
             }
             HoriPosOff += ButtonWidth;
@@ -720,32 +712,22 @@ namespace TAC_AI.Templates
             {
                 AIEPathMapper.ShowPathingGIZMO = !AIEPathMapper.ShowPathingGIZMO;
             }
-            HoriPosOff += ButtonWidth;
-
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
+            StepMenuPlacer();
 #endif
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Priced</b></color>"))
             {
                 RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), terrainType: BaseTerrain.Any, maxPrice: KickStart.EnemySpawnPriceMatching);
             }
-            HoriPosOff += ButtonWidth;
+            StepMenuPlacer();
 
-            if (HoriPosOff >= MaxWindowWidth)
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Founder</b></color>"))
             {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
+                var temp = RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), terrainType: BaseTerrain.Any, maxPrice: KickStart.EnemySpawnPriceMatching);
+
+                RawTechLoader.TryStartBase(temp, temp.GetHelperInsured(), BasePurpose.AnyNonHQ);
             }
+            StepMenuPlacer();
 #if DEBUG
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatNoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
             {
@@ -857,6 +839,7 @@ namespace TAC_AI.Templates
             }
             GUI.DragWindow();
         }
+
 
         public static void RemoveTechLocal(int index)
         {
@@ -1093,7 +1076,7 @@ namespace TAC_AI.Templates
 
                         if (AIGlobals.IsBaseTeam(remove.TeamID) && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
                         {
-                            DebugTAC_AI.Log("TACtical_AI: RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | "
+                            DebugTAC_AI.Log(KickStart.ModID + ": RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | "
                                 + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | "
                                 + (remove.visible ? "active" : "inactive"));
 
@@ -1119,7 +1102,7 @@ namespace TAC_AI.Templates
                     step++;
                 }
                 if (removed > 0)
-                    DebugTAC_AI.Log("TACtical_AI: RemoveOrphanTrackedVisibles - removed " + removed);
+                    DebugTAC_AI.Log(KickStart.ModID + ": RemoveOrphanTrackedVisibles - removed " + removed);
             }
             catch { }
             finally
@@ -1133,7 +1116,7 @@ namespace TAC_AI.Templates
             if (!UIIsCurrentlyOpen)
             {
                 RawTechExporter.ReloadExternal();
-                DebugTAC_AI.Log("TACtical_AI: Opened Raw Techs Debug menu!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Opened Raw Techs Debug menu!");
                 GUIWindow.SetActive(true);
             }
         }
@@ -1143,7 +1126,7 @@ namespace TAC_AI.Templates
             {
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
-                DebugTAC_AI.Log("TACtical_AI: Closed Raw Techs Debug menu!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Closed Raw Techs Debug menu!");
             }
         }
         public static void ForceCloseSubMenuClickable()
@@ -1151,7 +1134,7 @@ namespace TAC_AI.Templates
             toggleDebugLock = false;
             GUIWindow.SetActive(false);
             KickStart.ReleaseControl();
-            DebugTAC_AI.Log("TACtical_AI: Force-Closed Raw Techs Debug menu!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Force-Closed Raw Techs Debug menu!");
         }
 
 

@@ -75,7 +75,7 @@ namespace TAC_AI.World
         }
 
 
-        internal NP_BaseUnit(ManSaveGame.StoredTech techIn, NP_Presence team) :
+        internal NP_BaseUnit(ManSaveGame.StoredTech techIn, NP_Presence_Automatic team) :
             base(techIn, team, techIn.m_TechData.GetMainCorporations().FirstOrDefault(), ManEnemyWorld.BaseHealthMulti)
         {
             //tilePos = tilePosition;
@@ -128,7 +128,7 @@ namespace TAC_AI.World
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: EnemyBaseUnit(EBU) Failiure on init at level " + level + "!");
+                DebugTAC_AI.Log(KickStart.ModID + ": EnemyBaseUnit(EBU) Failiure on init at level " + level + "!");
             }
             RechargeRate = rechargeRate;
             RechargeRateDay = rechargeRateDay;
@@ -165,13 +165,13 @@ namespace TAC_AI.World
                     Health += Shield;
                     Shield = 0;
                 }
-                NP_Presence.ReportCombat("Base " + Name + " has received " + Dealt + " damage | Health " + Health
+                NP_Presence_Automatic.ReportCombat("Base " + Name + " has received " + Dealt + " damage | Health " + Health
                     + " | Shield " + Shield);
             }
             else
             {
                 Health -= Dealt;
-                NP_Presence.ReportCombat("Base " + Name + " has received " + Dealt + " damage | Health " + Health);
+                NP_Presence_Automatic.ReportCombat("Base " + Name + " has received " + Dealt + " damage | Health " + Health);
             }
             return Health < 0;
         }

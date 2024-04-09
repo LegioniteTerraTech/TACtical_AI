@@ -165,7 +165,7 @@ namespace TAC_AI.AI.Enemy
             if (!(bool)tank)
                 return true;
             tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree1);
-            DebugTAC_AI.Info("TACtical_AI: AI " + tank.name + ":  AI Tree is " + tree1.ToString());
+            DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI " + tank.name + ":  AI Tree is " + tree1.ToString());
 
             if (!DidFire)
             {

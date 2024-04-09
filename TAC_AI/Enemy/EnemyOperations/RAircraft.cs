@@ -237,7 +237,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
                         thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                         //thisInst.AttemptedRepairs++;
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else
@@ -260,7 +260,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                             thisInst.PendingDamageCheck = RRepair.EnemyRepairStepper(thisInst, tank, mind, Super: venPower);
                             //thisInst.AttemptedRepairs++;
                         }
-                        //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is repairing");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is repairing");
                         return true;
                     }
                     else
@@ -272,7 +272,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 thisInst.anchorAttempts = 0;
             }
 
-            //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
+            //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is lollygagging   " + mind.CommanderMind.ToString());
 
             if (holdGround)
                 direct.SetLastDest(mind.sceneStationaryPos);
@@ -292,6 +292,24 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     //The case below I still have to think of a reason for them to do the things
                     case EnemyAttitude.Junker:  // Huddle up by blocks on the ground
                         FlutterAround(thisInst, tank, mind, ref direct);
+                        break;
+                    case EnemyAttitude.OnRails:
+                        break;
+                    case EnemyAttitude.NPCBaseHost:
+                        break;
+                    case EnemyAttitude.Boss:
+                        break;
+                    case EnemyAttitude.Invader:
+                        break;
+                    case EnemyAttitude.Guardian:
+                        break;
+                    case EnemyAttitude.PartTurret:
+                        break;
+                    case EnemyAttitude.PartStatic:
+                        break;
+                    case EnemyAttitude.PartMimic:
+                        break;
+                    default:
                         break;
                 }
             }

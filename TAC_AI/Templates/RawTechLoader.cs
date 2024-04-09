@@ -20,43 +20,59 @@ namespace TAC_AI.Templates
     /// </summary>
     internal class BookmarkBuilder : MonoBehaviour
     {
+        public Tank target { get; private set; }
         public string blueprint { get; private set; }
         public bool infBlocks;
         public FactionSubTypes faction;
         public bool unprovoked = false;
         public bool instant = true;
+        private BookmarkBuilder(Tank tank, string Blueprint)
+        {
+            target = tank;
+            blueprint = Blueprint;
+        }
         internal static BookmarkBuilder Init(Tank tank, string Blueprint)
         {
             if (Blueprint.NullOrEmpty())
                 throw new NullReferenceException("BookmarkBuilder - Blueprint field cannot be null or empty");
             var help = tank.GetHelperInsured();
-            var bookmark = tank.gameObject.GetOrAddComponent<BookmarkBuilder>();
+            BookmarkBuilder bookmark = tank.gameObject.AddComponent<BookmarkBuilder>();
+            bookmark.target = tank;
             bookmark.blueprint = Blueprint;
             bookmark.HookUp(help);
             help.FinishedRepairEvent.Subscribe(bookmark.Finish);
+            DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " Setup BookmarkBuilder");
             return bookmark;
+        }
+        internal static bool Exists(Tank tank) => tank.GetComponent<BookmarkBuilder>();
+        internal static bool TryGet(Tank tank, out BookmarkBuilder value)
+        {
+            value = tank.GetComponent<BookmarkBuilder>();
+            return value != null;
+        }
+        internal static bool Remove(Tank tank)
+        {
+            var BB = tank.GetComponent<BookmarkBuilder>();
+            if (BB)
+            {
+                Destroy(BB);
+                return true;
+            }
+            else
+                return false;
         }
         internal void HookUp(TankAIHelper help)
         {
             help.AILimitSettings.OverrideForBuilder(true);
+            help.AISetSettings.OverrideForBuilder(true);
             help.InsureTechMemor("BookmarkBuilder", false);
             help.TechMemor.SetupForNewTechConstruction(help, blueprint);
         }
         internal void Finish(TankAIHelper help)
         {
-            DebugTAC_AI.Assert("BookmarkBuilder - Finish");
+            DebugTAC_AI.Assert("BookmarkBuilder - Finished building from assignment");
             help.FinishedRepairEvent.Unsubscribe(Finish);
-            Destroy(this);
-        }
-    }
-    internal class RequestAnchored : MonoBehaviour
-    {
-        sbyte delay = 4;
-        private void Update()
-        {
-            delay--;
-            if (delay == 0)
-                Destroy(this);
+            Remove(target);
         }
     }
 
@@ -97,7 +113,7 @@ namespace TAC_AI.Templates
                 return false; // Delaying...
             if (ManSpawn.inst.IsTechSpawning)
             {
-                DebugTAC_AI.Exception("TACtical_AI: QueueInstantTech.PushSpawn: ManSpawn Tech spawning appears to be jammed.  Unable to queue Tech spawn.");
+                DebugTAC_AI.Exception(KickStart.ModID + ": QueueInstantTech.PushSpawn: ManSpawn Tech spawning appears to be jammed.  Unable to queue Tech spawn.");
                 return false; // Something else is using it!!  Hold off! 
             }
             Tank outcome = RawTechLoader.InstantTech(pos, forward, Team, name, blueprint, grounded, ForceAnchor, population, skins);
@@ -146,10 +162,6 @@ namespace TAC_AI.Templates
     {
         internal static RawTechLoader inst;
 
-        /// <summary>
-        /// FOR CASES INVOLVING FIRST TECH SPAWNS, NOT ADDITIONS TO TEAMS
-        /// </summary>
-        internal static bool UseFactionSubTypes = false;  // Force FactionSubTypes instead of FactionSubTypes
         static readonly bool ForceSpawn = false;  // Test a specific base
         static readonly SpawnBaseTypes forcedBaseSpawn = SpawnBaseTypes.GSOMidBase;
         private static readonly Queue<QueueInstantTech> TechBacklog = new Queue<QueueInstantTech>();
@@ -218,70 +230,78 @@ namespace TAC_AI.Templates
         // Main initiation function
         internal static void TryStartBase(Tank tank, TankAIHelper thisInst, BasePurpose purpose = BasePurpose.Harvesting)
         {
-            if (!KickStart.enablePainMode || !KickStart.AllowEnemiesToStartBases)
-                return;
-            if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && !Singleton.Manager<ManNetwork>.inst.IsServer)
-                return; // no want each client to have enemies spawn in new bases - stacked base incident!
-
-            MakeSureCanExistWithBase(tank);
-
-            if (GetEnemyBaseCountSearchRadius(tank.boundsCentreWorldNoCheck, AIGlobals.StartBaseMinSpacing) >= KickStart.MaxEnemyBaseLimit)
-            {
-                int teamswatch = ReassignToExistingEnemyBaseTeam();
-                if (teamswatch == -1)
-                    return;
-                tank.SetTeam(teamswatch);
-                TryRemoveFromPop(tank);
-                return;
-            }
-
-            if (GetEnemyBaseCountForTeam(tank.Team) > 0)
-                return; // want no base spam on world load
-
-            Vector3 pos = (tank.rootBlockTrans.forward * (thisInst.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
-
-            if (!IsRadiusClearOfTechObst(pos, thisInst.lastTechExtents))
-            {   // try behind
-                pos = (-tank.rootBlockTrans.forward * (thisInst.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
-
-                if (!IsRadiusClearOfTechObst(pos, thisInst.lastTechExtents))
-                    return;
-            }
-
-            int GradeLim = 0;
             try
             {
-                if (ManLicenses.inst.GetLicense(tank.GetMainCorp()).IsDiscovered)
-                    GradeLim = ManLicenses.inst.GetLicense(tank.GetMainCorp()).CurrentLevel;
-            }
-            catch 
-            {
-                GradeLim = 99; // - creative or something else
-            }
+                if (!KickStart.enablePainMode || !KickStart.AllowEnemiesToStartBases)
+                    return;
+                if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && !Singleton.Manager<ManNetwork>.inst.IsServer)
+                    return; // no want each client to have enemies spawn in new bases - stacked base incident!
 
-            // We validated?  
-            //   Alright let's spawn the base!
-            int startingMoney = StartBaseAtPosition(tank, pos, tank.Team, purpose, GradeLim);
-            if (ManBaseTeams.InsureBaseTeam(tank.Team, out var teamInst))
-                teamInst.AddBuildBucks(startingMoney);
+                MakeSureCanExistWithBase(tank);
 
-            AIWiki.hintBase.Show();
-            InvokeHelper.Invoke(() =>
+                if (GetEnemyBaseCountSearchRadius(tank.boundsCentreWorldNoCheck, AIGlobals.StartBaseMinSpacing) >= KickStart.MaxEnemyBaseLimit)
+                {
+                    int teamswatch = ReassignToExistingEnemyBaseTeam();
+                    if (teamswatch == -1)
+                        return;
+                    tank.SetTeam(teamswatch);
+                    TryRemoveFromPop(tank);
+                    return;
+                }
+
+                if (GetEnemyBaseCountForTeam(tank.Team) > 0)
+                    return; // want no base spam on world load
+
+                Vector3 pos = (tank.rootBlockTrans.forward * (thisInst.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
+
+                if (!IsRadiusClearOfTechObst(pos, thisInst.lastTechExtents))
+                {   // try behind
+                    pos = (-tank.rootBlockTrans.forward * (thisInst.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
+
+                    if (!IsRadiusClearOfTechObst(pos, thisInst.lastTechExtents))
+                        return;
+                }
+
+                int GradeLim = 0;
+                try
+                {
+                    if (ManLicenses.inst.GetLicense(tank.GetMainCorp()).IsDiscovered)
+                        GradeLim = ManLicenses.inst.GetLicense(tank.GetMainCorp()).CurrentLevel;
+                }
+                catch
+                {
+                    GradeLim = 99; // - creative or something else
+                }
+
+                // We validated?  
+                //   Alright let's spawn the base!
+                int startingMoney = StartBaseAtPosition(tank, pos, tank.Team, purpose, GradeLim);
+                if (ManBaseTeams.InsureBaseTeam(tank.Team, out var teamInst))
+                    teamInst.AddBuildBucks(startingMoney);
+
+                AIWiki.hintBase.Show();
+                InvokeHelper.Invoke(() =>
+                {
+                    AIWiki.hintBaseInteract.Show();
+                }, 16);
+                switch (ManBaseTeams.GetRelations(ManPlayer.inst.PlayerTeam, tank.Team))
+                {
+                    case TeamRelations.Enemy:
+                        AIWiki.hintRival.Show();
+                        break;
+                    case TeamRelations.HoldFire:
+                    case TeamRelations.Neutral:
+                        AIWiki.hintSubNeutral.Show();
+                        break;
+                    case TeamRelations.Friendly:
+                        AIWiki.hintAllied.Show();
+                        break;
+                }
+            }
+            catch (Exception e)
             {
-                AIWiki.hintBaseInteract.Show();
-            }, 16);
-            switch (ManBaseTeams.GetRelations(ManPlayer.inst.PlayerTeam, tank.Team))
-            {
-                case TeamRelations.Enemy:
-                    AIWiki.hintRival.Show();
-                    break;
-                case TeamRelations.HoldFire:
-                case TeamRelations.Neutral:
-                    AIWiki.hintSubNeutral.Show();
-                    break;
-                case TeamRelations.Friendly:
-                    AIWiki.hintAllied.Show();
-                    break;
+                DebugTAC_AI.ErrorReport("Epic Error on AI Base Spawning:\n" + e);
+                DebugTAC_AI.Log("Epic Error on AI Base Spawning:\n" + e);
             }
         }
 
@@ -417,24 +437,24 @@ namespace TAC_AI.Templates
                 }
             }
 
-            RawTechTemplate BTemp = null;
+            RawTechTemplate BTemp;
             if (ShouldUseCustomTechs(out List<int> valid, TankExtentions.GetMainCorp(spawnerTank), lvl, purpose, BT, false, grade))
             {
                 int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex == -1)
-                {
-                    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(SpawnBaseAtPosition) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
-                }
+                    throw new Exception("ShouldUseCustomTechs.SpawnBaseAtPosition(1) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                 else
                 {
                     BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
                     //SpawnEnemyTechExtBase(pos, Team, Vector3.forward, BTemp);
+                    if (BTemp == null)
+                        throw new Exception("ShouldUseCustomTechs.SpawnBaseAtPosition(2) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                     //return BTemp.startingFunds;
                 }
             }
-            if (BTemp == null)
+            else
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnBaseAtPosition) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                DebugTAC_AI.LogSpawn(KickStart.ModID + ": SpawnBaseAtPosition - No appropreate Custom Local Tech has been found, resorting to built-in spawns.");
                 BTemp = GetBaseTemplate(GetEnemyBaseType(FTE, lvl, purpose, BT, maxGrade: grade));
             }
 
@@ -569,7 +589,7 @@ namespace TAC_AI.Templates
                 int spawnIndex = valid.GetRandomEntry();
                 if (spawnIndex == -1)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs(SpawnBaseAtPosition) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs(SpawnBaseAtPosition) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
                 }
                 else
                 {
@@ -679,7 +699,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(bType, pos, quat, out bool worked);
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
             var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -730,7 +750,7 @@ namespace TAC_AI.Templates
         internal static int SpawnBase(Vector3 pos, Vector3 facing, int Team, RawTechTemplate toSpawn, bool storeBB, int ExtraBB = 0)
         {
             if (!AIGlobals.IsBaseTeam(Team))
-                DebugTAC_AI.Assert("TACtical_AI: SpawnBase - Unexpected non-base team assigned to base spawn " + Team);
+                DebugTAC_AI.Assert(KickStart.ModID + ": SpawnBase - Unexpected non-base team assigned to base spawn " + Team);
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             string baseBlueprint = toSpawn.savedTech;
             Vector3 position = pos;
@@ -741,7 +761,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(bType, pos, quat, out bool worked);
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
             var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -801,7 +821,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(bType, pos, quat, out bool worked);
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: GetSpawnBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log(KickStart.ModID + ": GetSpawnBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return null;
             }
             var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -888,11 +908,11 @@ namespace TAC_AI.Templates
             position.y = offset;
             Quaternion quat = Quaternion.LookRotation(spawnerForwards, Vector3.up);
 
-            BlockTypes bType = RawTechTemplate.JSONToFirstBlock(baseBlueprint);
+            BlockTypes bType = RawTechBase.JSONToFirstBlock(baseBlueprint);
             TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnLandBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
             var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -919,11 +939,12 @@ namespace TAC_AI.Templates
             namesav.faction = RawTechUtil.CorpExtToCorp(toSpawn.faction);
             namesav.unprovoked = false;
             namesav.instant = false;
+            DebugTAC_AI.Log(KickStart.ModID + ": - SpawnLandBase: Spawning Land Base " + toSpawn.techName + ", ID (Still pending...)");
             return toSpawn.baseCost + SpawnBB;
         }
         private static int SpawnSeaBase(Vector3 spawnerForwards, Vector3 pos, int Team, RawTechTemplate toSpawn, bool Starting, bool storeBB, int SpawnBB = 0)
         {   // N/A!!! WIP!!!
-            DebugTAC_AI.Log("TACtical_AI: - SpawnSeaBase: There's no sea bases stored in the prefab pool.  Consider suggesting one!");
+            DebugTAC_AI.Log(KickStart.ModID + ": - SpawnSeaBase: There's no sea bases stored in the prefab pool.  Consider suggesting one!");
             return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, Starting, SpawnBB);
             /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
@@ -933,7 +954,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnSeaBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnSeaBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -958,7 +979,7 @@ namespace TAC_AI.Templates
         }
         private static int SpawnAirBase(Vector3 spawnerForwards, Vector3 pos, int Team, RawTechTemplate toSpawn, bool Starting, bool storeBB, int SpawnBB = 0)
         {   // N/A!!! WIP!!!
-            DebugTAC_AI.Log("TACtical_AI: - SpawnAirBase: There's no air bases stored in the prefab pool.  Consider suggesting one!");
+            DebugTAC_AI.Log(KickStart.ModID + ": - SpawnAirBase: There's no air bases stored in the prefab pool.  Consider suggesting one!");
             return SpawnLandBase(spawnerForwards, pos, Team, toSpawn, storeBB, Starting, SpawnBB);
             /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
@@ -968,7 +989,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnAirBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnAirBase - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return 0;
             }
 
@@ -995,7 +1016,7 @@ namespace TAC_AI.Templates
 
 
         // UNLOADED
-        internal static TechData GetBaseExpansionUnloaded(Vector3 pos, NP_Presence EP, RawTechTemplate BT, out int[] bIDs)
+        internal static TechData GetBaseExpansionUnloaded(Vector3 pos, NP_Presence_Automatic EP, RawTechTemplate BT, out int[] bIDs)
         {   // All bases are off-set rotated right to prevent the base from being built diagonally
             TryClearAreaForBase(pos);
 
@@ -1063,7 +1084,7 @@ namespace TAC_AI.Templates
                 {
                     return SpawnMobileTechPrefab(pos, forwards, Team, TempManager.ExternalEnemyTechsAll[spawnIndex], subNeutral, snapTerrain);
                 }
-                DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - Critical error on call - Expected a Custom Local Tech to exist but found none!");
             }
             return SpawnMobileTechPrefab(pos, forwards, Team, GetBaseTemplate(GetEnemyBaseType(factionType, lvl, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, subNeutral: subNeutral, maxPrice: maxPrice)), subNeutral, snapTerrain);
         }
@@ -1097,7 +1118,7 @@ namespace TAC_AI.Templates
                     outTank = SpawnMobileTechPrefab(pos, forwards, Team, TempManager.ExternalEnemyTechsAll[valid.GetRandomEntry()], subNeutral, snapTerrain);
                     return true;
                 }
-                DebugTAC_AI.Log("TACtical_AI: SpawnRandomTechAtPosHead - Critical error on call - Expected a Custom Local Tech to exist but found none!");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnRandomTechAtPosHead - Critical error on call - Expected a Custom Local Tech to exist but found none!");
             }
             SpawnBaseTypes type = GetEnemyBaseType(factionType, lvl, BasePurpose.NotStationary, terrainType, maxGrade: maxGrade, subNeutral: subNeutral, maxPrice: maxPrice);
             if (type == SpawnBaseTypes.NotAvail)
@@ -1121,7 +1142,7 @@ namespace TAC_AI.Templates
             Tank theTech = InstantTech(pos, forwards, Team, toSpawn.techName, baseBlueprint, snapTerrain, population: pop);
             if (theTech.IsNull())
             {   // Generate via the failsafe method
-                DebugTAC_AI.Log("TACtical_AI: SpawnMobileTech - Generation failed, falling back to slower, reliable Tech building method");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnMobileTech - Generation failed, falling back to slower, reliable Tech building method");
 
                 Vector3 position = pos;
                 if (snapTerrain)
@@ -1135,7 +1156,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
                 if (!worked)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: SpawnMobileTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpawnMobileTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return null;
                 }
                 var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -1172,7 +1193,7 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ASSERT - ShouldUseCustomTechs - Expected a Custom Local tech to exist but found none!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ASSERT - ShouldUseCustomTechs - Expected a Custom Local tech to exist but found none!");
                     return false;
                 }
             }
@@ -1185,11 +1206,11 @@ namespace TAC_AI.Templates
             Tank theTech = InstantTech(pos, forwards, Team, baseTemplate.techName, baseTemplate.savedTech, terrainType == BaseTerrain.Land, !baseTemplate.purposes.Contains(BasePurpose.NotStationary));
             if (theTech.IsNull())
             {   // Generate via the failsafe method
-                DebugTAC_AI.Assert(true, "TACtical_AI: SpawnAttractTech - Generation failed, falling back to slower, reliable Tech building method");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ": SpawnAttractTech - Generation failed, falling back to slower, reliable Tech building method");
                 SlowTech(pos, forwards, Team, baseTemplate.techName, baseTemplate, terrainType == BaseTerrain.Land, !baseTemplate.purposes.Contains(BasePurpose.NotStationary));
             }
 
-            DebugTAC_AI.Log("TACtical_AI: SpawnAttractTech - Spawned " + baseTemplate.techName);
+            DebugTAC_AI.Log(KickStart.ModID + ": SpawnAttractTech - Spawned " + baseTemplate.techName);
             return true;
 
         }
@@ -1233,7 +1254,7 @@ namespace TAC_AI.Templates
 
             if (theTech.IsNull())
             {   // Generate via the failsafe method
-                DebugTAC_AI.Assert(true ,"TACtical_AI: SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
+                DebugTAC_AI.Assert(true ,KickStart.ModID + ": SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
 
                 Vector3 position = pos;
                 if (snapTerrain)
@@ -1248,7 +1269,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
                 if (!worked)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: SpawnEnemyTechExt - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpawnEnemyTechExt - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return null;
                 }
                 var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -1284,7 +1305,7 @@ namespace TAC_AI.Templates
                 namesav.unprovoked = subNeutral;
             }
 
-            DebugTAC_AI.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.techName);
+            DebugTAC_AI.Log(KickStart.ModID + ": SpawnTechExternal - Spawned " + Blueprint.techName);
 
             return theTech;
         }
@@ -1335,7 +1356,7 @@ namespace TAC_AI.Templates
 
             if (theTech.IsNull())
             {   // Generate via the failsafe method
-                DebugTAC_AI.Assert(true, "TACtical_AI: SpawnSpecificTypeTech - Generation failed, falling back to slower, reliable Tech building method");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ": SpawnSpecificTypeTech - Generation failed, falling back to slower, reliable Tech building method");
                 Vector3 position = pos;
                 Quaternion quat = Quaternion.LookRotation(forwards, Vector3.up);
 
@@ -1343,7 +1364,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
                 if (!worked)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: SpawnSpecificTypeTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpawnSpecificTypeTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return false;
                 }
                 var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -1379,7 +1400,7 @@ namespace TAC_AI.Templates
             }
 
             if (theTech.IsNotNull())
-                DebugTAC_AI.Log("TACtical_AI: SpawnSpecificTypeTech - Spawned " + baseTemplate.techName);
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnSpecificTypeTech - Spawned " + baseTemplate.techName);
             return true;
         }
         internal static void SpawnSpecificTechSafe(Vector3 pos, Vector3 forwards, int Team, HashSet<BasePurpose> purposes, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, bool subNeutral = false, bool snapTerrain = true, int maxGrade = 99, int maxPrice = 0, bool isPopulation = false, Action<Tank> fallbackOp = null)
@@ -1422,7 +1443,7 @@ namespace TAC_AI.Templates
                 else
                     InstantTechSafe(pos, forwards, Team, baseTemplate.techName, baseTemplate.savedTech, snapTerrain, MustBeAnchored, isPopulation, fallbackOp);
             }
-            DebugTAC_AI.Log("TACtical_AI: SpawnSpecificTypeTechSafe - Spawned " + baseTemplate.techName);
+            DebugTAC_AI.Log(KickStart.ModID + ": SpawnSpecificTypeTechSafe - Spawned " + baseTemplate.techName);
 
         }
 
@@ -1437,26 +1458,25 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Exception("Cannot nest GetExternalIndexes calls!");
             try
             {   // Filters
-                //DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log(KickStart.ModID + ": GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 if (faction == FactionSubTypes.NULL)
                 {
                     for (int step = 0; step < TempManager.ExternalEnemyTechsAll.Count; step++)
-                    {
                         canidatesE.Add(step);
-                    }
                 }
                 else
                 {
                     FactionTypesExt FST = (FactionTypesExt)faction;
-                    if (UseFactionSubTypes)
+                    if (ManMods.inst.IsModdedCorp(faction))
                     {
+                        int FSTActualNameHash = ManMods.inst.FindCorpShortName(faction).GetHashCode();
                         for (int step = 0; step < TempManager.ExternalEnemyTechsAll.Count; step++)
                         {
                             RawTechTemplate cand = TempManager.ExternalEnemyTechsAll[step];
-                            if (cand.faction == FST && cand.factionLim <= bestPlayerFaction)
+                            if (cand.FactionActual.GetHashCode() == FSTActualNameHash && 
+                                cand.factionLim <= bestPlayerFaction)
                                 canidatesE.Add(step);
                         }
-                        UseFactionSubTypes = false;
                     }
                     else
                     {
@@ -1505,7 +1525,7 @@ namespace TAC_AI.Templates
                         (delegate (int cand) { return RawTechTemplate.JSONToMemoryExternal(TempManager.ExternalEnemyTechsAll[cand].savedTech).Count > AIGlobals.MaxBlockLimitAttract; });
                 }
 
-                if (!canidates.Any())
+                if (!canidatesE.Any())
                     return FailedSearch;
 
                 // final list compiling
@@ -1531,26 +1551,25 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Exception("Cannot nest GetExternalIndexes calls!");
             try
             {   // Filters
-                //DebugTAC_AI.Log("TACtical_AI: GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log(KickStart.ModID + ": GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
                 if (faction == FactionSubTypes.NULL)
                 {
                     for (int step = 0; step < TempManager.ExternalEnemyTechsAll.Count; step++)
-                    {
                         canidatesE.Add(step);
-                    }
                 }
                 else
                 {
                     FactionTypesExt FST = (FactionTypesExt)faction;
-                    if (UseFactionSubTypes)
+                    if (ManMods.inst.IsModdedCorp(faction))
                     {
+                        int FSTActualNameHash = ManMods.inst.FindCorpShortName(faction).GetHashCode();
                         for (int step = 0; step < TempManager.ExternalEnemyTechsAll.Count; step++)
                         {
                             RawTechTemplate cand = TempManager.ExternalEnemyTechsAll[step];
-                            if (cand.faction == FST && cand.factionLim <= bestPlayerFaction)
+                            if (cand.FactionActual.GetHashCode() == FSTActualNameHash &&
+                                cand.factionLim <= bestPlayerFaction)
                                 canidatesE.Add(step);
                         }
-                        UseFactionSubTypes = false;
                     }
                     else
                     {
@@ -1599,7 +1618,7 @@ namespace TAC_AI.Templates
                         (delegate (int cand) { return RawTechTemplate.JSONToMemoryExternal(TempManager.ExternalEnemyTechsAll[cand].savedTech).Count > AIGlobals.MaxBlockLimitAttract; });
                 }
 
-                if (!canidates.Any())
+                if (!canidatesE.Any())
                     return FailedSearch;
 
                 // final list compiling
@@ -1686,13 +1705,10 @@ namespace TAC_AI.Templates
 
         internal static bool ShouldUseCustomTechs(out List<int> validIndexes, FactionSubTypes faction, FactionLevel bestPlayerFaction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
-            bool cacheSubTypes = UseFactionSubTypes;
             FactionLevel lvl = TryGetPlayerLicenceLevel();
             validIndexes = GetExternalIndexes(faction, lvl, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral);
             int CustomTechs = validIndexes.Count;
-            UseFactionSubTypes = cacheSubTypes;
             List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(faction, lvl, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral);
-            UseFactionSubTypes = cacheSubTypes;
             int PrefabTechs = SBT.Count;
              
             if (validIndexes.FirstOrDefault() == -1)
@@ -1707,8 +1723,8 @@ namespace TAC_AI.Templates
                 if (CustomTechs > 0)
                 {
                     /*
-                    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Forced Local Techs spawn possible: true");
-                    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - Forced Local Techs spawn possible: true");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - Indexes Available: ");
                     StringBuilder SB = new StringBuilder();
                     foreach (int val in validIndexes)
                     {
@@ -1718,7 +1734,7 @@ namespace TAC_AI.Templates
                     return true;
                 }
                 //else
-                //    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: false");
+                //    DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - Forced Player-Made Techs spawn possible: false");
             }
             else
             {
@@ -1727,8 +1743,8 @@ namespace TAC_AI.Templates
                     if (CustomTechs > 0)
                     {
                     /*
-                        DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - There's only Local Techs available");
-                        DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Indexes Available: ");
+                        DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - There's only Local Techs available");
+                        DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - Indexes Available: ");
                         StringBuilder SB = new StringBuilder();
                         foreach (int val in validIndexes)
                         {
@@ -1738,11 +1754,11 @@ namespace TAC_AI.Templates
                         return true;
                     }
                     //else
-                    //    DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - No Techs found");
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - No Techs found");
                     return false;
                 }
                 float RAND = UnityEngine.Random.Range(0, CombinedVal);
-                //DebugTAC_AI.Log("TACtical_AI: ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
+                //DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs - Chance " + CustomTechs + "/" + CombinedVal + ", meaning a " + (int)(((float)CustomTechs / (float)CombinedVal) * 100f) + "% chance.   RAND value " + RAND);
                 if (RAND > PrefabTechs)
                 {
                     return true;
@@ -1780,7 +1796,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(bType, playerPos, playerFacing, out bool worked); 
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: StripPlayerTechOfBlocks - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                DebugTAC_AI.Log(KickStart.ModID + ": StripPlayerTechOfBlocks - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                 return;
             }
             var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -1809,7 +1825,7 @@ namespace TAC_AI.Templates
             }
             else
             {
-                DebugTAC_AI.Log("TACtical_AI: ReconstructPlayerTech - Failed, could not find main or fallback!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ReconstructPlayerTech - Failed, could not find main or fallback!");
                 return; // compromised - cannot load anything!
             }
             StripPlayerTechOfBlocks(toSpawn);
@@ -1819,7 +1835,7 @@ namespace TAC_AI.Templates
             Tank theTech = Singleton.playerTank;
 
             AIERepair.TurboconstructExt(theTech, RawTechTemplate.JSONToMemoryExternal(BT.savedTech), false);
-            DebugTAC_AI.Log("TACtical_AI: ReconstructPlayerTech - Retrofitted player FTUE tech to " + BT.techName);
+            DebugTAC_AI.Log(KickStart.ModID + ": ReconstructPlayerTech - Retrofitted player FTUE tech to " + BT.techName);
         }
 
 
@@ -1840,7 +1856,7 @@ namespace TAC_AI.Templates
         {
             if (Blueprint == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnTechExternal - Was handed a NULL Blueprint! \n" + StackTraceUtility.ExtractStackTrace());
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnTechExternal - Was handed a NULL Blueprint! \n" + StackTraceUtility.ExtractStackTrace());
                 return null;
             }
             string baseBlueprint = Blueprint.Blueprint;
@@ -1849,7 +1865,7 @@ namespace TAC_AI.Templates
 
             if (theTech.IsNull())
             {   // Generate via the failsafe method
-                DebugTAC_AI.Log("TACtical_AI: SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnTechExternal - Generation failed, falling back to slower, reliable Tech building method");
 
                 Vector3 position = pos;
                 if (snapTerrain)
@@ -1863,7 +1879,7 @@ namespace TAC_AI.Templates
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked); 
                 if (!worked)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: SpawnTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpawnTechExternal - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED");
                     return null;
                 }
                 var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -1883,7 +1899,7 @@ namespace TAC_AI.Templates
                     namesav.unprovoked = Blueprint.NonAggressive;
                 }
             }
-                DebugTAC_AI.Log("TACtical_AI: SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + snapTerrain);
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnTechExternal - Spawned " + Blueprint.Name + " at " + pos + ". Snapped to terrain " + snapTerrain);
 
 
             if (Team == -2)//neutral
@@ -1909,13 +1925,13 @@ namespace TAC_AI.Templates
         {
             if (Blueprint == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: SpawnTechExternal - Was handed a NULL Blueprint! \n" + StackTraceUtility.ExtractStackTrace());
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnTechExternal - Was handed a NULL Blueprint! \n" + StackTraceUtility.ExtractStackTrace());
                 return;
             }
             QueueInstantTech queue;
             queue = new QueueInstantTech(AfterAction, pos, forwards, Team, Blueprint.Name, Blueprint.Blueprint, snapTerrain, Blueprint.IsAnchored, Team == -1, randomSkins);
             TechBacklog.Enqueue(queue);
-            DebugTAC_AI.Log("TACtical_AI: SpawnTechExternalSafe - Adding to Queue - In Queue: " + TechBacklog.Count);
+            DebugTAC_AI.Log(KickStart.ModID + ": SpawnTechExternalSafe - Adding to Queue - In Queue: " + TechBacklog.Count);
         }
         public static Tank TechTransformer(Tank tech, string JSONTechBlueprint)
         {
@@ -1928,7 +1944,7 @@ namespace TAC_AI.Templates
             Tank theTech = InstantTech(techPos, techFacing * Vector3.forward, team, OGName, JSONTechBlueprint, false);
             if (theTech.IsNull())
             {   // Generate via the failsafe method
-                DebugTAC_AI.Log("TACtical_AI: TechTransformer - Generation failed, falling back to slower, reliable Tech building method");
+                DebugTAC_AI.Log(KickStart.ModID + ": TechTransformer - Generation failed, falling back to slower, reliable Tech building method");
 
                 BlockTypes bType = RawTechTemplate.JSONToFirstBlock(JSONTechBlueprint);
                 TankBlock block = SpawnBlockS(bType, techPos, techFacing, out bool worked); 
@@ -1963,28 +1979,28 @@ namespace TAC_AI.Templates
                 }
                 try
                 {
-                    DebugTAC_AI.Log("TACtical AI: GetPrefabFiltered - Error on block " + type.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": GetPrefabFiltered - Error on block " + type.ToString());
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical AI: GetPrefabFiltered - Error on unfetchable block");
+                    DebugTAC_AI.Log(KickStart.ModID + ": GetPrefabFiltered - Error on unfetchable block");
                 }
                 if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
-                    DebugTAC_AI.Log("TACtical AI: GetPrefabFiltered - Could not spawn block!  Block does not exist!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": GetPrefabFiltered - Could not spawn block!  Block does not exist!");
                 else
-                    DebugTAC_AI.Log("TACtical AI: GetPrefabFiltered - Could not spawn block!  Block is invalid in current gamemode!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": GetPrefabFiltered - Could not spawn block!  Block is invalid in current gamemode!");
             }
             else
             {
                 try
                 {
-                    DebugTAC_AI.Log("TACtical AI: GetPrefabFiltered - Error on block " + type.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": GetPrefabFiltered - Error on block " + type.ToString());
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical AI: GetPrefabFiltered - Error on unfetchable block");
+                    DebugTAC_AI.Log(KickStart.ModID + ": GetPrefabFiltered - Error on unfetchable block");
                 }
-                DebugTAC_AI.Log("TACtical AI: GetPrefabFiltered - Could not spawn block!  Block tried to spawn out of bounds!");
+                DebugTAC_AI.Log(KickStart.ModID + ": GetPrefabFiltered - Could not spawn block!  Block tried to spawn out of bounds!");
             }
             return null;
         }
@@ -2022,11 +2038,11 @@ namespace TAC_AI.Templates
                         {
                             try
                             {
-                                throw new Exception("TACtical AI: SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on block " + type, e);
+                                throw new Exception(KickStart.ModID + ": SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on block " + type, e);
                             }
                             catch (Exception e2)
                             {
-                                throw new Exception("TACtical AI: SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on unfetchable block", e2);
+                                throw new Exception(KickStart.ModID + ": SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on unfetchable block", e2);
                             }
                         }
                     }
@@ -2035,30 +2051,30 @@ namespace TAC_AI.Templates
                 {
                     try
                     {
-                        throw new Exception("TACtical AI: SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on block " + type, e);
+                        throw new Exception(KickStart.ModID + ": SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on block " + type, e);
                     }
                     catch (Exception e2)
                     {
-                        throw new Exception("TACtical AI: SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on unfetchable block", e2);
+                        throw new Exception(KickStart.ModID + ": SpawnBlockS(IsBlockAllowedInCurrentGameMode) - Error on unfetchable block", e2);
                     }
                 }
                 if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
-                    DebugTAC_AI.Log("TACtical AI: SpawnBlockS - Could not spawn block!  Block does not exist!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpawnBlockS - Could not spawn block!  Block does not exist!");
                 else
-                    DebugTAC_AI.Log("TACtical AI: SpawnBlockS - Could not spawn block!  Block is invalid in current gamemode!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpawnBlockS - Could not spawn block!  Block is invalid in current gamemode!");
 
             }
             else
             {
-                DebugTAC_AI.Log("TACtical AI: SpawnBlockS - Could not spawn block!  Block tried to spawn out of bounds at " +
+                DebugTAC_AI.Log(KickStart.ModID + ": SpawnBlockS - Could not spawn block!  Block tried to spawn out of bounds at " +
                     position.ToString() + "!");
                 try
                 {
-                    DebugTAC_AI.Log("TACtical AI: SpawnBlockS(CheckIsTileAtPositionLoaded) - Error on block " + type);
+                    DebugTAC_AI.Log(KickStart.ModID + ": SpawnBlockS(CheckIsTileAtPositionLoaded) - Error on block " + type);
                 }
                 catch (Exception e)
                 {
-                    throw new Exception("TACtical AI: SpawnBlockS(CheckIsTileAtPositionLoaded) - Error on unfetchable block", e);
+                    throw new Exception(KickStart.ModID + ": SpawnBlockS(CheckIsTileAtPositionLoaded) - Error on unfetchable block", e);
                 }
             }
             worked = false;
@@ -2108,7 +2124,7 @@ namespace TAC_AI.Templates
         {
             QueueInstantTech queue = new QueueInstantTech(fallbackOp, pos, forward, Team, name, blueprint, grounded, ForceAnchor, population, randomSkins);
             TechBacklog.Enqueue(queue);
-            DebugTAC_AI.Log("TACtical_AI: InstantTech - Adding to Queue - In Queue: " + TechBacklog.Count);
+            DebugTAC_AI.Log(KickStart.ModID + ": InstantTech - Adding to Queue - In Queue: " + TechBacklog.Count);
         }
         internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, string blueprint, bool grounded, bool ForceAnchor = false, bool population = false, bool randomSkins = true, bool UseTeam = false)
         {
@@ -2131,7 +2147,7 @@ namespace TAC_AI.Templates
                     if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) ||
                             Singleton.Manager<ManSpawn>.inst.IsBlockUsageRestrictedInGameMode(type))
                     {
-                        DebugTAC_AI.Log("TACtical_AI: InstantTech - Removed " + mem.t + " as it was invalidated");
+                        DebugTAC_AI.Log(KickStart.ModID + ": InstantTech - Removed " + mem.t + " as it was invalidated");
                         continue;
                     }
                     TankPreset.BlockSpec spec = default;
@@ -2180,12 +2196,12 @@ namespace TAC_AI.Templates
                         Quaternion.LookRotation(forward, Vector3.up), grounded);
                     if (TV == null)
                     {
-                        DebugTAC_AI.FatalError("TACtical_AI: InstantTech(TrackedVisible)[MP] - error on SpawnTank");
+                        DebugTAC_AI.FatalError(KickStart.ModID + ": InstantTech(TrackedVisible)[MP] - error on SpawnTank");
                         return null;
                     }
                     if (TV.visible == null)
                     {
-                        DebugTAC_AI.FatalError("TACtical_AI: InstantTech(Visible)[MP] - error on SpawnTank");
+                        DebugTAC_AI.FatalError(KickStart.ModID + ": InstantTech(Visible)[MP] - error on SpawnTank");
                         return null;
                     }
                     theTech = TV.visible.tank;
@@ -2211,7 +2227,7 @@ namespace TAC_AI.Templates
                 }
                 if (theTech.IsNull())
                 {
-                    DebugTAC_AI.Exception("TACtical_AI: InstantTech - error on SpawnTank");
+                    DebugTAC_AI.Exception(KickStart.ModID + ": InstantTech - error on SpawnTank");
                     return null;
                 }
                 else
@@ -2226,7 +2242,7 @@ namespace TAC_AI.Templates
                     //theTech.visible.MoveAboveGround();
                 }
 
-                DebugTAC_AI.Log("TACtical_AI: InstantTech - Built " + name);
+                DebugTAC_AI.LogAISetup(KickStart.ModID + ": InstantTech - Built " + name);
 
                 return theTech;
             }
@@ -2250,7 +2266,7 @@ namespace TAC_AI.Templates
             TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
             if (!worked)
             {
-                DebugTAC_AI.Log("TACtical_AI: SlowTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED " + StackTraceUtility.ExtractStackTrace().ToString());
+                DebugTAC_AI.Log(KickStart.ModID + ": SlowTech - FAILIURE TO SPAWN TECH!!!  FIRST BLOCK WAS NULL OR TILE NOT LOADED " + StackTraceUtility.ExtractStackTrace().ToString());
                 return null;
             }
             var effect = ManSpawn.inst.GetCustomSpawnEffectPrefabs(ManSpawn.CustomSpawnEffectType.Smoke);
@@ -2273,7 +2289,7 @@ namespace TAC_AI.Templates
             if (ForceAnchor)
                 theTech.gameObject.AddComponent<RequestAnchored>();
 
-            DebugTAC_AI.Log("TACtical_AI: InstantTech - Built " + name);
+            DebugTAC_AI.Log(KickStart.ModID + ": InstantTech - Built " + name);
 
             return theTech;
         }
@@ -2309,7 +2325,7 @@ namespace TAC_AI.Templates
                     if (!Singleton.Manager<ManSpawn>.inst.IsBlockAllowedInCurrentGameMode(type) ||
                             Singleton.Manager<ManSpawn>.inst.IsBlockUsageRestrictedInGameMode(type))
                     {
-                        DebugTAC_AI.Log("TACtical_AI: InstantTech - Removed " + mem.t + " as it was invalidated");
+                        DebugTAC_AI.Log(KickStart.ModID + ": InstantTech - Removed " + mem.t + " as it was invalidated");
                         continue;
                     }
                     if (!BTs.Contains((int)type))
@@ -2335,7 +2351,7 @@ namespace TAC_AI.Templates
 
                     dataPrefabber.m_BlockSpecs.Add(spec);
                 }
-                //DebugTAC_AI.Log("TACtical_AI: ExportRawTechToTechData - Exported " + name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": ExportRawTechToTechData - Exported " + name);
 
                 blockIDs = BTs.ToArray();
                 BTs.Clear();
@@ -2463,13 +2479,13 @@ namespace TAC_AI.Templates
         {
             if (ManNetwork.IsNetworked)
             {
-                //DebugTAC_AI.Log("TACtical_AI: RawTechLoader[stored](MP) - No such tracking function is finished yet - " + tank.m_TechData.Name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader[stored](MP) - No such tracking function is finished yet - " + tank.m_TechData.Name);
             }
             TrackedVisible tracked = ManVisible.inst.GetTrackedVisible(ID);
             if (tracked != null)
             {
                 tracked.RadarType = anchored ? RadarTypes.Base : RadarTypes.Vehicle;
-                //DebugTAC_AI.Log("TACtical_AI: RawTechLoader - Updating Tracked " + tank.m_TechData.Name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Updating Tracked " + tank.m_TechData.Name);
                 tracked.SetPos(GetWorldPos(tank));
                 return tracked;
             }
@@ -2478,19 +2494,19 @@ namespace TAC_AI.Templates
             tracked.SetPos(GetWorldPos(tank));
             tracked.TeamID = tank.m_TeamID;
             ManVisible.inst.TrackVisible(tracked);
-            //DebugTAC_AI.Log("TACtical_AI: RawTechLoader - Tracking " + tank.m_TechData.Name + " ID " + ID);
+            //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.m_TechData.Name + " ID " + ID);
             return tracked;
         }
         internal static TrackedVisible TrackTank(Tank tank, bool anchored = false)
         {
             if (ManNetwork.IsNetworked)
             {
-                //DebugTAC_AI.Log("TACtical_AI: RawTechLoader(MP) - No such tracking function is finished yet - " + tank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader(MP) - No such tracking function is finished yet - " + tank.name);
             }
             TrackedVisible tracked = ManVisible.inst.GetTrackedVisible(tank.visible.ID);
             if (tracked != null)
             {
-                //DebugTAC_AI.Log("TACtical_AI: RawTechLoader - Updating Tracked " + tank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Updating Tracked " + tank.name);
                 tracked.SetPos(tank.boundsCentreWorldNoCheck);
                 return tracked;
             }
@@ -2499,7 +2515,7 @@ namespace TAC_AI.Templates
             tracked.SetPos(tank.boundsCentreWorldNoCheck);
             tracked.TeamID = tank.Team;
             ManVisible.inst.TrackVisible(tracked);
-            //DebugTAC_AI.Log("TACtical_AI: RawTechLoader - Tracking " + tank.name);
+            //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.name);
             return tracked;
         }
         internal static void TryForceIntoPop(Tank tank)
@@ -2509,7 +2525,7 @@ namespace TAC_AI.Templates
                 List<TrackedVisible> visT = (List<TrackedVisible>)forceInsert.GetValue(ManPop.inst);
                 visT.Add(TrackTank(tank, tank.IsAnchored));
                 forceInsert.SetValue(ManPop.inst, visT);
-                //DebugTAC_AI.Log("TACtical_AI: RawTechLoader - Forced " + tank.name + " into population");
+                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Forced " + tank.name + " into population");
             }
         }
         internal static void TryRemoveFromPop(Tank tank)
@@ -2523,7 +2539,7 @@ namespace TAC_AI.Templates
                     List<TrackedVisible> visT = (List<TrackedVisible>)forceInsert.GetValue(ManPop.inst);
                     visT.Remove(tracked);
                     forceInsert.SetValue(ManPop.inst, visT);
-                    DebugTAC_AI.Log("TACtical_AI: RawTechLoader - Removed " + tank.name + " from population");
+                    DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Removed " + tank.name + " from population");
                 }
                 catch { }
             }
@@ -2545,7 +2561,7 @@ namespace TAC_AI.Templates
                     removeCount++;
                 }
             }
-            DebugTAC_AI.Log("TACtical_AI: removed " + removeCount + " trees around new enemy base setup");*/
+            DebugTAC_AI.Log(KickStart.ModID + ": removed " + removeCount + " trees around new enemy base setup");*/
         }
         internal static bool GetEnemyBaseSupplies(RawTechTemplate toSpawn)
         {
@@ -2609,16 +2625,16 @@ namespace TAC_AI.Templates
         {
             if (TempManager.techBases == null)
             {
-                DebugTAC_AI.Exception("TACtical_AI: GetBaseTemplate - techBases IS NULL");
+                DebugTAC_AI.Exception(KickStart.ModID + ": GetBaseTemplate - techBases IS NULL");
                 return null;
             }
             if (TempManager.techBases.TryGetValue(toSpawn, out RawTechTemplate baseT))
             {
                 if (toSpawn == SpawnBaseTypes.NotAvail)
-                    DebugTAC_AI.Assert("TACtical_AI: GetBaseTemplate - Forced to spawn FALLBACK");
+                    DebugTAC_AI.Assert(KickStart.ModID + ": GetBaseTemplate - Forced to spawn FALLBACK");
                 return baseT;
             }
-            DebugTAC_AI.Exception("TACtical_AI: GetBaseTemplate - COULD NOT FETCH BaseTemplate FOR ID " + toSpawn + "!");
+            DebugTAC_AI.Exception(KickStart.ModID + ": GetBaseTemplate - COULD NOT FETCH BaseTemplate FOR ID " + toSpawn + "!");
             return null;
         }
 
@@ -2740,37 +2756,40 @@ namespace TAC_AI.Templates
 
         private static List<SpawnBaseTypes> Shuffler = new List<SpawnBaseTypes>();
         private static List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> canidates = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
+        private static void GetEnemyBaseTypesDebug(FactionSubTypes faction, FactionLevel bestPlayerFaction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
+        {
+
+            DebugTAC_AI.LogSpawn("GetEnemyBaseTypes called with - faction: " + faction.ToString() + 
+                ", bestPlayerFaction: " + bestPlayerFaction .ToString() + ", purpose: " + purpose.ToString() +
+                ", terra: " + terra.ToString() + ", searchAttract: " + searchAttract.ToString() + 
+                ", maxGrade: " + maxGrade.ToString() + ", maxPrice: " + maxPrice.ToString() +
+                ", subNeutral: " + subNeutral.ToString());
+            if (faction == FactionSubTypes.SPE)
+            {
+                DebugTAC_AI.Assert("WAIT - WHY THE HECK IS OUR FACTION SPE???");
+            }
+        }
         internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, FactionLevel bestPlayerFaction, BasePurpose purpose, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
+            GetEnemyBaseTypesDebug(faction, bestPlayerFaction, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral);
             if (canidates.Any())
                 DebugTAC_AI.Exception("Cannot nest GetEnemyBaseTypes calls!");
             try
             {
                 // Filters
-                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log(KickStart.ModID + ": GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                canidates.AddRange(TempManager.techBases);
                 if (faction == FactionSubTypes.NULL)
                 {
-                    canidates.AddRange(TempManager.techBases);
-                    UseFactionSubTypes = false;
+                    DebugTAC_AI.LogSpawn("GetEnemyBaseTypes TOTAL CANIDATES[Non-Spec]: " + canidates.Count);
                 }
                 else
                 {
                     FactionTypesExt FST = (FactionTypesExt)faction;
-                    if (UseFactionSubTypes)
-                    {
-                        canidates.AddRange(TempManager.techBases.TakeWhile
-                            (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { 
-                                return cand.Value.faction == FST && cand.Value.factionLim <= bestPlayerFaction; 
-                            }));
-                        UseFactionSubTypes = false;
-                    }
-                    else
-                    {
-                        canidates.AddRange(TempManager.techBases.TakeWhile
-                            (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) {
-                                return cand.Value.faction == FST && cand.Value.factionLim <= bestPlayerFaction;
-                            }));
-                    }
+                    canidates.RemoveAll(delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) {
+                            return cand.Value.faction != FST || cand.Value.factionLim > bestPlayerFaction;
+                        });
+                    DebugTAC_AI.LogSpawn("GetEnemyBaseTypes TOTAL CANIDATES[" + faction + " => " + FST +  "]: " + canidates.Count);
                 }
 
                 bool multiplayer = ManNetwork.IsNetworked;
@@ -2780,6 +2799,7 @@ namespace TAC_AI.Templates
                     HashSet<BasePurpose> techPurposes = cand.Value.purposes;
                     return !ComparePurposes(purpose, techPurposes, cantErad, subNeutral, searchAttract, multiplayer);
                 });
+                DebugTAC_AI.LogSpawn("GetEnemyBaseTypes Post-Cull purposes: " + canidates.Count);
 
                 if (terra == BaseTerrain.Any)
                 { 
@@ -2789,23 +2809,27 @@ namespace TAC_AI.Templates
                 {
                     canidates.RemoveAll
                         (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { return cand.Value.terrain == BaseTerrain.Sea; });
+                    DebugTAC_AI.LogSpawn("GetEnemyBaseTypes Post-Cull terra[Non-Sea]: " + canidates.Count);
                 }
                 else
                 {
                     canidates.RemoveAll
                         (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { return cand.Value.terrain != terra; });
+                    DebugTAC_AI.LogSpawn("GetEnemyBaseTypes Post-Cull terra[Land]: " + canidates.Count);
                 }
 
                 if (maxGrade != 99 && Singleton.Manager<ManGameMode>.inst.CanEarnXp())
                 {
                     canidates.RemoveAll
                         (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { return cand.Value.IntendedGrade > maxGrade; });
+                    DebugTAC_AI.LogSpawn("GetEnemyBaseTypes Post-Cull grade [" + maxPrice + "]: " + canidates.Count);
                 }
 
                 if (maxPrice > 0)
                 {
                     canidates.RemoveAll
-                        (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { return cand.Value.startingFunds > maxPrice; });
+                        (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { return cand.Value.baseCost > maxPrice; });
+                    DebugTAC_AI.LogSpawn("GetEnemyBaseTypes Post-Cull maxPrice [" + maxPrice + "]: " + canidates.Count);
                 }
 
                 if (searchAttract)
@@ -2814,6 +2838,7 @@ namespace TAC_AI.Templates
                         (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { 
                             return RawTechTemplate.JSONToMemoryExternal(cand.Value.savedTech).Count > AIGlobals.MaxBlockLimitAttract; 
                         });
+                    DebugTAC_AI.LogSpawn("GetEnemyBaseTypes Post-Cull searchAttract: " + canidates.Count);
                 }
                 // finally, remove those which are N/A
 
@@ -2821,7 +2846,8 @@ namespace TAC_AI.Templates
                         (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) {
                             return cand.Value.faction == FactionTypesExt.NULL;
                         });
-                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
+                DebugTAC_AI.LogSpawn("GetEnemyBaseTypes Post-Cull remove NULL: " + canidates.Count);
+                //DebugTAC_AI.Log(KickStart.ModID + ": GetEnemyBaseTypes - Found " + canidates.Count + " options");
                 if (!canidates.Any())
                     return FallbackHandler(faction);
 
@@ -2843,31 +2869,22 @@ namespace TAC_AI.Templates
         }
         internal static List<SpawnBaseTypes> GetEnemyBaseTypes(FactionSubTypes faction, FactionLevel bestPlayerFaction, HashSet<BasePurpose> purposes, BaseTerrain terra, bool searchAttract = false, int maxGrade = 99, int maxPrice = 0, bool subNeutral = false)
         {
+            GetEnemyBaseTypesDebug(faction, bestPlayerFaction, purposes.First(), terra, searchAttract, maxGrade, maxPrice, subNeutral);
             if (canidates.Any())
                 DebugTAC_AI.Exception("Cannot nest GetEnemyBaseTypes calls!");
             try
             {
                 // Filters
-                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                //DebugTAC_AI.Log(KickStart.ModID + ": GetEnemyBaseTypes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
+                canidates.AddRange(TempManager.techBases);
                 if (faction == FactionSubTypes.NULL)
                 {
-                    canidates.AddRange(TempManager.techBases.TakeWhile(x => x.Value.factionLim <= bestPlayerFaction).AsEnumerable());
-                    UseFactionSubTypes = false;
+                    canidates.RemoveAll(x => x.Value.factionLim > bestPlayerFaction);
                 }
                 else
                 {
                     FactionTypesExt FST = (FactionTypesExt)faction;
-                    if (UseFactionSubTypes)
-                    {
-                        canidates.AddRange(TempManager.techBases.TakeWhile
-                            (x => x.Value.faction == FST && x.Value.factionLim <= bestPlayerFaction));
-                        UseFactionSubTypes = false;
-                    }
-                    else
-                    {
-                        canidates.AddRange(TempManager.techBases.TakeWhile
-                            (x => x.Value.faction == FST && x.Value.factionLim <= bestPlayerFaction));
-                    }
+                    canidates.RemoveAll(x => x.Value.faction != FST || x.Value.factionLim > bestPlayerFaction);
                 }
 
                 bool multiplayer = ManNetwork.IsNetworked;
@@ -2903,7 +2920,7 @@ namespace TAC_AI.Templates
                 if (maxPrice > 0)
                 {
                     canidates.RemoveAll
-                        (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { return cand.Value.startingFunds > maxPrice; });
+                        (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { return cand.Value.baseCost > maxPrice; });
                 }
 
                 if (searchAttract)
@@ -2919,7 +2936,7 @@ namespace TAC_AI.Templates
                         (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) {
                             return cand.Value.faction == FactionTypesExt.NULL;
                         });
-                //DebugTAC_AI.Log("TACtical_AI: GetEnemyBaseTypes - Found " + canidates.Count + " options");
+                //DebugTAC_AI.Log(KickStart.ModID + ": GetEnemyBaseTypes - Found " + canidates.Count + " options");
                 if (canidates.Count == 0)
                     return FallbackHandler(faction);
 
@@ -2944,18 +2961,13 @@ namespace TAC_AI.Templates
             try
             {
                 // Filters
+                canidates.AddRange(TempManager.techBases);
                 if (faction == FactionSubTypes.NULL)
                 {
-                    canidates.AddRange(TempManager.techBases);
                 }
                 else
                 {
-                    FactionSubTypes fallback = faction;
-                    canidates.AddRange(TempManager.techBases.TakeWhile
-                        (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand)
-                        {
-                            return (FactionSubTypes)cand.Value.faction == fallback;
-                        }));
+                    canidates.RemoveAll(x => { return (FactionSubTypes)x.Value.faction != faction; });
                 }
 
                 canidates.RemoveAll(delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand)
@@ -2964,26 +2976,26 @@ namespace TAC_AI.Templates
                     {   // no illegal base in MP
                         return true;
                     }
-                    if (!cand.Value.purposes.Contains(BasePurpose.Fallback))
+                    if (cand.Value.purposes.Contains(BasePurpose.Fallback))
                     {
                         return false;
                     }
                     return true;
                 });
+                canidates.RemoveAll
+                        (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) {
+                            return cand.Value.faction == FactionTypesExt.NULL;
+                        });
 
                 // finally, remove those which are N/A
 
                 if (!canidates.Any())
                 {
-                    DebugTAC_AI.Log("TACtical_AI: FallbackHandler - COULD NOT FIND FALLBACK FOR " + faction);
+                    DebugTAC_AI.Log(KickStart.ModID + ": FallbackHandler - COULD NOT FIND FALLBACK FOR " + faction);
                     return fallback;
                 }
 
                 // final list compiling
-                canidates.RemoveAll
-                        (delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) {
-                            return cand.Value.faction == FactionTypesExt.NULL;
-                        });
                 Shuffler.Clear();
                 foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in canidates)
                     Shuffler.Add(pair.Key);
@@ -2997,7 +3009,7 @@ namespace TAC_AI.Templates
             {
                 canidates.Clear();
             }
-            DebugTAC_AI.Assert("TACtical_AI: FallbackHandler - FALLBACK FOR " + faction);
+            DebugTAC_AI.Assert(KickStart.ModID + ": FallbackHandler - FALLBACK FOR " + faction);
             return fallback;
         }
 
@@ -3011,12 +3023,12 @@ namespace TAC_AI.Templates
                 SpawnBaseTypes toSpawn = GetEnemyBaseTypes(faction, lvl, purpose, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
 
                 if (!IsBaseTemplateAvailable(toSpawn))
-                    DebugTAC_AI.Exception("TACtical_AI: GetEnemyBaseType - population entry " + toSpawn + " has a null BaseTemplate.  How?");
+                    DebugTAC_AI.Exception(KickStart.ModID + ": GetEnemyBaseType - population entry " + toSpawn + " has a null BaseTemplate.  How?");
                 return toSpawn;
             }
             catch (Exception e)
-            { DebugTAC_AI.Exception("TACtical_AI: GetEnemyBaseType - Population seach FAILED:\n" + e); } // we resort to legacy
-            //DebugTAC_AI.Assert(true, "TACtical_AI: GetEnemyBaseType - Population seach FAILED");
+            { DebugTAC_AI.Exception(KickStart.ModID + ": GetEnemyBaseType - Population seach FAILED:\n" + e); } // we resort to legacy
+            //DebugTAC_AI.Assert(true, KickStart.ModID + ": GetEnemyBaseType - Population seach FAILED");
 
             int lowerRANDRange = 1;
             int higherRANDRange = 20;
@@ -3052,11 +3064,11 @@ namespace TAC_AI.Templates
             {
                 SpawnBaseTypes toSpawn = GetEnemyBaseTypes(faction, lvl, purposes, terra, searchAttract, maxGrade, maxPrice, subNeutral).GetRandomEntry();
                 if (!IsBaseTemplateAvailable(toSpawn))
-                    DebugTAC_AI.Exception("TACtical_AI: GetEnemyBaseType - population entry " + toSpawn + " has a null BaseTemplate.  How?");
+                    DebugTAC_AI.Exception(KickStart.ModID + ": GetEnemyBaseType - population entry " + toSpawn + " has a null BaseTemplate.  How?");
                 return toSpawn;
             }
             catch { }
-            DebugTAC_AI.Assert(true, "TACtical_AI: GetEnemyBaseType(multiple purposes) - Population seach FAILED");
+            DebugTAC_AI.Assert(true, KickStart.ModID + ": GetEnemyBaseType(multiple purposes) - Population seach FAILED");
 
             return SpawnBaseTypes.NotAvail;
         }
@@ -3207,7 +3219,7 @@ namespace TAC_AI.Templates
             if (tank.IsPopulation || !tank.IsFriendly(tank.Team) || tank.Team == ManSpawn.FirstEnemyTeam || tank.Team == ManSpawn.NewEnemyTeam)
             {
                 int set = AIGlobals.GetRandomBaseTeam(true);
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");
                 tank.SetTeam(set, false);
                 TryRemoveFromPop(tank);
             }
@@ -3256,7 +3268,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
+                DebugTAC_AI.Log(KickStart.ModID + ": ReconstructConveyorSequencing - error 0");
             }
             finally
             {
@@ -3295,7 +3307,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
+                DebugTAC_AI.Log(KickStart.ModID + ": ReconstructConveyorSequencing - error 0");
             }
         }
         private static void ReconstructConveyorSequencingInternal(Tank tank, List<RawBlockMem> memsConvey, List<BlockTypes> types)
@@ -3326,7 +3338,7 @@ namespace TAC_AI.Templates
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 1");
+                        DebugTAC_AI.Log(KickStart.ModID + ": ReconstructConveyorSequencing - error 1");
                     }
                 }
 
@@ -3347,7 +3359,7 @@ namespace TAC_AI.Templates
 
                                 if (!AIERepair.AIBlockAttachRequest(tank, memsConvey[step], block, false))
                                 {
-                                    //DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 3");
+                                    //DebugTAC_AI.Log(KickStart.ModID + ": ReconstructConveyorSequencing - error 3");
                                 }
                                 else
                                 {
@@ -3361,7 +3373,7 @@ namespace TAC_AI.Templates
                         }
                         catch
                         {
-                            DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 2");
+                            DebugTAC_AI.Log(KickStart.ModID + ": ReconstructConveyorSequencing - error 2");
                         }
                     }
                 }
@@ -3370,7 +3382,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: ReconstructConveyorSequencing - error 0");
+                DebugTAC_AI.Log(KickStart.ModID + ": ReconstructConveyorSequencing - error 0");
             }
             finally
             {
@@ -3402,7 +3414,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: ForceAllBubblesUp - error");
+                DebugTAC_AI.Log(KickStart.ModID + ": ForceAllBubblesUp - error");
             }
         }
         public static void ChargeAndClean(Tank tank, float fullPercent = 1)
@@ -3414,7 +3426,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: ChargeAndClean - error");
+                DebugTAC_AI.Log(KickStart.ModID + ": ChargeAndClean - error");
             }
         }
     }

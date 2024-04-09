@@ -19,6 +19,7 @@ namespace TAC_AI.AI
 
         internal static TankAIManager inst;
         private static Tank lastPlayerTech;
+        public static Event<TankAIHelper> AILoadedEvent = new Event<TankAIHelper>();
         public static Event<int> TeamCreatedEvent = new Event<int>();
         public static Event<int> TeamDestroyedEvent = new Event<int>();
 
@@ -40,6 +41,21 @@ namespace TAC_AI.AI
         private const float SlowedTime = 0.25f;
         private const float FastTime = 3f; // fooling around
         private const float ChangeRate = 1.5f;
+        //public static AbilityToggle toggleAuto;
+        public static ManToolbar.ToolbarToggle toggleAuto;
+        internal static void TogglePlayerAutopilot(bool state)
+        {
+            if (KickStart.AllowStrategicAI && ManPlayerRTS.PlayerIsInRTS)
+            {
+                KickStart.AutopilotPlayerRTS = state;
+                toggleAuto.SetToggleState(KickStart.AutopilotPlayerRTS);
+            }
+            else
+            {
+                KickStart.AutopilotPlayerMain = state;
+                toggleAuto.SetToggleState(KickStart.AutopilotPlayerMain);
+            }
+        }
 
         internal static void Initiate()
         {
@@ -62,14 +78,14 @@ namespace TAC_AI.AI
             Singleton.Manager<ManVisible>.inst.OnStoppedTrackingVisible.Subscribe(OnVisibleNoLongerTracked);
             InvokeHelper.Invoke(GatherAllMissionTechs, 0.1f);
             //QueueUpdater.Subscribe(FetchAllAllies);
-            DebugTAC_AI.Log("TACtical_AI: Created AIECore Manager.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Created AIECore Manager.");
 
             // Only change if no other mod changed
-            DebugTAC_AI.Log("TACtical_AI: Current AI interaction range is " + (float)rangeOverride.GetValue(ManTechs.inst) + ".");
+            DebugTAC_AI.Log(KickStart.ModID + ": Current AI interaction range is " + (float)rangeOverride.GetValue(ManTechs.inst) + ".");
             if ((float)rangeOverride.GetValue(ManTechs.inst) == 200f)
             {   // more than twice the range
                 rangeOverride.SetValue(ManTechs.inst, AIGlobals.EnemyExtendActionRange);
-                DebugTAC_AI.Log("TACtical_AI: Extended enemy Tech interaction range to " + AIGlobals.EnemyExtendActionRange + ".");
+                DebugTAC_AI.Log(KickStart.ModID + ": Extended enemy Tech interaction range to " + AIGlobals.EnemyExtendActionRange + ".");
             }
         }
 #if STEAM
@@ -103,13 +119,13 @@ namespace TAC_AI.AI
             inst.enabled = false;
             Destroy(inst.gameObject);
             inst = null;
-            DebugTAC_AI.Log("TACtical_AI: De-Init AIECore Manager.");
+            DebugTAC_AI.Log(KickStart.ModID + ": De-Init AIECore Manager.");
 
             // Only change if no other mod changed
             if ((float)rangeOverride.GetValue(ManTechs.inst) == AIGlobals.EnemyExtendActionRange)
             {   // more than twice the range
                 rangeOverride.SetValue(ManTechs.inst, 200);
-                DebugTAC_AI.Log("TACtical_AI: Un-Extended enemy Tech interaction range to default 200.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Un-Extended enemy Tech interaction range to default 200.");
             }
         }
 #endif
@@ -130,7 +146,7 @@ namespace TAC_AI.AI
         {
             foreach (var item in ManEncounter.inst.ActiveEncounters)
             {
-                foreach (var item2 in item.GetVisibleNamesWithPrefix(""))
+                foreach (var item2 in item.GetVisibleNamesWithPrefix(string.Empty))
                 {
                     EncounterVisibleData EVD = item.GetVisible(item2);
                     if (EVD.ObjectType == ObjectTypes.Vehicle)
@@ -152,9 +168,9 @@ namespace TAC_AI.AI
             //IndexTech(tonk, tonk.Team);
 
             if (tonk.GetComponents<TankAIHelper>().Count() > 1)
-                throw new InvalidOperationException("TACtical_AI: ASSERT: THERE IS MORE THAN ONE TankAIHelper ON " + tonk.name + "!!!");
+                throw new InvalidOperationException(KickStart.ModID + ": ASSERT: THERE IS MORE THAN ONE TankAIHelper ON " + tonk.name + "!!!");
 
-            //DebugTAC_AI.Log("TACtical_AI: Allied AI " + tankInfo.name + ":  Called OnSpawn");
+            //DebugTAC_AI.Log(KickStart.ModID + ": Allied AI " + tankInfo.name + ":  Called OnSpawn");
             //if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
             //helper.ResetAll(tonk);
             //helper.OnTechTeamChange();
@@ -167,7 +183,7 @@ namespace TAC_AI.AI
         {
             if (tonk == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: OnTankChange tonk is NULL");
+                DebugTAC_AI.Log(KickStart.ModID + ": OnTankChange tonk is NULL");
                 return;
             }
             var helper = tonk.GetHelperInsured();
@@ -175,7 +191,7 @@ namespace TAC_AI.AI
             //helper.ResetAll(tonk);
             helper.OnTechTeamChange();
             //IndexTech(tonk, info.m_NewTeam);
-            DebugTAC_AI.Log("TACtical_AI: AI Helper " + tonk.name + ":  Called OnTankChange");
+            DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Called OnTankChange");
             //QueueUpdater.Send();
         }
         private static void OnTankRecycled(Tank tonk)
@@ -188,7 +204,7 @@ namespace TAC_AI.AI
             helper.Recycled();
             RemoveTech(tonk);
             CheckDestroyedTeams();
-            //DebugTAC_AI.Log("TACtical_AI: Allied AI " + tonk.name + ":  Called OnTankRecycled");
+            //DebugTAC_AI.Log(KickStart.ModID + ": Allied AI " + tonk.name + ":  Called OnTankRecycled");
 
             helper.OverrideAllControls = false;
 
@@ -277,7 +293,7 @@ namespace TAC_AI.AI
                 var ele = list.ElementAt(step);
                 if (ele?.visible == null || !ele.visible.isActive)
                 {
-                    DebugTAC_AI.Assert("TACtical AI: RemoveAllInvalid - Tech indexes were desynced - a Tech that was null or had no blocks was in the collection!");
+                    DebugTAC_AI.Assert(KickStart.ModID + ": RemoveAllInvalid - Tech indexes were desynced - a Tech that was null or had no blocks was in the collection!");
                     list.Remove(ele);
                 }
             }

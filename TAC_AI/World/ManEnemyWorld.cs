@@ -165,7 +165,7 @@ namespace TAC_AI.World
 
         private static float OperatorTicker = 0;
         private static float MaintainerTicker = 0;
-        private static readonly Dictionary<int, NP_Presence> NPTTeams = new Dictionary<int, NP_Presence>();
+        private static readonly Dictionary<int, NP_Presence_Automatic> NPTTeams = new Dictionary<int, NP_Presence_Automatic>();
         internal static readonly Dictionary<NP_TechUnit, TileMoveCommand> QueuedUnitMoves = new Dictionary<NP_TechUnit, TileMoveCommand>();
         private static List<IntVector2> AllSavedWorldTileCoords
         {
@@ -178,10 +178,10 @@ namespace TAC_AI.World
         }
         private static List<IntVector2> allSavedWorldTileCoordsCache = new List<IntVector2>();
 
-        public static Dictionary<int, NP_Presence> AllTeamsUnloaded {
+        public static Dictionary<int, NP_Presence_Automatic> AllTeamsUnloaded {
             get
             {
-                return new Dictionary<int, NP_Presence>(NPTTeams);
+                return new Dictionary<int, NP_Presence_Automatic>(NPTTeams);
             }
         }
 
@@ -192,7 +192,7 @@ namespace TAC_AI.World
             if (inst)
                 return;
             inst = new GameObject("ManEnemyWorld").AddComponent<ManEnemyWorld>();
-            DebugTAC_AI.Log("TACtical_AI: Created ManEnemyWorld.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Created ManEnemyWorld.");
 #if STEAM
             LateInitiate();
 #endif
@@ -211,14 +211,14 @@ namespace TAC_AI.World
             inst = null;
             setup = false;
             logEntries.Clear();
-            DebugTAC_AI.Log("TACtical_AI: Removed ManEnemyWorld.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Removed ManEnemyWorld.");
         }
 
         internal static void LateInitiate()
         {
             if (setup)
                 return;
-            DebugTAC_AI.Log("TACtical_AI: Late Init ManEnemyWorld.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Late Init ManEnemyWorld.");
             Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnTechDestroyed);
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(OnWorldLoad);
             Singleton.Manager<ManGameMode>.inst.ModeSwitchEvent.Subscribe(OnWorldReset);
@@ -300,11 +300,11 @@ namespace TAC_AI.World
 
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: OnWorldLoadEnd Handled " + count + " Techs");
+                DebugTAC_AI.Log(KickStart.ModID + ": OnWorldLoadEnd Handled " + count + " Techs");
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: OnWorldLoadEnd FAILED at " + count + " Techs - " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": OnWorldLoadEnd FAILED at " + count + " Techs - " + e);
             }
         }
         public static void OnWorldReset()
@@ -391,11 +391,11 @@ namespace TAC_AI.World
                         }
                     }
                 }
-                //DebugTAC_AI.Log("TACtical_AI: TryRefindTech - COULD NOT REFIND TECH!!!  Of name " + techFind.m_TechData.Name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TryRefindTech - COULD NOT REFIND TECH!!!  Of name " + techFind.m_TechData.Name);
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: TryRefindTech - COULD NOT REFIND TECH!!! " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": TryRefindTech - COULD NOT REFIND TECH!!! " + e);
             }
             return false;
         }
@@ -407,7 +407,7 @@ namespace TAC_AI.World
                 ManSaveGame.StoredTile tileInst = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(tech.tilePos, false);
                 if (tileInst == null)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: IsTechOnSetTile - m_StoredVisibles is missing!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - m_StoredVisibles is missing!");
                     return false;
                 }
                 if (tileInst.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> techs))
@@ -419,20 +419,20 @@ namespace TAC_AI.World
                     else
                     {
                         /*
-                        DebugTAC_AI.Log("TACtical_AI: IsTechOnSetTile - Tech not present in techs " + techs.Count + "!");
-                        DebugTAC_AI.Log("TACtical_AI: Main - " + tech.ID);
+                        DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - Tech not present in techs " + techs.Count + "!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Main - " + tech.ID);
                         foreach (var item in techs)
                         {
-                            DebugTAC_AI.Log("TACtical_AI: - " + item.m_ID);
+                            DebugTAC_AI.Log(KickStart.ModID + ": - " + item.m_ID);
                         }*/
                     }
                 }
                 else
-                    DebugTAC_AI.Log("TACtical_AI: IsTechOnSetTile - StoredTile is NULL");
+                    DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - StoredTile is NULL");
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: IsTechOnSetTile - COULD NOT FIND TECH!!! " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - COULD NOT FIND TECH!!! " + e);
             }
             return false;
         }
@@ -451,7 +451,7 @@ namespace TAC_AI.World
             var TV = ManVisible.inst.GetTrackedVisible(tech.m_ID);
             if (TV == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: Tech unit " + tech.m_TechData.Name + " lacked TrackedVisible, fixing...");
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech unit " + tech.m_TechData.Name + " lacked TrackedVisible, fixing...");
                 TV = RawTechLoader.TrackTank(tech, tech.m_ID);
             }
             int team = TV.RadarTeamID;
@@ -475,7 +475,7 @@ namespace TAC_AI.World
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(EBU) Failiure on BASE init! - " + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) Failiure on BASE init! - " + e);
                     }
                 }
                 else
@@ -492,12 +492,12 @@ namespace TAC_AI.World
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(ETU) Failiure on BASE init! - " + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Failiure on BASE init! - " + e);
                     }
                 }
             }
             //else
-            //    DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded() Failed because tech " + tech.m_TechData.Name + "'s team [" + team + "] is not a valid base team");
+            //    DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded() Failed because tech " + tech.m_TechData.Name + "'s team [" + team + "] is not a valid base team");
         }
 
 
@@ -521,7 +521,7 @@ namespace TAC_AI.World
             {
                 if (tile.m_LoadStep >= LevelToAttemptTechEntry && AIGlobals.AtSceneTechMaxSpawnLimit())
                 {
-                    DebugTAC_AI.Info("TACtical_AI: CanMoveUnloadedTechIntoTile(Loaded) - The scene is at the Tech max limit.  Cannot proceed.");
+                    DebugTAC_AI.Info(KickStart.ModID + ": CanMoveUnloadedTechIntoTile(Loaded) - The scene is at the Tech max limit.  Cannot proceed.");
                     return false;
                 }
             }
@@ -534,7 +534,7 @@ namespace TAC_AI.World
             {
                 if (tile.m_LoadStep < LevelToAttemptTechEntry)
                     return true;
-                DebugTAC_AI.Info("TACtical_AI: CanMoveUnloadedTechIntoInactiveTile - Tile is at load state " 
+                DebugTAC_AI.Info(KickStart.ModID + ": CanMoveUnloadedTechIntoInactiveTile - Tile is at load state " 
                     + tile.m_LoadStep + ", which is above allowance for unloaded Techs at " + LevelToAttemptTechEntry + ".");
                 return false;
             }
@@ -546,7 +546,7 @@ namespace TAC_AI.World
                 return false;
             if (AIGlobals.AtSceneTechMaxSpawnLimit())
             {
-                DebugTAC_AI.Info("TACtical_AI: CanMoveUnloadedTechIntoActiveTile - The scene is at the Tech max limit.  Cannot proceed.");
+                DebugTAC_AI.Info(KickStart.ModID + ": CanMoveUnloadedTechIntoActiveTile - The scene is at the Tech max limit.  Cannot proceed.");
                 return false;
             }
             /*
@@ -567,7 +567,7 @@ namespace TAC_AI.World
                 {   // Loading in an active Tech
                     if (!FindFreeSpaceOnActiveTile(tilePosScene - tech.PosScene, tileToMoveInto.coord, out Vector3 newPosOff))
                     {
-                        DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile(loaded) - Could not find a valid spot to move the Tech");
+                        DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile(loaded) - Could not find a valid spot to move the Tech");
                         return false;
                     }
                     Vector3 newPos = newPosOff.SetY(tilePosScene.y);
@@ -577,7 +577,7 @@ namespace TAC_AI.World
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile(loaded) - The tile exists but the terrain doesn't?!? ScenePos " + newPos);
+                        DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile(loaded) - The tile exists but the terrain doesn't?!? ScenePos " + newPos);
                         return false;
                     }
                     tech.ApplyDamage();
@@ -601,11 +601,11 @@ namespace TAC_AI.World
                             tech.DoApplyShields(newTech);
                         EntirelyRemoveUnitFromTile(tech);
                         StopManagingUnit(tech);
-                        DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Tech " + tech.Name + " has moved to in-play world coordinate " + newPos + "!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile - Tech " + tech.Name + " has moved to in-play world coordinate " + newPos + "!");
                         return true;
                     }
                     else
-                        DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Failiure on spawning Tech!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile - Failiure on spawning Tech!");
 
                 }
                 else
@@ -622,7 +622,7 @@ namespace TAC_AI.World
                         }
                         if (!FindFreeSpaceOnTile(tech.tilePos - tileToMoveInto.coord, tileToMoveInto, out Vector2 newPosOff))
                         {
-                            DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Could not find a valid spot to move the Tech");
+                            DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile - Could not find a valid spot to move the Tech");
                             return false;
                         }
                         EntirelyRemoveUnitFromTile(tech);
@@ -638,19 +638,19 @@ namespace TAC_AI.World
                         if (AddTechToTileAndSetETU(tech, tileToMoveInto, ST.m_TechData, BlockTypeCache.ToArray(), ST.m_TeamID, newPos, fromDirect, false))
                         {
                             //RegisterTechUnloaded(techInst, tileToMoveInto.coord, false);
-                            //DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Moved a Tech");
+                            //DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile - Moved a Tech");
                             if (tech.tilePos == tileToMoveInto.coord)
                             {
                                 tech.UpdateTVLocation();
                                 //if (tech.Exists())
-                                //    DebugTAC_AI.Assert("TACtical_AI: MoveTechIntoTile - tech was moved but not part of team!!!");
+                                //    DebugTAC_AI.Assert(KickStart.ModID + ": MoveTechIntoTile - tech was moved but not part of team!!!");
                             }
                             else
-                                DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - tile coord mismatch!");
+                                DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile - tile coord mismatch!");
                         }
                         else
                         {
-                            DebugTAC_AI.Log("TACtical_AI: MoveTechIntoTile - Tech was created but WE HAVE MISPLACED IT!  The Tech may or may not be gone forever");
+                            DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile - Tech was created but WE HAVE MISPLACED IT!  The Tech may or may not be gone forever");
                             DebugTAC_AI.FatalError();
                         }
                     }
@@ -683,7 +683,7 @@ namespace TAC_AI.World
             ManSaveGame.StoredTile tileCache = tile;
             if (tileCache == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnTile - Attempt to find free space failed: Tile is null");
+                DebugTAC_AI.Log(KickStart.ModID + ": FindFreeSpaceOnTile - Attempt to find free space failed: Tile is null");
                 return false;
             }
             for (int stepX = 0; stepX < partDist; stepX += (int)partitionScale)
@@ -694,7 +694,7 @@ namespace TAC_AI.World
                     if (GetTechsInTileCached(ref tileCache, tile.coord, New, partitionScale - 2).Count() == 0)
                         possibleSpotsCache.Add(New);
                     //else
-                    //    DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnTile - Attempt to find free space failed on tile coord " + tile.coord + ", " + New);
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": FindFreeSpaceOnTile - Attempt to find free space failed on tile coord " + tile.coord + ", " + New);
                 }
             }
             if (!possibleSpotsCache.Any())
@@ -729,7 +729,7 @@ namespace TAC_AI.World
             ManSaveGame.StoredTile tileCache = tile;
             if (tileCache == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnTileCircle - Attempt to find free space failed: Tile is null");
+                DebugTAC_AI.Log(KickStart.ModID + ": FindFreeSpaceOnTileCircle - Attempt to find free space failed: Tile is null");
                 return false;
             }
             for (int stepX = 0; stepX < partDist; stepX += (int)partitionScale)
@@ -740,7 +740,7 @@ namespace TAC_AI.World
                     if (!IsTechInTile(ref tileCache, tile.coord, New, partitionScale - 2))
                         possibleSpotsCache.Add(New);
                     //else
-                    //    DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnTileCircle - Attempt to find free space failed on tile coord " + tile.coord + ", " + New);
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": FindFreeSpaceOnTileCircle - Attempt to find free space failed on tile coord " + tile.coord + ", " + New);
                 }
             }
             if (!possibleSpotsCache.Any())
@@ -796,13 +796,13 @@ namespace TAC_AI.World
                         float dist = (New.SetY(0) - Singleton.playerPos.SetY(0)).sqrMagnitude;
                         if (dist > extActionRange && dist < sleepRange && IsRadiusClearOfTechObst(New, hPart))
                         {
-                            //DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnActiveTile spawn position at " + New);
+                            //DebugTAC_AI.Log(KickStart.ModID + ": FindFreeSpaceOnActiveTile spawn position at " + New);
                             possibleSpotsCache3.Add(New);
                         }
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnActiveTile Terrain null at " + New);
+                        DebugTAC_AI.Log(KickStart.ModID + ": FindFreeSpaceOnActiveTile Terrain null at " + New);
                     }
                 }
             }
@@ -821,7 +821,7 @@ namespace TAC_AI.World
                 Vector3 Directed = -(headingDirection.normalized * ManWorld.inst.TileSize);
                 finalPos = possibleSpotsCache3.OrderBy(x => (x - Directed).sqrMagnitude).ElementAt(SpawnIndexThisFrame);
                 possibleSpotsCache3.Clear();
-                //DebugTAC_AI.Log("TACtical_AI: FindFreeSpaceOnActiveTile target spawned at " + finalPos);
+                //DebugTAC_AI.Log(KickStart.ModID + ": FindFreeSpaceOnActiveTile target spawned at " + finalPos);
                 SpawnIndexThisFrame++;
                 return true;
             }
@@ -870,7 +870,7 @@ namespace TAC_AI.World
         }
         public static void StopManagingUnit(NP_TechUnit tech)
         {
-            NP_Presence EP = GetTeam(tech.tech.m_TeamID);
+            NP_Presence_Automatic EP = GetTeam(tech.tech.m_TeamID);
             if (EP != null)
             {
                 if (tech is NP_BaseUnit EBU)
@@ -903,7 +903,7 @@ namespace TAC_AI.World
                     }
                     else if (val is ManSaveGame.StoredTech tech2 && tech2 == tech.tech)
                     {
-                        DebugTAC_AI.LogError("TACtical_AI: ManSaveGame altered ID for some reason? " + tech.Name + " prev, "
+                        DebugTAC_AI.LogError(KickStart.ModID + ": ManSaveGame altered ID for some reason? " + tech.Name + " prev, "
                             + tech.ID + " vs " + tech2.m_ID);
                         vals.RemoveAt(step);
                         break;
@@ -916,20 +916,20 @@ namespace TAC_AI.World
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: RemoveTechFromTile - Failed to purge " + tech.Name + " (SINGLE Player)");
+                DebugTAC_AI.Log(KickStart.ModID + ": RemoveTechFromTile - Failed to purge " + tech.Name + " (SINGLE Player)");
                 foreach (var item in ManVisible.inst.AllTrackedVisibles)
                 {
                     if (item != null && item.visible == null && item.ObjectType == ObjectTypes.Vehicle
                         && ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
                         DebugTAC_AI.Log("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                 }
-                DebugTAC_AI.Log("TACtical_AI: RemoveTechFromTile - Error backtrace - " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": RemoveTechFromTile - Error backtrace - " + e);
             }
             ManVisible.inst.StopTrackingVisible(tech.ID);
             /*
             if (!SpecialAISpawner.PurgeHost(tech.ID, tech.Name))
             {
-                DebugTAC_AI.LogError("TACtical_AI: We tried to remove visible of ID " + tech.ID
+                DebugTAC_AI.LogError(KickStart.ModID + ": We tried to remove visible of ID " + tech.ID
                     + " from the world but failed.  There will now be ghost techs on the minimap");
                 return false;
             }
@@ -943,7 +943,7 @@ namespace TAC_AI.World
                         var val = vals[step];
                         if (val.m_ID == tech.ID)
                         {
-                            DebugTAC_AI.LogError("TACtical_AI: RemoveTechFromTile used PurgeHost to remove an item from save but it wasn't removed." +
+                            DebugTAC_AI.LogError(KickStart.ModID + ": RemoveTechFromTile used PurgeHost to remove an item from save but it wasn't removed." +
                                 "\n  Removing manually...");
                             vals.RemoveAt(step);
                             break;
@@ -956,30 +956,30 @@ namespace TAC_AI.World
 
 
 
-        public static NP_Presence InsureTeam(int Team)
+        public static NP_Presence_Automatic InsureTeam(int Team)
         {
-            if (!NPTTeams.TryGetValue(Team, out NP_Presence EP))
+            if (!NPTTeams.TryGetValue(Team, out NP_Presence_Automatic EP))
             {
-                EP = new NP_Presence(Team, AIGlobals.IsEnemyBaseTeam(Team));
+                EP = new NP_Presence_Automatic(Team, AIGlobals.IsEnemyBaseTeam(Team));
                 if (Team != 1)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld - New team " + Team + " added");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ManEnemyWorld - New team " + Team + " added");
                     NPTTeams.Add(Team, EP);
                     TeamCreatedEvent.Send(Team);
                 }
             }
             return EP;
         }
-        public static NP_Presence GetTeam(int Team)
+        public static NP_Presence_Automatic GetTeam(int Team)
         {
-            if (NPTTeams.TryGetValue(Team, out NP_Presence EP))
+            if (NPTTeams.TryGetValue(Team, out NP_Presence_Automatic EP))
                 return EP;
             return null;
         }
         public static void AddToTeam(NP_TechUnit ETU, bool AnnounceNew)
         {
             int team = ETU.tech.m_TeamID;
-            NP_Presence EP;
+            NP_Presence_Automatic EP;
             if (ETU is NP_BaseUnit EBU)
             {
                 EP = InsureTeam(team);
@@ -988,18 +988,18 @@ namespace TAC_AI.World
 #if DEBUG
                     if (AnnounceNew)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(EBU) New tech " + ETU.Name + " of type " + EBU.Faction + ", health " + EBU.MaxHealth + ", weapons " + EBU.AttackPower + ", funds " + EBU.BuildBucks);
-                        DebugTAC_AI.Log("TACtical_AI: of Team " + ETU.tech.m_TeamID + ", tile " + ETU.tilePos);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) New tech " + ETU.Name + " of type " + EBU.Faction + ", health " + EBU.MaxHealth + ", weapons " + EBU.AttackPower + ", funds " + EBU.BuildBucks);
+                        DebugTAC_AI.Log(KickStart.ModID + ": of Team " + ETU.tech.m_TeamID + ", tile " + ETU.tilePos);
                     }
 #endif
                     if (EP.EBUs.Add(EBU))
-                        DebugTAC_AI.Info("TACtical_AI: HandleTechUnloaded(EBUs) Added " + EBU.Name);
+                        DebugTAC_AI.Info(KickStart.ModID + ": HandleTechUnloaded(EBUs) Added " + EBU.Name);
                     else
-                        DebugTAC_AI.Assert("TACtical_AI: HandleTechUnloaded(EBU) Hash Fail!");
+                        DebugTAC_AI.Assert(KickStart.ModID + ": HandleTechUnloaded(EBU) Hash Fail!");
                 }
                 else
                 {
-                    DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(EBU) DUPLICATE TECH ADD REQUEST!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) DUPLICATE TECH ADD REQUEST!");
                 }
             }
             else if (ETU is NP_MobileUnit EMU)
@@ -1010,24 +1010,24 @@ namespace TAC_AI.World
 #if DEBUG
                     if (AnnounceNew)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(ETU) New tech " + ETU.Name + " of type " + ETU.Faction + ", health " + ETU.MaxHealth + ", weapons " + ETU.AttackPower);
-                        DebugTAC_AI.Log("TACtical_AI: of Team " + ETU.tech.m_TeamID + ", tile " + ETU.tilePos);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) New tech " + ETU.Name + " of type " + ETU.Faction + ", health " + ETU.MaxHealth + ", weapons " + ETU.AttackPower);
+                        DebugTAC_AI.Log(KickStart.ModID + ": of Team " + ETU.tech.m_TeamID + ", tile " + ETU.tilePos);
                     }
 #endif
                     if (EMU.isFounder)
                     {
                         if (EP.teamFounder != null)
-                            DebugTAC_AI.Log("TACtical_AI: ASSERT - THERE ARE TWO TEAM FOUNDERS IN TEAM " + EP.team);
+                            DebugTAC_AI.Log(KickStart.ModID + ": ASSERT - THERE ARE TWO TEAM FOUNDERS IN TEAM " + EP.team);
                         EP.teamFounder = EMU;
                     }
                     if (EP.EMUs.Add(EMU))
-                        DebugTAC_AI.Info("TACtical_AI: HandleTechUnloaded(ETU) Added " + EMU.Name);
+                        DebugTAC_AI.Info(KickStart.ModID + ": HandleTechUnloaded(ETU) Added " + EMU.Name);
                     else
-                        DebugTAC_AI.Assert("TACtical_AI: HandleTechUnloaded(ETU) Hash Fail!");
+                        DebugTAC_AI.Assert(KickStart.ModID + ": HandleTechUnloaded(ETU) Hash Fail!");
                 }
                 else
                 {
-                    DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(ETU) DUPLICATE TECH ADD REQUEST!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) DUPLICATE TECH ADD REQUEST!");
                 }
             }
         }
@@ -1043,7 +1043,7 @@ namespace TAC_AI.World
                         item.SetTeam(newTeam);
                 }
             }
-            if (NPTTeams.TryGetValue(Team, out NP_Presence EP))
+            if (NPTTeams.TryGetValue(Team, out NP_Presence_Automatic EP))
             {
                 NPTTeams.Remove(Team);
                 EP.ChangeTeamOfAllTechsUnloaded(newTeam);
@@ -1055,14 +1055,14 @@ namespace TAC_AI.World
 
         public static int UnloadedBaseCount(int team)
         {
-            NP_Presence EP = GetTeam(team);
+            NP_Presence_Automatic EP = GetTeam(team);
             if (EP == null)
                 return 0;
             return EP.EBUs.Count;
         }
         public static int UnloadedMobileTechCount(int team)
         {
-            NP_Presence EP = GetTeam(team);
+            NP_Presence_Automatic EP = GetTeam(team);
             if (EP == null)
                 return 0;
             return EP.EMUs.Count;
@@ -1090,24 +1090,24 @@ namespace TAC_AI.World
             IntVector2 tilePosInitial = ETU.tilePos;
             if (ETU.GetSpeed() < 2)
             {
-                DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Is too slow with " + ETU.GetSpeed() + " to move!");
+                DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Is too slow with " + ETU.GetSpeed() + " to move!");
                 return false;
             }
             ManSaveGame.StoredTech ST = ETU.tech;
-            //DebugTAC_AI.Log("TACtical_AI: Enemy Tech " + ST.m_TechData.Name + " wants to move to " + target);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Enemy Tech " + ST.m_TechData.Name + " wants to move to " + target);
             if (!IsTechOnSetTile(ETU))
             {
-                DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - ETU is not in set tile: " + ETU.tilePos);
-                DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - was destroyed!?");
+                DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - ETU is not in set tile: " + ETU.tilePos);
+                DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - was destroyed!?");
                 /*
                 if (!TryRefindTech(ETU.tilePos, ETU, out IntVector2 IV2))
                 {
-                    DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - was destroyed!?");
+                    DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - was destroyed!?");
 
                     criticalFail = true;
                     return false;
                 }
-                DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - ETU is actually: " + IV2 + " setting to that.");
+                DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - ETU is actually: " + IV2 + " setting to that.");
                 ETU.tilePos = IV2;*/
                 return false;
             }
@@ -1120,7 +1120,7 @@ namespace TAC_AI.World
             IntVector2 newWorldPos = tilePosInitial + new IntVector2(moveTileDist);
             if (!CanMoveUnloadedTechIntoTile(newWorldPos))
             {
-                //DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Cannot Enter tile at " + newWorldPos +".");
+                //DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Cannot Enter tile at " + newWorldPos +".");
                 return false;
             }
 
@@ -1130,27 +1130,27 @@ namespace TAC_AI.World
                 TileMoveCommand TMC = new TileMoveCommand(ETU, newWorldPos, ETA, onFinished);
                 QueuedUnitMoves.Add(ETU, TMC);
 #if DEBUG
-                DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " Requested move to " + newWorldPos);
+                DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " Requested move to " + newWorldPos);
                 DebugTAC_AI.Log("   ETA is " + ETA + " enemy team turns.");
 #endif
                 return true;
             }
-            DebugTAC_AI.Log("TACtical_AI: StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Destination tile IS NULL OR NOT LOADED!");
+            DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Destination tile IS NULL OR NOT LOADED!");
             return false;
         }
         private static bool StrategicMoveConcluded(TileMoveCommand TMC)
         {
-            //DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - EXECUTING");
+            //DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - EXECUTING");
             bool worked = TryMoveUnloadedTech(TMC.ETU, TMC.TargetTileCoord);
             TMC.OnFinished(worked, TMC.ETU.Exists());
             return worked;
         }
         public static bool TryMoveUnloadedTech(NP_TechUnit ETU, IntVector2 TargetTileCoord)
         {
-            //DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - EXECUTING");
+            //DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - EXECUTING");
             if (!IsTechOnSetTile(ETU))
             {
-                DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - Enemy Tech " + ETU.Name + " was reloaded or destroyed before finishing move!");
+                DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - Enemy Tech " + ETU.Name + " was reloaded or destroyed before finishing move!");
                 return false;
             }
             ManSaveGame.StoredTile Tile2 = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(TargetTileCoord, true);
@@ -1159,24 +1159,24 @@ namespace TAC_AI.World
                 //ST.m_WorldPosition = new WorldPosition(Tile2.coord, Vector3.one);
                 if (TryMoveTechIntoTile(ETU, Tile2))
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - Enemy Tech " + ETU.Name + " Moved to " + Tile2.coord);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - Enemy Tech " + ETU.Name + " Moved to " + Tile2.coord);
                     return true;
                 }
                 else
                 {
-                    DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - Enemy Tech " + ETU.Name + " - Move operation cancelled.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - Enemy Tech " + ETU.Name + " - Move operation cancelled.");
                     return false;
                 }
             }
-            DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - Enemy Tech " + ETU.Name + " - TILE IS NULL!");
-            //DebugTAC_AI.Log("TACtical_AI: StrategicMoveConcluded - Enemy Tech " + TMC.ETU.name + " - CRITICAL MISSION FAILIURE");
+            DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - Enemy Tech " + ETU.Name + " - TILE IS NULL!");
+            //DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - Enemy Tech " + TMC.ETU.name + " - CRITICAL MISSION FAILIURE");
             return false;
         }
 
 
 
         // TECH BUILDING
-        public static void ConstructNewTech(NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT)
+        public static void ConstructNewTech(NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, SpawnBaseTypes SBT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1198,7 +1198,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        public static void ConstructNewExpansion(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT)
+        public static void ConstructNewExpansion(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, SpawnBaseTypes SBT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1217,7 +1217,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        public static void ConstructNewTechExt(NP_BaseUnit BuilderTech, NP_Presence EP, RawTechTemplate BT)
+        public static void ConstructNewTechExt(NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, RawTechTemplate BT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1239,7 +1239,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        public static void ConstructNewExpansionExt(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence EP, RawTechTemplate BT)
+        public static void ConstructNewExpansionExt(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, RawTechTemplate BT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1285,10 +1285,11 @@ namespace TAC_AI.World
                 }
             }
         }
-        private static List<NP_Presence> EPScrambled = new List<NP_Presence>();
+        private static List<NP_Presence_Automatic> EPScrambled = new List<NP_Presence_Automatic>();
+        private static List<NP_TechUnit> TUDestroyed = new List<NP_TechUnit>();
         private void UpdateOperators()
         {
-            //DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld - Updating All EnemyPresence");
+            //DebugTAC_AI.Log(KickStart.ModID + ": ManEnemyWorld - Updating All EnemyPresence");
             try
             {
                 EPScrambled.AddRange(NPTTeams.Values);
@@ -1296,37 +1297,42 @@ namespace TAC_AI.World
                 int Count = EPScrambled.Count;
                 if (KickStart.AllowStrategicAI)
                 {
-                    DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update()[RTS] - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
+                    DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update()[RTS] - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
                     for (int step = 0; step < Count;)
                     {
-                        NP_Presence EP = EPScrambled.ElementAt(step);
-                        if (EP.UpdateOperatorRTS())
+                        NP_Presence_Automatic EP = EPScrambled.ElementAt(step);
+                        if (EP.UpdateOperatorRTS(TUDestroyed))
                         {
                             step++;
                             continue;
                         }
 
-                        DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update()[RTS] - Team " + EP.Team + " has been unregistered");
+                        DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update()[RTS] - Team " + EP.Team + " has been unregistered");
                         TeamDestroyedEvent.Send(EP.Team);
                         NPTTeams.Remove(EP.Team);
                         EPScrambled.RemoveAt(step);
                         Count--;
                     }
+                    foreach (var item in TUDestroyed)
+                    {
+                        UnloadedBases.RemoteDestroy(item);
+                    }
+                    TUDestroyed.Clear();
                     ManEnemySiege.UpdateThis();
                 }
                 else
                 {
-                    DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update() - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
+                    DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update() - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
                     for (int step = 0; step < Count;)
                     {
-                        NP_Presence EP = EPScrambled.ElementAt(step);
+                        NP_Presence_Automatic EP = EPScrambled.ElementAt(step);
                         if (EP.UpdateOperator())
                         {
                             step++;
                             continue;
                         }
 
-                        DebugTAC_AI.Info("TACtical_AI: ManEnemyWorld.Update() - Team " + EP.Team + " has been unregistered");
+                        DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update() - Team " + EP.Team + " has been unregistered");
                         TeamDestroyedEvent.Send(EP.Team);
                         NPTTeams.Remove(EP.Team);
                         EPScrambled.RemoveAt(step);
@@ -1341,6 +1347,10 @@ namespace TAC_AI.World
             }
         }
 
+        private void ManageAllDestroyed()
+        { 
+        }
+
         private void UpdateMaintainers()
         {
             SpawnIndexThisFrame = 0;
@@ -1348,7 +1358,7 @@ namespace TAC_AI.World
             {
                 item.Value.UpdateMaintainer(MaintainerTickDelay);
             }
-            //DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld - UpdateMaintainers()");
+            //DebugTAC_AI.Log(KickStart.ModID + ": ManEnemyWorld - UpdateMaintainers()");
             for (int step = QueuedUnitMoves.Count - 1; step >= 0;)
             {
                 var pair = QueuedUnitMoves.ElementAt(step);
@@ -1365,13 +1375,13 @@ namespace TAC_AI.World
                     else
                     {
                         move.CurrentTurn++;
-                        //DebugTAC_AI.Log("TACtical_AI: Turn " + move.CurrentTurn + "/" + move.ExpectedMoveTurns + " for " + move.ETU.tech.m_TechData.Name);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Turn " + move.CurrentTurn + "/" + move.ExpectedMoveTurns + " for " + move.ETU.tech.m_TechData.Name);
                         move.ETU.SetFakeTVLocation(move.PosSceneCurTime());
                     }
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld(UpdateMaintainers) - ERROR - " + e);
+                    DebugTAC_AI.Log(KickStart.ModID + ": ManEnemyWorld(UpdateMaintainers) - ERROR - " + e);
                     QueuedUnitMoves.Remove(pair.Key);
                 }
                 step--;
@@ -1385,7 +1395,7 @@ namespace TAC_AI.World
             NP_TechUnit ETUo = null;
             if (!sTech)
                 throw new NullReferenceException("GetETUFromTank sTech IS NULL");
-            if (!NPTTeams.TryGetValue(sTech.Team, out NP_Presence EP))
+            if (!NPTTeams.TryGetValue(sTech.Team, out NP_Presence_Automatic EP))
                 throw new NullReferenceException("GetETUFromTank could not find enemy team of ID " + sTech.Team);
             ETUo = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.visible.ID; });
             if (ETUo != null)
@@ -1397,7 +1407,7 @@ namespace TAC_AI.World
         }
         private static bool TryGetETUFromTank(Tank sTech, out NP_TechUnit ETU)
         {
-            if (sTech && NPTTeams.TryGetValue(sTech.Team, out NP_Presence EP))
+            if (sTech && NPTTeams.TryGetValue(sTech.Team, out NP_Presence_Automatic EP))
             {
                 ETU = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.visible.ID; });
                 if (ETU != null)
@@ -1412,7 +1422,7 @@ namespace TAC_AI.World
         private static NP_TechUnit GetETUFromInst(ManSaveGame.StoredTech sTech)
         {
             NP_TechUnit ETUo = null;
-            if (!NPTTeams.TryGetValue(sTech.m_TeamID, out NP_Presence EP))
+            if (!NPTTeams.TryGetValue(sTech.m_TeamID, out NP_Presence_Automatic EP))
                 throw new NullReferenceException("GetETUFromInst could not find enemy team of ID " + sTech.m_TeamID);
             ETUo = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.m_ID; });
             if (ETUo != null)
@@ -1424,7 +1434,7 @@ namespace TAC_AI.World
         }
         private static bool TryGetETUFromInst(ManSaveGame.StoredTech sTech, out NP_TechUnit ETU)
         {
-            if (NPTTeams.TryGetValue(sTech.m_TeamID, out NP_Presence EP))
+            if (NPTTeams.TryGetValue(sTech.m_TeamID, out NP_Presence_Automatic EP))
             {
                 ETU = EP.EBUs.FirstOrDefault(delegate (NP_BaseUnit cand) { return cand.ID == sTech.m_ID; });
                 if (ETU != null)
@@ -1438,6 +1448,32 @@ namespace TAC_AI.World
         }
 
         private static List<NP_TechUnit> ETUsInRange = new List<NP_TechUnit>();
+        private static List<NP_TechUnit> ETUsAlly = new List<NP_TechUnit>();
+        private static List<NP_TechUnit> ETUsEnemy = new List<NP_TechUnit>();
+        internal static bool TryGetConflict(IntVector2 tilePos, int team, out List<NP_TechUnit> Allied, out List<NP_TechUnit> Enemy)
+        {
+            ETUsAlly.Clear();
+            ETUsEnemy.Clear();
+            ETUsInRange.Clear();
+            Allied = ETUsAlly;
+            Enemy = ETUsEnemy;
+            ManSaveGame.StoredTile Tile = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(tilePos, false);
+            if (Tile != null && Tile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> viss))
+            {
+                foreach (ManSaveGame.StoredVisible STV in viss)
+                {
+                    var tech = (ManSaveGame.StoredTech)STV;
+                    if (TryGetETUFromInst(tech, out var unit))
+                    {
+                        if (Tank.IsFriendly(unit.Team, team))
+                            Allied.Add(unit);
+                        else if(Tank.IsEnemy(unit.Team, team))
+                            Enemy.Add(unit);
+                    }
+                }
+            }
+            return Allied.Any() && Enemy.Any();
+        }
         internal static List<NP_TechUnit> GetUnloadedTechsInTile(IntVector2 tilePos)
         {
             ETUsInRange.Clear();
@@ -1451,6 +1487,42 @@ namespace TAC_AI.World
                 {
                     var tech = (ManSaveGame.StoredTech)STV;
                     if (TryGetETUFromInst(tech, out var unit))
+                        ETUsInRange.Add(unit);
+                }
+            }
+            return ETUsInRange;
+        }
+        internal static IEnumerable<NP_TechUnit> GetUnloadedTechsInTileFast(IntVector2 tilePos)
+        {
+            ETUsInRange.Clear();
+            ManSaveGame.StoredTile Tile = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(tilePos, false);
+            if (Tile == null)
+                return ETUsInRange;
+
+            if (Tile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> viss))
+            {
+                foreach (ManSaveGame.StoredVisible STV in viss)
+                {
+                    var tech = (ManSaveGame.StoredTech)STV;
+                    if (TryGetETUFromInst(tech, out var unit))
+                        ETUsInRange.Add(unit);
+                }
+            }
+            return ETUsInRange;
+        }
+        internal static IEnumerable<NP_TechUnit> GetUnloadedTechsInTileFast(IntVector2 tilePos, Func<NP_TechUnit, bool> selection = null)
+        {
+            ETUsInRange.Clear();
+            ManSaveGame.StoredTile Tile = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(tilePos, false);
+            if (Tile == null)
+                return ETUsInRange;
+
+            if (Tile.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> viss))
+            {
+                foreach (ManSaveGame.StoredVisible STV in viss)
+                {
+                    var tech = (ManSaveGame.StoredTech)STV;
+                    if (TryGetETUFromInst(tech, out var unit) && (selection == null || selection.Invoke(unit)))
                         ETUsInRange.Add(unit);
                 }
             }

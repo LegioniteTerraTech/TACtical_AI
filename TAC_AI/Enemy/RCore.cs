@@ -27,9 +27,9 @@ namespace TAC_AI.AI.Enemy
 
 
         // ----------------------------  New Enemy  ---------------------------- 
-        public static void RandomizeBrain(this TankAIHelper thisInst, Tank tank)
+        public static void GenerateEnemyAI(this TankAIHelper thisInst, Tank tank)
         {
-            //DebugTAC_AI.Log("TACtical_AI: offset " + tank.boundsCentreWorldNoCheck);
+            //DebugTAC_AI.Log(KickStart.ModID + ": offset " + tank.boundsCentreWorldNoCheck);
             var newMind = tank.gameObject.GetComponent<EnemyMind>();
             if (!newMind)
             {
@@ -38,7 +38,7 @@ namespace TAC_AI.AI.Enemy
             }
             thisInst.lastPlayer = null;
 
-            thisInst.RecalibrateMovementAIController();
+            //thisInst.RecalibrateMovementAIController();
 
             newMind.sceneStationaryPos = tank.boundsCentreWorldNoCheck;
             newMind.Refresh();
@@ -108,7 +108,7 @@ namespace TAC_AI.AI.Enemy
             }
             else if (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeSumo>())
             {
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a sumo brawler");
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a sumo brawler");
                 newMind.CommanderSmarts = EnemySmarts.Default;
                 newMind.CommanderMind = EnemyAttitude.Homing;
                 newMind.EvilCommander = EnemyHandling.Wheeled;
@@ -167,6 +167,13 @@ namespace TAC_AI.AI.Enemy
             else if (BM.IterateBlockComponents<ModuleWeapon>().Count() > AIGlobals.HomingWeaponCount)
             {   // Over-armed
                 newMind.CommanderMind = EnemyAttitude.Homing;
+                //toSet.CommanderAttack = EnemyAttack.Bully;
+                newMind.CommanderAttack = RWeapSetup.GetAttackStrat(tank, newMind);
+                fired = true;
+            }
+            else if (BM.IterateBlockComponents<ModuleWeapon>().Count() >= AIGlobals.DefenderWeaponCount)
+            {   // Can defend
+                newMind.CommanderMind = EnemyAttitude.Guardian;
                 //toSet.CommanderAttack = EnemyAttack.Bully;
                 newMind.CommanderAttack = RWeapSetup.GetAttackStrat(tank, newMind);
                 fired = true;
@@ -312,9 +319,9 @@ namespace TAC_AI.AI.Enemy
                 if (biasDirection.y > 0.6)
                     isFlyingDirectionForwards = false;
             }
-            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
+            DebugTAC_AI.Info(KickStart.ModID + ": Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
 
-            DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + "  Has block count " + BM.blockCount + "  | " + modBoostCount + " | " + modAGCount);
+            DebugTAC_AI.Info(KickStart.ModID + ": Tech " + tank.name + "  Has block count " + BM.blockCount + "  | " + modBoostCount + " | " + modAGCount);
 
 
             if (tank.IsAnchored)
@@ -442,10 +449,10 @@ namespace TAC_AI.AI.Enemy
         // ----------------------------  Operations  ---------------------------- 
         internal static void ScarePlayer(EnemyMind mind, TankAIHelper thisInst, Tank tank)
         {
-            //DebugTAC_AI.Log("TACtical_AI: enemy AI active!");
+            //DebugTAC_AI.Log(KickStart.ModID + ": enemy AI active!");
             try
             {
-                if (ManBaseTeams.IsEnemy(ManPlayer.inst.PlayerTeam, tank.Team))
+                if (Tank.IsEnemy(ManPlayer.inst.PlayerTeam, tank.Team))
                 {
                     var tonk = thisInst.lastEnemyGet;
                     if (tonk?.tank)
@@ -495,12 +502,12 @@ namespace TAC_AI.AI.Enemy
 
         internal static void BeEvil(TankAIHelper thisInst, Tank tank)
         {
-            //DebugTAC_AI.Log("TACtical_AI: enemy AI active!");
+            //DebugTAC_AI.Log(KickStart.ModID + ": enemy AI active!");
             var Mind = thisInst.MovementController.EnemyMind;
             if (Mind.IsNull())
             {
                 Mind = tank.GetComponent<EnemyMind>();
-                DebugTAC_AI.Log("TACtical_AI: Updating MovementController for " + tank.name);
+                DebugTAC_AI.Log(KickStart.ModID + ": Updating MovementController for " + tank.name);
                 thisInst.MovementController.UpdateEnemyMind(Mind);
                 //RandomizeBrain(thisInst, tank);
                 //return;
@@ -510,12 +517,12 @@ namespace TAC_AI.AI.Enemy
         }
         internal static void BeEvilLight(TankAIHelper thisInst, Tank tank)
         {
-            //DebugTAC_AI.Log("TACtical_AI: enemy AI active!");
+            //DebugTAC_AI.Log(KickStart.ModID + ": enemy AI active!");
             var Mind = thisInst.MovementController.EnemyMind;
             if (Mind.IsNull())
             {
                 Mind = tank.GetComponent<EnemyMind>();
-                DebugTAC_AI.Log("TACtical_AI: Updating MovementController for " + tank.name);
+                DebugTAC_AI.Log(KickStart.ModID + ": Updating MovementController for " + tank.name);
                 thisInst.MovementController.UpdateEnemyMind(Mind);
                 //RandomizeBrain(thisInst, tank);
                 //return;
@@ -532,7 +539,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
-                        //DebugTAC_AI.Log("TACtical_AI: Trying to anchor " + tank.name);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
                         thisInst.anchorAttempts++;
                         if (tank.IsAnchored)
@@ -575,7 +582,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
                     {
-                        //DebugTAC_AI.Log("TACtical_AI: Trying to anchor " + tank.name);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Trying to anchor " + tank.name);
                         thisInst.TryReallyAnchor();
                         thisInst.anchorAttempts++;
                         if (tank.IsAnchored)
@@ -731,7 +738,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    NP_Presence EP = ManEnemyWorld.GetTeam(tank.Team);
+                    NP_Presence_Automatic EP = ManEnemyWorld.GetTeam(tank.Team);
                     if (EP != null)
                     {
                         NP_BaseUnit EBU = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(EP);
@@ -863,7 +870,7 @@ namespace TAC_AI.AI.Enemy
             {
                 if (!tank.grounded && RLoadedBases.TeamActiveMakerBaseCount(tank.Team) > 0 && AIEPathing.AboveTheSea(mind.AIControl))
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Recycling " + tank.name + " back to team " + tank.Team + " because it was stuck in the water");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Recycling " + tank.name + " back to team " + tank.Team + " because it was stuck in the water");
                     RLoadedBases.RecycleTechToTeam(tank);
                 }
             }
@@ -886,7 +893,7 @@ namespace TAC_AI.AI.Enemy
                     return;
                 if ((bool)wasSet.GetValue(mover))
                     return;
-                DebugTAC_AI.Log("TACtical_AI: Setting a Control Block...");
+                DebugTAC_AI.Log(KickStart.ModID + ": Setting a Control Block...");
 
                 mover.ProcessOperations.Clear();
                 if (mover.IsPlanarVALUE)
@@ -970,18 +977,18 @@ namespace TAC_AI.AI.Enemy
                         else
                             RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.TechProduction);
                     }
-                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base hosting tech!!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a base hosting tech!!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
                 case EnemyAttitude.Boss:
                     if (!tank.name.Contains('⦲'))
                         tank.SetName(tank.name + " ⦲");
                     if (!AIGlobals.IsBaseTeam(tank.Team))
                         RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.Headquarters);
-                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base boss with dangerous potential!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a base boss with dangerous potential!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
                 case EnemyAttitude.Invader:
                     RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.AnyNonHQ);
-                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is an invader looking to take over your world!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is an invader looking to take over your world!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
                 case EnemyAttitude.Miner:
                     if (newMind.CommanderAttack == EAttackMode.Circle)// Circle breaks the harvester AI in some attack cases
@@ -1001,10 +1008,10 @@ namespace TAC_AI.AI.Enemy
                                 break;
                         }
                     }
-                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a harvester!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a harvester!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
                 default:
-                    DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is ready to roll!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
             }
         }
@@ -1054,6 +1061,8 @@ namespace TAC_AI.AI.Enemy
             {
                 newMind.StartedAnchored = true;
                 newMind.EvilCommander = EnemyHandling.Stationary;
+                thisInst.TryAnchor();
+                thisInst.TryReallyAnchor();
             }
             if (newMind.CommanderSmarts > EnemySmarts.Meh)
             {
@@ -1071,7 +1080,7 @@ namespace TAC_AI.AI.Enemy
                     case EnemyAttitude.Junker:
                         break;
                 }
-                DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
                 if (DebugRawTechSpawner.ShowDebugFeedBack)
                 {
                     if (AIGlobals.IsNeutralBaseTeam(tank.Team))
@@ -1081,7 +1090,7 @@ namespace TAC_AI.AI.Enemy
                     else
                         AIGlobals.PopupEnemyInfo(newMind.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
                 }
-                thisInst.RecalibrateMovementAIController();
+                //thisInst.RecalibrateMovementAIController();
                 return;
             }
 
@@ -1101,12 +1110,12 @@ namespace TAC_AI.AI.Enemy
                         {
                             thisInst.TryReallyAnchor();
                         }
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a base Tech");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a base Tech");
                     }
                     else
                     {
                         newMind.CommanderMind = EnemyAttitude.Miner;
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is a harvester Tech");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a harvester Tech");
                     }
                 }
                 else
@@ -1116,7 +1125,7 @@ namespace TAC_AI.AI.Enemy
                         RLoadedBases.SetupBaseAI(thisInst, tank, newMind);
                         if (ManBaseTeams.TryGetBaseTeam(tank.Team, out var teamInst))
                             teamInst.AddBuildBucks(4000000);
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " is is a base Tech");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is is a base Tech");
                     }
                     if (newMind.EvilCommander != EnemyHandling.Wheeled)
                         newMind.CommanderAttack = EAttackMode.Chase;
@@ -1210,7 +1219,7 @@ namespace TAC_AI.AI.Enemy
             else
                 newMind.MinCombatRange = AIGlobals.MinCombatRangeDefault;
 
-            thisInst.RecalibrateMovementAIController();
+            //thisInst.RecalibrateMovementAIController();
         }
     }
 }

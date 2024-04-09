@@ -49,6 +49,15 @@ namespace TAC_AI.AI.Enemy
         Boss,
         /// <summary>One. job.<para>INVADE</para><para>end the player</para><para>REALLY PAINFULLY</para></summary>
         Invader,
+        /// <summary>Protect other allies</summary>
+        Guardian,
+
+        /// <summary>Like allied equiv</summary>
+        PartTurret,
+        /// <summary>Like allied equiv</summary>
+        PartStatic,
+        /// <summary>Like allied equiv</summary>
+        PartMimic,
     }
 
     /// <summary>

@@ -16,7 +16,7 @@ namespace TAC_AI.AI.Movement.AICores
             this.controller = (AIControllerStatic)controller;
             this.tank = tank;
             controller.Helper.GroundOffsetHeight = controller.Helper.lastTechExtents + AIGlobals.GroundOffsetGeneralAir;
-            //DebugTAC_AI.Log("TACtical_AI: StaticAICore - Init");
+            //DebugTAC_AI.Log(KickStart.ModID + ": StaticAICore - Init");
         }
 
         public Vector3 AvoidAssist(Vector3 targetIn, Vector3 predictionOffset)
@@ -27,7 +27,7 @@ namespace TAC_AI.AI.Movement.AICores
         public bool DriveDirector(ref EControlCoreSet core)
         {
             var help = controller.Helper;
-            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");
+            // DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " drive was called");
             try
             {
                 help.PivotOnly = true;
@@ -47,21 +47,21 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 try
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ERROR IN StaticAICore");
-                    DebugTAC_AI.Log("TACtical_AI: Tank - " + tank.name);
-                    DebugTAC_AI.Log("TACtical_AI: Helper - " + (bool)controller.Helper);
-                    DebugTAC_AI.Log("TACtical_AI: AI Main Mode - " + tank.AI.GetAICategory().ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": ERROR IN StaticAICore");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tank - " + tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Helper - " + (bool)controller.Helper);
+                    DebugTAC_AI.Log(KickStart.ModID + ": AI Main Mode - " + tank.AI.GetAICategory().ToString());
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
-                        DebugTAC_AI.Log("TACtical_AI: AI Tree Mode - " + tree.ToString());
-                    DebugTAC_AI.Log("TACtical_AI: Last AI Tree Mode - " + help.lastAIType.ToString());
-                    DebugTAC_AI.Log("TACtical_AI: Player - " + help.lastPlayer.tank.name);
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI Tree Mode - " + tree.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": Last AI Tree Mode - " + help.lastAIType.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": Player - " + help.lastPlayer.tank.name);
                     if ((bool)help.lastEnemyGet)
-                        DebugTAC_AI.Log("TACtical_AI: Target - " + help.lastEnemyGet.tank.name);
-                    DebugTAC_AI.Log("TACtical_AI: " + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Target - " + help.lastEnemyGet.tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": " + e);
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Missing variable(s)");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Missing variable(s)");
                 }
             }
             return true;
@@ -70,7 +70,7 @@ namespace TAC_AI.AI.Movement.AICores
         public bool DriveDirectorRTS(ref EControlCoreSet core)
         {
             DriveDirector(ref core);
-            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " drive was called");DriveDirector()
+            // DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " drive was called");DriveDirector()
             return true;
         }
 
@@ -98,7 +98,7 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
-            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
+            // DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " normal drive was called");
             if (tank.Anchors.Fixed)
             {   // Static base
                 return true;
@@ -171,7 +171,7 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
             if (thisInst.Navi3DUp == Vector3.up)
             {
-                //DebugTAC_AI.Log("TACtical_AI: Forwards");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Forwards");
                 if (!thisInst.FullMelee && Vector3.Dot(thisInst.Navi3DDirect, tank.rootBlockTrans.forward) < 0.6f)
                 {
                     //If overtilt then try get back upright again
@@ -204,11 +204,11 @@ namespace TAC_AI.AI.Movement.AICores
                         turnVal.z = -((turnVal.z - 360) / 180);
                     else
                         turnVal.z = -(turnVal.z / 180);
-                    //DebugTAC_AI.Log("TACtical_AI: Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Broadside overloaded with value " + Vector3.Dot(thisInst.Navi3DUp, tank.rootBlockTrans.up));
                 }
                 else
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: Broadside Z-tilt active");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Broadside Z-tilt active");
                     if (turnVal.z > 180)
                         turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / 60), -1, 1);
                     else
@@ -227,7 +227,7 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                     turnVal.y = Mathf.Clamp(-(turnVal.y / 60), -1, 1);
 
-                //DebugTAC_AI.Log("TACtical_AI: TurnVal AIM " + turnVal);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurnVal AIM " + turnVal);
 
             thisInst.Navi3DDirect = Vector3.zero;
             thisInst.Navi3DUp = Vector3.up;

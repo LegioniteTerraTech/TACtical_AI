@@ -45,11 +45,11 @@ namespace TAC_AI
                     bool attached;
                     if (NetT == null)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverrideServer - NetTech is NULL!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": BlockAttachNetworkOverrideServer - NetTech is NULL!");
                     }
                     else if (canidate == null)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverrideServer - BLOCK IS NULL!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": BlockAttachNetworkOverrideServer - BLOCK IS NULL!");
                     }
                     else
                     {
@@ -57,7 +57,7 @@ namespace TAC_AI
                         NetBlock netBlock = canidate.netBlock;
                         if (netBlock.IsNull())
                         {
-                            DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverrideServer - NetBlock could not be found on AI block attach attempt!");
+                            DebugTAC_AI.Log(KickStart.ModID + ": BlockAttachNetworkOverrideServer - NetBlock could not be found on AI block attach attempt!");
                         }
                         else
                         {
@@ -95,7 +95,7 @@ namespace TAC_AI
             //PatchTankToHelpAI
             private static void RegisterTank_Postfix(ManTechs __instance, ref Tank t)
             {
-                //DebugTAC_AI.Log("TACtical_AI: Patched Tank OnPool(TankAIHelper & TimeTank)");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Patched Tank OnPool(TankAIHelper & TimeTank)");
                 t.GetHelperInsured();
             }
         }

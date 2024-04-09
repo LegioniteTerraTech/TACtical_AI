@@ -36,7 +36,7 @@ namespace TAC_AI
         }
         public static GUIListHandler<T> Initiate(List<T> list)
         {
-            DebugTAC_AI.Log("TACtical_AI: GUIListHandler for " + typeof(T).Name);
+            DebugTAC_AI.Log(KickStart.ModID + ": GUIListHandler for " + typeof(T).Name);
 
             GUIListHandler<T> GLH = new GUIListHandler<T>();
             GLH.GUIWindow = new GameObject(GLH.GetName());
@@ -163,7 +163,7 @@ namespace TAC_AI
         {
             if (!GUIWindow.activeSelf)
             {
-                DebugTAC_AI.Log("TACtical_AI: Opened " + typeof(T).Name + " menu!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Opened " + typeof(T).Name + " menu!");
                 OnLaunchSubMenu();
                 GUIWindow.SetActive(true);
             }
@@ -178,7 +178,7 @@ namespace TAC_AI
                 OnCloseSubMenu();
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
-                DebugTAC_AI.Log("TACtical_AI: Closed " + typeof(T).Name + " menu!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Closed " + typeof(T).Name + " menu!");
             }
         }
         protected virtual void OnCloseSubMenu()

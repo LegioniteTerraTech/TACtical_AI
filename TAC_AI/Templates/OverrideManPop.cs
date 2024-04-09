@@ -52,16 +52,16 @@ namespace TAC_AI.Templates
                         Val = 250000000
                     };
                     SavedRight = true;
-                    DebugTAC_AI.Log("TACtical_AI: Fetched pop");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Fetched pop");
                     return true;
                 }
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Could not fetch pop, will try again later");
+                DebugTAC_AI.Log(KickStart.ModID + ": Could not fetch pop, will try again later");
                 return false;
             }
-            DebugTAC_AI.Log("TACtical_AI: Pop already fetched");
+            DebugTAC_AI.Log(KickStart.ModID + ": Pop already fetched");
             return true;
         }
         public static void ChangeToRagnarokPop(bool isTrue)
@@ -100,7 +100,7 @@ namespace TAC_AI.Templates
 
         private static void OverridePop()
         {
-            DebugTAC_AI.Log("TACtical_AI: RAGNAROK ENABLED");
+            DebugTAC_AI.Log(KickStart.ModID + ": RAGNAROK ENABLED");
             ManPop pop = Singleton.Manager<ManPop>.inst;
             try
             {
@@ -108,7 +108,7 @@ namespace TAC_AI.Templates
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change dayTechs " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to change dayTechs " + e);
             }
 
             try
@@ -117,7 +117,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change nightTechs");
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to change nightTechs");
             }
 
             try
@@ -126,14 +126,14 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change nonEXPTechs");
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to change nonEXPTechs");
             }
             IsOverridden = true;
         }
 
         private static void RecoverPop()
         {
-            DebugTAC_AI.Log("TACtical_AI: RAGNAROK DISABLED");
+            DebugTAC_AI.Log(KickStart.ModID + ": RAGNAROK DISABLED");
             ManPop pop = Singleton.Manager<ManPop>.inst;
             try
             {
@@ -141,7 +141,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change dayTechs");
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to change dayTechs");
             }
             try
             {
@@ -149,7 +149,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change nightTechs");
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to change nightTechs");
             }
             try
             {
@@ -157,7 +157,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change nonEXPTechs");
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to change nonEXPTechs");
             }
             IsOverridden = false;
         }
@@ -175,7 +175,7 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Failed to get Bloc");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Failed to get Bloc");
                 }
                 try
                 {
@@ -183,7 +183,7 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Failed to get Rad");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Failed to get Rad");
                 }
                 try
                 {
@@ -191,12 +191,12 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Failed to get Val");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Failed to get Val");
                 }
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to get TechSpawnFilter");
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to get TechSpawnFilter");
             }
             return TFS;
         }
@@ -211,7 +211,7 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Failed to change Bloc");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Failed to change Bloc");
                 }
                 try
                 {
@@ -219,7 +219,7 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Failed to change Rad");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Failed to change Rad");
                 }
                 try
                 {
@@ -227,12 +227,12 @@ namespace TAC_AI.Templates
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Failed to change Val");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Failed to change Val");
                 }
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: Failed to change TechSpawnFilter");
+                DebugTAC_AI.Log(KickStart.ModID + ": Failed to change TechSpawnFilter");
             }
         }
     }

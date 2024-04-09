@@ -24,7 +24,7 @@ namespace TAC_AI
         internal static List<SpecialAttract.AttractInfo> InitAttracts => new List<SpecialAttract.AttractInfo>()
         {
             new SpecialAttract.AttractInfo(AttractType.BaseVBase.ToString(), 1.25f, null, StartBaseVBase),
-            new SpecialAttract.AttractInfo(AttractType.Dogfight.ToString(), 5.25f, null, StartDogfight),
+            new SpecialAttract.AttractInfo(AttractType.Dogfight.ToString(), 50000.25f, null, StartDogfight),
             new SpecialAttract.AttractInfo(AttractType.Harvester.ToString(), 3.75f, null, StartHarvester, null, true),
             new SpecialAttract.AttractInfo(AttractType.BaseSiege.ToString(), 2.25f, null, StartBaseSiege, EndBaseSiege),
             new SpecialAttract.AttractInfo(AttractType.Invader.ToString(), 0.75f, null, StartInvader),
@@ -79,7 +79,7 @@ namespace TAC_AI
                 Vector3 position = tanksToConsider[step] + (Vector3.up * 32);
                 Vector3 ForeVec = (spawn - tanksToConsider[step]).normalized;
                 if (!RawTechLoader.SpawnAttractTech(position - (ForeVec * 12) + (Vector3.up * (16 * step)), ForeVec, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Air))
-                    DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ThrowCoolAIInAttract(Dogfight) - error ~ could not find Tech");
             }
             rTime.SetValue(__instance, Time.time + __instance.resetTime);
             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
@@ -98,7 +98,7 @@ namespace TAC_AI
             {
                 Vector3 position = tanksToConsider[step] + (Vector3.up * 14);
                 if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space))
-                    DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(SpaceBattle) - error ~ could not find Tech");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ThrowCoolAIInAttract(SpaceBattle) - error ~ could not find Tech");
             }
             rTime.SetValue(__instance, Time.time + __instance.resetTime);
             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
@@ -151,7 +151,7 @@ namespace TAC_AI
                         removed++;
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: removed " + removed);
+                DebugTAC_AI.Log(KickStart.ModID + ": removed " + removed);
                 int numToSpawn = 3;
                 float rad = 360f / (float)numToSpawn;
                 for (int step = 0; numToSpawn > step; step++)
@@ -166,7 +166,7 @@ namespace TAC_AI
                     if (!RawTechLoader.SpawnAttractTech(position, forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Sea))
                         RawTechLoader.SpawnAttractTech(position, forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space);
                 }
-                //DebugTAC_AI.Log("TACtical_AI: cam is at " + Singleton.Manager<CameraManager>.inst.ca);
+                //DebugTAC_AI.Log(KickStart.ModID + ": cam is at " + Singleton.Manager<CameraManager>.inst.ca);
                 Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
                 Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
                 Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
@@ -231,7 +231,7 @@ namespace TAC_AI
 
                 if (RawTechLoader.SpawnAttractTech(position, (spawn - tanksToConsider[step]).normalized, 
                     AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.AnyNonSea))
-                    DebugTAC_AI.Log("TACtical_AI: ThrowCoolAIInAttract(Misc) - error ~ could not find Tech");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ThrowCoolAIInAttract(Misc) - error ~ could not find Tech");
             }
             RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, team1, BaseTerrain.Air);
             rTime.SetValue(__instance, Time.time + __instance.resetTime);

@@ -165,7 +165,7 @@ namespace TAC_AI.AI
             if (this.Helper == null)
             {
                 string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -174,7 +174,7 @@ namespace TAC_AI.AI
                 if (this.AICore == null)
                 {
                     string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                    DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirector WITHOUT ANY SET AICore!!!");
                     return;
                 }
                 this.AICore.DriveDirector(ref core);
@@ -189,7 +189,7 @@ namespace TAC_AI.AI
             if (this.Helper == null)
             {
                 string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -199,7 +199,7 @@ namespace TAC_AI.AI
                 if (this.AICore == null)
                 {
                     string tankName = this.Tank.IsNotNull() ? this.Tank.name : "UNKNOWN_TANK";
-                    DebugTAC_AI.Log("TACtical_AI: AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT ANY SET AICore!!!");
                     return;
                 }
                 this.AICore.DriveDirectorRTS(ref core);
@@ -244,7 +244,7 @@ namespace TAC_AI.AI
                     default:
                         throw new Exception("Invalid control type for Non-NPT Vehicle " + helper.DriverType.ToString());
                 }
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has been assigned Vehicle AI with " + helper.DriverType.ToString() + ".");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " has been assigned Vehicle AI with " + helper.DriverType.ToString() + ".");
             }
             else
             {
@@ -265,14 +265,14 @@ namespace TAC_AI.AI
                     default:
                         throw new Exception("Invalid control type for MPT Vehicle " + mind.EvilCommander.ToString());
                 }
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " has been assigned Non-Player Vehicle AI with " + mind.EvilCommander.ToString() + ".");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " has been assigned Non-Player Vehicle AI with " + mind.EvilCommander.ToString() + ".");
             }
             AICore.Initiate(tank, this);
 
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
             CheckBoosters();
-            DebugTAC_AI.Info("TACtical_AI: Added ground AI for " + Tank.name);
+            DebugTAC_AI.LogAISetup(KickStart.ModID + ": Added ground AI for " + Tank.name);
         }
         private void CheckBoosters()
         {
@@ -378,7 +378,7 @@ namespace TAC_AI.AI
                 this.SetAutoPathfinding(false);
                 Tank.AttachEvent.Unsubscribe(OnAttach);
                 Tank.DetachEvent.Unsubscribe(OnDetach);
-                //DebugTAC_AI.Log("TACtical_AI: Removed ground AI from " + Tank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Removed ground AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }

@@ -35,6 +35,14 @@ namespace TAC_AI.AI
             lastDest = prev.lastDestination;
         }
 
+
+        public void STOP(TankAIHelper thisInst)
+        {
+            DriveDest = EDriveDest.None;
+            DriveDir = EDriveFacing.Stop;
+            thisInst.ForceSetDrive = false;
+            thisInst.DriveVar = 0;
+        }
         public void Forwards(TankAIHelper thisInst)
         {
             DriveDest = EDriveDest.Override;

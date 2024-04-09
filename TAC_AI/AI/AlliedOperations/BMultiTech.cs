@@ -98,7 +98,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.MTOffsetPos = copyTargVis.trans.InverseTransformPoint(tank.trans.position);
                     thisInst.MTOffsetRot = copyTargVis.trans.InverseTransformDirection(tank.trans.forward);
                     thisInst.MTOffsetRotUp = copyTargVis.trans.InverseTransformDirection(tank.trans.up);
-                    //DebugTAC_AI.Log("TACtical_AI:AI " + tank.name + ": Synced position to " + thisInst.MTOffsetPos + " and rot to " + thisInst.MTOffsetRot);
+                    //DebugTAC_AI.Log(KickStart.ModID + ":AI " + tank.name + ": Synced position to " + thisInst.MTOffsetPos + " and rot to " + thisInst.MTOffsetRot);
                     thisInst.MTLockedToTechBeam = true;
                 }
                 else if (thisInst.MTLockedToTechBeam && !copyTargVis.beam.IsActive)
@@ -165,7 +165,7 @@ namespace TAC_AI.AI.AlliedOperations
                     thisInst.MTOffsetPos = vis.trans.InverseTransformPoint(tank.trans.position);
                     thisInst.MTOffsetRot = vis.trans.InverseTransformDirection(tank.trans.forward);
                     thisInst.MTOffsetRotUp = vis.trans.InverseTransformDirection(tank.trans.up);
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Synced position to " + thisInst.MTOffsetPos + " and rot to " + thisInst.MTOffsetRot);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Synced position to " + thisInst.MTOffsetPos + " and rot to " + thisInst.MTOffsetRot);
                     thisInst.MTLockedToTechBeam = true;
                 }
                 else if (thisInst.MTLockedToTechBeam && !vis.beam.IsActive)

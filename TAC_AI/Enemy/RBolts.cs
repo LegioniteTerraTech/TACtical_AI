@@ -105,7 +105,7 @@ namespace TAC_AI.AI.Enemy
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: AllyCostCount - Error on ally counting");
+                DebugTAC_AI.Log(KickStart.ModID + ": AllyCostCount - Error on ally counting");
                 DebugTAC_AI.Log(e);
             }
             lastTechsCount = techCount;

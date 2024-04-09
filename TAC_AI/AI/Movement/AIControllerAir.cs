@@ -109,13 +109,20 @@ namespace TAC_AI.AI
             tank.AttachEvent.Subscribe(OnAttach);
             tank.DetachEvent.Subscribe(OnDetach);
 
+            CurrentThrottle = 0;
+            ErrorsInTakeoff = 0;
+            ErrorsInUTurn = 0;
+            TakeOff = true;
+            Grounded = false;
+            TargetGrounded = false;
+
             // SETUP
             CheckAllFlightBlocks();
             CurrentThrottle = 0;
 
 
             //Now determine type of craft
-            DebugTAC_AI.Info("TACtical AI: (2) Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
+            DebugTAC_AI.Info(KickStart.ModID + ": (2) Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
             if (mind.IsNull())
             {
                 //if (thisInst.isAstrotechAvail && thisInst.DediAI == AIECore.DediAIType.Aviator)
@@ -156,7 +163,7 @@ namespace TAC_AI.AI
                         AICore.Initiate(tank, this);
                     }
                 }
-                DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " has been assigned Non-NPT aircraft AI with flight mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
+                DebugTAC_AI.LogAISetup(KickStart.ModID + ": Tech " + tank.name + " has been assigned Non-NPT aircraft AI with flight mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
             }
             else
             {
@@ -202,7 +209,7 @@ namespace TAC_AI.AI
                         mind.EvilCommander = Enemy.EnemyHandling.Airplane;
                     }
                 }
-                DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " has been assigned Non-Player aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
+                DebugTAC_AI.LogAISetup(KickStart.ModID + ": Tech " + tank.name + " has been assigned Non-Player aircraft AI with " + mind.EvilCommander.ToString() + " mentality " + FlyStyle.ToString() + ", Roll intensity of " + RollStrength + " and flying chill of " + FlyingChillFactor);
             }
         }
         public void UpdateEnemyMind(Enemy.EnemyMind mind)
@@ -216,7 +223,7 @@ namespace TAC_AI.AI
             {
                 Tank.AttachEvent.Unsubscribe(OnAttach);
                 Tank.DetachEvent.Unsubscribe(OnDetach);
-                //DebugTAC_AI.Log("TACtical_AI: Removed aircraft AI from " + Tank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Removed aircraft AI from " + Tank.name);
                 DestroyImmediate(this);
             }
         }
@@ -224,7 +231,7 @@ namespace TAC_AI.AI
         {
 
         }
-        private void CheckEngines()
+        private void CheckEngines(bool firstCheck = false)
         {
             float lowestDelta = 100;
             float guzzleLevel = 0;
@@ -238,11 +245,12 @@ namespace TAC_AI.AI
             foreach (ModuleBooster module in Engines)
             {
                 //Get the slowest spooling one
-                foreach (FanJet jet in module.transform.GetComponentsInChildren<FanJet>())
+                foreach (FanJet jet in module.transform.GetComponentsInChildren<FanJet>(true))
                 {
                     if (jet.spinDelta <= 10)
                     {
-                        biasDirection -= Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                        Vector3 rawVec = Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                        biasDirection += new Vector3(Mathf.Abs(rawVec.x), Mathf.Abs(rawVec.y), Mathf.Abs(rawVec.z));
                         if (jet.spinDelta < lowestDelta)
                             lowestDelta = jet.spinDelta;
                     }
@@ -253,7 +261,7 @@ namespace TAC_AI.AI
                         fanThrust += jet.force;
                     }
                 }
-                foreach (BoosterJet boost in module.transform.GetComponentsInChildren<BoosterJet>())
+                foreach (BoosterJet boost in module.transform.GetComponentsInChildren<BoosterJet>(true))
                 {
                     if (boost.ConsumesFuel)
                     {
@@ -279,26 +287,31 @@ namespace TAC_AI.AI
             this.BankOnly = totalThrust * totalThrust < (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).sqrMagnitude;
 
             if (this.BankOnly)
-            {  
-                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " does not apply enough forwards thrust " + totalThrust + " vs " + (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).magnitude + " to perform an immelmann.");
+            {
+                if (firstCheck)
+                    DebugTAC_AI.LogAISetup(KickStart.ModID + ": Tech " + Tank.name + " does not apply enough forwards thrust " + totalThrust + " vs " + (this.NoStallThreshold * this.Tank.rbody.mass * Physics.gravity).magnitude + " to perform an immelmann.");
             }
             if (lowestDelta > 10 && boostBiasDirection == Vector3.zero)
             {   //IT HAS NO VALID PROPS OR BOOSTERS!!!!
-                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS OR BOOSTERS TO FLY USING!!");
+                if (firstCheck)
+                    DebugTAC_AI.LogAISetup(KickStart.ModID + ": Tech " + Tank.name + " DOES NOT HAVE ANY PROPS OR BOOSTERS TO FLY USING!!");
             }
             if (lowestDelta > 10 && consumeBoosters > 0)
             {
-                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " DOES NOT HAVE ANY PROPS TO FLY USING!!");
+                if (firstCheck)
+                    DebugTAC_AI.LogAISetup(KickStart.ModID + ": Tech " + Tank.name + " DOES NOT HAVE ANY PROPS TO FLY USING!!");
                 NoProps = true;
             }
             BoostBias = boostBiasDirection.normalized;
 
-            PropBias = biasDirection.normalized;
-            //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
+            biasDirection.Normalize();
+            PropBias = biasDirection;
+            DebugTAC_AI.LogAISetup(KickStart.ModID + ": Tech " + Tank.name + " PropBias " + PropBias + ", BoostBias " + BoostBias);
             if (Mathf.Abs(Vector3.Dot(PropBias, Vector3.right)) > 0.2f)
             {   //CENTER OF THRUST MAY BE OFF!!!
                 SkewedFlightCenter = true;
-                //DebugTAC_AI.Log("TACtical AI: Tech " + Tank.name + " reported to have off-centered thrust of a factor of " + Mathf.Abs(Vector3.Dot(biasDirection.normalized, Vector3.right)) + ".  \nAs all props don't have uniform thrust backwards and forwards (in relation to the root cab), the AI may not be able to fly correctly!!!");
+                if (firstCheck)
+                    DebugTAC_AI.LogAISetup(KickStart.ModID + ": Tech " + Tank.name + " reported to have off-centered thrust of a factor of " + Mathf.Abs(Vector3.Dot(biasDirection.normalized, Vector3.right)) + ".  \nAs all props don't have uniform thrust backwards and forwards (in relation to the root cab), the AI may not be able to fly correctly!!!");
             }
             else
                 SkewedFlightCenter = false;
@@ -324,12 +337,12 @@ namespace TAC_AI.AI
             }
             if (Helper.lastTechExtents >= AIGlobals.LargeAircraftSize)
             {
-                DebugTAC_AI.Log("LARGE AIRCRAFT " + Helper.lastTechExtents + " ramming: " + Helper.FullMelee);
+                DebugTAC_AI.LogAISetup("CheckWings(): LARGE AIRCRAFT " + Helper.lastTechExtents + " ramming: " + Helper.FullMelee);
                 LargeAircraft = true;
             }
             else
             {
-                DebugTAC_AI.Log("Normal aircraft " + Helper.lastTechExtents + " ramming: " + Helper.FullMelee);
+                DebugTAC_AI.LogAISetup("CheckWings(): Normal aircraft " + Helper.lastTechExtents + " ramming: " + Helper.FullMelee);
                 LargeAircraft = false;
             }
 
@@ -359,7 +372,7 @@ namespace TAC_AI.AI
         private void CheckAllFlightBlocks()
         {
             // SETUP
-            CheckEngines();
+            CheckEngines(true);
             CheckWings();
         }
 
@@ -371,7 +384,7 @@ namespace TAC_AI.AI
 
             if (thisInst == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  FIRED FlightDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  FIRED FlightDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -409,7 +422,7 @@ namespace TAC_AI.AI
 
             if (thisInst == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  FIRED FlightDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  FIRED FlightDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
 
@@ -449,7 +462,7 @@ namespace TAC_AI.AI
 
             if (thisInst == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  FIRED FlightMaintainer WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  FIRED FlightMaintainer WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
             if (Tank.beam.IsActive)
@@ -518,11 +531,11 @@ namespace TAC_AI.AI
                 if (!AIERepair.CanRepairNow(tank))
                 {
                     //if (!Grounded)
-                    //    DebugTAC_AI.Log("TACtical_AI: " + tank.name + " has been damaged too badly with no parts to repair with");
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": " + tank.name + " has been damaged too badly with no parts to repair with");
                     return false;
                 }
                 if (damaged && !Grounded)
-                    DebugTAC_AI.Log("TACtical_AI: " + tank.name + " has been deemed incapable of flight!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": " + tank.name + " is missing too many parts and has been deemed incapable of flight!");
 
                 return damaged;
             }

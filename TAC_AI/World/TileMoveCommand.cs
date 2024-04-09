@@ -46,7 +46,7 @@ namespace TAC_AI.World
         {
             if (!ETU.Exists())
             {
-                //DebugTAC_AI.Log("TACtical_AI: IsValid(ETU) " + ETU.tech.m_TechData.Name + " is INVALID!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": IsValid(ETU) " + ETU.tech.m_TechData.Name + " is INVALID!");
                 return false;
             }
             return true;

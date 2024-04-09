@@ -30,13 +30,23 @@ namespace TAC_AI.World
     }
     public static class NP_PresenceExtensions
     {
-        internal static bool IsValidAndRegistered(this NP_Presence thisInst)
+        internal static bool IsValidAndRegistered(this NP_Presence_Automatic thisInst)
         {
             return thisInst != null && thisInst.registered;
         }
     }
-    // The enemy base in world-relations
+
+    /// <summary>
+    /// The master class to command fleets of AI
+    /// </summary>
     public class NP_Presence
+    {
+    }
+
+    /// <summary>
+    /// The enemy base in world-relations
+    /// </summary>
+    public class NP_Presence_Automatic
     {
         public bool registered => ManEnemyWorld.AllTeamsUnloaded.ContainsKey(team);
         public int team = AIGlobals.EnemyTeamsRangeStart;
@@ -87,7 +97,7 @@ namespace TAC_AI.World
 #endif
 
 
-        internal NP_Presence(int Team, bool canLaunchSieges)
+        internal NP_Presence_Automatic(int Team, bool canLaunchSieges)
         {
             team = Team;
             canSiege = canLaunchSieges;
@@ -97,7 +107,7 @@ namespace TAC_AI.World
         /// Returns false if the team should be removed
         /// </summary>
         /// <returns></returns>
-        internal bool UpdateOperatorRTS()
+        internal bool UpdateOperatorRTS(List<NP_TechUnit> TUDestroyed)
         {
             if (Team == SpecialAISpawner.trollTeam)
             {
@@ -106,17 +116,17 @@ namespace TAC_AI.World
             }
             if (GlobalMakerBaseCount() == 0)
             {
-                DebugTAC_AI.Info("TACtical_AI: UpdateGrandCommandRTS - Team " + Team + " has no production bases");
+                DebugTAC_AI.Info(KickStart.ModID + ": UpdateGrandCommandRTS - Team " + Team + " has no production bases");
                 return EBUs.Count > 0 || EMUs.Count > 0; // NO SUCH TEAM EXISTS (no base!!!)
             }
-            PresenceDebug("TACtical_AI: UpdateGrandCommandRTS - Turn for Team " + Team);
+            PresenceDebug(KickStart.ModID + ": UpdateGrandCommandRTS - Turn for Team " + Team);
             attackStarted = false;
             if (lastFounderStopUpdateTicks > 0)
                 lastFounderStopUpdateTicks--;
-            //PresenceDebug("TACtical_AI: UpdateGrandCommandRTS - Updating for team " + Team);
+            //PresenceDebug(KickStart.ModID + ": UpdateGrandCommandRTS - Updating for team " + Team);
             TryGetFounderUnloaded(out teamFounder);
             HandleUnitRecon();
-            HandleCombat();
+            HandleCombat(TUDestroyed);
             HandleUnitMoving();
             UpdateRevenue();
             UnloadedBases.TryUnloadedBaseOperations(this);
@@ -125,7 +135,7 @@ namespace TAC_AI.World
             UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
             if (MainBase != null)
             {   // To make sure little bases are not totally stagnant - the AI is presumed to be mining aand doing missions
-                PresenceDebugDEV("TACtical_AI: UpdateGrandCommandRTS - Team final funds " + MainBase.BuildBucks);
+                PresenceDebugDEV(KickStart.ModID + ": UpdateGrandCommandRTS - Team final funds " + MainBase.BuildBucks);
             }
             return AnyLeftStanding;
         }
@@ -139,12 +149,12 @@ namespace TAC_AI.World
             }
             if (GlobalMakerBaseCount() == 0)
             {
-                DebugTAC_AI.Info("TACtical_AI: UpdateGrandCommand - Team " + Team + " has no production bases");
+                DebugTAC_AI.Info(KickStart.ModID + ": UpdateGrandCommand - Team " + Team + " has no production bases");
                 return false; // NO SUCH TEAM EXISTS (no base!!!)
             }
-            PresenceDebug("TACtical_AI: UpdateGrandCommand - Turn for Team " + Team);
+            PresenceDebug(KickStart.ModID + ": UpdateGrandCommand - Turn for Team " + Team);
             attackStarted = false;
-            //PresenceDebug("TACtical_AI: UpdateGrandCommand - Updating for team " + Team);
+            //PresenceDebug(KickStart.ModID + ": UpdateGrandCommand - Updating for team " + Team);
             UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
 
             if (MainBase != null)
@@ -155,7 +165,7 @@ namespace TAC_AI.World
         internal void UpdateMaintainer(float timeDelta)
         {
             // The techs move every UpdateMoveDelay seconds
-            //DebugTAC_AI.Log("TACtical_AI: ManEnemyWorld - UpdateMaintainer, num fighting " + Fighting.Count());
+            //DebugTAC_AI.Log(KickStart.ModID + ": ManEnemyWorld - UpdateMaintainer, num fighting " + Fighting.Count());
             foreach (var item in Fighting)
             {
                 item.MovementSceneDelta(timeDelta);
@@ -228,10 +238,10 @@ namespace TAC_AI.World
                         case AIFounderMode.ScriptWait:
                             return true;
                         default:
-                            throw new Exception("TACtical_AI: EnemyPresence.CanSwitchState anon variable is invalid " + anon.ToString());
+                            throw new Exception(KickStart.ModID + ": EnemyPresence.CanSwitchState anon variable is invalid " + anon.ToString());
                     }
                 default:
-                    throw new Exception("TACtical_AI: EnemyPresence.CanSwitchState initial variable is invalid " + initial.ToString());
+                    throw new Exception(KickStart.ModID + ": EnemyPresence.CanSwitchState initial variable is invalid " + initial.ToString());
             }
         }
         /// <summary>
@@ -466,7 +476,7 @@ namespace TAC_AI.World
 
 
         // Recon
-        private void HandleUnitRecon()
+        protected virtual void HandleUnitRecon()
         {
             scannedPositions.Clear();
             UnloadedBases.RefreshTeamMainBaseIfAnyPossible(this);
@@ -512,7 +522,7 @@ namespace TAC_AI.World
 
 
         // Combat
-        private void HandleCombat()
+        private void HandleCombat(List<NP_TechUnit> TUDestroyed)
         {
             Fighting.Clear();
             float damageTime = (float)ManEnemyWorld.OperatorTickDelay / ManEnemyWorld.ExpectedDPSDelitime;
@@ -525,17 +535,17 @@ namespace TAC_AI.World
                     continue; // tile loaded
                 }
                 //PresenceDebug("HandleCombat Trying to test for combat");
-                List<NP_TechUnit> techsCache = ManEnemyWorld.GetUnloadedTechsInTile(TT);
-                if (techsCache.Count == 0)
+                if (ManEnemyWorld.TryGetConflict(TT, Team, out List<NP_TechUnit> Allies, out List<NP_TechUnit> Enemies))
                 {
-                    //PresenceDebug("TACtical_AI: EnemyPresence(ASSERT) - HandleCombat called the tile, but THERE'S NO TECHS IN THE TILE!");
+                    int damageTurn = DistributeDamageThisTurn(TT, Allies, damageTime, Enemies, TUDestroyed);
+                    if (damageTurn != 0)
+                        ReportCombat("-- This Turn Total: " + damageTurn + " --");
+                }
+                else
+                {
+                    //PresenceDebug(KickStart.ModID + ": EnemyPresence(ASSERT) - HandleCombat called the tile, but THERE'S NO TECHS IN THE TILE!");
                     continue;
                 }
-                List<NP_TechUnit> Allies = techsCache.FindAll(delegate (NP_TechUnit cand) { return Tank.IsFriendly(cand.tech.m_TeamID, Team); });
-                List<NP_TechUnit> Enemies = techsCache.FindAll(delegate (NP_TechUnit cand) { return Tank.IsEnemy(cand.tech.m_TeamID, Team); });
-                int damageTurn = DistributeDamageThisTurn(TT, Allies, damageTime, Enemies);
-                if (damageTurn != 0)
-                    ReportCombat("-- This Turn Total: " + damageTurn + " --");
             }
             if (AIECore.RetreatingTeams.Contains(team))
             {
@@ -548,7 +558,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        public int DistributeDamageThisTurn(IntVector2 TT, List<NP_TechUnit> Allied, float damageTime, List<NP_TechUnit> Enemies)
+        private int DistributeDamageThisTurn(IntVector2 TT, List<NP_TechUnit> Allied, float damageTime, List<NP_TechUnit> Enemies, List<NP_TechUnit> TUDestroyed)
         {
             if (Allied.Count == 0 || Enemies.Count == 0)
                 return 0;
@@ -611,7 +621,7 @@ namespace TAC_AI.World
                         }
                     }
                     catch { }
-                    UnloadedBases.RemoteDestroy(target);
+                    TUDestroyed.Add(target);
                 }
             }
             return damageTotal;
@@ -805,7 +815,7 @@ namespace TAC_AI.World
             {
                 if (TMC.TryGetActiveTank(out var tank) && Singleton.playerTank)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: OnUnitReachDestinationNoBase for " + tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": OnUnitReachDestinationNoBase for " + tank.name);
                     var helper = tank.GetHelperInsured();
                     helper.DirectRTSDest(Singleton.playerTank.boundsCentreWorldNoCheck);
                     helper.SetRTSState(true);
@@ -822,7 +832,7 @@ namespace TAC_AI.World
                     var mind = inst.GetComponent<EnemyMind>();
                     if (mind != null && lastTarget != null && lastTarget.isActive)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: OnUnitReachDestinationBase for " + tank.name);
+                        DebugTAC_AI.Log(KickStart.ModID + ": OnUnitReachDestinationBase for " + tank.name);
                         mind.GetRevengeOn(lastTarget);
                     }
                 }
@@ -879,7 +889,7 @@ namespace TAC_AI.World
         public static void ReportCombat(string thing)
         {
 #if DEBUG
-            DebugTAC_AI.Log("TACtical_AI: EnemyPresence - " + thing);
+            DebugTAC_AI.Log(KickStart.ModID + ": EnemyPresence - " + thing);
 #endif
             ManEnemyWorld.AddToCombatLog(thing);
         }

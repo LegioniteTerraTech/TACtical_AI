@@ -10,7 +10,7 @@ namespace TAC_AI.World
 {
     public abstract class NP_TechUnit
     {
-        public readonly NP_Presence teamInst;
+        public readonly NP_Presence_Automatic teamInst;
         public int Team => tech.m_TeamID;
         public ManSaveGame.StoredTech tech { get; private set; }
         public TrackedVisible trackedVis { get; private set; }
@@ -39,7 +39,7 @@ namespace TAC_AI.World
                 }
                 catch
                 {
-                    DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update name!");
+                    DebugTAC_AI.LogError(KickStart.ModID + ": EnemyTechUnit - " + Name + " failed to update name!");
                 }
             }
         }
@@ -51,7 +51,7 @@ namespace TAC_AI.World
                 try { return tech.m_WorldPosition; }
                 catch
                 {
-                    DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to fetch worldPosition!");
+                    DebugTAC_AI.LogError(KickStart.ModID + ": EnemyTechUnit - " + Name + " failed to fetch worldPosition!");
                     return WorldPosition.FromGameWorldPosition(Vector3.zero);
                 }
             }
@@ -78,7 +78,7 @@ namespace TAC_AI.World
         public readonly bool isArmed = false;
         public readonly bool canHarvest = false;
 
-        protected NP_TechUnit(ManSaveGame.StoredTech techIn, NP_Presence team, FactionSubTypes faction, float healthMulti)
+        protected NP_TechUnit(ManSaveGame.StoredTech techIn, NP_Presence_Automatic team, FactionSubTypes faction, float healthMulti)
         {
             teamInst = team;
             Faction = faction;
@@ -131,7 +131,7 @@ namespace TAC_AI.World
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: HandleTechUnloaded(ETU) Failiure on init at level " + level + "!");
+                DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Failiure on init at level " + level + "!");
             }
         }
 
@@ -152,7 +152,7 @@ namespace TAC_AI.World
             }
             catch
             {
-                DebugTAC_AI.LogError("TACtical_AI: EnemyTechUnit - " + Name + " failed to update position!");
+                DebugTAC_AI.LogError(KickStart.ModID + ": EnemyTechUnit - " + Name + " failed to update position!");
             }
             return false;
         }*/

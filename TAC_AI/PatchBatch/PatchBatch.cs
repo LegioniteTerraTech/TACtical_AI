@@ -44,7 +44,7 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on patch");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on patch");
                     DebugTAC_AI.Log(e);
                 }
             }
@@ -316,14 +316,14 @@ namespace TAC_AI
                     try
                     {
 
-                        //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Triggered!");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": UpdateAIDisplay - Triggered!");
                         if (RawTechExporter.lastTech.IsNotNull())
                         {
                             if (RawTechExporter.lastTech.AIState == 1)
                             {
                                 if (RawTechExporter.aiIcons.TryGetValue(RawTechExporter.lastTech.DediAI, out Sprite sprite))
                                 {
-                                    //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Swapping sprite!");
+                                    //DebugTAC_AI.Log(KickStart.ModID + ": UpdateAIDisplay - Swapping sprite!");
                                     iconSprite = sprite;
                                     return false;
                                 }
@@ -334,11 +334,11 @@ namespace TAC_AI
                         //cache.sprite = Singleton.Manager<ManUI>.inst.GetAICategoryIcon(AICategories.AIHostile);
                         //icon.SetValue(__instance, cache);
 
-                        //DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp2 - Caught Update!");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": SendUpdateAIDisp2 - Caught Update!");
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: SendUpdateAIDisp - failiure on send!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": SendUpdateAIDisp - failiure on send!");
                     }
                 }
                 return true;
@@ -352,14 +352,14 @@ namespace TAC_AI
             static bool fired = false;
             private static bool Prefix(ManUI __instance, ref Sprite __result)
             {
-                //DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - Trigger");
+                //DebugTAC_AI.Log(KickStart.ModID + ": UpdateAIDisplay - Trigger");
                 if (KickStart.EnableBetterAI)
                 {
                     try
                     {
                         if (!fired)
                         {
-                            DebugTAC_AI.Log("TACtical_AI: UpdateAIDisplay - snapping sprite!"); 
+                            DebugTAC_AI.Log(KickStart.ModID + ": UpdateAIDisplay - snapping sprite!"); 
                             Sprite image = __instance.m_SpriteFetcher.GetAICategoryIcon(AICategories.AIHostile);
                             RenderTexture grabTex = RenderTexture.GetTemporary(
                                 image.texture.width,
@@ -375,7 +375,7 @@ namespace TAC_AI
                             Texture2D generated = new Texture2D((int)image.rect.width, (int)image.rect.height);
                             generated.ReadPixels(new Rect(0, 0, (int)grabTex.width, (int)grabTex.height), 0, 0);
 
-                            DebugTAC_AI.Log("TACtical_AI: UpdateModeDisplay - deployed!");
+                            DebugTAC_AI.Log(KickStart.ModID + ": UpdateModeDisplay - deployed!");
                             FileUtils.SaveTexture(generated, RawTechExporter.BaseDirectory + up + "AI2.png");
                             fired = true;
                         }
@@ -383,7 +383,7 @@ namespace TAC_AI
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: UpdateModeDisplay - failiure on update!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": UpdateModeDisplay - failiure on update!");
                     }
                 }
                 return true;

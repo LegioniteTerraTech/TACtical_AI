@@ -18,16 +18,17 @@ namespace TAC_AI.AI.Movement.AICores
             this.tank = tank;
             this.controller.WaterPathing = WaterPathing.AvoidWater;
             controller.Helper.GroundOffsetHeight = controller.Helper.lastTechExtents + AIGlobals.GroundOffsetGeneralAir;
-            //DebugTAC_AI.Info("TACtical_AI: LandAICore - Init");
+            //DebugTAC_AI.Info(KickStart.ModID + ": LandAICore - Init");
 
             if (controller.Helper.Allied && controller.Helper.AutoAnchor)
             {
                 if (tank.IsAnchored && !controller.Helper.PlayerAllowAutoAnchoring)
-                    DebugTAC_AI.Log("TACtical_AI: LandAICore - Should NOT be active when anchored UNLESS we have autoAnchor!  StaticAICore should be in control!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": LandAICore - Should NOT be active when anchored UNLESS we have autoAnchor [" +
+                        controller.Helper.AutoAnchor.ToString() + "]!  StaticAICore should be in control!");
             }
             else if (tank.IsAnchored)
             {
-                DebugTAC_AI.Log("TACtical_AI: LandAICore - Should NOT be active when anchored UNLESS we have autoAnchor!  StaticAICore should be in control!");
+                DebugTAC_AI.Log(KickStart.ModID + ": LandAICore - Should NOT be active when anchored UNLESS we have autoAnchor [NPT]!  StaticAICore should be in control!");
             }
         }
 
@@ -243,7 +244,7 @@ namespace TAC_AI.AI.Movement.AICores
 
         public bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
         {
-            // DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + " normal drive was called");
+            // DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " normal drive was called");
             Vector3 destDirect = controller.PathPoint - tank.boundsCentreWorldNoCheck;
 
             //DebugTAC_AI.Log("IS target player " + Singleton.playerTank == thisInst.lastEnemy + " | MinimumRad " + thisInst.MinimumRad + " | destination" + controller.PathPoint);
@@ -453,7 +454,7 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             VehicleUtils.Turner(thisControl, thisInst, destDirect, ref core);
-                            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  driving to " + controller.PathPoint); 
+                            //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  driving to " + controller.PathPoint); 
                         }
                         break;
                 }

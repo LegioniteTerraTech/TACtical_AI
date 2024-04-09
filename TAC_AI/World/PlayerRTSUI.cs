@@ -81,7 +81,7 @@ namespace TAC_AI.World
             TankAIManager.TechRemovedEvent.Unsubscribe(OnTechRemoved);
             Destroy(inst.gameObject);
             inst = null;
-            DebugTAC_AI.Log("TACtical_AI: Removed PlayerRTSUI.");
+            DebugTAC_AI.Log(KickStart.ModID + ": Removed PlayerRTSUI.");
         }
 
         public static void OnTechChanged(Tank tank, TankBlock block)
@@ -189,10 +189,14 @@ namespace TAC_AI.World
                     {
                         SmallTextTitle = new GUIStyle(AltUI.LabelBlueTitle);
                         SmallTextTitle.fontSize = 11;
+                        SmallTextTitle.clipping = TextClipping.Overflow;
+                        SmallTextTitle.wordWrap = true;
 
                         SmallTextDesc = new GUIStyle(AltUI.LabelBlackTitle);
                         SmallTextDesc.font = AltUI.ExoFontExtraBold;
                         SmallTextDesc.fontSize = 10;
+                        SmallTextDesc.clipping = TextClipping.Overflow;
+                        SmallTextDesc.wordWrap = false;
 
                         hudBack = ManHUD.inst.GetComponent<Canvas>();
                         hudBackOrigin = hudBack.pixelRect.position;
@@ -242,15 +246,15 @@ namespace TAC_AI.World
                         else
                             DisplayHud(false);
                     }
+                    AltUI.EndUI();
                     if (!setHovered && hovered?.tank?.visible && hovered.tank.visible.isActive)
                     {
-                        Vector3 Mous = Input.mousePosition;
-                        Mous.y = Display.main.renderingHeight - Mous.y;
-                        toolWindow.x = Mathf.Clamp(Mous.x + 16, 0, Display.main.renderingWidth - toolWindow.width);
-                        toolWindow.y = Mathf.Clamp(Mous.y + 16, 0, Display.main.renderingHeight - toolWindow.height);
-                        toolWindow = GUI.Window(AIRTSDisplayToolID, toolWindow, GUIHandlerInfo, "A.I. Status", AltUI.MenuLeft);
+                        string action = hovered.GetActionStatus(out bool notAble);
+                        if (notAble)
+                            AltUI.TooltipWorld("A.I. Status", action + " (Unable)");
+                        else
+                            AltUI.TooltipWorld("A.I. Status", action);
                     }
-                    AltUI.EndUI();
                 }
             }
             public void RTSDamageWarningEnd()
@@ -453,7 +457,7 @@ namespace TAC_AI.World
 
             if (GUI.Button(new Rect(HoriPosOff, VertPosOff, ButtonWidth, ButtonHeight), "Select\nALL"))
             {
-                ManPlayerRTS.inst.SelectAllPlayer();
+                ManPlayerRTS.inst.ControlAllPlayer();
             }
             HoriPosOff += ButtonWidth;
 
@@ -501,10 +505,10 @@ namespace TAC_AI.World
             {
                 RTSUnitDisp temp = unitsSelected[index];
                 ManPlayerRTS.inst.ClearList();
-                ManPlayerRTS.inst.SelectTank(temp.unit);
+                ManPlayerRTS.inst.StartControlling(temp.unit, ManPlayerRTS.inst.LocalPlayerTechsControlled);
                 ManPlayerRTS.SetSelectHalo(temp.unit, true);
                 //TechUnit.SetRTSState(true);
-                //DebugTAC_AI.Log("TACtical_AI: Selected Tank " + grabbedTech.name + ".");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
                 ManPlayerRTS.inst.SelectUnitSFX();
             }
             if (MouseIsOverSubMenu())
@@ -531,7 +535,7 @@ namespace TAC_AI.World
             //GUI.DragWindow();
         }
         private static TankAIHelper lastTank => ManPlayerRTS.inst.Leading;
-        private static List<TankAIHelper> lastTanks => ManPlayerRTS.inst.LocalPlayerTechsControlled;
+        private static List<TankAIHelper> lastTanks => ManPlayerRTS.inst.LocalPlayerTechsControlled.ToList();
         private static void GUIHandlerCommands()
         {
             TankAIHelper helper = ManPlayerRTS.inst.Leading;
@@ -818,45 +822,33 @@ namespace TAC_AI.World
         private static Texture2D OutlineWhite = Texture2D.whiteTexture;
         public static void InitTextures()
         {
+            Color colorC = AltUI.ColorDefaultGrey;
             OutlineBlack = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
-            OutlineBlack.SetPixels(0, 0, 2, 2, new Color[4]{
-                    AltUI.ColorDefaultGrey,
-                    AltUI.ColorDefaultGrey,
-                    AltUI.ColorDefaultGrey,
-                    AltUI.ColorDefaultGrey,
-                });
+            OutlineBlack.SetPixels(0, 0, 2, 2, new Color[4] { colorC, colorC, colorC, colorC, });
+            OutlineBlack.Apply();
+
+            colorC = new Color(0.2f, 0.2f, 0.2f, 1f);
             NoHPBar = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
-            NoHPBar.SetPixels(0, 0, 2, 2, new Color[4]{
-                    new Color(0.2f, 0.2f, 0.2f, 1f),
-                    new Color(0.2f, 0.2f, 0.2f, 1f),
-                    new Color(0.2f, 0.2f, 0.2f, 1f),
-                    new Color(0.2f, 0.2f, 0.2f, 1f),
-                });
+            NoHPBar.SetPixels(0, 0, 2, 2, new Color[4] { colorC, colorC, colorC, colorC, });
             NoHPBar.Apply();
+
+            colorC = new Color(0.525f, 1, 0.75f, 1f);
             HPBarGreen = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
-            HPBarGreen.SetPixels(0, 0, 2, 2, new Color[4]{
-                    new Color(0.225f, 1, 0.35f, 1f),
-                    new Color(0.225f, 1, 0.35f, 1f),
-                    new Color(0.225f, 1, 0.35f, 1f),
-                    new Color(0.225f, 1, 0.35f, 1f),
-                });
+            HPBarGreen.SetPixels(0, 0, 2, 2, new Color[4] { colorC, colorC, colorC, colorC, });
             HPBarGreen.Apply();
+
+            //colorC = new Color(1, 0.3f, 0.4f, 1f);
+            colorC = new Color(1, 0.525f, 0.75f, 1f);
             HPBarRed = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
-            HPBarRed.SetPixels(0, 0, 2, 2, new Color[4]{
-                    new Color(1, 0.3f, 0.4f, 1f),
-                    new Color(1, 0.3f, 0.4f, 1f),
-                    new Color(1, 0.3f, 0.4f, 1f),
-                    new Color(1, 0.3f, 0.4f, 1f),
-                });
+            HPBarRed.SetPixels(0, 0, 2, 2, new Color[4]{ colorC, colorC, colorC, colorC, });
             HPBarRed.Apply();
+
+            //colorC = new Color(0.225f, 0.75f, 1, 1f);
+            colorC = new Color(0.525f, 0.85f, 1, 1f);
             HPBarBlue = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
-            HPBarBlue.SetPixels(0, 0, 2, 2, new Color[4]{
-                    new Color(0.225f, 0.75f, 1, 1f),
-                    new Color(0.225f, 0.75f, 1, 1f),
-                    new Color(0.225f, 0.75f, 1, 1f),
-                    new Color(0.225f, 0.75f, 1, 1f),
-                });
+            HPBarBlue.SetPixels(0, 0, 2, 2, new Color[4] { colorC, colorC, colorC, colorC, });
             HPBarBlue.Apply();
+
             Texture2D[] res = Resources.FindObjectsOfTypeAll<Texture2D>();
             for (int step = 0; step < res.Length; step++)
             {

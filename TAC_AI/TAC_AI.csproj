@@ -303,6 +303,8 @@
     <Compile Include="CursorChanger.cs" />
     <Compile Include="CustomAttract.cs" />
     <Compile Include="DebugTAC_AI.cs" />
+    <Compile Include="Enemy\EnemyOperations\RGuardian.cs" />
+    <Compile Include="Enemy\EnemyOperations\RPart.cs" />
     <Compile Include="Enemy\EnemyOperations\RScavenger.cs" />
     <Compile Include="AIEnums.cs" />
     <Compile Include="AI\AlliedOperations\BAstrotech.cs" />
@@ -347,6 +349,7 @@
     <Compile Include="PatchBatch\PatchBatch.cs" />
     <Compile Include="AnimeAICompat.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TankExtensions.cs" />
     <Compile Include="TeamNamer.cs" />
     <Compile Include="Templates\BaseGamePopSpecials.cs" />
     <Compile Include="Templates\CommunityCluster.cs" />
@@ -366,8 +369,9 @@
     <Compile Include="UnityEngineExtensions.cs" />
     <Compile Include="World\NP_BaseUnit.cs" />
     <Compile Include="World\NP_MobileUnit.cs" />
+    <Compile Include="World\TechUnitGroup.cs" />
     <Compile Include="World\UnloadedBases.cs" />
-    <Compile Include="World\NP_Presence.cs" />
+    <Compile Include="World\NP_Presence_Automatic.cs" />
     <Compile Include="World\NP_TechUnit.cs" />
     <Compile Include="World\ManEnemyWorld.cs" />
     <Compile Include="World\PlayerRTSUI.cs" />

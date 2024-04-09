@@ -22,6 +22,8 @@ namespace TAC_AI
         [SSaveField]
         public AIType SavedAI;
         [SSaveField]
+        public int LastTargetVisibleID = -1;
+        [SSaveField]
         public bool RTSActive = false;
         [SSaveField]
         public Vector3 RTSInTilePos = Vector3.zero;
@@ -115,7 +117,7 @@ namespace TAC_AI
         public bool AdvancedAI = false;     // Should the AI take combat calculations and retreat if nesseary?
         public bool AdvAvoidence = false;   // Should the AI avoid two allied techs at once?
         public bool MTForAll = false;       // Should the AI listen to non-player Tech MT commands?
-        public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's safety?
+        public bool AidAI = false;          // Should the AI be willing to sacrifice themselves for their owner's (or asset's) safety?
         public bool SelfRepairAI = false;   // Can the AI self-repair?
         public bool InventoryUser = false;  // Can the AI use the player Inventory?
         public bool Builder = false;        // Can the AI build new Techs?
@@ -209,7 +211,7 @@ namespace TAC_AI
             var tankInst = block.transform.root.GetComponent<Tank>();
             if (!tankInst)
             {
-                DebugTAC_AI.Log("TACtical_AI: ModuleAIExtention - TANK IS NULL!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ModuleAIExtention - TANK IS NULL!!!");
                 return;
             }
             SavedAI = block.tank.GetHelperInsured().DediAI;
@@ -225,7 +227,7 @@ namespace TAC_AI
                 return;
             if (!block?.tank)
             {
-                DebugTAC_AI.Info("TACtical_AI: ModuleAIExtention - Tank IS NULL AND BLOCK IS LOOSE");
+                DebugTAC_AI.Info(KickStart.ModID + ": ModuleAIExtention - Tank IS NULL AND BLOCK IS LOOSE");
                 return;
             }
             var thisInst = block.tank.GetHelperInsured();
@@ -240,7 +242,7 @@ namespace TAC_AI
             try
             {
                 var name = gameObject.name;
-                //DebugTAC_AI.Log("TACtical_AI: Init new AI for " + name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": Init new AI for " + name);
                 if (name == "GSO_AI_Module_Guard_111")
                 {
                     Aegis = true;
@@ -371,7 +373,7 @@ namespace TAC_AI
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: CRASH ON HANDLING EXISTING AIS");
+                DebugTAC_AI.Log(KickStart.ModID + ": CRASH ON HANDLING EXISTING AIS");
                 DebugTAC_AI.Log(e);
             }
         }
@@ -412,7 +414,7 @@ namespace TAC_AI
                             SavedAIDriver = driver;
                             SavedAI = newtype;
                         }
-                        thisInst.DriverType = SavedAIDriver;
+                        thisInst.SetDriverType(SavedAIDriver);
                         thisInst.DediAI = SavedAI;
                         DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
                         thisInst.dirtyAI = true;
@@ -427,7 +429,7 @@ namespace TAC_AI
                     return true;
                 }
             }
-            catch (Exception e){ DebugTAC_AI.Log("TACtical AI: error on fetch " + e); }
+            catch (Exception e){ DebugTAC_AI.Log(KickStart.ModID + ": error on fetch " + e); }
             return false;
         }
 
@@ -478,10 +480,46 @@ namespace TAC_AI
                         SavedAIDriver = Helper.DriverType;
                         SavedAI = Helper.DediAI;
                         WasMobileAnchor = Helper.PlayerAllowAutoAnchoring;
+                        switch (Helper.DediAI)
+                        {
+                            case AIType.Assault:
+                                if (Helper.lastEnemy)
+                                    LastTargetVisibleID = Helper.lastEnemy.ID;
+                                else
+                                    LastTargetVisibleID = -1;
+                                break;
+                            case AIType.Aegis:
+                                if (Helper.theResource)
+                                    LastTargetVisibleID = Helper.theResource.ID;
+                                else
+                                    LastTargetVisibleID = -1;
+                                break;
+                            case AIType.Prospector:
+                                if (Helper.theResource)
+                                    LastTargetVisibleID = Helper.theResource.ID;
+                                else
+                                    LastTargetVisibleID = -1;
+                                break;
+                            case AIType.Scrapper:
+                                if (Helper.theResource)
+                                    LastTargetVisibleID = Helper.theResource.ID;
+                                else
+                                    LastTargetVisibleID = -1;
+                                break;
+                            case AIType.Energizer:
+                                if (Helper.theResource)
+                                    LastTargetVisibleID = Helper.theResource.ID;
+                                else
+                                    LastTargetVisibleID = -1;
+                                break;
+                            default:
+                                LastTargetVisibleID = -1;
+                                break;
+                        }
                         Serialize(true);
                         // OBSOLETE - CAN CAUSE CRASHES
                         //serialData.Store(blockSpec.saveState);
-                        //DebugTAC_AI.Log("TACtical AI: Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);
                     }
                 }
                 else
@@ -498,8 +536,8 @@ namespace TAC_AI
                                 {
                                     thisInst.DediAI = serialData2.savedMode;
                                     thisInst.RefreshAI();
-                                    if (serialData2.savedMode == AIType.Aviator)
-                                        thisInst.RecalibrateMovementAIController();
+                                    //if (serialData2.savedMode == AIType.Aviator)
+                                    //    thisInst.RecalibrateMovementAIController();
                                 }
                                 SavedAI = serialData2.savedMode;
                                 if (serialData2.wasRTS)
@@ -512,10 +550,67 @@ namespace TAC_AI
                                     SavedAIDriver = driver;
                                     SavedAI = newtype;
                                 }
-                                thisInst.DriverType = SavedAIDriver;
+                                thisInst.SetDriverType(SavedAIDriver);
                                 thisInst.DediAI = SavedAI;
                                 thisInst.PlayerAllowAutoAnchoring = WasMobileAnchor;
-                                //DebugTAC_AI.Log("TACtical AI: Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
+                                if (LastTargetVisibleID != -1)
+                                {
+                                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(LastTargetVisibleID);
+                                    if (TV != null)
+                                    {
+                                        switch (TV.ObjectType)
+                                        {
+                                            case ObjectTypes.Vehicle:
+                                                if (TV.visible != null)
+                                                {
+                                                    if (TV.visible.tank.IsEnemy(tank.Team))
+                                                    {
+                                                        if (thisInst.DediAI == AIType.Assault)
+                                                        {
+                                                            thisInst.theResource = TV.visible;
+                                                            thisInst.foundGoal = TV.visible;
+                                                        }
+                                                        else
+                                                        {
+                                                            thisInst.lastEnemy = TV.visible;
+                                                        }
+                                                    }
+                                                    else if (thisInst.DediAI == AIType.Aegis)
+                                                    {
+                                                        thisInst.theResource = TV.visible;
+                                                        thisInst.foundGoal = TV.visible;
+                                                    }
+                                                }
+                                                break;
+                                            case ObjectTypes.Block:
+                                                if (thisInst.DediAI == AIType.Scrapper)
+                                                {
+                                                    thisInst.theResource = TV.visible;
+                                                    thisInst.foundGoal = TV.visible;
+                                                }
+                                                else
+                                                    DebugTAC_AI.LogError("AI " + thisInst.name + " expected to be Scrapper for visible ID " +
+                                                        LastTargetVisibleID + " of type " + TV.ObjectType + " but was " + thisInst.DediAI + " instead");
+                                                break;
+                                            case ObjectTypes.Scenery:
+                                                if (thisInst.DediAI == AIType.Prospector)
+                                                {
+                                                    thisInst.theResource = TV.visible;
+                                                    thisInst.foundGoal = TV.visible;
+                                                }
+                                                else
+                                                    DebugTAC_AI.LogError("AI " + thisInst.name + " expected to be Prospector for visible ID " +
+                                                        LastTargetVisibleID + " of type " + TV.ObjectType + " but was " + thisInst.DediAI + " instead");
+                                                break;
+                                            default:
+                                                DebugTAC_AI.LogError("AI " + thisInst.name + " wasn't expecting a " + TV.ObjectType + " for visible ID " +
+                                                    LastTargetVisibleID);
+                                                break;
+                                        }
+                                    }
+                                }
+                                //DebugTAC_AI.Log(KickStart.ModID + ": Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
+                                TankAIManager.AILoadedEvent.Send(thisInst);
                             }
                         }
                     }

@@ -11,7 +11,7 @@ namespace TAC_AI
 {
     public class CursorChanger : MonoBehaviour
     {
-        static FieldInfo existingCursors = typeof(MousePointer).GetField("m_CursorDataSets", BindingFlags.NonPublic | BindingFlags.Instance);
+        // static FieldInfo existingCursors = typeof(MousePointer).GetField("m_CursorDataSets", BindingFlags.NonPublic | BindingFlags.Instance);
 
         /*
             Default,

@@ -146,7 +146,7 @@ namespace TAC_AI
             }
             else
             {
-                DebugTAC_AI.Log("TACtical_AI: SELECTED TANK IS NULL!");
+                DebugTAC_AI.Log(KickStart.ModID + ": SELECTED TANK IS NULL!");
                 //lastTank = Singleton.Manager<ManPointer>.inst.targetVisible.transform.root.gameObject.GetComponent<AI.AIEnhancedCore.TankAIHelper>();
                 CloseSubMenuClickable();
             }
@@ -323,7 +323,7 @@ namespace TAC_AI
                     }
                     if (select > 0)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: GUIAIManager - Set " + select + " Techs to RTSMode " + toTog);
+                        DebugTAC_AI.Log(KickStart.ModID + ": GUIAIManager - Set " + select + " Techs to RTSMode " + toTog);
                         inst.Invoke("DelayedExtraNoise", 0.15f);
                     }
                     Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
@@ -527,7 +527,7 @@ namespace TAC_AI
                     }
                     if (select > 0)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: GUIAIManager - Set " + select + " Techs to RTSMode " + toTog);
+                        DebugTAC_AI.Log(KickStart.ModID + ": GUIAIManager - Set " + select + " Techs to RTSMode " + toTog);
                         inst.Invoke("DelayedExtraNoise", 0.15f);
                     }
                     Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
@@ -933,10 +933,8 @@ namespace TAC_AI
                         if (driver == AIDriverType.AutoSet)
                             lastTank.ExecuteAutoSetNoCalibrate();
                         else
-                            lastTank.DriverType = driver;
+                            lastTank.SetDriverType(driver);
                         lastTank.ForceAllAIsToEscort(true, false);
-                        if (lastTank.AIAlign == AIAlignment.Player)
-                            lastTank.RecalibrateMovementAIController();
                         lastTank.ForceRebuildAlignment();
                         if (lastTank.DriverType != driver)
                         {
@@ -947,7 +945,7 @@ namespace TAC_AI
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Error on sending AI Option change!!!\n" + e);
                     }
                 }
                 else
@@ -956,10 +954,8 @@ namespace TAC_AI
                     if (driver == AIDriverType.AutoSet)
                         lastTank.ExecuteAutoSetNoCalibrate();
                     else
-                        lastTank.DriverType = driver;
+                        lastTank.SetDriverType(driver);
                     lastTank.ForceAllAIsToEscort(true, false);
-                    if (lastTank.AIAlign == AIAlignment.Player)
-                        lastTank.RecalibrateMovementAIController();
                     lastTank.ForceRebuildAlignment();
                     if (lastTank.DriverType != driver)
                     {
@@ -994,7 +990,7 @@ namespace TAC_AI
                     }
                 }
                 //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
-                DebugTAC_AI.Log("TACtical_AI: Set " + lastTank.name + " to driver " + driver);
+                DebugTAC_AI.Log(KickStart.ModID + ": Set " + lastTank.name + " to driver " + driver);
             }
             catch { }
         }
@@ -1015,7 +1011,7 @@ namespace TAC_AI
                         SetOptionDriverCase(tankInst, driver);
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: TrySetOptionRTS - Set " + amount + " Techs to drive " + driver);
+                DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionRTS - Set " + amount + " Techs to drive " + driver);
                 if (select > 0)
                     Invoke("DelayedExtraNoise", 0.15f);
             }
@@ -1046,7 +1042,7 @@ namespace TAC_AI
                 case AIDriverType.AutoSet:
                     break;
                 default:
-                    DebugTAC_AI.LogError("TACtical_AI: Encountered illegal AIDriverType on AI Driver switch!");
+                    DebugTAC_AI.LogError(KickStart.ModID + ": Encountered illegal AIDriverType on AI Driver switch!");
                     break;
             }
             if (ManNetwork.IsNetworked)
@@ -1059,9 +1055,7 @@ namespace TAC_AI
                     if (driver == AIDriverType.AutoSet)
                         tankInst.ExecuteAutoSetNoCalibrate();
                     else
-                        tankInst.DriverType = driver;
-                    if (tankInst.AIAlign == AIAlignment.Player)
-                        tankInst.RecalibrateMovementAIController();
+                        tankInst.SetDriverType(driver);
                     tankInst.ForceRebuildAlignment();
                     if (tankInst.DriverType != driver)
                     {
@@ -1072,7 +1066,7 @@ namespace TAC_AI
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on sending AI Option change!!!\n" + e);
                 }
             }
             else
@@ -1082,9 +1076,7 @@ namespace TAC_AI
                 if (driver == AIDriverType.AutoSet)
                     tankInst.ExecuteAutoSetNoCalibrate();
                 else
-                    tankInst.DriverType = driver;
-                if (tankInst.AIAlign == AIAlignment.Player)
-                    tankInst.RecalibrateMovementAIController();
+                    tankInst.SetDriverType(driver);
                 tankInst.ForceRebuildAlignment();
                 if (tankInst.DriverType != driver)
                 {
@@ -1112,14 +1104,12 @@ namespace TAC_AI
                     lastTank.DediAI = dediAI;
                     lastTank.ForceAllAIsToEscort(true, false);
                     fetchAI = dediAI;
-                    if (lastTank.AIAlign == AIAlignment.Player)
-                        lastTank.RecalibrateMovementAIController();
                     lastTank.ForceRebuildAlignment();
 
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on sending AI Option change!!!\n" + e);
                 }
             }
             else
@@ -1133,8 +1123,6 @@ namespace TAC_AI
                 lastTank.DediAI = dediAI;
                 lastTank.ForceAllAIsToEscort(true, false);
                 fetchAI = dediAI;
-                if (lastTank.AIAlign == AIAlignment.Player)
-                    lastTank.RecalibrateMovementAIController();
                 lastTank.ForceRebuildAlignment();
 
             }
@@ -1204,7 +1192,7 @@ namespace TAC_AI
                         SetOptionCase(tankInst, dediAI);
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: TrySetOptionRTS - Set " + amount + " Techs to mode " + dediAI);
+                DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionRTS - Set " + amount + " Techs to mode " + dediAI);
                 if (select > 0)
                     Invoke("DelayedExtraNoise", 0.15f);
             }
@@ -1269,14 +1257,12 @@ namespace TAC_AI
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     tankInst.DediAI = locDediAI;
-                    if (tankInst.AIAlign == AIAlignment.Player)
-                        tankInst.RecalibrateMovementAIController();
                     tankInst.ForceRebuildAlignment();
 
                 }
                 catch (Exception e)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Error on sending AI Option change!!!\n" + e);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Error on sending AI Option change!!!\n" + e);
                 }
             }
             else
@@ -1289,8 +1275,6 @@ namespace TAC_AI
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 tankInst.DediAI = locDediAI;
-                if (tankInst.AIAlign == AIAlignment.Player)
-                    tankInst.RecalibrateMovementAIController();
                 tankInst.ForceRebuildAlignment();
             }
         }
@@ -1370,20 +1354,20 @@ namespace TAC_AI
                         }
                         else
                         {
-                            DebugTAC_AI.Log("TACtical_AI: No techs selected!");
+                            DebugTAC_AI.Log(KickStart.ModID + ": No techs selected!");
                             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                             return;
                         }
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: No techs selected!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": No techs selected!");
                         return;
                     }
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: TANK IS NULL!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": TANK IS NULL!");
                     return;
                 }
             }
@@ -1392,7 +1376,7 @@ namespace TAC_AI
 
             lastTank.RefreshAI();
             GetInfo(lastTank);
-            DebugTAC_AI.Log("TACtical_AI: Opened AI menu!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Opened AI menu!");
             AIDriver = lastTank.DriverType;
             fetchAI = lastTank.DediAI;
             MoveMenuToCursor(true);
@@ -1408,14 +1392,14 @@ namespace TAC_AI
             }
             if (IsTankNull())
             {
-                DebugTAC_AI.Assert(true, "TACtical_AI: TANK IS NULL!");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ": TANK IS NULL!");
                 return;
             }
             lastTank.RefreshAI();
             GetInfo(lastTank);
             AdvancedToggles = false;
             SelfDestruct = 5;
-            DebugTAC_AI.Log("TACtical_AI: Opened AI menu!");
+            DebugTAC_AI.Log(KickStart.ModID + ": Opened AI menu!");
             AIDriver = lastTank.DriverType;
             fetchAI = lastTank.DediAI;
             MoveMenuToCursor(centerOnMouse);
@@ -1435,7 +1419,7 @@ namespace TAC_AI
                 isCurrentlyOpen = false;
                 GUIWindow.SetActive(false);
                 KickStart.ReleaseControl();
-                DebugTAC_AI.Log("TACtical_AI: Closed AI menu!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Closed AI menu!");
             }
         }
 

@@ -30,7 +30,7 @@ namespace TAC_AI.AI.Movement.AICores
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
-                DebugTAC_AI.Log("TACtical_AI: " + tank.name + " is GROUNDED!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": " + tank.name + " is GROUNDED!!!");
                 if (!AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.lastTechExtents * 2))
                 {
                     return false;
@@ -50,7 +50,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (tank.grounded || pilot.ForcePitchUp)
             {   // Try and takeoff
-                //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " is taking off");
+                //DebugTAC_AI.Log(KickStart.ModID + ": " + tank.name + " is taking off");
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, groundOffset + 5), true);
                 HelicopterUtils.UpdateThrottleCopter(thisControl, pilot);
                 HelicopterUtils.AngleTowardsUp(thisControl, pilot, pilot.PathPointSet, thisInst.lastDestinationCore, ref core, true);
@@ -63,7 +63,7 @@ namespace TAC_AI.AI.Movement.AICores
                 /*
                 if (thisInst.lastIsNotNull())
                 {
-                    DebugTAC_AI.Log("TACtical_AI: " + tank.name + " is in combat at " + pilot.AirborneDest + " tank at " + thisInst.lastEnemy.tank.boundsCentreWorldNoCheck);
+                    DebugTAC_AI.Log(KickStart.ModID + ": " + tank.name + " is in combat at " + pilot.AirborneDest + " tank at " + thisInst.lastEnemy.tank.boundsCentreWorldNoCheck);
                 }
                 */
             }
@@ -166,7 +166,7 @@ namespace TAC_AI.AI.Movement.AICores
                         }
                         else
                         {
-                            //DebugTAC_AI.Log("TACtical_AI: AI IDLE");
+                            //DebugTAC_AI.Log(KickStart.ModID + ": AI IDLE");
                         }
                     }
                 }
@@ -208,7 +208,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!AIEPathing.AboveHeightFromGround(Helper.DodgeSphereCenter, groundOffsetEmerg))
             {
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + pilot.Tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;
             }
             core.lastDestination = pilot.PathPointSet;
@@ -247,7 +247,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!AIEPathing.AboveHeightFromGround(Helper.DodgeSphereCenter, groundOffsetEmerg))
             {
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + pilot.Tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;
             }
             core.lastDestination = pilot.PathPointSet;
@@ -287,7 +287,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {   //Fly off the screen
-                        //DebugTAC_AI.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Leaving scene!");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + pilot.Tank.name + "  Leaving scene!");
                         Vector3 fFlat = pilot.Tank.rootBlockTrans.forward;
                         fFlat.y = 0;
                         pilot.PathPointSet = (fFlat.normalized * 1000) + pilot.Tank.boundsCentreWorldNoCheck;
@@ -301,7 +301,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             if (!AIEPathing.AboveHeightFromGround(Helper.DodgeSphereCenter, groundOffsetEmerg))
             {
-                //DebugTAC_AI.Log("TACtical_AI: Tech " + pilot.Tank.name + "  Avoiding Ground!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + pilot.Tank.name + "  Avoiding Ground!");
                 pilot.ForcePitchUp = true;
             }
             core.lastDestination = pilot.PathPointSet;
@@ -337,7 +337,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, predictionOffset, out lastAllyDist, tank);
                 if (lastCloseAlly == null)
-                    DebugTAC_AI.Log("TACtical_AI: ALLY IS NULL");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ALLY IS NULL");
                 if (lastAllyDist < thisInst.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)
                 {
                     IntVector3 ProccessedVal = thisInst.GetOtherDir(lastCloseAlly);
@@ -346,12 +346,12 @@ namespace TAC_AI.AI.Movement.AICores
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: Crash on AvoidAssistAir " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": Crash on AvoidAssistAir " + e);
                 return targetIn;
             }
             if (targetIn.IsNaN())
             {
-                DebugTAC_AI.Log("TACtical_AI: AvoidAssistAir IS NaN!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AvoidAssistAir IS NaN!!");
                 //TankAIManager.FetchAllAllies();
             }
             return targetIn;

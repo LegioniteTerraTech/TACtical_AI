@@ -40,17 +40,17 @@ namespace TAC_AI.AI.Movement.AICores
             {   //Fly like plane
                 if (pilot.PerformUTurn > 0)
                 {   //The Immelmann Turn
-                    //DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
                     pilot.MainThrottle = 1;
                     this.pilot.UpdateThrottle(thisInst, thisControl);
                     if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIGlobals.AirStallSpeed - 4)
                     {   //ABORT!!!
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
                         pilot.PerformUTurn = -1;
                     }
                     else if (Vector3.Dot(Vector3.down, tank.rbody.velocity.normalized) > 0.4f)
                     {   //ABORT!!!
-                        DebugTAC_AI.Log("TACtical_AI: Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
                         pilot.PerformUTurn = -1;
                     }
                     if (pilot.PerformUTurn == 1)

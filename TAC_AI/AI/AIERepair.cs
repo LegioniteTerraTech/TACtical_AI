@@ -103,13 +103,30 @@ namespace TAC_AI.AI
                 thisInst.TechMemor = this;
                 thisInst.PendingDamageCheck = true;
                 blockIntegrityDirty = true;
-                rejectSaveAttempts = false;
                 purchaseOp = EnemyPurchase;
                 if (DoFirstSave)
                 {
-                    SaveTech();
+                    if (SavedTech.Any() || BookmarkBuilder.TryGet(tank, out BookmarkBuilder BB))
+                    {
+                        DebugTAC_AI.LogAISetup("Design for " + tank.name + ", ID [" + tank.visible.ID + "] was assigned by BookmarkBuilder, using it.");
+                    }
+                    else
+                    {
+                        if (SaveTech())
+                            DebugTAC_AI.LogAISetup("Saving base design for " + tank.name + ", ID [" + tank.visible.ID + "] for use in repairs");
+                        else
+                            DebugTAC_AI.Log("Design for " + tank.name + ", ID [" + tank.visible.ID + "] was assigned somehow??? (rejectSaveAttempts was TRUE!?), using it...");
+                        /*
+                        DebugTAC_AI.Log("Designs within BookmarkBuilder: " + BookmarkBuilder.count);
+                        foreach (var item in BookmarkBuilder.Plans)
+                        {
+                            DebugTAC_AI.Log(item.Key.visible.ID + ", " + item.Key.name);
+                        }
+                        */
+                    }
                     //Invoke("SaveTech", 0.01f);
                 }
+                rejectSaveAttempts = false;
             }
             internal void Remove()
             {
@@ -161,18 +178,18 @@ namespace TAC_AI.AI
 
 
             // Save operations
-            public void SaveTech()
+            public bool SaveTech()
             {
                 if (rejectSaveAttempts)
-                    return;
+                    return false;
                 blockIntegrityDirty = false;
                 MissingTypes.Clear();
 
                 if (KickStart.DesignsToLog)
                 {
-                    DebugTAC_AI.Log("TACtical_AI:  DesignMemory - DESIGNS TO LOG IS ENABLED!!!");
+                    DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory - DESIGNS TO LOG IS ENABLED!!!");
                     TechToJSONLog();
-                    return;
+                    return true;
                 }
                 SavedTech.Clear();
 
@@ -188,18 +205,18 @@ namespace TAC_AI.AI
                 }
                 if (!SavedTech.Any())
                 {
-                    DebugTAC_AI.Info("TACtical_AI: INVALID TECH DATA SAVED FOR TANK " + tank.name + "\n" +StackTraceUtility.ExtractStackTrace());
+                    DebugTAC_AI.Info(KickStart.ModID + ": INVALID TECH DATA SAVED FOR TANK " + tank.name + "\n" +StackTraceUtility.ExtractStackTrace());
                 }
-                DebugTAC_AI.Info("TACtical_AI:  DesignMemory - Saved " + tank.name);
+                DebugTAC_AI.Info(KickStart.ModID + ":  DesignMemory - Saved " + tank.name);
                 //build AROUND the cab pls
                 //if (SavedTech.Count() > 1)
                 //    SavedTech = new List<BlockMemory>(SavedTech).OrderBy((blok) => (blok.CachePos - tank.CentralBlock.cachedLocalPosition).sqrMagnitude).ToList();
                 ValidateTechIfNeeded();
                 BuildTechQuickLookup();
+                return true;
             }
             public void SaveTech(List<TankBlock> overwrite)
             {
-                rejectSaveAttempts = true;
                 blockIntegrityDirty = true;
                 MissingTypes.Clear();
                 SavedTech.Clear();
@@ -213,19 +230,20 @@ namespace TAC_AI.AI
                     };
                     SavedTech.Add(mem);
                 }
-                DebugTAC_AI.Log("TACtical_AI:  DesignMemory - Overwrote(SaveTech) " + tank.name);
+                DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory - Overwrote(SaveTech) " + tank.name);
                 //build AROUND the cab pls
                 //if (SavedTech.Count() > 1)
                 //    SavedTech = new List<BlockMemory>(SavedTech).OrderBy((blok) => (blok.CachePos - Vector3.zero).sqrMagnitude).ToList();
                 ValidateTechIfNeeded();
                 BuildTechQuickLookup();
+                rejectSaveAttempts = true;
             }
 
             private void ValidateTechIfNeeded()
             {
                 if (ManNetwork.IsNetworked)
                     if (!TempManager.ValidateBlocksInTechAndPurgeIfNeeded(SavedTech))
-                        DebugTAC_AI.Log("TACtical_AI: DesignMemory - Found illegal blocks for " + tank.name
+                        DebugTAC_AI.Log(KickStart.ModID + ": DesignMemory - Found illegal blocks for " + tank.name
                             + " and purged them from memory to prevent self-repair meltdown");
             }
 
@@ -250,14 +268,13 @@ namespace TAC_AI.AI
                         newEntry.Add(position);
                     }
                     fastBlockLookup.Add(item, newEntry);
-                    //Debug.Info("TACtical_AI: BuildTechQuickLookup - processed " + LP.Count + " entries for " + item);
+                    //Debug.Info(KickStart.ModID + ": BuildTechQuickLookup - processed " + LP.Count + " entries for " + item);
                 }
             }
 
 
             public void MemoryToTech(List<RawBlockMem> overwrite)
             {   // Loading a Tech from the BlockMemory
-                rejectSaveAttempts = true;
                 blockIntegrityDirty = true;
                 MissingTypes.Clear();
                 SavedTech.Clear();
@@ -266,19 +283,20 @@ namespace TAC_AI.AI
                     BlockTypes type = BlockIndexer.StringToBlockType(mem.t);
                     if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
                     {
-                        DebugTAC_AI.Log("TACtical_AI:  DesignMemory - " + tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
+                        DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory - " + tank.name + ": could not save " + mem.t + " in blueprint due to illegal block.");
                         continue;
                     }
                     // get rid of floating point errors
                     mem.TidyUp();
                     SavedTech.Add(mem);
                 }
-                DebugTAC_AI.Log("TACtical_AI:  DesignMemory - Overwrote(MemoryToTech) " + tank.name);
+                DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory - Overwrote(MemoryToTech) " + tank.name + ", ID (" + tank.visible.ID + ")");
                 //build AROUND the cab pls
                 //if (SavedTech.Count() > 1)
                 //    SavedTech = new List<BlockMemory>(SavedTech).OrderBy((blok) => (blok.CachePos - Vector3.zero).sqrMagnitude).ToList();
                 ValidateTechIfNeeded();
                 BuildTechQuickLookup();
+                rejectSaveAttempts = true;
             }
             public TankBlock TryFindProperRootBlock(List<TankBlock> ToSearch)
             {
@@ -296,7 +314,7 @@ namespace TAC_AI.AI
                 IEnumerable<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList().AsEnumerable();
                 if (!cBlocks.Any(x => true))
                 {
-                    DebugTAC_AI.Assert(true, "TACtical AI: ASSERT - VerifyIntegrity - Called on Tank with ZERO blocks!");
+                    DebugTAC_AI.Assert(true, KickStart.ModID + ": ASSERT - VerifyIntegrity - Called on Tank with ZERO blocks!");
                     return;
                 }
                 MissingTypes.Clear();
@@ -309,7 +327,7 @@ namespace TAC_AI.AI
                     if (mem2 > present)// are some blocks not accounted for?
                         MissingTypes.Add(repairCase);
                 }
-                DebugTAC_AI.Info("TACtical AI: VerifyIntegrity - Executed with " + MissingTypes.Count + " results");
+                DebugTAC_AI.Info(KickStart.ModID + ": VerifyIntegrity - Executed with " + MissingTypes.Count + " results");
                 blockIntegrityDirty = false;
             }
             private void VerifyIntegritySLOW()
@@ -319,7 +337,7 @@ namespace TAC_AI.AI
                 List<TankBlock> cBlocks = tank.blockman.IterateBlocks().ToList();
                 if (cBlocks.Count() == 0)
                 {
-                    DebugTAC_AI.Log("TACtical AI: ASSERT - VerifyIntegrity - Called on Tank with ZERO blocks!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ASSERT - VerifyIntegrity - Called on Tank with ZERO blocks!");
                     return;
                 }
                 MissingTypes.Clear();
@@ -347,7 +365,7 @@ namespace TAC_AI.AI
                     if (mem2 > present)// are some blocks not accounted for?
                         MissingTypes.Add(typesToRepair[step]);
                 }
-                DebugTAC_AI.Log("TACtical AI: VerifyIntegrity - Executed with " + MissingTypes.Count + " results");
+                DebugTAC_AI.Log(KickStart.ModID + ": VerifyIntegrity - Executed with " + MissingTypes.Count + " results");
                 blockIntegrityDirty = false;
             }
 
@@ -368,11 +386,11 @@ namespace TAC_AI.AI
                 float totalDesignBlocks = (float)SavedTech.Count;
                 if (totalDesignBlocks == 0)
                 {
-                    DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " has 0 saved blocks in TechMemor.  How?");
+                    DebugTAC_AI.Info(KickStart.ModID + ": Tech " + tank.name + " has 0 saved blocks in TechMemor.  How?");
                     return false;
                 }
                 thisInst.DamageThreshold = (1 - (tank.blockman.blockCount / totalDesignBlocks)) * 100;
-                DebugTAC_AI.Info("TACtical_AI: Tech " + tank.name + " has damage percent of " + thisInst.DamageThreshold);
+                DebugTAC_AI.Info(KickStart.ModID + ": Tech " + tank.name + " has damage percent of " + thisInst.DamageThreshold);
                 if (!thisInst.DamageThreshold.Approximately(0) && !ranOutOfParts)
                 {
                     return true;
@@ -433,7 +451,7 @@ namespace TAC_AI.AI
                 {
                     if (UnityEngine.Random.Range(0, 2000) < 150)
                     {
-                        //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " reclaim attempt success");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + " reclaim attempt success");
                         ReserveSuperGrabs++;
                         return true;
                     }
@@ -442,7 +460,7 @@ namespace TAC_AI.AI
                 {
                     if (UnityEngine.Random.Range(0, 2000) < KickStart.Difficulty)
                     {
-                        //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " reclaim attempt success");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + " reclaim attempt success");
                         ReserveSuperGrabs++;
                         return true;
                     }
@@ -454,7 +472,7 @@ namespace TAC_AI.AI
                 bool attemptW;
                 // if we are smrt, run heavier operation
                 List<RawBlockMem> posBlocks = ReturnAllPositionsOfTypeSLOW(foundBlock.name);
-                //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
                     RawBlockMem template = posBlocks.ElementAt(step2);
@@ -474,17 +492,17 @@ namespace TAC_AI.AI
                 bool success;
                 try
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
                     TankBlock held = thisInst.HeldBlock;
                     if (held == null)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach NULL BLOCK");
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to attach NULL BLOCK");
                         templateCache = null;
                         return;
                     }
                     if (templateCache == null)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach block but no template was cached!!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to attach block but no template was cached!!");
                         return;
                     }
 
@@ -496,7 +514,7 @@ namespace TAC_AI.AI
                         if (held.visible.InBeam)
                             held.visible.SetHolder(null);
 
-                        //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Attaching " + canidate.name);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Attaching " + canidate.name);
                         if (!KickStart.MuteNonPlayerRacket)
                         {
                             FieldInfo attachSFX = typeof(ManTechBuilder).GetField("m_BlockAttachSFXEvents", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -554,13 +572,13 @@ namespace TAC_AI.AI
                 {
                     if (ch == '"')
                     {
-                        SB.Append(Templates.RawTechExporter.up);
+                        SB.Append('\\');
                         SB.Append(ch);
                     }
                     else
                         SB.Append(ch);
                 }
-                DebugTAC_AI.Log("TACtical_AI: " + SB.ToString());
+                DebugTAC_AI.Log(KickStart.ModID + ": " + SB.ToString());
                 SB.Clear();
             }
             public void JSONToTech(string toLoad)
@@ -598,7 +616,7 @@ namespace TAC_AI.AI
                 }
                 catch { DebugTAC_AI.Log("JSONToTech failed on last entry"); }
                 SB.Clear();
-                //DebugTAC_AI.Log("TACtical_AI:  DesignMemory: saved " + mem.Count);
+                //DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory: saved " + mem.Count);
                 MemoryToTech(mem);
             }
 
@@ -612,7 +630,7 @@ namespace TAC_AI.AI
             public void SetupForNewTechConstruction(TankAIHelper thisInst, string JSON)
             {
                 JSONToTech(JSON);
-                DebugTAC_AI.Log("TechMemor of " + tank.name + " has " + SavedTech.Count + " entries");
+                DebugTAC_AI.LogAISetup("TechMemor of " + tank.name + " has " + SavedTech.Count + " entries");
                 CheckGameTamperedWith(tank, this);
                 thisInst.PendingDamageCheck = true;
             }
@@ -630,8 +648,8 @@ namespace TAC_AI.AI
             {
                 if (SavedTech.Count() == 0)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: INVALID TECH DATA STORED FOR TANK " + tank.name);
-                    DebugTAC_AI.Log("TACtical_AI: " + StackTraceUtility.ExtractStackTrace());
+                    DebugTAC_AI.Log(KickStart.ModID + ": INVALID TECH DATA STORED FOR TANK " + tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": " + StackTraceUtility.ExtractStackTrace());
                 }
                 return SavedTech;
             }
@@ -676,10 +694,10 @@ namespace TAC_AI.AI
             {
                 if (fastBlockLookup.TryGetValue(blocktype, out List<RawBlockMem> mems))
                 {
-                    //Debug.Info("TACtical_AI:  DesignMemory - ReturnAllPositionsOfType " + tank.name + " looked for " + blocktype + " and found " + mems.Count);
+                    //Debug.Info(KickStart.ModID + ":  DesignMemory - ReturnAllPositionsOfType " + tank.name + " looked for " + blocktype + " and found " + mems.Count);
                     return mems;
                 }
-                //Debug.Info("TACtical_AI:  DesignMemory - ReturnAllPositionsOfType " + tank.name + " looked for " + blocktype + " and found nothing");
+                //Debug.Info(KickStart.ModID + ":  DesignMemory - ReturnAllPositionsOfType " + tank.name + " looked for " + blocktype + " and found nothing");
                 return emptyMem;
             }
 
@@ -693,7 +711,7 @@ namespace TAC_AI.AI
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: MakeMinersMineUnlimited - game is being stubborn");
+                    DebugTAC_AI.Log(KickStart.ModID + ": MakeMinersMineUnlimited - game is being stubborn");
                 }
             }
             internal void DoMakeMinersMineUnlimited()
@@ -701,7 +719,7 @@ namespace TAC_AI.AI
                 try
                 {
                     thisInst.AdjustAnchors();
-                    //DebugTAC_AI.Log("TACtical_AI: " + tank.name + " is trying to mine unlimited");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": " + tank.name + " is trying to mine unlimited");
                     foreach (ModuleItemProducer module in tank.blockman.IterateBlockComponents<ModuleItemProducer>())
                     {
                         module.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
@@ -709,7 +727,7 @@ namespace TAC_AI.AI
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: DoMakeMinersMineUnlimited - game is being stubborn");
+                    DebugTAC_AI.Log(KickStart.ModID + ": DoMakeMinersMineUnlimited - game is being stubborn");
                 }
             }
 
@@ -743,7 +761,7 @@ namespace TAC_AI.AI
                     float priceIsRight = Singleton.Manager<RecipeManager>.inst.GetBlockBuyPrice(BlockType, true);
                     if (Enemy.RLoadedBases.TryMakePurchase(BlockType, tank.Team))
                     {
-                        DebugTAC_AI.Info("TACtical_AI: AI " + tank.name + ": bought " + BlockType
+                        DebugTAC_AI.Info(KickStart.ModID + ": AI " + tank.name + ": bought " + BlockType
                             + " from the shop for " + priceIsRight);
 
                         if (!KickStart.MuteNonPlayerRacket)
@@ -752,7 +770,7 @@ namespace TAC_AI.AI
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Could not afford " + BlockType
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Could not afford " + BlockType
                             + " from the shop for " + priceIsRight + " because ");
                        DebugTAC_AI.Log(" Funds are " + ManBaseTeams.GetTeamMoney(tank.Team) + ", but cost is " +
                                 priceIsRight);
@@ -780,10 +798,10 @@ namespace TAC_AI.AI
                 }
 
                 ranOutOfParts = false;
-                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
+                //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
                 if (tank.CanAttachBlock(canidate, template.p, new OrthoRotation(template.r)))
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
                     if (!NeedPurchase || HandlePurchase())
                     {
                         AttachOperation(canidate.visible, template, out _);
@@ -793,14 +811,14 @@ namespace TAC_AI.AI
                     else
                     {
                         ranOutOfParts = true;
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Team " + tank.Team + " is out of parts!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Team " + tank.Team + " is out of parts!");
                         lastAttached = BlockTypes.GSOAIController_111;
                         return true;
                     }
                 }
                 else
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Could not attach block " +
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Could not attach block " +
                    //     "- no available AP connections between block and Tech target coordinates!");
                     return false;
                 }
@@ -813,16 +831,16 @@ namespace TAC_AI.AI
 
                 if (!tank.visible.isActive || !canidate)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: QueueBlockAttach Canidate is NotNull : " + canidate);
+                    DebugTAC_AI.Log(KickStart.ModID + ": QueueBlockAttach Canidate is NotNull : " + canidate);
                     lastAttached = BlockTypes.GSOAIController_111;
                     return false;
                 }
 
                 ranOutOfParts = false;
-                //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
+                //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
                 if (tank.CanAttachBlock(canidate, template.p, new OrthoRotation(template.r)))
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
                     if (!purchase || HandlePurchase())
                     {
                         AttachOperation(canidate.visible, template, out offsetVec);
@@ -832,14 +850,14 @@ namespace TAC_AI.AI
                     else
                     {
                         ranOutOfParts = true;
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Team " + tank.Team + " is out of parts!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Team " + tank.Team + " is out of parts!");
                         lastAttached = BlockTypes.GSOAIController_111;
                         return true;
                     }
                 }
                 else
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Could not attach block " +
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Could not attach block " +
                     //    "- no available AP connections between block and Tech target coordinates!");
                     lastAttached = BlockTypes.GSOAIController_111;
                     return false;
@@ -869,14 +887,14 @@ namespace TAC_AI.AI
                         canidate.visible.SetHolder(null);
                     lastAttached = canidate.BlockType;
 
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  " + !TechMemor.unlimitedParts + " | " + useLimitedSupplies);
                     if (purchase && !HandlePurchase())
                     {
                         ranOutOfParts = true;
                         return false;
                     }
 
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Attaching " + canidate.name);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Attaching " + canidate.name);
                     if (!KickStart.MuteNonPlayerRacket)
                     {
                         FieldInfo attachSFX = typeof(ManTechBuilder).GetField("m_BlockAttachSFXEvents", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -906,7 +924,7 @@ namespace TAC_AI.AI
                         {
                             if (foundBlock.block.PreExplodePulse)
                                 continue; //explode? no thanks
-                                          //DebugTAC_AI.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
+                                          //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
                             fBlocks.Add(foundBlock.block);
                         }
                     }
@@ -918,7 +936,7 @@ namespace TAC_AI.AI
             internal bool TryAttachExistingBlockFromList(ref List<BlockTypes> typesMissing, ref List<TankBlock> foundBlocks, bool denySD = false)
             {
                 int attachAttempts = foundBlocks.Count();
-                //DebugTAC_AI.Log("TACtical AI: RepairLerp - Found " + attachAttempts + " loose blocks to use");
+                //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - Found " + attachAttempts + " loose blocks to use");
                 for (int step = 0; step < attachAttempts; step++)
                 {
                     TankBlock foundBlock = foundBlocks[step];
@@ -929,7 +947,7 @@ namespace TAC_AI.AI
                     // if we are smrt, run heavier operation
                     List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(BT);
                     int count = posBlocks.Count;
-                    //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                     for (int step2 = 0; step2 < count; step2++)
                     {
                         RawBlockMem template = posBlocks.ElementAt(step2);
@@ -952,7 +970,7 @@ namespace TAC_AI.AI
             internal bool TryAttachExistingBlockFromListInst(ref List<BlockTypes> typesMissing, ref List<TankBlock> foundBlocks, bool denySD = false)
             {
                 int attachAttempts = foundBlocks.Count();
-                //DebugTAC_AI.Log("TACtical AI: RepairLerp - Found " + attachAttempts + " loose blocks to use");
+                //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - Found " + attachAttempts + " loose blocks to use");
                 for (int step = 0; step < attachAttempts; step++)
                 {
                     TankBlock foundBlock = foundBlocks[step];
@@ -964,7 +982,7 @@ namespace TAC_AI.AI
 
                     List<RawBlockMem> posBlocks = ReturnAllPositionsOfType(BT);
                     int count = posBlocks.Count;
-                    //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                     for (int step2 = 0; step2 < count; step2++)
                     {
                         RawBlockMem template = posBlocks.ElementAt(step2);
@@ -988,7 +1006,7 @@ namespace TAC_AI.AI
             internal bool TrySpawnAndAttachBlockFromList(ref List<BlockTypes> typesMissing, bool playerInventory = false, bool purchase = false)
             {
                 int attachAttempts = typesMissing.Count();
-                //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Types Missing " + attachAttempts + " | playerInv " + playerInventory);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - Types Missing " + attachAttempts + " | playerInv " + playerInventory);
                 for (int step = 0; step < attachAttempts; step++)
                 {
                     BlockTypes bType = typesMissing.ElementAt(step);
@@ -1009,7 +1027,7 @@ namespace TAC_AI.AI
                         (Vector3.up * (thisInst.lastTechExtents + 10)), Quaternion.identity, out bool worked);
                     if (!worked)
                     {
-                        DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");
+                        DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - Could not spawn block");
                         continue;
                     }
                     bool attemptW;
@@ -1018,14 +1036,14 @@ namespace TAC_AI.AI
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
-                        DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - THERE'S NO MORE BLOCK POSITIONS TO ATTACH!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - THERE'S NO MORE BLOCK POSITIONS TO ATTACH!");
                         ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                         typesMissing.RemoveAt(step);
                         attachAttempts--;
                         step--;
                         continue;
                     }
-                    //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                     for (int step2 = 0; step2 < count; step2++)
                     {
                         RawBlockMem template = posBlocks.ElementAt(step2);
@@ -1046,7 +1064,7 @@ namespace TAC_AI.AI
                             return true;
                         }
                     }
-                    //DebugTAC_AI.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
 
                     ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                     // if everything fails, resort to timbuktu
@@ -1054,7 +1072,7 @@ namespace TAC_AI.AI
                     //Vector3 yeet = Vector3.forward * 450000;
                     //foundBlock.transform.position = yeet;
                 }
-                //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - ATTACH ATTEMPT FAILED!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - ATTACH ATTEMPT FAILED!");
                 return false;
             }
 
@@ -1096,7 +1114,7 @@ namespace TAC_AI.AI
                     int count = posBlocks.Count();
                     if (count == 0)
                     {
-                        //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - THERE'S NO MORE BLOCK POSITIONS TO ATTACH!");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - THERE'S NO MORE BLOCK POSITIONS TO ATTACH!");
                         typesMissing.RemoveAt(step);
                         attachAttempts--;
                         step--;
@@ -1107,7 +1125,7 @@ namespace TAC_AI.AI
                         TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, blockSpawnPos, Quaternion.identity, out bool worked);
                         if (!worked)
                         {
-                            DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block " + bType);
+                            DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - Could not spawn block " + bType);
                             continue;
                         }
                         for (int step2 = 0; step2 < count; step2++)
@@ -1161,7 +1179,7 @@ namespace TAC_AI.AI
                     TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, tank.boundsCentreWorldNoCheck + (Vector3.up * (thisInst.lastTechExtents + 10)), Quaternion.identity, out bool worked);
                     if (!worked)
                     {
-                        DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block");
+                        DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - Could not spawn block");
                         continue;
                     }
                     bool attemptW;
@@ -1176,7 +1194,7 @@ namespace TAC_AI.AI
                         step--;
                         continue;
                     }
-                    //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                     for (int step2 = 0; step2 < count; step2++)
                     {
                         RawBlockMem template = posBlocks.ElementAt(step2);
@@ -1198,7 +1216,7 @@ namespace TAC_AI.AI
                             return true;
                         }
                     }
-                    //DebugTAC_AI.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
 
                     ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                     // if everything fails, resort to timbuktu
@@ -1264,12 +1282,12 @@ namespace TAC_AI.AI
                         TankBlock foundBlock = RawTechLoader.SpawnBlockS(bType, blockSpawnPos, Quaternion.identity, out bool worked);
                         if (!worked)
                         {
-                            DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - Could not spawn block " + bType);
+                            DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - Could not spawn block " + bType);
                             continue;
                         }
                         bool attemptW;
 
-                        //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                         for (int step2 = 0; step2 < count; step2++)
                         {
                             RawBlockMem template = posBlocks.ElementAt(step2);
@@ -1285,7 +1303,7 @@ namespace TAC_AI.AI
                                 return true;
                             }
                         }
-                        //DebugTAC_AI.Log("TACtical AI: TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
 
                         ManLooseBlocks.inst.RequestDespawnBlock(foundBlock, DespawnReason.Host);
                     }
@@ -1323,13 +1341,13 @@ namespace TAC_AI.AI
                 TankBlock prefabBlock = RawTechLoader.GetPrefabFiltered(bType, blockSpawnPos);
                 if (!prefabBlock)
                 {
-                    DebugTAC_AI.Log("TACtical AI: IterateAndTryAttachBlockSkinMP - Could not fetch block");
+                    DebugTAC_AI.Log(KickStart.ModID + ": IterateAndTryAttachBlockSkinMP - Could not fetch block");
                     return false;
                 }
                 bool attemptW;
 
 
-                //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < count; step2++)
                 {
                     RawBlockMem template = posBlocks.ElementAt(step2);
@@ -1349,7 +1367,7 @@ namespace TAC_AI.AI
                         return true;
                     }
                 }
-                //DebugTAC_AI.Log("TACtical AI: IterateAndTryAttachBlock - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": IterateAndTryAttachBlock - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
                 prefabBlock.visible.RemoveFromGame();
                 return false;
             }
@@ -1371,7 +1389,7 @@ namespace TAC_AI.AI
                 TankBlock prefabBlock = RawTechLoader.GetPrefabFiltered(bType, blockSpawnPos);
                 if (!prefabBlock)
                 {
-                    DebugTAC_AI.Log("TACtical AI: IterateAndTryAttachBlockSkinMP - Could not fetch block");
+                    DebugTAC_AI.Log(KickStart.ModID + ": IterateAndTryAttachBlockSkinMP - Could not fetch block");
                     return false;
                 }
                 bool attemptW;
@@ -1381,7 +1399,7 @@ namespace TAC_AI.AI
                 if (count == 0)
                     return false;
 
-                //DebugTAC_AI.Log("TACtical AI: TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAndAttachBlockFromList - potential spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < count; step2++)
                 {
                     RawBlockMem template = posBlocks.ElementAt(step2);
@@ -1402,7 +1420,7 @@ namespace TAC_AI.AI
                     }
                 }
                 prefabBlock.visible.RemoveFromGame();
-                //DebugTAC_AI.Log("TACtical AI: IterateAndTryAttachBlock - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
+                //DebugTAC_AI.Log(KickStart.ModID + ": IterateAndTryAttachBlock - ATTACH ATTEMPT FAILED!  BLOCK MAY BE COMPROMISED!");
 
                 return false;
             }
@@ -1459,14 +1477,14 @@ namespace TAC_AI.AI
         public static bool AIBlockAttachRequest(Tank tank, RawBlockMem template, TankBlock canidate, bool mandatory)
         {
             bool success;
-            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
+            //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
             if (!ManNetwork.inst.IsMultiplayer())
             {
                 success = Singleton.Manager<ManLooseBlocks>.inst.RequestAttachBlock(tank, canidate, template.p, new OrthoRotation(template.r));
                 if (!success && mandatory)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": RequestAttachBlock - Failed to attach " + canidate.name + " at " + template.p);
-                    throw new Exception("TACtical_AI: a block that SHOULD be attached was rejected!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": RequestAttachBlock - Failed to attach " + canidate.name + " at " + template.p);
+                    throw new Exception(KickStart.ModID + ": a block that SHOULD be attached was rejected!");
                 }
             }
             else
@@ -1477,21 +1495,21 @@ namespace TAC_AI.AI
         {
             if (!ManNetwork.IsHost)
             {
-                DebugTAC_AI.Log("TACtical_AI: ASSERT: BlockAttachNetworkOverride - Called in non-host sitsuation!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ASSERT: BlockAttachNetworkOverride - Called in non-host sitsuation!");
                 return false;// CANNOT DO THIS WHEN NOT HOST OR ERROR 
             }
             bool attached = false;
             
             if (canidate == null)
             {
-                DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverride - BLOCK IS NULL!");
+                DebugTAC_AI.Log(KickStart.ModID + ": BlockAttachNetworkOverride - BLOCK IS NULL!");
             }
             else
             {
                 NetBlock netBlock = canidate.netBlock;
                 if (netBlock.IsNull())
                 {
-                    DebugTAC_AI.Log("TACtical_AI: BlockAttachNetworkOverride - NetBlock could not be found on AI block attach attempt!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": BlockAttachNetworkOverride - NetBlock could not be found on AI block attach attempt!");
                 }
                 else
                 {
@@ -1519,17 +1537,17 @@ namespace TAC_AI.AI
         {
             if (TechMemor.IsNull())
             {
-                DebugTAC_AI.Log("TACtical_AI: RepairLerp called with no valid DesignMemory!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp called with no valid DesignMemory!!!");
                 TechMemor = tank.gameObject.AddComponent<DesignMemory>();
                 TechMemor.Initiate();
                 return false;
             }
             int savedBCount = TechMemor.IterateReturnContents().Count;
             int cBCount = tank.blockman.IterateBlocks().Count();
-            //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
+            //DebugTAC_AI.Log(KickStart.ModID + ": saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount < cBCount)
             {
-                DebugTAC_AI.Log("TACtical_AI: Player AI " + tank.name + ":  New blocks were added without " +
+                DebugTAC_AI.Log(KickStart.ModID + ": Player AI " + tank.name + ":  New blocks were added without " +
                     "being saved before building.  Was the player messing with the Tech?");
                 TechMemor.SaveTech();
                 return false;
@@ -1542,7 +1560,7 @@ namespace TAC_AI.AI
         }
         private static bool RepairLerp(Tank tank, DesignMemory TechMemor, TankAIHelper thisInst, ref List<TankBlock> fBlocks, ref List<BlockTypes> typesMissing)
         {
-            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
+            //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to repair");
             if (ManNetwork.IsNetworked)
                 return RepairLerpInstant(tank, TechMemor, thisInst, ref fBlocks, ref typesMissing);
 
@@ -1550,7 +1568,7 @@ namespace TAC_AI.AI
                 return true;
             if (thisInst.UseInventory)
             {
-                //DebugTAC_AI.Log("TACtical AI: RepairLerp - Attempting to repair from inventory");
+                //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - Attempting to repair from inventory");
                 RawTechLoader.ResetSkinIDSet();
                 if (TechMemor.TrySpawnAndAttachBlockFromList(ref typesMissing, true))
                     return true;
@@ -1559,13 +1577,13 @@ namespace TAC_AI.AI
         }
         private static bool RepairLerpInstant(Tank tank, DesignMemory TechMemor, TankAIHelper thisInst, ref List<TankBlock> fBlocks, ref List<BlockTypes> typesMissing)
         {
-            //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Trying to repair");
+            //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Trying to repair");
 
             if (TechMemor.TryAttachExistingBlockFromListInst( ref typesMissing, ref fBlocks))
                 return true;
             if (thisInst.UseInventory)
             {
-                //DebugTAC_AI.Log("TACtical AI: RepairLerp - Attempting to repair from inventory");
+                //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - Attempting to repair from inventory");
                 RawTechLoader.ResetSkinIDSet();
                 if (TechMemor.TrySpawnAndAttachBlockFromListInst(ref typesMissing, true))
                     return true;
@@ -1651,7 +1669,7 @@ namespace TAC_AI.AI
 
                         if (!RepairLerp(tank, TechMemor, thisInst, ref fBlocks, ref typesMissing))
                         {
-                            //DebugTAC_AI.Log("TACtical_AI: AlliedRepairStepper - unknown error on RepairLerp for " + tank.name);
+                            //DebugTAC_AI.Log(KickStart.ModID + ": AlliedRepairStepper - unknown error on RepairLerp for " + tank.name);
                         } 
                         TechMemor.UpdateMissingBlockTypes(typesMissing);
                         thisInst.PendingDamageCheck = TechMemor.SystemsCheck();
@@ -1662,10 +1680,10 @@ namespace TAC_AI.AI
 
                     if (!thisInst.PendingDamageCheck && initialBlockCount != tank.blockman.blockCount)
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AlliedRepairStepper - Done for " + tank.name);
+                        DebugTAC_AI.Log(KickStart.ModID + ": AlliedRepairStepper - Done for " + tank.name);
                         thisInst.FinishedRepairEvent.Send(thisInst);
                     }
-                    //DebugTAC_AI.Log("TACtical AI: RepairStepper(" + tank.name + ") - Pending check: " + thisInst.PendingSystemsCheck);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": RepairStepper(" + tank.name + ") - Pending check: " + thisInst.PendingSystemsCheck);
                 }
             }
             else
@@ -1713,7 +1731,7 @@ namespace TAC_AI.AI
                     {
                         if (foundBlock.block.PreExplodePulse)
                             continue; //explode? no thanks
-                                      //DebugTAC_AI.Log("TACtical AI: RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
+                                      //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - block " + foundBlock.name + " has " + cBlocks.FindAll(delegate (TankBlock cand) { return cand.blockPoolID == foundBlock.block.blockPoolID; }).Count() + " matches");
                         if (TechMemor.IterateReturnContents().FindAll(delegate (RawBlockMem cand) { return cand.t == foundBlock.block.name; }).Count() > 0)
                         {
                             blocksNearby = true;
@@ -1782,7 +1800,7 @@ namespace TAC_AI.AI
                     }
                     catch
                     {
-                        DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Tried to repair but block " + blockType.ToString() + " was not found!");
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Tried to repair but block " + blockType.ToString() + " was not found!");
                     }
                 }
                 return false;
@@ -1827,7 +1845,7 @@ namespace TAC_AI.AI
                 }
                 catch
                 {
-                    DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Tried to repair but block " + blockType.ToString() + " was not found!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Tried to repair but block " + blockType.ToString() + " was not found!");
                 }
             }
             return isAvail;
@@ -1841,12 +1859,12 @@ namespace TAC_AI.AI
         }
         internal static void Turboconstruct(Tank tank, DesignMemory TechMemor, bool fullyCharge = true)
         {
-            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.IterateReturnContents().Count());
+            DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.IterateReturnContents().Count());
             int cBCount = tank.blockman.blockCount;
             int RepairAttempts = TechMemor.IterateReturnContents().Count() - cBCount + 3;
             if (TechMemor.IsNull())
             {
-                DebugTAC_AI.Log("TACtical_AI: TurboRepair called with no valid EnemyDesignMemory!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair called with no valid EnemyDesignMemory!!!");
                 TechMemor = tank.gameObject.AddComponent<DesignMemory>();
                 TechMemor.Initiate();
                 return;
@@ -1868,12 +1886,12 @@ namespace TAC_AI.AI
         }
         internal static void Turboconstruct(Tank tank, DesignMemory TechMemor, ref List<TankBlock> provided)
         {
-            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.IterateReturnContents().Count());
+            DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory: Turboconstructing " + tank.name + ", count " + TechMemor.IterateReturnContents().Count());
             int cBCount = tank.blockman.blockCount;
             int RepairAttempts = TechMemor.IterateReturnContents().Count() - cBCount + 3;
             if (TechMemor.IsNull())
             {
-                DebugTAC_AI.Log("TACtical_AI: TurboRepair called with no valid EnemyDesignMemory!!!");
+                DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair called with no valid EnemyDesignMemory!!!");
                 TechMemor = tank.gameObject.AddComponent<DesignMemory>();
                 TechMemor.Initiate();
                 return;
@@ -1895,12 +1913,12 @@ namespace TAC_AI.AI
         {
             int savedBCount = TechMemor.IterateReturnContents().Count;
             int cBCount = tank.blockman.blockCount;
-            //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
+            //DebugTAC_AI.Log(KickStart.ModID + ": saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount != cBCount)
             {
-                //DebugTAC_AI.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesMissing.Count());
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - Attempting to repair from infinity - " + typesMissing.Count());
                 if (!TechMemor.TrySpawnAndAttachBlockFromListInst(ref typesMissing, false, false))
-                    DebugTAC_AI.Log("TACtical AI: TurboRepair - attach attempt failed");
+                    DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - attach attempt failed");
             }
             return;
         }
@@ -1908,12 +1926,12 @@ namespace TAC_AI.AI
         {
             int savedBCount = TechMemor.IterateReturnContents().Count;
             int cBCount = tank.blockman.blockCount;
-            //DebugTAC_AI.Log("TACtical_AI: saved " + savedBCount + " vs remaining " + cBCount);
+            //DebugTAC_AI.Log(KickStart.ModID + ": saved " + savedBCount + " vs remaining " + cBCount);
             if (savedBCount != cBCount)
             {
-                //DebugTAC_AI.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesMissing.Count());
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - Attempting to repair from infinity - " + typesMissing.Count());
                 if (!TechMemor.TryAttachExistingBlockFromListInst(ref typesMissing, ref provided, false))
-                    DebugTAC_AI.Log("TACtical AI: TurboRepair - attach attempt failed");
+                    DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - attach attempt failed");
             }
             return;
         }
@@ -1927,7 +1945,7 @@ namespace TAC_AI.AI
         /// <param name="TechMemor"></param>
         public static void TurboconstructExt(Tank tank, List<RawBlockMem> Mem, bool fullyCharge = true)
         {
-            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
+            DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory: Turboconstructing " + tank.name);
             int cBCount = tank.blockman.blockCount;
             int RepairAttempts = Mem.Count() - cBCount + 3;
             try
@@ -1951,7 +1969,7 @@ namespace TAC_AI.AI
         /// <param name="TechMemor"></param>
         public static void TurboconstructExt(Tank tank, List<RawBlockMem> Mem, List<TankBlock> provided, bool fullyCharge = true)
         {
-            DebugTAC_AI.Log("TACtical_AI:  DesignMemory: Turboconstructing " + tank.name);
+            DebugTAC_AI.Log(KickStart.ModID + ":  DesignMemory: Turboconstructing " + tank.name);
             int cBCount = tank.blockman.blockCount;
             int RepairAttempts = Mem.Count() - cBCount + 3;
             try
@@ -1982,9 +2000,9 @@ namespace TAC_AI.AI
             if (savedBCount != cBCount)
             {
 
-                //DebugTAC_AI.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
                 if (!TrySpawnAndAttachBlockFromListExt(tank, Mem, ref typesMissing))
-                    DebugTAC_AI.Log("TACtical AI: TurboRepair - attach attempt failed");
+                    DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - attach attempt failed");
             }
             return;
         }
@@ -1996,9 +2014,9 @@ namespace TAC_AI.AI
             if (savedBCount != cBCount)
             {
 
-                //DebugTAC_AI.Log("TACtical AI: TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - Attempting to repair from infinity - " + typesToRepair.Count());
                 if (!TryAttachExistingBlockFromListExt(tank, Mem, ref typesMissing, ref provided))
-                    DebugTAC_AI.Log("TACtical AI: TurboRepair - attach attempt failed");
+                    DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - attach attempt failed");
             }
             return;
         }
@@ -2059,7 +2077,7 @@ namespace TAC_AI.AI
                     attachAttempts--;
                     continue;
                 }
-                //DebugTAC_AI.Log("TACtical AI: TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": TurboRepair - potental spots " + posBlocks.Count + " for block " + foundBlock.name);
                 for (int step2 = 0; step2 < posBlocks.Count; step2++)
                 {
                     RawBlockMem template = posBlocks.ElementAt(step2);
@@ -2077,7 +2095,7 @@ namespace TAC_AI.AI
         public static bool TryAttachExistingBlockFromListExt(Tank tank, List<RawBlockMem> mem, ref List<BlockTypes> typesMissing, ref List<TankBlock> foundBlocks, bool denySD = false)
         {
             int attachAttempts = foundBlocks.Count();
-            //DebugTAC_AI.Log("TACtical AI: RepairLerp - Found " + attachAttempts + " loose blocks to use");
+            //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - Found " + attachAttempts + " loose blocks to use");
             for (int step = 0; step < attachAttempts; step++)
             {
                 TankBlock foundBlock = foundBlocks[step];
@@ -2089,7 +2107,7 @@ namespace TAC_AI.AI
                 int hash = foundBlock.name.GetHashCode();
                 List<RawBlockMem> posBlocks = mem.FindAll(delegate (RawBlockMem cand) { return cand.t.GetHashCode() == hash;});
                 int count = posBlocks.Count;
-                //DebugTAC_AI.Log("TACtical AI: RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RepairLerp - potental spots " + posBlocks.Count + " for block " + foundBlock);
                 for (int step2 = 0; step2 < count; step2++)
                 {
                     RawBlockMem template = posBlocks.ElementAt(step2);
@@ -2109,7 +2127,7 @@ namespace TAC_AI.AI
         }
         private static bool AttemptBlockAttachExt(Tank tank, RawBlockMem template, TankBlock canidate)
         {
-            //DebugTAC_AI.Log("TACtical_AI: (AttemptBlockAttachExt) AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
+            //DebugTAC_AI.Log(KickStart.ModID + ": (AttemptBlockAttachExt) AI " + tank.name + ":  Trying to attach " + canidate.name + " at " + template.CachePos);
             return AIBlockAttachRequest(tank, template, canidate, false);
         }
 
@@ -2125,12 +2143,12 @@ namespace TAC_AI.AI
                 string blockSaved = mem.IterateReturnContents().FirstOrDefault().t;
                 if (blockCurrent != blockSaved)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Expected " + blockSaved + " at 0,0,0 local blockman, found " + (blockCurrent.NullOrEmpty() ? "NO BLOCK" : blockCurrent.ToString()) + " instead.");
+                    DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Expected " + blockSaved + " at 0,0,0 local blockman, found " + (blockCurrent.NullOrEmpty() ? "NO BLOCK" : blockCurrent.ToString()) + " instead.");
                 }
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ":  Block Hierachy compromised!");
+                DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Block Hierachy compromised!");
             }
         }
     }

@@ -140,6 +140,7 @@ namespace TAC_AI
         //-------------------------------------
         // SPAWNING
         public const int SmolTechBlockThreshold = 24;
+        public const int DefenderWeaponCount = 12;
         public const int HomingWeaponCount = 25;
         public const int BossTechSize = 150;
         public const int LethalTechSize = 256;
@@ -368,7 +369,7 @@ namespace TAC_AI
         public const float SpacingRangeHoverer = 18;
 
         // Non-Player Base Checks
-        public static bool StartingBasesAreAirdropped = true;
+        public static bool StartingBasesAreAirdropped = false;
         public const float EnemyBaseMakerChance = 25;
         public const float StartBaseMinSpacing = 450;
         public static bool AllowInfAutominers = true;
@@ -446,7 +447,7 @@ namespace TAC_AI
                 catch (Exception e)
                 {
                     SceneTechCount = 0;
-                    DebugTAC_AI.Log("TACtical_AI: AtSceneTechMax() - Error on IterateTechs Fetch");
+                    DebugTAC_AI.Log(KickStart.ModID + ": AtSceneTechMax() - Error on IterateTechs Fetch");
                     DebugTAC_AI.Log(e);
                 }
             }
@@ -463,7 +464,7 @@ namespace TAC_AI
                 catch (Exception e)
                 {
                     SceneTechCount = 0;
-                    DebugTAC_AI.Log("TACtical_AI: BeyondSceneTechMax() - Error on IterateTechs Fetch");
+                    DebugTAC_AI.Log(KickStart.ModID + ": BeyondSceneTechMax() - Error on IterateTechs Fetch");
                     DebugTAC_AI.Log(e);
                 }
             }
@@ -638,7 +639,7 @@ namespace TAC_AI
                 AllySavedOver = true;
             }
             AltUI.PopupCustomInfo(text, pos, AllyOverEdit);
-            //DebugTAC_AI.Log("TACtical_AI: PopupAllyInfo - Threw popup \"" + text + "\"");
+            //DebugTAC_AI.Log(KickStart.ModID + ": PopupAllyInfo - Threw popup \"" + text + "\"");
         }
     }
 }

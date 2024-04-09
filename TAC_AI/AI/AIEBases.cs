@@ -22,7 +22,7 @@ namespace TAC_AI.AI
             try
             {
                 if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tech.boundsCentreWorld))
-                    DebugTAC_AI.Assert("TACtical_AI: BaseConstructTech - Spawning Tech is out of world playable bounds at " +
+                    DebugTAC_AI.Assert(KickStart.ModID + ": BaseConstructTech - Spawning Tech is out of world playable bounds at " +
                         tech.boundsCentreWorld.ToString() + " this should not be possible");
                 if (FindNewExpansionBase(tech, tech.boundsCentreWorld + (tech.rootBlockTrans.forward * 64), out Vector3 pos, true))
                 {
@@ -32,19 +32,18 @@ namespace TAC_AI.AI
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: BaseConstructTech - game is being stubborn " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": BaseConstructTech - game is being stubborn " + e);
             }
         }
         internal static void SetupBookmarkBuilder(TankAIHelper helper)
         {
-            BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
-            if (builder)
+            if (BookmarkBuilder.TryGet(helper.tank, out BookmarkBuilder builder))
             {
                 helper.AILimitSettings.OverrideForBuilder(true);
 
                 helper.InsureTechMemor("SetupBookmarkBuilder", false);
 
-                DebugTAC_AI.Log("TACtical_AI: Tech " + helper.tank.name + " Setup for SetupTechAutoConstruction");
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + helper.tank.name + " Setup for SetupTechAutoConstruction");
                 helper.TechMemor.SetupForNewTechConstruction(helper, builder.blueprint);
                 if (builder.instant)
                 {
@@ -55,8 +54,7 @@ namespace TAC_AI.AI
         }
         internal static bool CheckIfTechNeedsToBeBuilt(TankAIHelper helper)
         {
-            BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
-            if (builder)
+            if (BookmarkBuilder.Exists(helper.tank))
             {
                 helper.AILimitSettings.OverrideForBuilder();
                 helper.AISetSettings.OverrideForBuilder();
@@ -67,10 +65,9 @@ namespace TAC_AI.AI
         }
         internal static void SetupTechAutoConstruction(TankAIHelper helper)
         {
-            BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
-            if (builder)
+            if (BookmarkBuilder.TryGet(helper.tank, out BookmarkBuilder builder))
             {
-                DebugTAC_AI.Log("TACtical_AI: Tech " + helper.tank.name + 
+                DebugTAC_AI.Log(KickStart.ModID + ": Tech " + helper.tank.name + 
                     " Setup for SetupTechAutoConstruction with string length " + builder.blueprint.Count());
                 helper.TechMemor.SetupForNewTechConstruction(helper, builder.blueprint);
                 if (builder.instant)
@@ -82,12 +79,13 @@ namespace TAC_AI.AI
         }
         internal static void OnFinishTechAutoConstruction(TankAIHelper helper)
         {
-            BookmarkBuilder builder = helper.GetComponent<BookmarkBuilder>();
-            if (builder)
+            if (BookmarkBuilder.Remove(helper.tank))
             {
-                UnityEngine.Object.DestroyImmediate(builder);
                 helper.ForceRebuildAlignment();
             }
+            else
+                DebugTAC_AI.LogError("OnFinishTechAutoConstruction expected the blueprint to be registered in BookmarkedPlans" + 
+                    ", but it was not present in there?  Did we remove it earlier???");
         }
 
         private static Vector3[] location = new Vector3[9];

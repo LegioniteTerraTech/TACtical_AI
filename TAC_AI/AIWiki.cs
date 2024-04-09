@@ -7,6 +7,9 @@ using TerraTechETCUtil;
 using TAC_AI.AI;
 using TAC_AI.Templates;
 using TAC_AI.World;
+using System.Diagnostics;
+using RandomAdditions;
+using System.IO;
 
 namespace TAC_AI
 {
@@ -14,6 +17,7 @@ namespace TAC_AI
     {
         private static string modID => KickStart.ModID;
         private static Sprite lineSPrite;
+        private static Sprite nullSprite;
         private static WikiPageInfo RTSJump;
         private static bool Expandable1 = false;
         private static bool Expandable2 = false;
@@ -25,11 +29,13 @@ namespace TAC_AI
             var tex = (Texture2D)ManPlayerRTS.GetLineMat().mainTexture;
             lineSPrite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
                 RawTechExporter.GuardAIIcon.pivot);
+            nullSprite = ManUI.inst.GetSprite(ObjectTypes.Block, -1);
             InitMechanics();
             InitTypes();
             InitModes();
+            InitHelpers();
         }
-        internal static void InitMechanics()
+        private static void InitMechanics()
         {
             ManIngameWiki.WikiPageGroup AITypesGrouper = new ManIngameWiki.WikiPageGroup(modID,
                "Mechanics", RawTechExporter.aiIconsEnemy[AI.Enemy.EnemySmarts.Meh]);
@@ -43,7 +49,62 @@ namespace TAC_AI
             new WikiPageInfo(modID, "Enemy Sieges", RawTechExporter.aiIconsEnemy[AI.Enemy.EnemySmarts.Meh],
                 PageSieges, AITypesGrouper);
         }
-        internal static void PageEnemies()
+
+        private static void InitHelpers()
+        {
+            new WikiPageInfo(modID, "Tools", nullSprite, PageTools);
+        }
+        internal static void OpenInExplorer(string directory)
+        {
+            switch (SystemInfo.operatingSystemFamily)
+            {
+                case OperatingSystemFamily.MacOSX:
+                    Process.Start(new ProcessStartInfo("file://" + directory));
+                    break;
+                case OperatingSystemFamily.Linux:
+                case OperatingSystemFamily.Windows:
+                    Process.Start(new ProcessStartInfo("explorer.exe", directory));
+                    break;
+                default:
+                    throw new Exception("This operating system is UNSUPPORTED by RandomAdditions");
+            }
+        }
+        internal static void PageTools()
+        {
+            AltUI.Sprite(nullSprite, AltUI.TextfieldBorderedBlue, GUILayout.Height(128), GUILayout.Width(128));
+
+            GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
+            GUILayout.Label("RawTech Files", AltUI.LabelBlueTitle);
+
+            if (DebugRawTechSpawner.CanOpenDebugSpawnMenu)
+            {
+                if (GUILayout.Button("Population Exporter", AltUI.ButtonBlueLarge))
+                    DebugRawTechSpawner.LaunchSubMenuClickable();
+            }
+            else
+            {
+                if (GUILayout.Button("Population Exporter(Only In Creative/R&D)", AltUI.ButtonGreyLarge))
+                { 
+                }
+            }
+            if (GUILayout.Button("Reload ALL Raw Techs", AltUI.ButtonBlueLarge))
+            {
+                RawTechExporter.inst.ReloadRawTechLoader();
+            }
+            if (GUILayout.Button("Open Raw Techs", AltUI.ButtonOrangeLarge))
+            {
+                string path = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "Raw Techs");
+                if (!Directory.Exists(path))
+                    Directory.CreateDirectory(path);
+                OpenInExplorer(path);
+            }
+            GUILayout.EndVertical();
+        }
+
+        /// <summary>
+        /// INCOMPLETE
+        /// </summary>
+        private static void PageEnemies()
         {
             GUILayout.BeginHorizontal();
             AltUI.Sprite(RawTechExporter.aiIconsEnemy[AI.Enemy.EnemySmarts.IntAIligent], AltUI.TextfieldBorderedBlue, GUILayout.Height(128), GUILayout.Width(128));
@@ -79,9 +140,9 @@ namespace TAC_AI
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText +
-                "Intrepid Prospectors" + AltUI.UIEndColor + " are very mobile prospectors that can " +
-                AltUI.UIEnemyText + "attack" + AltUI.UIEndColor + " you by surpise." +
-                "\n\n  Early-game they have no interest, but late-game they may begin to strike!", AltUI.LabelWhite);
+                "Non-Player Prospectors" + AltUI.UIEndColor + " now think more intelligently, and can build and " +
+                AltUI.UIEnemyText + "destroy" + AltUI.UIEndColor + " others, and maybe even you as well!" +
+                "\n\n  Early-game they may be weak, but later on expect fierce competition!", AltUI.LabelWhite);
 
             GUILayout.Label("Aggression Grades:", AltUI.LabelRedTitle);
             GUILayout.BeginVertical(AltUI.TextfieldBordered);
@@ -107,7 +168,7 @@ namespace TAC_AI
             GUILayout.EndVertical();
 
         }
-        internal static void PageAirborne()
+        private static void PageAirborne()
         {
             GUILayout.BeginHorizontal();
             AltUI.Sprite(RawTechExporter.aiIcons[AIType.Aviator], AltUI.TextfieldBorderedBlue, GUILayout.Height(128), GUILayout.Width(128));
@@ -171,7 +232,7 @@ namespace TAC_AI
             GUILayout.EndVertical();
 
         }
-        internal static void PageRTSGoHereDesc()
+        private static void PageRTSGoHereDesc()
         {
             GUILayout.Label("AKA: Drive To, Move Command", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -192,12 +253,16 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageRTS()
+        private static void PageRTS()
         {
             GUILayout.Label("Go Here", AltUI.LabelBlackTitle);
             PageRTSGoHereDesc();
         }
-        internal static void PageBases()
+
+        /// <summary>
+        /// INCOMPLETE
+        /// </summary>
+        private static void PageBases()
         {
             GUILayout.Label("AKA: Founders, Siegers", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -233,8 +298,8 @@ namespace TAC_AI
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText +
-                "Rival Prospectors" + AltUI.UIEndColor + " will appear every now and then to " +
-                AltUI.UIEnemyText + "challenge" + AltUI.UIEndColor + " your turf by setting up close or within it." +
+                "Rival Prospectors" + AltUI.UIEndColor + " can build " +
+                AltUI.UIEnemyText + "bases" + AltUI.UIEndColor + " around your turf." +
                 " They will then continue to expand, " +
                 (KickStart.AllowEnemiesToMine ? "mining out your area  " : "attacking your " + AltUI.UIBlueText + "Techs" + AltUI.UIEndColor) +
                 " to stake YOUR claim as their own.  Beware, even if you run away, they can still launch attacks from afar.\n\n" +
@@ -244,7 +309,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageSieges()
+        private static void PageSieges()
         {
             GUILayout.Label("AKA: White Banner, \"Invasion\"", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -293,7 +358,7 @@ namespace TAC_AI
         }
 
 
-        internal static void InitTypes()
+        private static void InitTypes()
         {
             ManIngameWiki.WikiPageGroup AITypesGrouper = new ManIngameWiki.WikiPageGroup(modID,
                "A.I. Drivers", RawTechExporter.aiIcons[AIType.Escort]);
@@ -302,7 +367,7 @@ namespace TAC_AI
             new WikiPageInfo(modID, "Rocket", RawTechExporter.aiIcons[AIType.Astrotech], PageSpace, AITypesGrouper);
             new WikiPageInfo(modID, "Ship", RawTechExporter.aiIcons[AIType.Buccaneer], PageSea, AITypesGrouper);
         }
-        internal static void PageTank()
+        private static void PageTank()
         {
             GUILayout.Label("AKA: Car, Vehicle", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -324,7 +389,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageAir()
+        private static void PageAir()
         {
             GUILayout.Label("AKA: Plane, Rotorcraft", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -356,7 +421,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageSpace()
+        private static void PageSpace()
         {
             GUILayout.Label("AKA: Spaceship, Antigrav", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -383,7 +448,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageSea()
+        private static void PageSea()
         {
             GUILayout.Label("AKA: Warship, Floater", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -412,7 +477,7 @@ namespace TAC_AI
             GUILayout.EndVertical();
         }
 
-        internal static void InitModes()
+        private static void InitModes()
         {
             ManIngameWiki.WikiPageGroup AITypesGrouper = new ManIngameWiki.WikiPageGroup(modID,
                "A.I. Modes", RawTechExporter.GuardAIIcon);
@@ -427,7 +492,7 @@ namespace TAC_AI
             new WikiPageInfo(modID, "Turret", RawTechExporter.aiIcons[AIType.MTTurret], PageTurret, AITypesGrouper);
             new WikiPageInfo(modID, "Mimic", RawTechExporter.aiIcons[AIType.MTMimic], PageMimic, AITypesGrouper);
         }
-        internal static void PageEscort()
+        private static void PageEscort()
         {
             GUILayout.Label("AKA: Follow, Guard", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -447,7 +512,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageGoHere()
+        private static void PageGoHere()
         {
             PageRTSGoHereDesc();
             if (GUILayout.Button("Jump To RTS Section", AltUI.ButtonOrangeLarge, GUILayout.Height(40)))
@@ -455,7 +520,7 @@ namespace TAC_AI
                 RTSJump.GoHere();
             }
         }
-        internal static void PageMine()
+        private static void PageMine()
         {
             GUILayout.Label("AKA: Mine, Prospector", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -473,7 +538,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageAegis()
+        private static void PageAegis()
         {
             GUILayout.Label("AKA: Defend Others, Watchdog", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -497,7 +562,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageAssault()
+        private static void PageAssault()
         {
             GUILayout.Label("AKA: Assault, Raider", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -516,7 +581,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageScrapper()
+        private static void PageScrapper()
         {
             GUILayout.Label("AKA: Collect blocks, Scrapper", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -535,7 +600,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageEnergizer()
+        private static void PageEnergizer()
         {
             GUILayout.Label("AKA: Tech Recharger, Energizer", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -554,7 +619,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageMultiTech()
+        private static void PageMultiTech()
         {
             GUILayout.Label("The universal " + AltUI.UIObjectiveMarkerText + "Attach Point System" + AltUI.UIEndColor +
                 " has a 64 length-width-height limit due to structual issues.\n\n  " + AltUI.UIObjectiveMarkerText +
@@ -568,7 +633,7 @@ namespace TAC_AI
                  AltUI.UIObjectiveMarkerText + "Multi-Techs" + AltUI.UIEndColor + " are the future of bigger Techs. ", 
                  AltUI.LabelWhite);
         }
-        internal static void PageStatic()
+        private static void PageStatic()
         {
             GUILayout.Label("AKA: Multi-Tech Segment", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -584,7 +649,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageTurret()
+        private static void PageTurret()
         {
             GUILayout.Label("AKA: Multi-Tech Turret", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();
@@ -600,7 +665,7 @@ namespace TAC_AI
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
-        internal static void PageMimic()
+        private static void PageMimic()
         {
             GUILayout.Label("AKA: Multi-Tech Relay", AltUI.LabelBlackTitle);
             GUILayout.BeginHorizontal();

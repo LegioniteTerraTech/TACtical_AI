@@ -196,7 +196,7 @@ namespace TAC_AI.AI.Enemy
                     isMelee = true;
                     break;
             }
-            //DebugTAC_AI.Log("TACtical_AI: Enemy AI " + tank.name + " Combat type " + sortList.ElementAt(0).Value + " | " + sortList.ElementAt(1).Value);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + " Combat type " + sortList.ElementAt(0).Value + " | " + sortList.ElementAt(1).Value);
 
             // Determine based on Tech Size and driving class:
             // Because we want the combat to not be irritating, circle should only be used if the player has target leading

@@ -68,13 +68,13 @@ namespace TAC_AI
             //OverridePlayerTechOnWaterLanding
             private static void PlayerRespawned_Postfix()
             {
-                DebugTAC_AI.Log("TACtical_AI: Player respawned");
+                DebugTAC_AI.Log(KickStart.ModID + ": Player respawned");
                 if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Precheck validated");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Precheck validated");
                     if (AI.Movement.AIEPathing.AboveTheSea(Singleton.playerTank.boundsCentreWorld))
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Attempting retrofit");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Attempting retrofit");
                         PlayerSpawnAid.TryBotePlayerSpawn();
                     }
                 }
@@ -128,11 +128,11 @@ namespace TAC_AI
             //PatchTankBeamToHelpAI - Give the AI some untangle help
             private static void OnUpdate_Postfix(TankBeam __instance)
             {
-                //DebugTAC_AI.Log("TACtical_AI: Patched TankBeam Update(TankAIHelper)");
+                //DebugTAC_AI.Log(KickStart.ModID + ": Patched TankBeam Update(TankAIHelper)");
                 if (__instance.IsActive && !ManNetwork.IsNetworked && !ManGameMode.inst.IsCurrent<ModeSumo>())
                 {
                     var helper = __instance.GetComponent<TankAIHelper>();
-                    if (helper != null && (!helper.tank.PlayerFocused || (ManPlayerRTS.autopilotPlayer && ManPlayerRTS.PlayerIsInRTS)))
+                    if (helper != null && (!helper.tank.PlayerFocused || KickStart.AutopilotPlayer))
                     {
                         if (helper.AIAlign != AIAlignment.Static && (helper.AIAlign != AIAlignment.Player || helper.ActuallyWorks))
                         {

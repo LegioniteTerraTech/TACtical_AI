@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
 using TerraTechETCUtil;
+using System.IO;
 
 namespace TAC_AI.Templates
 {
@@ -26,7 +27,7 @@ namespace TAC_AI.Templates
 
         public static List<RawTechTemplate> ExternalEnemyTechsAll;
 
-        public static void ValidateAndAddTechs(List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile)
+        private static void ValidateAndAddTechs(List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile)
         {
             foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in preCompile)
             {
@@ -36,7 +37,7 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    DebugTAC_AI.Log("TACtical_AI: Could not load " + pair.Value.techName + " as the load operation encountered an error");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Could not load " + pair.Value.techName + " as the load operation encountered an error");
                 }
             }
             CommunityCluster.Organize(ref techBases);
@@ -68,11 +69,28 @@ namespace TAC_AI.Templates
             techBases = new Dictionary<SpawnBaseTypes, RawTechTemplate>();
             List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
 
-            preCompile.AddRange(SpecialAISpawner.ReturnAllBaseGameSpawns());
-            preCompile.AddRange(CommunityStorage.ReturnAllCommunityStored(reloadPublic));
-            preCompile.AddRange(TempStorage.techBasesPrefab);
-            ValidateAndAddTechs(preCompile);
-            InvokeHelper.Invoke(DelayedValidateAndAddBaseGameTechs, 3);
+            try
+            {
+                preCompile.AddRange(SpecialAISpawner.ReturnAllBaseGameSpawns());
+                preCompile.AddRange(CommunityStorage.ReturnAllCommunityStored(reloadPublic));
+                preCompile.AddRange(TempStorage.techBasesPrefab);
+                ValidateAndAddTechs(preCompile);
+                InvokeHelper.Invoke(DelayedValidateAndAddBaseGameTechs, 3);
+            }
+            catch (InsufficientMemoryException)
+            {
+                preCompile.Clear(); // GC, do your duty
+                GC.Collect(); // Do it NOW IT'S AN EMERGENCY
+                DebugTAC_AI.FatalError("Advanced AI ran COMPLETELY OUT of memory when loading enemy spawns." +
+                    " Some enemies might be corrupted!");
+            }
+            catch (OutOfMemoryException)
+            {
+                preCompile.Clear(); // GC, do your duty
+                GC.Collect(); // Do it NOW IT'S AN EMERGENCY
+                DebugTAC_AI.FatalError("Advanced AI ran out of memory when loading enemy spawns." +
+                    " Some enemies might be corrupted!");
+            }
         }
         public static void ValidateAndAddAllExternalTechs(bool force = false)
         {
@@ -91,10 +109,10 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Could not load local RawTech " + raw.techName + " as the load operation encountered an error");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Could not load local RawTech " + raw.techName + " as the load operation encountered an error");
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: Pushed " + ExternalEnemyTechsLocal.Count + " RawTechs from the Local pool");
+                DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExternalEnemyTechsLocal.Count + " RawTechs from the Local pool");
                 lastExtLocalCount = tCount;
 
 
@@ -108,17 +126,17 @@ namespace TAC_AI.Templates
                     }
                     else
                     {
-                        DebugTAC_AI.Log("TACtical_AI: Could not load ModBundle RawTech " + raw.techName + " as the load operation encountered an error");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Could not load ModBundle RawTech " + raw.techName + " as the load operation encountered an error");
                     }
                 }
-                DebugTAC_AI.Log("TACtical_AI: Pushed " + ExternalEnemyTechsMods.Count + " RawTechs from the Mod pool");
+                DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExternalEnemyTechsMods.Count + " RawTechs from the Mod pool");
                 lastExtModCount = tMCount;
 
 
                 ExternalEnemyTechsAll = new List<RawTechTemplate>();
                 ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsLocal);
                 ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsMods);
-                DebugTAC_AI.Log("TACtical_AI: Pushed a total of " + ExternalEnemyTechsAll.Count + " to the external tech pool.");
+                DebugTAC_AI.Log(KickStart.ModID + ": Pushed a total of " + ExternalEnemyTechsAll.Count + " to the external tech pool.");
                 DebugRawTechSpawner.Organize(ref ExternalEnemyTechsLocal);
                 DebugRawTechSpawner.Organize(ref ExternalEnemyTechsMods);
             }
@@ -140,7 +158,7 @@ namespace TAC_AI.Templates
             {
                 foreach (char ch in toLoad)
                 {
-                    if (ch != RawTechExporter.up.ToCharArray()[0])
+                    if (ch != Path.DirectorySeparatorChar)
                     {
                         SB.Append(ch);
                     }
@@ -167,16 +185,13 @@ namespace TAC_AI.Templates
                 catch
                 {
                     SB.Clear();
-                    DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTech - Loading error - File was edited or corrupted!");
-                    greatestFaction = FactionLevel.GSO;
-                    return false;
+                    throw new Exception("File was edited or corrupted.");
                 }
                 bool valid = true;
                 if (mem.Count == 0)
                 {
                     greatestFaction = FactionLevel.GSO;
-                    DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - FAILED as no blocks were present!");
-                    return false;
+                    throw new Exception("No blocks were present on the Tech.  Nothing could be placed at all.");
                 }
                 int basePrice = 0;
                 foreach (RawBlockMem bloc in mem)
@@ -192,18 +207,25 @@ namespace TAC_AI.Templates
                     FactionLevel FL = RawTechUtil.GetFactionLevel(FST);
                     if (FL >= FactionLevel.ALL)
                     {
-                        if (ManMods.inst.IsModdedCorp(FST))
+                        try
                         {
-                            ModdedCorpDefinition MCD = ManMods.inst.GetCorpDefinition(FST);
-                            if (Enum.TryParse(MCD.m_RewardCorp, out FactionSubTypes FST2))
+                            if (ManMods.inst.IsModdedCorp(FST))
                             {
-                                FST = FST2;
+                                ModdedCorpDefinition MCD = ManMods.inst.GetCorpDefinition(FST);
+                                if (Enum.TryParse(MCD.m_RewardCorp, out FactionSubTypes FST2))
+                                {
+                                    FST = FST2;
+                                }
+                                else
+                                    throw new InvalidOperationException("Block with invalid m_RewardCorp - \nBlockType: " + type.ToString());
                             }
                             else
-                                throw new Exception("There's a block given that has an invalid corp \nBlockType: " + type);
+                                throw new InvalidOperationException("Block with invalid corp - \nCorp Level: " + FL.ToString() + " \nBlockType: " + type.ToString());
                         }
-                        else
-                            throw new Exception("There's a block given that has an invalid corp \nCorp: " + FL + " \nBlockType: " + type);
+                        catch (InvalidOperationException)
+                        {
+                            throw new Exception("Block with invalid data - \nBlockType: <?NULL?>");
+                        }
                     }
                     if (greatestFaction < FL)
                         greatestFaction = FL;
@@ -222,7 +244,14 @@ namespace TAC_AI.Templates
             catch
             {
                 SB.Clear();
-                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
+                try
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech " + templateToCheck.techName + " was corrupted via unexpected mod changes!");
+                }
+                catch (Exception)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech <?NULL?> was corrupted via unexpected mod changes!");
+                }
                 return false;
             }
         }
@@ -238,7 +267,7 @@ namespace TAC_AI.Templates
             {
                 if (toScreen.Count == 0)
                 {
-                    DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTechAndPurgeIfNeeded - FAILED as no blocks were present!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTechAndPurgeIfNeeded - FAILED as no blocks were present!");
                     return false;
                 }
                 bool valid = true;
@@ -258,7 +287,7 @@ namespace TAC_AI.Templates
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
                 return false; 
             }
         }
@@ -272,7 +301,7 @@ namespace TAC_AI.Templates
             {
                 foreach (char ch in toLoad)
                 {
-                    if (ch != RawTechExporter.up.ToCharArray()[0])
+                    if (ch != Path.DirectorySeparatorChar)
                     {
                         SB.Append(ch);
                     }
@@ -313,13 +342,13 @@ namespace TAC_AI.Templates
                 catch
                 {
                     SB.Clear();
-                    DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTechStrict - Loading error(2) - File was edited or corrupted!");
+                    DebugTAC_AI.Assert(true, KickStart.ModID + ": ValidateBlocksInTechStrict - Loading error(2) - File was edited or corrupted!");
                     return false;
                 }
             }
             catch { 
                 SB.Clear();
-                DebugTAC_AI.Assert(true, "TACtical_AI: ValidateBlocksInTechStrict - Loading error(1) - File was edited or corrupted!");
+                DebugTAC_AI.Assert(true, KickStart.ModID + ": ValidateBlocksInTechStrict - Loading error(1) - File was edited or corrupted!");
                 return false;
             }
             return valid;

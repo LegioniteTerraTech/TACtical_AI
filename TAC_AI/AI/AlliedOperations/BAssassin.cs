@@ -29,7 +29,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.4f)
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Falling back to base! Charge " + (state.storageTotal - state.spareCapacity).ToString());
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Falling back to base! Charge " + (state.storageTotal - state.spareCapacity).ToString());
                     thisInst.CollectedTarget = false;
                     thisInst.actionPause = reverseFromResourceTime;
                 }
@@ -38,7 +38,7 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.95f)
                 {
-                    //DebugTAC_AI.Log("TACtical_AI: AI " + tank.name + ": Charged up and ready to attack!");
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Charged up and ready to attack!");
                     thisInst.CollectedTarget = true;
                     thisInst.actionPause = AIGlobals.ReverseDelay;
                 }

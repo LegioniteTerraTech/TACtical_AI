@@ -39,7 +39,7 @@ namespace TAC_AI.AI
             }
             catch
             {
-                DebugTAC_AI.Log("TACtical_AI: WeaponDirector - Error on handling");
+                DebugTAC_AI.Log(KickStart.ModID + ": WeaponDirector - Error on handling");
             }
         }
 
@@ -50,7 +50,7 @@ namespace TAC_AI.AI
             {
                 if (!thisInst.FIRE_ALL && thisInst.AIAlign == AIAlignment.Player && 
                     !ManNetwork.IsNetworked && AIGlobals.PlayerClientFireCommand() &&
-                    ManPlayerRTS.inst.LocalPlayerTechsControlledFast.Contains(thisInst))
+                    ManPlayerRTS.inst.LocalPlayerTechsControlled.Contains(thisInst))
                     thisInst.FIRE_ALL = true;
 
                 if (thisInst.IsMultiTech)
@@ -80,7 +80,7 @@ namespace TAC_AI.AI
                     {
                         try
                         {
-                            //DebugTAC_AI.Log("TACtical_AI:Trying to shoot at " + thisInst.Obst.name);
+                            //DebugTAC_AI.Log(KickStart.ModID + ":Trying to shoot at " + thisInst.Obst.name);
                             thisInst.ActiveAimState = AIWeaponState.Obsticle;
                             thisControl.m_Weapons.AimAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
                             if (thisInst.FIRE_ALL)
@@ -88,7 +88,7 @@ namespace TAC_AI.AI
                         }
                         catch
                         {
-                            DebugTAC_AI.Log("TACtical_AI: WeaponDirector - Crash on targeting scenery");
+                            DebugTAC_AI.Log(KickStart.ModID + ": WeaponDirector - Crash on targeting scenery");
                         }
                         try
                         {
@@ -99,7 +99,7 @@ namespace TAC_AI.AI
                         }
                         catch
                         {
-                            DebugTAC_AI.Log("TACtical_AI: Obst HAS NO DAMAGEABLE");
+                            DebugTAC_AI.Log(KickStart.ModID + ": Obst HAS NO DAMAGEABLE");
                         }
                     }
                 }

@@ -311,7 +311,7 @@ namespace TAC_AI
 
         internal void ManageBases()
         {
-            NP_Presence presence = ManEnemyWorld.GetTeam(Team);
+            NP_Presence_Automatic presence = ManEnemyWorld.GetTeam(Team);
             if (presence != null)
                 UnloadedBases.TryUnloadedBaseOperations(presence);
             if (HQ != null)
@@ -705,11 +705,11 @@ namespace TAC_AI
                     }
                 }
                 if (count > 0)
-                    DebugTAC_AI.Log("TACtical_AI: MigrateTeamsToNewSaveFormat Handled " + count + " Techs");
+                    DebugTAC_AI.Log(KickStart.ModID + ": MigrateTeamsToNewSaveFormat Handled " + count + " Techs");
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("TACtical_AI: MigrateTeamsToNewSaveFormat FAILED at " + count + " Techs - " + e);
+                DebugTAC_AI.Log(KickStart.ModID + ": MigrateTeamsToNewSaveFormat FAILED at " + count + " Techs - " + e);
             }
         }
 
