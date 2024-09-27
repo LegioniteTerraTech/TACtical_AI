@@ -12,7 +12,7 @@ namespace TAC_AI.World
 {
     public class UnloadedBases
     {
-        public static NP_BaseUnit RefreshTeamMainBaseIfAnyPossible(NP_Presence_Automatic EP)
+        public static NP_BaseUnit RefreshTeamMainBaseIfAnyPossible(NP_Presence EP)
         {
             if (EP.EBUs.Count == 0)
             {
@@ -62,7 +62,7 @@ namespace TAC_AI.World
             }
         }
 
-        public static bool HasTooMuchOfType(NP_Presence_Automatic EP, BasePurpose purpose)
+        public static bool HasTooMuchOfType(NP_Presence EP, BasePurpose purpose)
         {
             int Count = 0;
             int Team = EP.Team;
@@ -82,7 +82,7 @@ namespace TAC_AI.World
             {
                 switch (purpose) {
                     case BasePurpose.HasReceivers:
-                        if (EBU.canHarvest)
+                        if (EBU.handlesChunks)
                             Count++;
                         break;
                     case BasePurpose.Autominer:
@@ -142,7 +142,7 @@ namespace TAC_AI.World
                 dist = ManEnemyWorld.BaseSightRadius;
             GetScannedTilesAtCoord(EP, scanPos, dist);
         }
-        public static void GetScannedTilesAtCoord(NP_Presence_Automatic EP, IntVector2 scanPos, int sightRadTiles = ManEnemyWorld.UnitSightRadius)
+        public static void GetScannedTilesAtCoord(NP_Presence EP, IntVector2 scanPos, int sightRadTiles = ManEnemyWorld.UnitSightRadius)
         {
             if (EP.attackStarted || EP.scannedPositions.Contains(scanPos))
                 return;
@@ -177,7 +177,7 @@ namespace TAC_AI.World
             }
             //DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCachFetch - Scanned a total of " + numScanned);
         }
-        internal static bool SearchPatternCacheNoSort(NP_Presence_Automatic EP, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
+        internal static bool SearchPatternCacheNoSort(NP_Presence EP, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
         {
             tilePosEnemy = IntVector2.zero;
             foreach (IntVector2 IV2 in SearchedTiles)
@@ -191,7 +191,7 @@ namespace TAC_AI.World
             }
             return false;
         }
-        internal static bool SearchPatternCacheSort(NP_Presence_Automatic EP, IntVector2 tilePos, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
+        internal static bool SearchPatternCacheSort(NP_Presence EP, IntVector2 tilePos, HashSet<IntVector2> SearchedTiles, out IntVector2 tilePosEnemy)
         {
             tilePosEnemy = IntVector2.zero;
             int numScanned = 0;
@@ -209,7 +209,7 @@ namespace TAC_AI.World
             //DebugTAC_AI.Log(KickStart.ModID + ": SearchPatternCacheSort - Scanned a total of " + numScanned);
             return false;
         }
-        public static bool TileHasTargetableEnemy(NP_Presence_Automatic EP, IntVector2 tilePos)
+        public static bool TileHasTargetableEnemy(NP_Presence EP, IntVector2 tilePos)
         {
             List<NP_TechUnit> ETUe = ManEnemyWorld.GetUnloadedTechsInTile(tilePos);
             //DebugTAC_AI.Log(KickStart.ModID + ": TileHasEnemy - Tile count " + ETUe.Count());
@@ -218,10 +218,10 @@ namespace TAC_AI.World
                 if (cand.tech == null)
                     return false;
                 return AIGlobals.IsBaseTeam(cand.tech.m_TeamID)  
-                && Tank.IsEnemy(cand.tech.m_TeamID, EP.Team); 
+                && ManBaseTeams.IsEnemy(EP.Team, cand.tech.m_TeamID); 
             });
         }
-        public static IntVector2 FindTeamBaseTile(NP_Presence_Automatic EP)
+        public static IntVector2 FindTeamBaseTile(NP_Presence EP)
         {
             try
             {
@@ -251,7 +251,7 @@ namespace TAC_AI.World
             RemoteRemove(ETU);
         }
 
-        public static void PurgeAllUnder(NP_Presence_Automatic EP)
+        public static void PurgeAllUnder(NP_Presence EP)
         {
             int count = EP.EBUs.Count;
             for (int step = 0; step < count; count--)
@@ -281,7 +281,7 @@ namespace TAC_AI.World
 
 
         // Base Operations
-        public static bool PurgeIfNeeded(NP_Presence_Automatic EP, NP_BaseUnit EBU)
+        public static bool PurgeIfNeeded(NP_Presence EP, NP_BaseUnit EBU)
         {
             try
             {
@@ -290,8 +290,9 @@ namespace TAC_AI.World
                     if (KickStart.CullFarEnemyBases && (EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(AIGlobals.IgnoreBaseCullingTilesFromOrigin))
                     {
                         // Note: GetBackwardsCompatiblePosition gets the SCENEposition (Position relative to the WorldTreadmillOrigin)!
-                        if (!(EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(ManEnemyWorld.EnemyBaseCullingExtents))
+                        if (!(EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(KickStart.CullFarEnemyBasesDistance))
                         {
+                            DebugTAC_AI.Log("Removing team at " + EBU.tilePos + " since ");
                             PurgeAllUnder(EP);
                             return true;
                         }
@@ -302,7 +303,7 @@ namespace TAC_AI.World
             return false;
         }
 
-        internal static void TryUnloadedBaseOperations(NP_Presence_Automatic EP)
+        internal static void TryUnloadedBaseOperations(NP_Presence EP)
         {
             RefreshTeamMainBaseIfAnyPossible(EP);
             if (EP.MainBase != null)
@@ -317,15 +318,17 @@ namespace TAC_AI.World
                     if (EP.MainBase.BuildBucks < 1000000)
                         EP.MainBase.AddBuildBucks(AIGlobals.MinimumBBToTryExpand);
                 }
-                if (EP.MainBase.BuildBucks < AIGlobals.MinimumBBToTryExpand)
+                if (ManEnemyWorld.SpecialUpdate != SpecialUpdateType.Building ||
+                    EP.MainBase.BuildBucks < AIGlobals.MinimumBBToTryExpand)
                     return; // Reduce expansion lag
-                if (EP.MainBase != null)
-                    if (EP.MainBase.Health == EP.MainBase.MaxHealth && UnityEngine.Random.Range(1, 100) <= AIGlobals.BaseExpandChance + (EP.BuildBucks() / 10000))
+                if (EP.MainBase != null && EP.MainBase.Health == EP.MainBase.MaxHealth && 
+                    !ManEnemyWorld.IsProcessingTech &&  UnityEngine.Random.Range(1, 100) <= 
+                    AIGlobals.BaseExpandChance + (EP.BuildBucks() / 10000))
                         ImTakingThatExpansion(EP, EP.MainBase);
             }
         }
 
-        internal static void ImTakingThatExpansion(NP_Presence_Automatic EP, NP_BaseUnit EBU)
+        internal static void ImTakingThatExpansion(NP_Presence EP, NP_BaseUnit EBU)
         {   // Expand the base!
             try
             {
@@ -349,22 +352,21 @@ namespace TAC_AI.World
                         return;
                     if (!IsActivelySieging(EP))
                     {
-                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, lvl, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, false, grade, maxPrice: Cost))
+                        RawTechPopParams RTF = RawTechPopParams.Default;
+                        RTF.Faction = EBU.Faction;
+                        RTF.Terrain = BaseTerrain.AnyNonSea;
+                        RTF.Purpose = BasePurpose.NotStationary;
+                        RTF.Progression = lvl;
+                        RTF.MaxGrade = grade;
+                        RTF.MaxPrice = Cost;
+                        if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                         {
-                            int spawnIndex = valid.GetRandomEntry();
-                            if (spawnIndex == -1)
-                            {
-                                DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
-                            }
-                            else
-                            {
-                                RawTechTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
-                                ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
-                                //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
-                                return;
-                            }
+                            RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                            ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
+                            //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            return;
                         }
-                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, lvl, BasePurpose.NotStationary, BaseTerrain.AnyNonSea, maxGrade: grade, maxPrice: Cost);
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type);
@@ -381,25 +383,24 @@ namespace TAC_AI.World
                     Vector3 pos = ManWorld.inst.TileManager.CalcTileOriginScene(ST.coord) + newPosOff.ToVector3XZ();
                     reason = PickBuildBasedOnPriorities(EP, lvl);
                     Terra = RawTechLoader.GetTerrain(pos);
-                    if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, lvl, reason, Terra, false, grade, maxPrice: Cost))
+                    RawTechPopParams RTF = RawTechPopParams.Default;
+                    RTF.Faction = EBU.Faction;
+                    RTF.Terrain = Terra;
+                    RTF.Purpose = reason;
+                    RTF.Progression = lvl;
+                    RTF.MaxGrade = grade;
+                    RTF.MaxPrice = Cost;
+                    if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
-                        int spawnIndex = valid.GetRandomEntry();
-                        if (spawnIndex == -1)
-                        {
-                            DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs(ImTakingThatExpansion - UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
-                        }
-                        else
-                        {
-                            RawTechTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
-                            ManEnemyWorld.ConstructNewExpansionExt(pos, EBU, EP, BTemp);
-                            //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
-                            return;
-                        }
+                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                        ManEnemyWorld.ConstructNewBaseExt(pos, EBU, EP, BTemp);
+                        //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
+                        return;
                     }
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, lvl, reason, Terra, maxGrade: grade, maxPrice: Cost);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                     if (RawTechLoader.IsFallback(type))
                         return;
-                    ManEnemyWorld.ConstructNewExpansion(pos, EBU, EP, type);
+                    ManEnemyWorld.ConstructNewBase(pos, EBU, EP, type);
                     //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
                 }
                 else
@@ -411,22 +412,21 @@ namespace TAC_AI.World
                     if (!IsActivelySieging(EP))
                     {
                         Terra = RawTechLoader.GetTerrain(EBU.tech.GetBackwardsCompatiblePosition());
-                        if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, EBU.Faction, lvl, BasePurpose.NotStationary, Terra, false, grade, maxPrice: Cost))
+                        RawTechPopParams RTF = RawTechPopParams.Default;
+                        RTF.Faction = EBU.Faction;
+                        RTF.Terrain = Terra;
+                        RTF.Purpose = BasePurpose.NotStationary;
+                        RTF.Progression = lvl;
+                        RTF.MaxGrade = grade;
+                        RTF.MaxPrice = Cost;
+                        if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                         {
-                            int spawnIndex = valid.GetRandomEntry();
-                            if (spawnIndex == -1)
-                            {
-                                DebugTAC_AI.Log(KickStart.ModID + ": ShouldUseCustomTechs(ImTakingThatExpansion -UnloadedBases) - Critical error on call - Expected a Custom Local Tech to exist but found none!");
-                            }
-                            else
-                            {
-                                RawTechTemplate BTemp = TempManager.ExternalEnemyTechsAll[spawnIndex];
-                                ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
-                                //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
-                                return;
-                            }
+                            RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                            ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
+                            //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            return;
                         }
-                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(EBU.Faction, lvl, BasePurpose.NotStationary, Terra, maxGrade: grade, maxPrice: Cost);
+                        SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type);
@@ -439,14 +439,14 @@ namespace TAC_AI.World
                 DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Error on execution: " + e);
             }
         }
-        internal static void TryFreeUpBaseSlots(NP_Presence_Automatic EP, FactionLevel lvl)
+        internal static void TryFreeUpBaseSlots(NP_Presence EP, FactionLevel lvl)
         {   // Remove uneeeded garbage
             try
             {
                 NP_BaseUnit Main = RefreshTeamMainBaseIfAnyPossible(EP);
                 int TeamBaseCount = EP.GlobalMakerBaseCount();
                 //bool RemoveReceivers = FetchNearbyResourceCounts(tech.Team) == 0;
-                bool RemoveSpenders = EP.BuildBucks() < CheapestAutominerPrice(Main.Faction, lvl) / 2;
+                bool RemoveSpenders = EP.BuildBucks() < RawTechLoader.CheapestAutominerPrice(Main.Faction, lvl) / 2;
                 bool ForceRemove = TeamBaseCount > KickStart.MaxBasesPerTeam;
 
                 int attempts = 1;
@@ -476,7 +476,7 @@ namespace TAC_AI.World
                                 return;
                         }*/
                         if (RemoveSpenders && fund.Health < fund.MaxHealth
-                            && fund.isTechBuilder && !fund.isHarvestBase)
+                            && fund.isTechBuilder && !fund.handlesChunks)
                         {
                             RemoteRecycle(fund);
                             if (step >= attempts)
@@ -491,9 +491,10 @@ namespace TAC_AI.World
                 DebugTAC_AI.Log(KickStart.ModID + ": TryFreeUpBaseSlots - game is being stubborn");
             }
         }
-        private static BasePurpose PickBuildBasedOnPriorities(NP_Presence_Automatic EP, FactionLevel lvl)
+        private static BasePurpose PickBuildBasedOnPriorities(NP_Presence EP, FactionLevel lvl)
         {   // Expand the base!
-            if (EP.BuildBucks() <= CheapestAutominerPrice(RefreshTeamMainBaseIfAnyPossible(EP).Faction, lvl) && !HasTooMuchOfType(EP, BasePurpose.Autominer))
+            if (EP.BuildBucks() <= RawTechLoader.CheapestAutominerPrice(RefreshTeamMainBaseIfAnyPossible(EP).Faction, lvl) && 
+                !HasTooMuchOfType(EP, BasePurpose.Autominer))
             {   // YOU MUST CONSTRUCT ADDITIONAL PYLONS
                 return BasePurpose.Autominer;
             }
@@ -554,7 +555,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        private static BasePurpose PickBuildNonDefense(NP_Presence_Automatic EP)
+        private static BasePurpose PickBuildNonDefense(NP_Presence EP)
         {   // Expand the base!
             switch (UnityEngine.Random.Range(0, 5))
             {
@@ -771,23 +772,9 @@ namespace TAC_AI.World
             }
             return validLocation;
         }
-        private static int CheapestAutominerPrice(FactionSubTypes FST, FactionLevel lvl)
-        {
-            List<SpawnBaseTypes> types = RawTechLoader.GetEnemyBaseTypes(FST, lvl, BasePurpose.Autominer, BaseTerrain.Land);
-            int lowest = 150000;
-            foreach (SpawnBaseTypes type in types)
-            {
-                int tryThis = RawTechLoader.GetBaseTemplate(type).baseCost;
-                if (tryThis < lowest)
-                {
-                    lowest = tryThis;
-                }
-            }
-            return lowest;
-        }
 
 
-        private static bool IsActivelySieging(NP_Presence_Automatic EP)
+        private static bool IsActivelySieging(NP_Presence EP)
         {
             if (ManEnemySiege.SiegingEnemyTeam != null)
             {

@@ -1,17 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Reflection;
-using UnityEngine;
-using TerraTechETCUtil;
-using TAC_AI.Templates;
 using TAC_AI.AI.Movement;
+using TAC_AI.Templates;
 using TAC_AI.World;
-#if !STEAM
-using Control_Block;
-#endif
+using TerraTechETCUtil;
+using UnityEngine;
 
 namespace TAC_AI.AI.Enemy
 {
@@ -27,7 +22,7 @@ namespace TAC_AI.AI.Enemy
 
 
         // ----------------------------  New Enemy  ---------------------------- 
-        public static void GenerateEnemyAI(this TankAIHelper thisInst, Tank tank)
+        public static void GenerateEnemyAI(this TankAIHelper helper, Tank tank)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": offset " + tank.boundsCentreWorldNoCheck);
             var newMind = tank.gameObject.GetComponent<EnemyMind>();
@@ -36,19 +31,19 @@ namespace TAC_AI.AI.Enemy
                 newMind = tank.gameObject.AddComponent<EnemyMind>();
                 newMind.Initiate();
             }
-            thisInst.lastPlayer = null;
+            helper.lastPlayer = null;
 
-            //thisInst.RecalibrateMovementAIController();
+            //helper.RecalibrateMovementAIController();
 
             newMind.sceneStationaryPos = tank.boundsCentreWorldNoCheck;
             newMind.Refresh();
 
-            bool isMissionTech = RMission.SetupBaseOrMissionAI(thisInst, tank, newMind);
+            bool isMissionTech = RMission.SetupBaseOrMissionAI(helper, tank, newMind);
             if (isMissionTech)
             {
                 if (!(bool)tank)
                     return;
-                FinalCleanup(thisInst, newMind, tank);
+                FinalCleanup(helper, newMind, tank);
                 if (ManNetwork.IsNetworked && ManNetwork.IsHost)
                 {
                     NetworkHandler.TryBroadcastNewEnemyState(tank.netTech.netId.Value, newMind.CommanderSmarts);
@@ -67,7 +62,7 @@ namespace TAC_AI.AI.Enemy
             {
                 RandomSetMindAttack(newMind, tank);
             }
-            FinalCleanup(thisInst, newMind, tank);
+            FinalCleanup(helper, newMind, tank);
             if (ManNetwork.IsNetworked && ManNetwork.IsHost)
             {
                 NetworkHandler.TryBroadcastNewEnemyState(tank.netTech.netId.Value, newMind.CommanderSmarts);
@@ -120,7 +115,8 @@ namespace TAC_AI.AI.Enemy
             bool playerIsSmall = false;
             if (Singleton.playerTank)
                 playerIsSmall = Singleton.playerTank.blockman.blockCount < BM.blockCount + 5;
-            if (!playerIsSmall && BM.blockCount + BM.IterateBlockComponents<ModuleDrill>().Count() <= BM.IterateBlockComponents<ModuleTechController>().Count())
+            if (!playerIsSmall && BM.blockCount + BM.IterateBlockComponents<ModuleMeleeWeapon>().Count() <=
+                BM.IterateBlockComponents<ModuleTechController>().Count())
             {   // Unarmed - Runner
                 newMind.CommanderMind = EnemyAttitude.Default;
                 newMind.CommanderAttack = EAttackMode.Safety;
@@ -139,27 +135,18 @@ namespace TAC_AI.AI.Enemy
             }
             else if (IsHarvester(BM) || newMind.MainFaction == FactionSubTypes.GC)
             {   // Miner
-                if (AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
+                if (tank.IsPopulation && AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
                 {
-                    if (IsHarvester(BM))
-                    {
-                        if (tank.IsPopulation)
-                            newMind.CommanderMind = EnemyAttitude.NPCBaseHost;
-                        else
-                            newMind.CommanderMind = EnemyAttitude.Miner;
-                    }
-                    else
-                        newMind.CommanderMind = EnemyAttitude.Junker;
-                    //toSet.CommanderAttack = EnemyAttack.Bully;
+                    newMind.CommanderMind = EnemyAttitude.NPCBaseHost;
                     newMind.CommanderAttack = RWeapSetup.GetAttackStrat(tank, newMind);
                     newMind.InvertBullyPriority = true;
                 }
                 else
                 {
-                    if (tank.IsPopulation)
-                        newMind.CommanderMind = EnemyAttitude.NPCBaseHost;
-                    else
+                    if (IsHarvester(BM))
                         newMind.CommanderMind = EnemyAttitude.Miner;
+                    else
+                        newMind.CommanderMind = EnemyAttitude.Junker;
                     newMind.CommanderAttack = RWeapSetup.GetAttackStrat(tank, newMind);
                 }
                 fired = true;
@@ -204,10 +191,52 @@ namespace TAC_AI.AI.Enemy
         private static List<BoosterJet> boosterGetCache = new List<BoosterJet>();
         internal static void BlockSetEnemyHandling(Tank tank, EnemyMind newMind, bool ForceAllBubblesUp = false)
         {
+            RawTech RTT = RawTechLoader.GetEnemyBaseTypeFromNameFull(tank.name);
             var BM = tank.blockman;
+            if (RTT != null)
+            {
+                if (RTT.purposes.Contains(BasePurpose.NotStationary))
+                {
+                    switch (RTT.terrain)
+                    {
+                        case BaseTerrain.Sea:
+                            newMind.EvilCommander = EnemyHandling.Naval;
+                            break;
+                        case BaseTerrain.Air:
+                            newMind.EvilCommander = EnemyHandling.Airplane;
+                            break;
+                        case BaseTerrain.Chopper:
+                            newMind.EvilCommander = EnemyHandling.Chopper;
+                            break;
+                        case BaseTerrain.Space:
+                            newMind.EvilCommander = EnemyHandling.Starship;
+                            break;
+                        default:
+                            newMind.EvilCommander = EnemyHandling.Wheeled;
+                            break;
+                    }
+                }
+                else
+                {
+                    newMind.StartedAnchored = true;
+                    newMind.EvilCommander = EnemyHandling.Stationary;
+                    newMind.CommanderBolts = EnemyBolts.AtFull;
+                }
+                if (BM.IterateBlockComponents<ModuleMeleeWeapon>().Count() + (BM.IterateBlockComponents<ModuleWeaponTeslaCoil>().Count()
+                    * 25) > BM.IterateBlockComponents<ModuleWeaponGun>().Count() || newMind.MainFaction == FactionSubTypes.GC)
+                    newMind.LikelyMelee = true;
+                if (RTT.purposes.Contains(BasePurpose.NANI) || RTT.blockCount >= RawTechUtil.FrameImpactingTechBlockCount)
+                {   // DEATH TO ALL
+                    if (!SpecialAISpawner.Eradicators.Contains(tank))
+                        SpecialAISpawner.Eradicators.Add(tank);
+                }
+                return;
+            }
             // We have to do it this way since modded blocks don't work well with the defaults
+            bool canFloat = false;
             bool isFlying = false;
             bool isFlyingDirectionForwards = true;
+            bool isOmniEngine = false;
             Vector3 biasDirection = Vector3.zero;
             Vector3 boostBiasDirection = Vector3.zero;
 
@@ -225,59 +254,68 @@ namespace TAC_AI.AI.Enemy
 
             foreach (TankBlock bloc in BM.IterateBlocks())
             {
-                var booster = bloc.GetComponent<ModuleBooster>();
-                if (booster)
+                BlockDetails BD = new BlockDetails(bloc.BlockType);
+                if (BD.DoesMovement)
                 {
-                    //Get the slowest spooling one
-                    booster.transform.GetComponentsInChildren(jetGetCache);
-                    foreach (FanJet jet in jetGetCache)
+                    if (BD.HasBoosters || BD.HasFans)
                     {
-                        if (jet.spinDelta <= 10)
+                        var booster = bloc.GetComponent<ModuleBooster>();
+                        if (booster)
                         {
-                            biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                            modBoostCount++;
+                            //Get the slowest spooling one
+                            booster.transform.GetComponentsInChildren(jetGetCache);
+                            foreach (FanJet jet in jetGetCache)
+                            {
+                                if ((float)RawTechBase.spinDat.GetValue(jet) <= 10)
+                                {
+                                    biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForward) * (float)RawTechBase.thrustRate.GetValue(jet);
+                                }
+                            }
+                            jetGetCache.Clear();
+                            booster.transform.GetComponentsInChildren(boosterGetCache);
+                            foreach (BoosterJet boost in boosterGetCache)
+                            {
+                                //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
+                                boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalThrustDirection));
+                            }
+                            boosterGetCache.Clear();
                         }
                     }
-                    jetGetCache.Clear();
-                    booster.transform.GetComponentsInChildren(boosterGetCache);
-                    foreach (BoosterJet boost in boosterGetCache)
+                    if (BD.HasWings)
                     {
-                        //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                        boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection));
+                        ModuleWing.Aerofoil[] foils = bloc.GetComponent<ModuleWing>().m_Aerofoils;
+                        FoilCount += foils.Length;
+                        foreach (ModuleWing.Aerofoil Afoil in foils)
+                        {
+                            if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
+                                MovingFoilCount++;
+                        }
                     }
-                    boosterGetCache.Clear();
-                }
 
-                var wing = bloc.GetComponent<ModuleWing>();
-                if (wing)
-                {
-                    ModuleWing.Aerofoil[] foils = wing.m_Aerofoils;
-                    FoilCount += foils.Length;
-                    foreach (ModuleWing.Aerofoil Afoil in foils)
-                    {
-                        if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
-                            MovingFoilCount++;
-                    }
+                    if (BD.HasHovers)
+                        modHoverCount++;
+                    if (BD.IsGyro)
+                        modGyroCount++;
+                    if (BD.HasWheels)
+                        modWheelCount++;
+                    else if (BD.IsOmniDirectional)
+                        isOmniEngine = true;
+                    if (BD.FloatsOnWater)
+                        canFloat = true;
+                    if (BD.HasAntiGravity)
+                        modAGCount++;
                 }
-                if (bloc.GetComponent<ModuleBooster>())
-                    modBoostCount++;
-                if (bloc.GetComponent<ModuleHover>())
-                    modHoverCount++;
-                if (bloc.GetComponent<ModuleGyro>())
-                    modGyroCount++;
-                if (bloc.GetComponent<ModuleWheels>())
-                    modWheelCount++;
-                if (bloc.GetComponent<ModuleAntiGravityEngine>())
-                    modAGCount++;
-                var buubles = bloc.GetComponent<ModuleShieldGenerator>();
-                if (ForceAllBubblesUp && buubles)
+                if (ForceAllBubblesUp && BD.IsBubble)
                 {
+                    var buubles = bloc.GetComponent<ModuleShieldGenerator>();
                     charge.SetValue(buubles, 0);
                     charge2.SetValue(buubles, 2);
                     BubbleShield shield = (BubbleShield)charge3.GetValue(buubles);
                     shield.SetTargetScale(buubles.m_Radius);
                 }
 
-                if (bloc.GetComponent<ModuleEnergy>())
+                if (BD.IsGenerator)
                 {
                     ModuleEnergy.OutputConditionFlags flagG = (ModuleEnergy.OutputConditionFlags)generator.GetValue(bloc.GetComponent<ModuleEnergy>());
                     if (flagG.HasFlag(ModuleEnergy.OutputConditionFlags.Anchored) && flagG.HasFlag(ModuleEnergy.OutputConditionFlags.DayTime))
@@ -287,21 +325,24 @@ namespace TAC_AI.AI.Enemy
                 if (bloc.GetComponent<ModulePacemaker>())
                     tank.Holders.SetHeartbeatSpeed(TechHolders.HeartbeatSpeed.Fast);
 
-                if (bloc.GetComponent<ModuleTechController>())
+                if (BD.IsCab)
                 {
                     modControlCount++;
                 }
-                else
+                else if (BD.IsWeapon)
                 {
                     if (bloc.GetComponent<ModuleWeaponGun>())
                         modGunCount++;
-                    if (bloc.GetComponent<ModuleDrill>() || bloc.GetComponent<ModuleWeaponFlamethrower>())
+                    if (BD.IsMelee)
                         modDrillCount++;
                     if (bloc.GetComponent<ModuleWeaponTeslaCoil>())
                         modTeslaCount++;
                 }
-
-                CheckAndHandleControlBlocks(newMind, bloc);
+                try
+                {
+                    CheckAndHandleControlBlocks(newMind, bloc);
+                }
+                catch { }
             }
 
             boostBiasDirection.Normalize();
@@ -330,9 +371,28 @@ namespace TAC_AI.AI.Enemy
                 newMind.EvilCommander = EnemyHandling.Stationary;
                 newMind.CommanderBolts = EnemyBolts.AtFull;
             }
+            else if (BM.blockCount == 1)
+            {
+                if (isOmniEngine)
+                    newMind.EvilCommander = EnemyHandling.Starship;
+                else if (isFlyingDirectionForwards && MovingFoilCount > 3)
+                    newMind.EvilCommander = EnemyHandling.Airplane;
+                else if (!isFlyingDirectionForwards)
+                    newMind.EvilCommander = EnemyHandling.Chopper;
+                else if (tank.IsAnchored)
+                    newMind.EvilCommander = EnemyHandling.Stationary;
+                else if (canFloat && modWheelCount == 0)
+                    newMind.EvilCommander = EnemyHandling.Naval;
+                else
+                    newMind.EvilCommander = EnemyHandling.Wheeled;
+            }
+            else if (isOmniEngine && BM.blockCount == 1)
+            {
+                newMind.EvilCommander = EnemyHandling.Wheeled;
+            }
             else if (MovingFoilCount > 4 && isFlying && isFlyingDirectionForwards)
             {
-                if ((modHoverCount > 2  && modWheelCount > 2) || modAGCount > 0)
+                if ((modHoverCount > 2 && modWheelCount > 2) || modAGCount > 0)
                 {
                     newMind.EvilCommander = EnemyHandling.Starship;
                 }
@@ -348,7 +408,7 @@ namespace TAC_AI.AI.Enemy
                 else
                     newMind.EvilCommander = EnemyHandling.Chopper;
             }
-            else if (modBoostCount > 2 &&  modAGCount > 0)
+            else if (modBoostCount > 2 && modAGCount > 0)
             {
                 newMind.EvilCommander = EnemyHandling.Starship;
             }
@@ -356,7 +416,7 @@ namespace TAC_AI.AI.Enemy
             {
                 newMind.EvilCommander = EnemyHandling.Naval;
             }
-            else if (modBoostCount > 2 && modHoverCount > 2)
+            else if ((modBoostCount > 2 && modHoverCount > 2) || isOmniEngine)
             {
                 newMind.EvilCommander = EnemyHandling.Starship;
             }
@@ -370,7 +430,7 @@ namespace TAC_AI.AI.Enemy
             if (modDrillCount + (modTeslaCount * 25) > modGunCount|| newMind.MainFaction == FactionSubTypes.GC)
                 newMind.LikelyMelee = true;
 
-            if (modGunCount > 48 || modHoverCount > 18)
+            if (BM.blockCount >= RawTechUtil.FrameImpactingTechBlockCount)
             {   // DEATH TO ALL
                 if (!SpecialAISpawner.Eradicators.Contains(tank))
                     SpecialAISpawner.Eradicators.Add(tank);
@@ -447,18 +507,19 @@ namespace TAC_AI.AI.Enemy
 
 
         // ----------------------------  Operations  ---------------------------- 
-        internal static void ScarePlayer(EnemyMind mind, TankAIHelper thisInst, Tank tank)
+        internal static void ScarePlayer(EnemyMind mind, TankAIHelper helper, Tank tank)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": enemy AI active!");
             try
             {
-                if (Tank.IsEnemy(ManPlayer.inst.PlayerTeam, tank.Team))
+                if (ManBaseTeams.IsEnemy(ManPlayer.inst.PlayerTeam, tank.Team))
                 {
-                    var tonk = thisInst.lastEnemyGet;
-                    if (tonk?.tank)
+                    var targVis = helper.lastEnemyGet;
+                    if (targVis?.tank)
                     {
-                        bool player = tonk.tank.PlayerFocused;
-                        if (tonk.tank.Team == ManPlayer.inst.PlayerTeam)
+                        Tank target = targVis.tank;
+                        bool player = targVis.tank.PlayerFocused;
+                        if (targVis.tank.Team == ManPlayer.inst.PlayerTeam)
                         {
                             if (KickStart.WarnOnEnemyLock && Mode<ModeMain>.inst != null)
                             {
@@ -479,20 +540,24 @@ namespace TAC_AI.AI.Enemy
                                 }
                             }
                         }
+                        bool weInDanger = false;
                         if (player && Singleton.playerTank)
+                            weInDanger = true;
+                        else if (ManWorldRTS.PlayerIsInRTS)
+                        {
+                            if (targVis.tank.Team == ManPlayer.inst.PlayerTeam)
+                                weInDanger = true;
+                        }
+                        if (weInDanger)
                         {
                             if (Mode<ModeMain>.inst != null)
                                 Mode<ModeMain>.inst.SetPlayerInDanger(true, true);
-                            Singleton.Manager<ManMusic>.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, tonk.tank);
+                            ManMusic.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, targVis.tank);
                         }
-                        else if (ManPlayerRTS.PlayerIsInRTS)
+                        else if (target != Singleton.playerTank && target.IsEnemy(tank.Team) && target.netTech != null &&
+                            target.netTech.NetPlayer != null)
                         {
-                            if (tonk.tank.Team == ManPlayer.inst.PlayerTeam)
-                            {
-                                if (Mode<ModeMain>.inst != null)
-                                    Mode<ModeMain>.inst.SetPlayerInDanger(true, true);
-                                Singleton.Manager<ManMusic>.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, tonk.tank);
-                            }
+                            ManMusic.inst.SetDangerClient(ManMusic.DangerContext.Circumstance.Enemy, tank, target);
                         }
                     }
                 }
@@ -500,112 +565,107 @@ namespace TAC_AI.AI.Enemy
             catch (Exception e) { DebugTAC_AI.Log("error " + e); }
         }
 
-        internal static void BeEvil(TankAIHelper thisInst, Tank tank)
+        internal static void BeEvil(TankAIHelper helper, Tank tank)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": enemy AI active!");
-            var Mind = thisInst.MovementController.EnemyMind;
+            var Mind = helper.MovementController.EnemyMind;
             if (Mind.IsNull())
             {
                 Mind = tank.GetComponent<EnemyMind>();
                 DebugTAC_AI.Log(KickStart.ModID + ": Updating MovementController for " + tank.name);
-                thisInst.MovementController.UpdateEnemyMind(Mind);
-                //RandomizeBrain(thisInst, tank);
+                helper.MovementController.UpdateEnemyMind(Mind);
+                //RandomizeBrain(helper, tank);
                 //return;
             }
-            RunEvilOperations(Mind, thisInst, tank);
-            ScarePlayer(Mind, thisInst, tank);
+            RunEvilOperations(Mind, helper, tank);
+            ScarePlayer(Mind, helper, tank);
         }
-        internal static void BeEvilLight(TankAIHelper thisInst, Tank tank)
+        internal static void BeEvilLight(TankAIHelper helper, Tank tank)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": enemy AI active!");
-            var Mind = thisInst.MovementController.EnemyMind;
+            var Mind = helper.MovementController.EnemyMind;
             if (Mind.IsNull())
             {
                 Mind = tank.GetComponent<EnemyMind>();
                 DebugTAC_AI.Log(KickStart.ModID + ": Updating MovementController for " + tank.name);
-                thisInst.MovementController.UpdateEnemyMind(Mind);
-                //RandomizeBrain(thisInst, tank);
+                helper.MovementController.UpdateEnemyMind(Mind);
+                //RandomizeBrain(helper, tank);
                 //return;
             }
-            RunLightEvilOp(Mind, thisInst, tank);
-            ScarePlayer(Mind, thisInst, tank);
+            RunLightEvilOp(Mind, helper, tank);
+            ScarePlayer(Mind, helper, tank);
         }
-        private static void RunLightEvilOp(EnemyMind mind, TankAIHelper thisInst, Tank tank)
+        private static void RunLightEvilOp(EnemyMind mind, TankAIHelper helper, Tank tank)
         {
             if (mind.StartedAnchored)
             {
                 mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
                 if (!tank.IsAnchored && !mind.Hurt)
                 {
-                    if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
+                    if (helper.CanAttemptAnchor)
                     {
                         //DebugTAC_AI.Log(KickStart.ModID + ": Trying to anchor " + tank.name);
-                        thisInst.TryReallyAnchor();
-                        thisInst.anchorAttempts++;
-                        if (tank.IsAnchored)
-                            thisInst.anchorAttempts = 0;
+                        helper.AnchorIgnoreChecks();
                     }
                 }
             }
             if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck))
             {
-                if ((mind.AllowRepairsOnFly || mind.StartedAnchored || mind.BuildAssist) && thisInst.TechMemor)
+                if ((mind.AllowRepairsOnFly || mind.StartedAnchored || mind.BuildAssist) && helper.TechMemor)
                 {
                     bool venPower = false;
                     if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                    RRepair.EnemyRepairStepper(thisInst, tank, mind, venPower);// longer while fighting
+                    RRepair.EnemyRepairStepper(helper, tank, mind, venPower);// longer while fighting
                 }
             }
             // Attack handling
             switch (mind.CommanderAlignment)
             {
                 case EnemyStanding.Enemy:
-                    BeHostile(thisInst, tank);
+                    BeHostile(helper, tank);
                     break;
                 case EnemyStanding.SubNeutral:
-                    BeSubNeutral(thisInst, tank);
+                    BeSubNeutral(helper, tank);
                     break;
                 case EnemyStanding.Neutral:
-                    BeNeutral(thisInst, tank);
+                    BeNeutral(helper, tank);
                     break;
                 case EnemyStanding.Friendly:
-                    BeFriendly(thisInst, tank);
+                    BeFriendly(helper, tank);
                     break;
             }
         }
-        private static void RunEvilOperations(EnemyMind mind, TankAIHelper thisInst, Tank tank)
+        private static void RunEvilOperations(EnemyMind mind, TankAIHelper helper, Tank tank)
         {
             if (mind.StartedAnchored)
             {
-                mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
+                if (mind.EvilCommander != EnemyHandling.Stationary)
+                    mind.EvilCommander = EnemyHandling.Stationary;// NO MOVE FOOL
                 if (!tank.IsAnchored && !mind.Hurt)
                 {
-                    if (thisInst.anchorAttempts < AIGlobals.NPTAnchorAttempts)
+                    if (helper.CanAttemptAnchor)
                     {
                         //DebugTAC_AI.Log(KickStart.ModID + ": Trying to anchor " + tank.name);
-                        thisInst.TryReallyAnchor();
-                        thisInst.anchorAttempts++;
-                        if (tank.IsAnchored)
-                            thisInst.anchorAttempts = 0;
+                        helper.AnchorIgnoreChecks();
                     }
                 }
             }
 
 
-            RBolts.ManageBolts(thisInst, tank, mind);
+            RBolts.ManageBolts(helper, tank, mind);
             TestShouldCommitDie(tank, mind);
             if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck))
             {
-                if ((mind.AllowRepairsOnFly || mind.StartedAnchored || mind.BuildAssist) && thisInst.TechMemor)
+                if ((mind.AllowRepairsOnFly || mind.StartedAnchored || mind.BuildAssist) && helper.TechMemor)
                 {
                     bool venPower = false;
                     if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
-                    RRepair.EnemyRepairStepper(thisInst, tank, mind, venPower);// longer while fighting
+                    RRepair.EnemyRepairStepper(helper, tank, mind, venPower);// longer while fighting
                 }
             }
             if (mind.AIControl.Provoked <= 0)
             {
-                if (thisInst.lastEnemyGet && thisInst.lastEnemyGet.isActive)
+                if (helper.lastEnemyGet && helper.lastEnemyGet.isActive)
                 {
                     if (!mind.InMaxCombatRangeOfTarget())
                     {
@@ -624,113 +684,101 @@ namespace TAC_AI.AI.Enemy
             switch (mind.CommanderAlignment)
             {
                 case EnemyStanding.Enemy:
-                    BeHostile(thisInst, tank);
+                    BeHostile(helper, tank);
                     break;
                 case EnemyStanding.SubNeutral:
-                    BeSubNeutral(thisInst, tank);
+                    BeSubNeutral(helper, tank);
                     break;
                 case EnemyStanding.Neutral:
-                    BeNeutral(thisInst, tank);
+                    BeNeutral(helper, tank);
                     break;
                 case EnemyStanding.Friendly:
-                    BeFriendly(thisInst, tank);
+                    BeFriendly(helper, tank);
                     break;
             }
 
-            if (thisInst.RTSControlled)
-                thisInst.RunRTSNaviEnemy(mind);
+            if (helper.RTSControlled)
+                helper.RunRTSNaviEnemy(mind);
             else
                 mind.EnemyOpsController.Execute();
             //CommanderMind is handled in each seperate class
-            if (AIGlobals.IsBaseTeam(tank.Team))
+            if (AIGlobals.IsBaseTeamDynamic(tank.Team))
             {
-                EControlOperatorSet direct = thisInst.GetDirectedControl();
-                if (ProccessIfRetreat(thisInst, tank, mind, ref direct))
+                EControlOperatorSet direct = helper.GetDirectedControl();
+                if (ProccessIfRetreat(helper, tank, mind, ref direct))
                 {
-                    thisInst.SetDirectedControl(direct);
+                    helper.SetDirectedControl(direct);
                     return;
                 }
-                thisInst.SetDirectedControl(direct);
+                helper.SetDirectedControl(direct);
             }
         }
 
-        public static Vector3 GetTargetCoordinates(TankAIHelper thisInst, Visible target, EnemyMind mind)
+        public static Vector3 GetTargetCoordinates(TankAIHelper helper, Visible target, EnemyMind mind)
         {
             if (mind.CommanderSmarts >= EnemySmarts.Smrt)   // Rough Target leading
             {
-                return thisInst.RoughPredictTarget(target.tank);
+                return helper.RoughPredictTarget(target.tank);
             }
             else
                 return target.tank.boundsCentreWorldNoCheck;
         }
-        private static void CombatChecking(TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        private static void CombatChecking(TankAIHelper helper, Tank tank, EnemyMind mind)
         {
             switch (mind.EvilCommander)
             {
                 case EnemyHandling.Airplane:
-                    EnemyOperations.RAircraft.EnemyDogfighting(thisInst, tank, mind);
+                    EnemyOperations.RAircraft.EnemyDogfighting(helper, tank, mind);
                     break;
                 case EnemyHandling.Stationary:
-                    RGeneral.BaseAttack(thisInst, tank, mind);
+                    RGeneral.BaseAttack(helper, tank, mind);
                     break;
                 default:
                     switch (mind.CommanderAttack)
                     {
                         case EAttackMode.Safety:
-                            RGeneral.SelfDefense(thisInst, tank, mind);
+                            RGeneral.SelfDefense(helper, tank, mind);
                             break;
                         case EAttackMode.Ranged:
-                            RGeneral.AimAttack(thisInst, tank, mind);
+                            RGeneral.AimAttack(helper, tank, mind);
                             break;
                         case EAttackMode.Chase:
-                            RGeneral.AidAttack(thisInst, tank, mind);
-                            //RGeneral.HoldGrudge(thisInst, tank, Mind); - now handled within FindEnemy
+                            RGeneral.AidAttack(helper, tank, mind);
+                            //RGeneral.HoldGrudge(helper, tank, Mind); - now handled within FindEnemy
                             break;
                         default:
-                            RGeneral.AidAttack(thisInst, tank, mind);
+                            RGeneral.AidAttack(helper, tank, mind);
                             break;
                     }
                     break;
             }
         }
-        private static bool ProccessIfRetreat(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        private static bool ProccessIfRetreat(TankAIHelper helper, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
-            if (thisInst.Retreat)
+            if (helper.Retreat)
             {
-                return GetRetreatLocation(thisInst, tank, mind, ref direct);
+                return GetRetreatLocation(helper, tank, mind, ref direct);
             }
             return false;
         }
-        public static bool GetRetreatLocation(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static bool GetRetreatLocation(TankAIHelper helper, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             TeamBasePointer funds = RLoadedBases.GetTeamHQ(tank.Team);
             if (funds.IsValid())
             {
-                BGeneral.ResetValues(thisInst, ref direct);
-                thisInst.theBase = funds.tank;
-                if (funds.tank)
-                    thisInst.lastBaseExtremes = funds.tank.visible.GetCheapBounds();
-
-                Vector3 veloFlat = Vector3.zero;
-                if ((bool)tank.rbody)   // So that drifting is minimized
-                {
-                    veloFlat = thisInst.SafeVelocity;
-                    veloFlat.y = 0;
-                }
-                direct.SetLastDest(funds.WorldPos.ScenePosition);
-                float dist = (direct.lastDestination + veloFlat - tank.boundsCentreWorldNoCheck).magnitude;
-                bool messaged = true;
-                StopByBase(thisInst, tank, dist, ref messaged, ref direct);
+                BGeneral.ResetValues(helper, ref direct);
+                BGeneral.StopByPosition(helper, tank, funds.WorldPos.ScenePosition, 
+                    funds.tank.visible.GetCheapBounds(), ref direct);
                 return true;
             }
             else
             {
-                if (thisInst.lastEnemy?.tank)
+                if (helper.lastEnemy?.tank)
                 {
                     if (mind.CanCallRetreat)
                     {
-                        BGeneral.ResetValues(thisInst, ref direct);
-                        Vector3 runVec = (tank.boundsCentreWorldNoCheck - thisInst.lastEnemy.tank.boundsCentreWorldNoCheck).normalized;
+                        BGeneral.ResetValues(helper, ref direct);
+                        Vector3 runVec = (tank.boundsCentreWorldNoCheck - helper.lastEnemy.tank.boundsCentreWorldNoCheck).normalized;
                         direct.SetLastDest(tank.boundsCentreWorldNoCheck + (runVec * 150));
                         direct.DriveToFacingTowards();
                         return true;
@@ -744,7 +792,7 @@ namespace TAC_AI.AI.Enemy
                         NP_BaseUnit EBU = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(EP);
                         if (EBU != null)
                         {
-                            BGeneral.ResetValues(thisInst, ref direct);
+                            BGeneral.ResetValues(helper, ref direct);
                             direct.DriveToFacingTowards();
                             direct.SetLastDest(EBU.PosScene);
                             // yes we will drive off-scene to retreat home
@@ -755,86 +803,62 @@ namespace TAC_AI.AI.Enemy
             }
             return false;
         }
-        internal static void StopByBase(TankAIHelper thisInst, Tank tank, float dist, ref bool hasMessaged, ref EControlOperatorSet direct)
-        {
-            float girth = thisInst.lastBaseExtremes + thisInst.lastTechExtents;
-            direct.DriveToFacingTowards();
-            if (dist < girth + 3)
-            {   // We are at the base, stop moving and hold pos
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving room to base... |Tech is at " + tank.boundsCentreWorldNoCheck);
-                if (thisInst.theBase)
-                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
-                thisInst.AvoidStuff = false;
-                direct.DriveAwayFacingTowards();
-                thisInst.SettleDown();
-            }
-            else if (dist < girth + 7)
-            {   // We are at the base, stop moving and hold pos
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at a base and applying brakes. |Tech is at " + tank.boundsCentreWorldNoCheck);
-                if (thisInst.theBase)
-                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
-                thisInst.AvoidStuff = false;
-                thisInst.Yield = true;
-                thisInst.PivotOnly = true;
-                thisInst.SettleDown();
-            }
-        }
 
-        private static void BeHostile(TankAIHelper thisInst, Tank tank)
+        private static void BeHostile(TankAIHelper helper, Tank tank)
         {
-            var Mind = thisInst.MovementController.EnemyMind;
-            CombatChecking(thisInst, tank, Mind);
+            var Mind = helper.MovementController.EnemyMind;
+            CombatChecking(helper, tank, Mind);
         }
-        private static void BeSubNeutral(TankAIHelper thisInst, Tank tank)
+        private static void BeSubNeutral(TankAIHelper helper, Tank tank)
         {
-            var Mind = thisInst.MovementController.EnemyMind;
-            if (Mind.Hurt && Mind.AIControl.Provoked > 0)
-            {   // If we were hit, then we fight back the attacker
-                if (thisInst.lastEnemyGet?.tank)
-                {
-                    int teamAttacker = thisInst.lastEnemyGet.tank.Team;
-                    if (AIGlobals.IsBaseTeam(teamAttacker) || teamAttacker == ManPlayer.inst.PlayerTeam)
-                    {
-                        ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomEnemyBaseTeam());
-                        RandomSetMindAttack(Mind, tank);
-                        Mind.CommanderAlignment = EnemyStanding.Enemy;
-                        return;
-                    }
-                }
-            }
-            RGeneral.Monitor(thisInst, tank, Mind);
+            var Mind = helper.MovementController.EnemyMind;
+            if (helper.Provoked > 0)
+                CombatChecking(helper, tank, Mind);
+            else
+                RGeneral.Monitor(helper, tank, Mind);
         }
-        private static void BeNeutral(TankAIHelper thisInst, Tank tank)
+        private static void BeNeutral(TankAIHelper helper, Tank tank)
         {
-            var Mind = thisInst.MovementController.EnemyMind;
-            if (Mind.Hurt && thisInst.PendingDamageCheck && Mind.AIControl.Provoked > 0)
+            var Mind = helper.MovementController.EnemyMind;
+            if (Mind.Hurt && helper.PendingDamageCheck && Mind.AIControl.Provoked > 0)
             {   // If we were hit & lost blocks, then we fight back the attacker
-                if (thisInst.lastEnemyGet?.tank)
+                if (helper.lastEnemyGet?.tank)
                 {
-                    if (thisInst.lastEnemyGet.tank.Team == ManPlayer.inst.PlayerTeam)
+                    int teamAttacker = helper.lastEnemyGet.tank.Team;
+                    if (AIGlobals.IsBaseTeamDynamic(teamAttacker) || teamAttacker == ManPlayer.inst.PlayerTeam)
+                    {
+                        var ETD = ManBaseTeams.InsureBaseTeam(tank.Team);
+                        ETD.DegradeRelations(teamAttacker);
+                        helper.EndPursuit();
+                        ManEnemyWorld.UpdateTeam(tank.Team);
+                        return;
+                    }
+                    /*
+                    if (helper.lastEnemyGet.tank.Team == ManPlayer.inst.PlayerTeam)
                     {
                         ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomEnemyBaseTeam());
                         RandomSetMindAttack(Mind, tank);
                         Mind.CommanderAlignment = EnemyStanding.Enemy;
                         return;
                     }
-                    else if (AIGlobals.IsBaseTeam(thisInst.lastEnemyGet.tank.Team))
+                    else if (AIGlobals.IsBaseTeam(helper.lastEnemyGet.tank.Team))
                     {
                         ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomAllyBaseTeam());
                         RandomSetMindAttack(Mind, tank);
                         Mind.CommanderAlignment = EnemyStanding.Friendly;
                         return;
                     }
+                    */
                 }
             }
-            thisInst.lastEnemy = null;
-            thisInst.AttackEnemy = false;
+            //helper.lastEnemy = null;
+            //helper.AttackEnemy = false;
         }
-        private static void BeFriendly(TankAIHelper thisInst, Tank tank)
+        private static void BeFriendly(TankAIHelper helper, Tank tank)
         {
-            var Mind = thisInst.MovementController.EnemyMind;
+            var Mind = helper.MovementController.EnemyMind;
             // Can't really damage an ally
-            CombatChecking(thisInst, tank, Mind);
+            CombatChecking(helper, tank, Mind);
         }
 
 
@@ -851,7 +875,9 @@ namespace TAC_AI.AI.Enemy
         }
         public static bool IsUnarmed(Tank tank)
         {
-            return tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() + tank.blockman.IterateBlockComponents<ModuleDrill>().Count();
+            return tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= 
+                tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() + 
+                tank.blockman.IterateBlockComponents<ModuleMeleeWeapon>().Count();
         }
         private static void TestShouldCommitDie(Tank tank, EnemyMind mind)
         {
@@ -884,11 +910,10 @@ namespace TAC_AI.AI.Enemy
         }
         private static void HandleUnsetControlBlocks(EnemyMind mind, TankBlock block)
         {
-#if !STEAM
             try
             {
-                FieldInfo wasSet = typeof(ModuleBlockMover).GetField("Deserialized", BindingFlags.NonPublic | BindingFlags.Instance);
-                ModuleBlockMover mover = block.GetComponent<ModuleBlockMover>();
+                FieldInfo wasSet = typeof(Control_Block.ModuleBlockMover).GetField("Deserialized", BindingFlags.NonPublic | BindingFlags.Instance);
+                Control_Block.ModuleBlockMover mover = block.GetComponent<Control_Block.ModuleBlockMover>();
                 if (!(bool)mover)
                     return;
                 if ((bool)wasSet.GetValue(mover))
@@ -898,71 +923,70 @@ namespace TAC_AI.AI.Enemy
                 mover.ProcessOperations.Clear();
                 if (mover.IsPlanarVALUE)
                 {
-                    mover.ProcessOperations.Add(new InputOperator()
+                    mover.ProcessOperations.Add(new Control_Block.InputOperator()
                     {
                         m_InputKey = KeyCode.Space,
-                        m_InputType = InputOperator.InputType.EnemyTechIsNear,
-                        m_InputParam = mind.Range,
-                        m_OperationType = InputOperator.OperationType.IfThen,
+                        m_InputType = Control_Block.InputOperator.InputType.EnemyTechIsNear,
+                        m_InputParam = mind.MaxCombatRange,
+                        m_OperationType = Control_Block.InputOperator.OperationType.IfThen,
                         m_Strength = 0
                     });
-                    mover.ProcessOperations.Add(new InputOperator()
+                    mover.ProcessOperations.Add(new Control_Block.InputOperator()
                     {
                         m_InputKey = KeyCode.Space,
-                        m_InputType = InputOperator.InputType.AlwaysOn,
-                        m_InputParam = mind.Range,
-                        m_OperationType = InputOperator.OperationType.TargetPointPredictive,
+                        m_InputType = Control_Block.InputOperator.InputType.AlwaysOn,
+                        m_InputParam = mind.MaxCombatRange,
+                        m_OperationType = Control_Block.InputOperator.OperationType.TargetPointPredictive,
                         m_Strength = 125
                     });
-                    mover.ProcessOperations.Add(new InputOperator()
+                    mover.ProcessOperations.Add(new Control_Block.InputOperator()
                     {
                         m_InputKey = KeyCode.Space,
-                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputType = Control_Block.InputOperator.InputType.AlwaysOn,
                         m_InputParam = 0,
-                        m_OperationType = InputOperator.OperationType.ElseThen,
+                        m_OperationType = Control_Block.InputOperator.OperationType.ElseThen,
                         m_Strength = 0
                     });
-                    mover.ProcessOperations.Add(new InputOperator()
+                    mover.ProcessOperations.Add(new Control_Block.InputOperator()
                     {
                         m_InputKey = KeyCode.Space,
-                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputType = Control_Block.InputOperator.InputType.AlwaysOn,
                         m_InputParam = 0,
-                        m_OperationType = InputOperator.OperationType.SetPos,
+                        m_OperationType = Control_Block.InputOperator.OperationType.SetPos,
                         m_Strength = 0
                     });
-                    mover.ProcessOperations.Add(new InputOperator()
+                    mover.ProcessOperations.Add(new Control_Block.InputOperator()
                     {
                         m_InputKey = KeyCode.Space,
-                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputType = Control_Block.InputOperator.InputType.AlwaysOn,
                         m_InputParam = 0,
-                        m_OperationType = InputOperator.OperationType.EndIf,
+                        m_OperationType = Control_Block.InputOperator.OperationType.EndIf,
                         m_Strength = 0
                     });
                 }
                 else
                 {
-                    mover.ProcessOperations.Add(new InputOperator()
+                    mover.ProcessOperations.Add(new Control_Block.InputOperator()
                     {
                         m_InputKey = KeyCode.Space,
-                        m_InputType = InputOperator.InputType.EnemyTechIsNear,
-                        m_InputParam = mind.Range,
-                        m_OperationType = InputOperator.OperationType.ShiftPos,
+                        m_InputType = Control_Block.InputOperator.InputType.EnemyTechIsNear,
+                        m_InputParam = mind.MaxCombatRange,
+                        m_OperationType = Control_Block.InputOperator.OperationType.ShiftPos,
                         m_Strength = 2
                     });
-                    mover.ProcessOperations.Add(new InputOperator()
+                    mover.ProcessOperations.Add(new Control_Block.InputOperator()
                     {
                         m_InputKey = KeyCode.Space,
-                        m_InputType = InputOperator.InputType.AlwaysOn,
+                        m_InputType = Control_Block.InputOperator.InputType.AlwaysOn,
                         m_InputParam = 0,
-                        m_OperationType = InputOperator.OperationType.ShiftPos,
+                        m_OperationType = Control_Block.InputOperator.OperationType.ShiftPos,
                         m_Strength = -1
                     });
                 }
             }
             catch { }
-#endif
         }
-        private static void CheckShouldMakeBase(TankAIHelper thisInst, EnemyMind newMind, Tank tank)
+        private static void CheckShouldMakeBase(TankAIHelper helper, EnemyMind newMind, Tank tank)
         {
             switch (newMind.CommanderMind)
             {
@@ -970,24 +994,24 @@ namespace TAC_AI.AI.Enemy
                     if (!tank.name.Contains('Ω'))
                         tank.SetName(tank.name + " Ω");
                     newMind.CommanderMind = EnemyAttitude.NPCBaseHost;
-                    if (!AIGlobals.IsBaseTeam(tank.Team))
+                    if (!AIGlobals.IsBaseTeamDynamic(tank.Team))
                     {
                         if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() > 0)
-                            RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.HarvestingNoHQ);
+                            RawTechLoader.TryStartBase(tank, helper, BasePurpose.HarvestingNoHQ);
                         else
-                            RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.TechProduction);
+                            RawTechLoader.TryStartBase(tank, helper, BasePurpose.TechProduction);
                     }
                     DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a base hosting tech!!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
                 case EnemyAttitude.Boss:
                     if (!tank.name.Contains('⦲'))
                         tank.SetName(tank.name + " ⦲");
-                    if (!AIGlobals.IsBaseTeam(tank.Team))
-                        RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.Headquarters);
+                    if (!AIGlobals.IsBaseTeamDynamic(tank.Team))
+                        RawTechLoader.TryStartBase(tank, helper, BasePurpose.Headquarters);
                     DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a base boss with dangerous potential!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
                 case EnemyAttitude.Invader:
-                    RawTechLoader.TryStartBase(tank, thisInst, BasePurpose.AnyNonHQ);
+                    RawTechLoader.TryStartBase(tank, helper, BasePurpose.AnyNonHQ);
                     DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is an invader looking to take over your world!  " + newMind.EvilCommander.ToString() + " based " + newMind.CommanderAlignment.ToString() + " with attitude " + newMind.CommanderAttack.ToString() + " | Mind " + newMind.CommanderMind.ToString() + " | Smarts " + newMind.CommanderSmarts.ToString() + " inbound!");
                     break;
                 case EnemyAttitude.Miner:
@@ -1055,25 +1079,26 @@ namespace TAC_AI.AI.Enemy
 
 
         // ----------------------------  Conclusion  ---------------------------- 
-        private static void FinalCleanup(TankAIHelper thisInst, EnemyMind newMind, Tank tank)
+        private static void FinalCleanup(TankAIHelper helper, EnemyMind newMind, Tank tank)
         {
             if (tank.Anchors.NumAnchored > 0 || tank.GetComponent<RequestAnchored>())
             {
                 newMind.StartedAnchored = true;
                 newMind.EvilCommander = EnemyHandling.Stationary;
-                thisInst.TryAnchor();
-                thisInst.TryReallyAnchor();
+                helper.TryInsureAnchor();
+                helper.AnchorIgnoreChecks();
             }
             if (newMind.CommanderSmarts > EnemySmarts.Meh)
             {
-                thisInst.InsureTechMemor("FinalCleanup", true);
+                helper.InsureTechMemor("FinalCleanup", true);
                 newMind.CommanderBolts = EnemyBolts.AtFullOnAggro;// allow base function
             }
 
             bool isBaseMaker = newMind.CommanderMind == EnemyAttitude.NPCBaseHost || newMind.CommanderMind == EnemyAttitude.Boss;
-            if (newMind.CommanderSmarts == EnemySmarts.Default && !isBaseMaker && newMind.EvilCommander == EnemyHandling.Wheeled)
+            if (newMind.CommanderSmarts == EnemySmarts.Default && !isBaseMaker && newMind.EvilCommander == EnemyHandling.Wheeled
+                && !ManBaseTeams.ShouldNotAttack(ManPlayer.inst.PlayerTeam, tank.Team))
             {
-                thisInst.Hibernate = true;// enable the default AI
+                helper.RunState = AIRunState.Default;// enable the default AI
                 switch (newMind.CommanderMind)
                 {
                     case EnemyAttitude.Miner:
@@ -1083,14 +1108,11 @@ namespace TAC_AI.AI.Enemy
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
                 if (DebugRawTechSpawner.ShowDebugFeedBack)
                 {
-                    if (AIGlobals.IsNeutralBaseTeam(tank.Team))
-                        AIGlobals.PopupNeutralInfo(newMind.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
-                    else if (AIGlobals.IsFriendlyBaseTeam(tank.Team))
-                        AIGlobals.PopupAllyInfo(newMind.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
-                    else
-                        AIGlobals.PopupEnemyInfo(newMind.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
+                    AIGlobals.PopupColored(newMind.EvilCommander.ToString(), tank.Team, 
+                        WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up *
+                        helper.lastTechExtents)));
                 }
-                //thisInst.RecalibrateMovementAIController();
+                //helper.RecalibrateMovementAIController();
                 return;
             }
 
@@ -1108,7 +1130,7 @@ namespace TAC_AI.AI.Enemy
                         newMind.CommanderBolts = EnemyBolts.MissionTrigger;
                         if (!tank.IsAnchored && tank.Anchors.NumPossibleAnchors > 0)
                         {
-                            thisInst.TryReallyAnchor();
+                            helper.AnchorIgnoreChecks();
                         }
                         DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is a base Tech");
                     }
@@ -1122,8 +1144,8 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (newMind.StartedAnchored)
                     {
-                        RLoadedBases.SetupBaseAI(thisInst, tank, newMind);
-                        if (ManBaseTeams.TryGetBaseTeam(tank.Team, out var teamInst))
+                        RLoadedBases.SetupBaseAI(helper, tank, newMind);
+                        if (ManBaseTeams.TryGetBaseTeamDynamicOnly(tank.Team, out var teamInst))
                             teamInst.AddBuildBucks(4000000);
                         DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is is a base Tech");
                     }
@@ -1139,52 +1161,31 @@ namespace TAC_AI.AI.Enemy
             }
             else
             {
-                CheckShouldMakeBase(thisInst, newMind, tank);
+                CheckShouldMakeBase(helper, newMind, tank);
 
                 int Team = tank.Team;
-                if (AIGlobals.IsEnemyBaseTeam(Team))
+                if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
                 {
-                    newMind.CommanderAlignment = EnemyStanding.Enemy;
+                    newMind.CommanderAlignment = ETD.EnemyMindAlignment(ManPlayer.inst.PlayerTeam);
                 }
-                else if (AIGlobals.IsSubNeutralBaseTeam(Team))
-                {
-                    newMind.CommanderAlignment = EnemyStanding.SubNeutral;
-                }
-                else if (AIGlobals.IsNeutralBaseTeam(Team))
-                {
-                    newMind.CommanderAlignment = EnemyStanding.Neutral;
-                }
-                else
-                {
-                    newMind.CommanderAlignment = EnemyStanding.Friendly;
-                }
-
 
                 if (RawTechLoader.ShouldDetonateBoltsNow(newMind) && tank.FirstUpdateAfterSpawn)
                 {
                     newMind.BlowBolts();
                 }
-                thisInst.SuppressFiring(!newMind.AttackAny);
 
                 if (!KickStart.AllowEnemiesToMine && newMind.CommanderMind == EnemyAttitude.Miner)
                     newMind.CommanderMind = EnemyAttitude.Default;
             }
             if (DebugRawTechSpawner.ShowDebugFeedBack)
-            {
-                if (AIGlobals.IsNeutralBaseTeam(tank.Team))
-                    AIGlobals.PopupNeutralInfo(newMind.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
-                else if (AIGlobals.IsFriendlyBaseTeam(tank.Team))
-                    AIGlobals.PopupAllyInfo(newMind.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
-                else
-                    AIGlobals.PopupEnemyInfo(newMind.EvilCommander.ToString(), WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * thisInst.lastTechExtents)));
-            }
+                AIGlobals.PopupColored(newMind.EvilCommander.ToString(), tank.Team, WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * helper.lastTechExtents)));
 
-            thisInst.SecondAvoidence = newMind.CommanderSmarts >= EnemySmarts.Smrt;
-            thisInst.AISetSettings.AdvancedAI = newMind.CommanderSmarts >= EnemySmarts.Meh;
+            helper.SecondAvoidence = newMind.CommanderSmarts >= EnemySmarts.Smrt;
+            helper.AISetSettings.AdvancedAI = newMind.CommanderSmarts >= EnemySmarts.Meh;
             if (newMind.CommanderMind == EnemyAttitude.Homing)
-                thisInst.AISetSettings.ScanRange = AIGlobals.EnemyExtendActionRange;
+                helper.AISetSettings.ScanRange = AIGlobals.EnemyExtendActionRange;
             else
-                thisInst.AISetSettings.ScanRange = AIGlobals.DefaultEnemyScanRange;
+                helper.AISetSettings.ScanRange = AIGlobals.DefaultEnemyScanRange;
 
             switch (newMind.CommanderMind)
             {
@@ -1205,21 +1206,21 @@ namespace TAC_AI.AI.Enemy
                     newMind.MaxCombatRange = AIGlobals.InvaderMaxCombatRange;
                     break;
                 default:
-                    if (thisInst.AttackMode == EAttackMode.Ranged)
+                    if (helper.AttackMode == EAttackMode.Ranged)
                         newMind.MaxCombatRange = AIGlobals.SpyperMaxCombatRange;
                     else
                         newMind.MaxCombatRange = AIGlobals.DefaultEnemyMaxCombatRange;
 
                     break;
             }
-            if (thisInst.AttackMode == EAttackMode.Ranged)
+            if (helper.AttackMode == EAttackMode.Ranged)
                 newMind.MinCombatRange = AIGlobals.MinCombatRangeSpyper;
-            else if (thisInst.Attempt3DNavi)
+            else if (helper.Attempt3DNavi)
                 newMind.MinCombatRange = AIGlobals.SpacingRangeHoverer;
             else
                 newMind.MinCombatRange = AIGlobals.MinCombatRangeDefault;
 
-            //thisInst.RecalibrateMovementAIController();
+            //helper.RecalibrateMovementAIController();
         }
     }
 }

@@ -201,6 +201,10 @@
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2757919307\WaterMod.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Control Block">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\workshop\content\285920\2758880180\Control Block.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="TerraTechETCUtil">
       <HintPath>..\..\TTETCUtil\TerraTechETCUtil\TerraTechETCUtil\obj\Steam\TerraTechETCUtil.dll</HintPath>
     </Reference>
@@ -211,7 +215,6 @@
     <!--> zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz </!-->
     <Reference Include="0Harmony">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\TerraTechWin64_Data\Managed\0Harmony.dll</HintPath>
-      <Private>False</Private>
     </Reference>
     <Reference Include="RandomAdditions">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\TerraTech\QMods\RandomAdditions\RandomAdditions.dll</HintPath>
@@ -254,6 +257,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AIFollowable.cs" />
     <Compile Include="AISettingsSet.cs" />
     <Compile Include="AIStates.cs" />
     <Compile Include="AIGlobals.cs" />
@@ -289,7 +293,6 @@
     <Compile Include="AI\AlliedOperations\BAegis.cs" />
     <Compile Include="AI\AlliedOperations\BAviator.cs" />
     <Compile Include="AI\Movement\IMovementAIController.cs" />
-    <Compile Include="AI\Movement\AICores\AirplaneUtils.cs" />
     <Compile Include="AI\Movement\AICores\AirplaneAICore.cs" />
     <Compile Include="AI\Movement\AICores\HelicopterAICore.cs" />
     <Compile Include="AI\Movement\AICores\HelicopterUtils.cs" />
@@ -335,6 +338,7 @@
     <Compile Include="GUIAIManager.cs" />
     <Compile Include="GUINPTInteraction.cs" />
     <Compile Include="GUILister.cs" />
+    <Compile Include="KickStartExtras.cs" />
     <Compile Include="ModuleWorldRadar.cs" />
     <Compile Include="PatchBatch\GlobalPatches.cs" />
     <Compile Include="PatchBatch\ManagerPatches.cs" />
@@ -353,9 +357,10 @@
     <Compile Include="TeamNamer.cs" />
     <Compile Include="Templates\BaseGamePopSpecials.cs" />
     <Compile Include="Templates\CommunityCluster.cs" />
+    <Compile Include="Templates\RawTechPopParams.cs" />
     <Compile Include="World\ManEnemySiege.cs" />
     <Compile Include="World\ManBaseTeams.cs" />
-    <Compile Include="World\ManPlayerRTS.cs" />
+    <Compile Include="World\ManWorldRTS.cs" />
     <Compile Include="Templates\CommunityStorage.cs" />
     <Compile Include="Templates\DebugRawTechSpawner.cs" />
     <Compile Include="Templates\SpawnBaseTypes.cs" />
@@ -364,14 +369,14 @@
     <Compile Include="Templates\RawTechExporter.cs" />
     <Compile Include="Templates\RawTechLoader.cs" />
     <Compile Include="Templates\SpecialAISpawner.cs" />
-    <Compile Include="Templates\TempManager.cs" />
+    <Compile Include="Templates\ModTechsDatabase.cs" />
     <Compile Include="Templates\TempStorage.cs" />
     <Compile Include="UnityEngineExtensions.cs" />
     <Compile Include="World\NP_BaseUnit.cs" />
     <Compile Include="World\NP_MobileUnit.cs" />
     <Compile Include="World\TechUnitGroup.cs" />
     <Compile Include="World\UnloadedBases.cs" />
-    <Compile Include="World\NP_Presence_Automatic.cs" />
+    <Compile Include="World\NP_Presence.cs" />
     <Compile Include="World\NP_TechUnit.cs" />
     <Compile Include="World\ManEnemyWorld.cs" />
     <Compile Include="World\PlayerRTSUI.cs" />
@@ -422,6 +427,11 @@ set modpath3="C:\Program Files (x86)\Steam\steamapps\common\TerraTech\LocalMods\
 
 if exist !modpath3! (
 if $(ConfigurationName) == Steam (
+echo Copying to SteamModLocalDirect
+set e=$(TargetDir)&gt;nul
+xcopy /S /Y /R "!e:~0,-1!" !modpath3!
+)
+if $(ConfigurationName) == SteamDev (
 echo Copying to SteamModLocalDirect
 set e=$(TargetDir)&gt;nul
 xcopy /S /Y /R "!e:~0,-1!" !modpath3!

@@ -23,14 +23,14 @@ namespace TAC_AI.World
         private static bool ready = false;
         public static bool InProgress => inProgress;
         private static bool inProgress = false;
-        public static NP_Presence_Automatic SiegingEnemyTeam {
+        public static NP_Presence SiegingEnemyTeam {
             get {
                 if (!inst)
                     return null;
                 return inst.EP; 
             }
         }
-        private NP_Presence_Automatic EP;
+        private NP_Presence EP;
         private int Team = 0;
         private readonly List<Tank> techsInvolved = new List<Tank>();
 
@@ -54,7 +54,7 @@ namespace TAC_AI.World
             else
                 RaidCooldown = AIGlobals.RaidCooldownTimeSecs;
         }
-        public static bool LaunchSiege(NP_Presence_Automatic enemyTeamInvolved)
+        public static bool CheckShouldLaunchSiege(NP_Presence enemyTeamInvolved)
         {
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return false;
@@ -70,7 +70,7 @@ namespace TAC_AI.World
             }
             return false;
         }
-        public static void CancelSiege(NP_Presence_Automatic enemyTeamInvolved)
+        public static void CancelSiege(NP_Presence enemyTeamInvolved)
         {
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return;
@@ -155,7 +155,7 @@ namespace TAC_AI.World
         private static void CheckSiegeEnded()
         {
             var mainBase = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(inst.EP);
-            bool defeatedAllUnits = !Tank.IsEnemy(inst.Team, ManPlayer.inst.PlayerTeam) || (inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs());
+            bool defeatedAllUnits = !ManBaseTeams.IsEnemy(inst.Team, ManPlayer.inst.PlayerTeam) || (inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs());
             if (mainBase == null || !UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos) || defeatedAllUnits)
             {
                 NetworkHandler.TryBroadcastNewEnemySiege(inst.Team, TotalHP, false);
@@ -381,10 +381,10 @@ namespace TAC_AI.World
                 return;
             }
             GUILayout.Box("--- RTS Enemy Siege --- ");
-            GUILayout.Label("  Hosting Team: " + SiegingEnemyTeam.team);
+            GUILayout.Label("  Hosting Team: " + SiegingEnemyTeam.Team);
             GUILayout.Label("    Total Health: " + TotalHP);
             GUILayout.Label("    Current Health: " + CurrentHP);
-            GUILayout.Label("    Retreating: " + AIECore.RetreatingTeams.Contains(SiegingEnemyTeam.team));
+            GUILayout.Label("    Retreating: " + AIECore.RetreatingTeams.Contains(SiegingEnemyTeam.Team));
             GUILayout.Label("    Target: " + (Singleton.playerTank ? Singleton.playerTank.name : "None"));
             int activeCount = 0;
             int baseCount = 0;

@@ -5,13 +5,14 @@ using TerraTechETCUtil;
 
 namespace TAC_AI
 {
-    internal class ModuleHarvestReciever : MonoBehaviour
+    public class ModuleHarvestReciever : MonoBehaviour, IAIFollowable
     {
         TankBlock TankBlock;
         // Returns the position of itself in the world as a point the AI can pathfind to
-        public Tank tank;
+        public Tank tank { get; private set; }
         public Transform trans;
         public ModuleItemHolder holder;
+        public Vector3 position => trans.position;
         private bool DockingRequested = false;
 
         public static implicit operator Transform(ModuleHarvestReciever yes)
@@ -28,6 +29,10 @@ namespace TAC_AI
             TankBlock.SubToBlockAttachConnected(null, OnDetach);
             if (TankBlock.tank)
                 OnAttach();
+            //holder.TakeItemEvent.Subscribe(); // too late
+        }
+        public void OnTaken(Visible vis, ModuleItemHolder.Stack stack)
+        { 
         }
         public void DelayedSub()
         {
@@ -67,7 +72,7 @@ namespace TAC_AI
             }
             DockingRequested = false;
         }
-        public void RequestDocking(TankAIHelper Approaching)
+        public void RequestDocking(TankAIHelper requesterHelper)
         {
             if (!DockingRequested)
             {
@@ -78,7 +83,7 @@ namespace TAC_AI
                 }
                 DockingRequested = true;
                 Invoke("StopDocking", 2);
-                tank.GetHelperInsured().SlowForApproacher(Approaching);
+                tank.GetHelperInsured().SlowForApproacher(requesterHelper);
             }
         }
         private void StopDocking()

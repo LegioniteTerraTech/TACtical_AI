@@ -468,7 +468,7 @@ namespace TAC_AI.AI.Movement
                         else if (best.Key == AIEPathMapper.maxAltByte)
                             AIGlobals.PopupEnemyInfo(pathed.Count.ToString(), WorldPosition.FromScenePosition(ToSceneHeightFast(CurPos)));
                         else
-                            AIGlobals.PopupNeutralInfo(pathed.Count.ToString() + " | " + best.Key, WorldPosition.FromScenePosition(ToSceneHeightFast(CurPos)));
+                            AIGlobals.PopupSubNeutralInfo(pathed.Count.ToString() + " | " + best.Key, WorldPosition.FromScenePosition(ToSceneHeightFast(CurPos)));
                     }
                     pathed.Add(CurPos);
                     if (pathed.Count >= maxPathedTillFail)

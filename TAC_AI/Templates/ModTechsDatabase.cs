@@ -7,10 +7,11 @@ using UnityEngine;
 using TAC_AI.AI;
 using TerraTechETCUtil;
 using System.IO;
+using System.Collections;
 
 namespace TAC_AI.Templates
 {
-    internal static class TempManager
+    internal static class ModTechsDatabase
     {
         private static int lastExtLocalCount = 0;
         private static int lastExtModCount = 0;
@@ -19,31 +20,96 @@ namespace TAC_AI.Templates
         /// <summary>
         /// Hosts active techs
         /// </summary>
-        public static Dictionary<SpawnBaseTypes, RawTechTemplate> techBases;
+        public static Dictionary<SpawnBaseTypes, RawTech> InternalPopTechs;
 
-        public static List<RawTechTemplate> ExternalEnemyTechsLocal;
+        public static List<RawTech> ExtPopTechsLocal = new List<RawTech>();
 
-        public static List<RawTechTemplate> ExternalEnemyTechsMods;
+        public static List<RawTech> ExtPopTechsMods = new List<RawTech>();
 
-        public static List<RawTechTemplate> ExternalEnemyTechsAll;
+        public static List<RawTech> ExtPopTechsAll = new List<RawTech>();
 
-        private static void ValidateAndAddTechs(List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile)
+        private static void AddInternalTechs(List<KeyValuePair<SpawnBaseTypes, RawTech>> compile)
+        {
+            foreach (KeyValuePair<SpawnBaseTypes, RawTech> pair in compile)
+                InternalPopTechs.Add(pair.Key, pair.Value);
+        }
+        internal static void ValidateAndAdd(Dictionary<SpawnBaseTypes, RawTechTemplate> preCompile, Dictionary<SpawnBaseTypes, RawTech> target)
         {
             foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in preCompile)
             {
-                if (ValidateBlocksInTech(ref pair.Value.savedTech, pair.Value))
+                RawTech inst = pair.Value.ToActive();
+                try
                 {
-                    techBases.Add(pair.Key, pair.Value);
+                    if (inst.ValidateBlocksInTech(false, true))
+                    {
+                        target.Add(pair.Key, inst);
+                    }
+                    else
+                    {
+                        DebugTAC_AI.Log(KickStart.ModID + ": (Prefabs) Could not load " + pair.Value.techName + 
+                            " as the load operation encountered an error");
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    DebugTAC_AI.Log(KickStart.ModID + ": Could not load " + pair.Value.techName + " as the load operation encountered an error");
+                    DebugTAC_AI.LogLoad(KickStart.ModID + ": (Prefabs) Could not load " + pair.Value.techName + 
+                        " as the load operation encountered a serious error - " + e);
                 }
             }
-            CommunityCluster.Organize(ref techBases);
-
             preCompile.Clear(); // GC, do your duty
-            CommunityStorage.UnloadRemainingUnused();
+        }
+        internal static void ValidateAndAdd(List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile, List<KeyValuePair<SpawnBaseTypes, RawTech>> target)
+        {
+            foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in preCompile)
+            {
+                try
+                {
+                    RawTech inst = pair.Value.ToActive();
+                    try
+                    {
+                        if (inst.ValidateBlocksInTech(true, false))
+                        {
+                            target.Add(new KeyValuePair<SpawnBaseTypes, RawTech>(pair.Key, inst));
+                        }
+                        else
+                        {
+                            DebugTAC_AI.Log(KickStart.ModID + ": (CommunityInternal) Could not load " + pair.Value.techName +
+                                " as the load operation encountered an error");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        DebugTAC_AI.LogLoad(KickStart.ModID + ": (CommunityInternal) Could not load " + pair.Value.techName +
+                            " as the load operation encountered a serious error - " + e);
+                    }
+                }
+                catch
+                {
+                    DebugTAC_AI.LogLoad(KickStart.ModID + ": (CommunityInternal) Could not load " + pair.Value.techName +
+                        " as it was completely corrupted");
+                }
+            }
+            preCompile.Clear(); // GC, do your duty
+        }
+        internal static void ValidateAndAdd(List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile, Dictionary<SpawnBaseTypes, RawTech> target)
+        {
+            foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in preCompile)
+            {
+                try
+                {
+                    RawTech inst = pair.Value.ToActive();
+                    if (inst.ValidateBlocksInTech(true, false))
+                    {
+                        target.Add(pair.Key, inst);
+                    }
+                    else
+                    {
+                        DebugTAC_AI.Log(KickStart.ModID + ": (VanillaInternal) Could not load " + pair.Value.techName + " as the load operation encountered an error");
+                    }
+                }
+                catch { }
+            }
+            preCompile.Clear(); // GC, do your duty
         }
 
         /// <summary>
@@ -66,79 +132,163 @@ namespace TAC_AI.Templates
         }
         public static void ValidateAndAddAllInternalTechs(bool reloadPublic = true)
         {
-            techBases = new Dictionary<SpawnBaseTypes, RawTechTemplate>();
-            List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> preCompile = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
-
+            InternalPopTechs = new Dictionary<SpawnBaseTypes, RawTech>();
             try
             {
-                preCompile.AddRange(SpecialAISpawner.ReturnAllBaseGameSpawns());
-                preCompile.AddRange(CommunityStorage.ReturnAllCommunityStored(reloadPublic));
-                preCompile.AddRange(TempStorage.techBasesPrefab);
-                ValidateAndAddTechs(preCompile);
+#if !DEBUG
+                if (!KickStart.TryForceOnlyPlayerSpawns)
+                    ValidateAndAdd(SpecialAISpawner.ReturnAllBaseGameSpawns(), InternalPopTechs);
+#endif
+                AddInternalTechs(TempStorage.techBasesPrefab.ToList());
+                AddInternalTechs(CommunityStorage.ReturnAllCommunityStored());
+                if (reloadPublic)
+                    AddInternalTechs(CommunityStorage.ReturnAllCommunityClustered());
+                CommunityCluster.Organize(ref InternalPopTechs);
+
+                CommunityStorage.UnloadRemainingUnused();
                 InvokeHelper.Invoke(DelayedValidateAndAddBaseGameTechs, 3);
             }
             catch (InsufficientMemoryException)
             {
-                preCompile.Clear(); // GC, do your duty
                 GC.Collect(); // Do it NOW IT'S AN EMERGENCY
                 DebugTAC_AI.FatalError("Advanced AI ran COMPLETELY OUT of memory when loading enemy spawns." +
                     " Some enemies might be corrupted!");
             }
             catch (OutOfMemoryException)
             {
-                preCompile.Clear(); // GC, do your duty
                 GC.Collect(); // Do it NOW IT'S AN EMERGENCY
                 DebugTAC_AI.FatalError("Advanced AI ran out of memory when loading enemy spawns." +
                     " Some enemies might be corrupted!");
             }
         }
+        private static IEnumerator CurrCoroutine = null;
+        private static float startTime;
         public static void ValidateAndAddAllExternalTechs(bool force = false)
+        {
+            if (CurrCoroutine != null)
+                InvokeHelper.CancelCoroutine(CurrCoroutine);
+            startTime = Time.time;
+            CurrCoroutine = DoValidateAndAddAllExternalTechsAsync(force);
+            InvokeHelper.InvokeCoroutine(CurrCoroutine);
+        }
+        private static IEnumerator DoValidateAndAddAllExternalTechsAsync(bool force)
         {
             RawTechExporter.ValidateEnemyFolder();
             int tCount = RawTechExporter.GetTechCounts();
             int tMCount = RawTechExporter.GetRawTechsCountExternalMods();
             if (tCount != lastExtLocalCount || lastExtModCount != tMCount || force)
             {
-                ExternalEnemyTechsLocal = new List<RawTechTemplate>();
+                ExtPopTechsLocal.Clear();
                 List<RawTechTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
                 foreach (RawTechTemplate raw in ExternalTechsRaw)
                 {
-                    if (ValidateBlocksInTech(ref raw.savedTech, raw))
+                    RawTech inst = raw.ToActive();
+                    if (inst.ValidateBlocksInTech(true, false))
                     {
-                        ExternalEnemyTechsLocal.Add(raw);
+                        ExtPopTechsLocal.Add(inst);
                     }
                     else
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": Could not load local RawTech " + raw.techName + " as the load operation encountered an error");
+                        DebugTAC_AI.Log(KickStart.ModID + ": Could not load local RawTech " + inst.techName + " as the load operation encountered an error");
                     }
+                    yield return null;
                 }
-                DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExternalEnemyTechsLocal.Count + " RawTechs from the Local pool");
+                DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExtPopTechsLocal.Count + " RawTechs from the Local pool");
                 lastExtLocalCount = tCount;
 
 
-                ExternalEnemyTechsMods = new List<RawTechTemplate>();
+                ExtPopTechsMods.Clear();
                 ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechsExternalMods();
                 foreach (RawTechTemplate raw in ExternalTechsRaw)
                 {
-                    if (ValidateBlocksInTech(ref raw.savedTech, raw))
+                    RawTech inst = raw.ToActive();
+                    if (inst.ValidateBlocksInTech(true, false))
                     {
-                        ExternalEnemyTechsMods.Add(raw);
+                        if (inst.purposes == null)
+                            inst.purposes = new HashSet<BasePurpose>();
+                        if (inst.techName == null)
+                            inst.techName = "<NULL>";
+                        ExtPopTechsMods.Add(inst);
                     }
                     else
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": Could not load ModBundle RawTech " + raw.techName + " as the load operation encountered an error");
                     }
+                    yield return null;
                 }
-                DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExternalEnemyTechsMods.Count + " RawTechs from the Mod pool");
+                DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExtPopTechsMods.Count + " RawTechs from the Mod pool");
                 lastExtModCount = tMCount;
 
 
-                ExternalEnemyTechsAll = new List<RawTechTemplate>();
-                ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsLocal);
-                ExternalEnemyTechsAll.AddRange(ExternalEnemyTechsMods);
-                DebugTAC_AI.Log(KickStart.ModID + ": Pushed a total of " + ExternalEnemyTechsAll.Count + " to the external tech pool.");
-                DebugRawTechSpawner.Organize(ref ExternalEnemyTechsLocal);
-                DebugRawTechSpawner.Organize(ref ExternalEnemyTechsMods);
+                ExtPopTechsAll.Clear();
+                ExtPopTechsAll.AddRange(ExtPopTechsLocal);
+                ExtPopTechsAll.AddRange(ExtPopTechsMods);
+                DebugTAC_AI.Log(KickStart.ModID + ": Pushed a total of " + ExtPopTechsAll.Count + " to the external tech pool.");
+                DebugRawTechSpawner.Organize(ref ExtPopTechsLocal);
+                DebugRawTechSpawner.Organize(ref ExtPopTechsMods);
+                DebugTAC_AI.Log(KickStart.ModID + ": Finished in " + (Time.time - startTime).ToString("F") + " seconds");
+            }
+        }
+        public static void ValidateAndAddAllExternalTechsIMMEDEATELY(bool force = false)
+        {
+            try
+            {
+                RawTechExporter.ValidateEnemyFolder();
+                int tCount = RawTechExporter.GetTechCounts();
+                int tMCount = RawTechExporter.GetRawTechsCountExternalMods();
+                if (tCount != lastExtLocalCount || lastExtModCount != tMCount || force)
+                {
+                    ExtPopTechsLocal.Clear();
+                    List<RawTechTemplate> ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechs();
+                    foreach (RawTechTemplate raw in ExternalTechsRaw)
+                    {
+                        RawTech inst = raw.ToActive();
+                        if (inst.ValidateBlocksInTech(true, false))
+                        {
+                            ExtPopTechsLocal.Add(inst);
+                        }
+                        else
+                        {
+                            DebugTAC_AI.Log(KickStart.ModID + ": Could not load local RawTech " + raw.techName + " as the load operation encountered an error");
+                        }
+                    }
+                    DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExtPopTechsLocal.Count + " RawTechs from the Local pool");
+                    lastExtLocalCount = tCount;
+
+
+                    ExtPopTechsMods.Clear();
+                    ExternalTechsRaw = RawTechExporter.LoadAllEnemyTechsExternalMods();
+                    foreach (RawTechTemplate raw in ExternalTechsRaw)
+                    {
+                        RawTech inst = raw.ToActive();
+                        if (inst.ValidateBlocksInTech(true, false))
+                        {
+                            if (inst.purposes == null)
+                                inst.purposes = new HashSet<BasePurpose>();
+                            if (inst.techName == null)
+                                inst.techName = "<NULL>";
+                            ExtPopTechsMods.Add(inst);
+                        }
+                        else
+                        {
+                            DebugTAC_AI.Log(KickStart.ModID + ": Could not load ModBundle RawTech " + raw.techName + " as the load operation encountered an error");
+                        }
+                    }
+                    DebugTAC_AI.Log(KickStart.ModID + ": Pushed " + ExtPopTechsMods.Count + " RawTechs from the Mod pool");
+                    lastExtModCount = tMCount;
+
+
+                    ExtPopTechsAll.Clear();
+                    ExtPopTechsAll.AddRange(ExtPopTechsLocal);
+                    ExtPopTechsAll.AddRange(ExtPopTechsMods);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Pushed a total of " + ExtPopTechsAll.Count + " to the external tech pool.");
+                    DebugRawTechSpawner.Organize(ref ExtPopTechsLocal);
+                    DebugRawTechSpawner.Organize(ref ExtPopTechsMods);
+                }
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log("CRASH on ValidateAndAddAllExternalTechs - " + e);
             }
         }
 
@@ -152,7 +302,7 @@ namespace TAC_AI.Templates
         /// <param name="basePrice"></param>
         /// <param name="greatestFaction"></param>
         /// <returns></returns>
-        public static bool ValidateBlocksInTech(ref string toLoad, RawTechTemplate templateToCheck)
+        public static bool ValidateBlocksInTech_OBSOLETE(ref string toLoad, RawTech templateToCheck)
         {
             try
             {
@@ -196,12 +346,12 @@ namespace TAC_AI.Templates
                 int basePrice = 0;
                 foreach (RawBlockMem bloc in mem)
                 {
-                    BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);
-                    if (!Singleton.Manager<ManSpawn>.inst.IsTankBlockLoaded(type))
-                    {
-                        valid = false;
-                        continue;
-                    }
+                    if (!BlockIndexer.StringToBlockType(bloc.t, out BlockTypes type))
+                        throw new NullReferenceException("Block does not exists - \nBlockName: " +
+                            (bloc.t.NullOrEmpty() ? "<NULL>" : bloc.t));
+                    if (!ManMods.inst.IsModdedBlock(type) && !ManSpawn.inst.IsTankBlockLoaded(type))
+                        throw new NullReferenceException("Block is not loaded - \nBlockName: " +
+                            (bloc.t.NullOrEmpty() ? "<NULL>" : bloc.t));
 
                     FactionSubTypes FST = Singleton.Manager<ManSpawn>.inst.GetCorporation(type);
                     FactionLevel FL = RawTechUtil.GetFactionLevel(FST);
@@ -222,7 +372,11 @@ namespace TAC_AI.Templates
                             else
                                 throw new InvalidOperationException("Block with invalid corp - \nCorp Level: " + FL.ToString() + " \nBlockType: " + type.ToString());
                         }
-                        catch (InvalidOperationException)
+                        catch (InvalidOperationException e)
+                        {
+                            throw e;
+                        }
+                        catch (Exception)
                         {
                             throw new Exception("Block with invalid data - \nBlockType: <?NULL?>");
                         }
@@ -237,20 +391,20 @@ namespace TAC_AI.Templates
                 templateToCheck.blockCount = mem.Count;
 
                 // Rebuild in workable format
-                toLoad = RawTechTemplate.MemoryToJSONExternal(mem);
+                toLoad = RawTechBase.MemoryToJSONExternal(mem);
 
                 return valid;
             }
-            catch
+            catch (Exception e)
             {
                 SB.Clear();
                 try
                 {
-                    DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech " + templateToCheck.techName + " was corrupted via unexpected mod changes!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech " + templateToCheck.techName + " is invalid! - " + e);
                 }
                 catch (Exception)
                 {
-                    DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech <?NULL?> was corrupted via unexpected mod changes!");
+                    DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech <?NULL?> is invalid! - " + e);
                 }
                 return false;
             }

@@ -10,7 +10,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 {
     internal static class RMiner
     {
-        public static void MineYerOwnBusiness(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void MineYerOwnBusiness(TankAIHelper helper, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Prospector) what to do movement-wise
             int errorCode = 0;
@@ -19,298 +19,278 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 Vector3 veloFlat = Vector3.zero;
                 if ((bool)tank.rbody)   // So that drifting is minimized
                 {
-                    veloFlat = tank.rbody.velocity;
+                    veloFlat = helper.SafeVelocity;
                     veloFlat.y = 0;
                 }
-                float prevDist = thisInst.lastOperatorRange;
-                float dist = thisInst.GetDistanceFromTask(thisInst.lastDestinationCore);
-                bool needsToSlowDown = thisInst.IsOrbiting(thisInst.lastDestinationCore, dist - prevDist);
+                float prevDist = helper.lastOperatorRange;
+                float dist = helper.GetDistanceFromTask(helper.lastDestinationCore);
+                bool needsToSlowDown = helper.IsOrbiting();
                 bool hasMessaged = false;
-                thisInst.AvoidStuff = true;
+                helper.AvoidStuff = true;
                 errorCode = 1;
 
-                BGeneral.ResetValues(thisInst, ref direct);
+                BGeneral.ResetValues(helper, ref direct);
 
                 // VALIDATION CHECKS OF TRACTOR BED FILL STATUS
-                if (thisInst.CollectedTarget)
+                if (helper.CollectedTarget)
                 {
                     errorCode = 2;
-                    thisInst.CollectedTarget = false;
+                    helper.CollectedTarget = false;
                     foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
                     {
                         ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
                         if (!hold.IsEmpty && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
                         {
-                            thisInst.CollectedTarget = true;
+                            helper.CollectedTarget = true;
                             break;//Checking if tech is empty when unloading at base
                         }
                     }
-                    if (!thisInst.CollectedTarget)
-                        thisInst.actionPause = BProspector.reverseFromResourceTime;
+                    if (!helper.CollectedTarget)
+                        helper.actionPause = BProspector.reverseFromResourceTime;
                 }
                 else
                 {
                     errorCode = 3;
-                    thisInst.CollectedTarget = true;
+                    helper.CollectedTarget = true;
                     foreach (ModuleItemHolder hold in tank.blockman.IterateBlockComponents<ModuleItemHolder>())
                     {
                         ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
                         if (!hold.IsFull && hold.Acceptance == flag && hold.IsFlag(ModuleItemHolder.Flags.Collector))
                         {
-                            thisInst.CollectedTarget = false;
+                            helper.CollectedTarget = false;
                             break;//Checking if tech is full after destroying a node
                         }
                     }
-                    if (thisInst.CollectedTarget)
-                        thisInst.actionPause = BProspector.reverseFromBaseTime;
+                    if (helper.CollectedTarget)
+                        helper.actionPause = BProspector.reverseFromBaseTime;
                 }
                 errorCode = 4;
 
-                if (thisInst.CollectedTarget)
+                if (helper.CollectedTarget)
                 {
                     errorCode = 5;
-                    if (thisInst.ActionPause > 0)
+                    if (helper.ActionPause > 0)
                     {
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from resources...");
-                        direct.Reverse(thisInst);
-                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                        direct.Reverse(helper);
+                        helper.actionPause -= KickStart.AIClockPeriod / 5;
                         return;
                     }
                     errorCode = 6;
-                    thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, mind.MaxCombatRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
-                    if (!thisInst.foundBase)
-                    {
-                        errorCode = 7;
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Searching for nearest base!");
-                        thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                        if (thisInst.theBase == null)
-                            return; // There's no base!
-                        thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
-                    }
-                    thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = 1;
+                    BGeneral.GetBase(helper, tank, true, ref dist, ref hasMessaged, ref direct);
 
                     errorCode = 8;
-                    if (thisInst.MovementController is AIControllerAir)
+                    if (helper.MovementController is AIControllerAir)
                     {
-                        if (thisInst.MovementController.AICore is Movement.AICores.HelicopterAICore)
+                        if (helper.MovementController.AICore is Movement.AICores.HelicopterAICore)
                         {   // Float over target and unload
-                            float distFlat = (tank.boundsCentreWorldNoCheck - thisInst.theBase.boundsCentreWorldNoCheck).ToVector2XZ().magnitude;
-                            if (distFlat < thisInst.lastBaseExtremes)
+                            float distFlat = (tank.boundsCentreWorldNoCheck - helper.theBase.boundsCentreWorldNoCheck).ToVector2XZ().magnitude;
+                            if (distFlat < helper.lastBaseExtremes)
                             {   // Final approach - turn off avoidence
-                                thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
-                                thisInst.AvoidStuff = false;
-                                if (thisInst.recentSpeed == 1)
+                                helper.theBase.GetHelperInsured().SlowForApproacher(helper);
+                                helper.AvoidStuff = false;
+                                if (helper.recentSpeed == 1)
                                 {
                                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                                    thisInst.DriveVar = -1;
-                                    //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                                    helper.DriveVar = -1;
+                                    //helper.TryHandleObstruction(hasMessaged, dist, false, false);
                                 }
                                 else
                                 {
                                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
-                                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                                    thisInst.Yield = true;
-                                    thisInst.SettleDown();
-                                    thisInst.DropAllItemsInCollectors();
+                                    helper.actionPause -= KickStart.AIClockPeriod / 5;
+                                    helper.ThrottleState = AIThrottleState.Yield;
+                                    helper.SettleDown();
+                                    helper.DropAllItemsInCollectors();
                                 }
                             }
-                            else if (thisInst.recentSpeed < 3)
+                            else if (helper.recentSpeed < 3)
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                                thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                                helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                             }
                         }
                         else
                         {   // Fly aircraft
-                            if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + AIGlobals.AircraftHailMaryRange)
+                            if (dist < helper.lastBaseExtremes + helper.lastTechExtents + AIGlobals.AircraftHailMaryRange)
                             {   // Final approach - turn off avoidence
-                                thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
-                                thisInst.AvoidStuff = false;
-                                if (thisInst.recentSpeed == 1)
+                                helper.theBase.GetHelperInsured().SlowForApproacher(helper);
+                                helper.AvoidStuff = false;
+                                if (helper.recentSpeed == 1)
                                 {
                                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                                    thisInst.DriveVar = -1;
-                                    //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                                    helper.DriveVar = -1;
+                                    //helper.TryHandleObstruction(hasMessaged, dist, false, false);
                                 }
                                 else
                                 {
                                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and dropping off payload...");
-                                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                                    thisInst.Yield = true;
-                                    thisInst.SettleDown();
-                                    thisInst.DropAllItemsInCollectors();
+                                    helper.actionPause -= KickStart.AIClockPeriod / 5;
+                                    helper.ThrottleState = AIThrottleState.Yield;
+                                    helper.SettleDown();
+                                    helper.DropAllItemsInCollectors();
                                 }
                             }
-                            else if (thisInst.recentSpeed < 3)
+                            else if (helper.recentSpeed < 3)
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                                thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                                helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                             }
                         }
                     }
                     else
                     {
-                        if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 1)
+                        if (dist < helper.lastBaseExtremes + helper.lastTechExtents + 1)
                         {
-                            if (thisInst.recentSpeed == 1)
+                            if (helper.recentSpeed == 1)
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                                thisInst.AvoidStuff = false;
-                                thisInst.DriveVar = -1;
+                                helper.AvoidStuff = false;
+                                helper.DriveVar = -1;
                             }
                             else
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base and unloading!");
-                                thisInst.AvoidStuff = false;
-                                thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                                thisInst.Yield = true;
-                                thisInst.SettleDown();
+                                helper.AvoidStuff = false;
+                                helper.actionPause -= KickStart.AIClockPeriod / 5;
+                                helper.ThrottleState = AIThrottleState.Yield;
+                                helper.SettleDown();
                             }
                         }
-                        else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 4)
+                        else if (dist < helper.lastBaseExtremes + helper.lastTechExtents + 4)
                         {
-                            if (thisInst.recentSpeed == 1)
+                            if (helper.recentSpeed == 1)
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                                thisInst.AvoidStuff = false;
-                                thisInst.TryHandleObstruction(hasMessaged, dist, false, false, ref direct);
+                                helper.AvoidStuff = false;
+                                helper.TryHandleObstruction(hasMessaged, dist, false, false, ref direct);
                             }
-                            else if (thisInst.recentSpeed < 3)
+                            else if (helper.recentSpeed < 3)
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
-                                thisInst.AvoidStuff = false;
-                                thisInst.Yield = true;
+                                helper.AvoidStuff = false;
+                                helper.ThrottleState = AIThrottleState.Yield;
                             }
                             else
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
-                                thisInst.AvoidStuff = false;
-                                thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                                thisInst.Yield = true;
-                                thisInst.SettleDown();
+                                helper.AvoidStuff = false;
+                                helper.actionPause -= KickStart.AIClockPeriod / 5;
+                                helper.ThrottleState = AIThrottleState.Yield;
+                                helper.SettleDown();
                             }
                         }
-                        else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
+                        else if (dist < helper.lastBaseExtremes + helper.lastTechExtents + 8)
                         {
-                            if (thisInst.recentSpeed < 2)
+                            if (helper.recentSpeed < 2)
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  unjamming from base...");
-                                thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                                helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                             }
                             else
                             {
                                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arrived at base!");
-                                thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                                //thisInst.Yield = true;
-                                thisInst.SettleDown();
+                                helper.actionPause -= KickStart.AIClockPeriod / 5;
+                                //helper.ThrottleState = AIThrottleState.Yield;
+                                helper.SettleDown();
                                 if (needsToSlowDown)
-                                    thisInst.Yield = true;
+                                    helper.ThrottleState = AIThrottleState.Yield;
                             }
                         }
-                        else if (thisInst.recentSpeed < 3)
+                        else if (helper.recentSpeed < 3)
                         {
                             hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                            thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                            helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                         }
                         else if (needsToSlowDown)
-                            thisInst.Yield = true;
+                            helper.ThrottleState = AIThrottleState.Yield;
                     }
                     errorCode = 9;
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Heading back to base!");
                     direct.DriveDest = EDriveDest.ToBase;
-                    thisInst.foundGoal = false;
+                    helper.foundGoal = false;
                 }
                 else
                 {
                     errorCode = 101;
-                    if (thisInst.ActionPause > 0)
+                    if (helper.ActionPause > 0)
                     {
                         errorCode = 102;
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                        direct.Reverse(thisInst);
-                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                        direct.Reverse(helper);
+                        helper.actionPause -= KickStart.AIClockPeriod / 5;
                         return;
                     }
                     errorCode = 103;
-                    if (!thisInst.foundGoal)
+                    if (!helper.foundGoal)
                     {
                         errorCode = 104;
-                        thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                        thisInst.foundGoal = AIECore.FetchClosestResource(tank.rootBlockTrans.position, mind.MaxCombatRange
-                            , thisInst.lastTechExtents * AIGlobals.WaterDepthTechHeightPercent, out thisInst.theResource);
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Scanning for resources...");
-                        if (!thisInst.foundGoal)
-                        {
-                            errorCode = 105;
-                            thisInst.foundBase = AIECore.FetchClosestChunkReceiver(tank.rootBlockTrans.position, mind.MaxCombatRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
-                            if (thisInst.theBase == null)
-                            {
-                                direct.STOP(thisInst);
-                                return; // There's no base! 
-                            }
-                            thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
-                        }
-                        direct.DriveDest = EDriveDest.ToBase;
-                        errorCode = 106;
-                        BProspector.StopByBase(thisInst, tank, dist, ref hasMessaged, ref direct);
+                        helper.EstTopSped = 1;//slow down the clock to reduce lagg
+                        BGeneral.StopByBase(helper, tank, true, ref dist, ref hasMessaged, ref direct);
                         return; // There's no resources left!
                     }
-                    else if (thisInst.theResource != null)
+                    else if (helper.theResource != null)
                     {
                         errorCode = 107;
-                        if (!thisInst.theResource.isActive ||
-                            thisInst.theResource.GetComponent<ResourceDispenser>().IsDeactivated ||
-                            thisInst.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
+                        if (!helper.theResource.isActive ||
+                            helper.theResource.GetComponent<ResourceDispenser>().IsDeactivated ||
+                            helper.theResource.gameObject.GetComponent<Damageable>().Invulnerable)
                         {
                             errorCode = 108;
-                            AIECore.Minables.Remove(thisInst.theResource);
-                            thisInst.theResource = null;
-                            thisInst.foundGoal = false;
-                            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.trans.position);
+                            AIECore.Minables.Remove(helper.theResource);
+                            helper.theResource = null;
+                            helper.foundGoal = false;
+                            return;
+                        }
+                        else if (!(helper.theResource.centrePosition - tank.boundsCentreWorldNoCheck).WithinBox(
+                            helper.JobSearchRange + AIGlobals.FindItemScanRangeExtension))
+                        {
+                            errorCode = 10833;
+                            helper.theResource = null;
+                            helper.foundGoal = false;
                             return;
                         }
                     }
 
-                    if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
+                    if (dist < helper.lastTechExtents + 3 && helper.recentSpeed < 3)
                     {
                         errorCode = 109;
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + thisInst.theResource.trans.position);
-                        thisInst.AvoidStuff = false;
-                        thisInst.Yield = true;
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Mining resource at " + helper.theResource.trans.position);
+                        helper.AvoidStuff = false;
+                        helper.ThrottleState = AIThrottleState.Yield;
                         if (!mind.LikelyMelee)
-                            thisInst.PivotOnly = true;
+                            helper.ThrottleState = AIThrottleState.PivotOnly;
                         else
                         {
-                            thisInst.ForceSetDrive = true;
-                            thisInst.DriveVar = 1;
+                            helper.ThrottleState = AIThrottleState.ForceSpeed;
+                            helper.DriveVar = 1;
                         }
-                        thisInst.SettleDown();
-                        thisInst.RemoveObstruction(48);
+                        helper.SettleDown();
+                        helper.RemoveObstruction(48);
                     }
-                    else if (thisInst.recentSpeed < 2.5f)
+                    else if (helper.recentSpeed < 2.5f)
                     {
                         errorCode = 110;
                         hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                        helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                     }
-                    else if (dist < thisInst.lastTechExtents + 12)
+                    else if (dist < helper.lastTechExtents + 12)
                     {
                         errorCode = 111;
-                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arriving at resource at " + thisInst.theResource.trans.position);
-                        thisInst.AvoidStuff = false;
-                        thisInst.Yield = true;
-                        thisInst.SettleDown();
-                        thisInst.RemoveObstruction();
-                        thisInst.ForceSetDrive = true;
-                        thisInst.DriveVar = 1;
+                        hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Arriving at resource at " + helper.theResource.trans.position);
+                        helper.AvoidStuff = false;
+                        helper.ThrottleState = AIThrottleState.Yield;
+                        helper.SettleDown();
+                        helper.RemoveObstruction();
+                        helper.ThrottleState = AIThrottleState.ForceSpeed;
+                        helper.DriveVar = 1;
                     }
                     else if (needsToSlowDown)
-                        thisInst.Yield = true;
+                        helper.ThrottleState = AIThrottleState.Yield;
                     errorCode = 112;
-                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + thisInst.theResource.trans.position + "|| Current pos " + tank.boundsCentreWorldNoCheck);
+                    hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Moving out to mine at " + helper.theResource.trans.position + "|| Current pos " + tank.boundsCentreWorldNoCheck);
                     direct.DriveDest = EDriveDest.ToMine;
-                    thisInst.foundBase = false;
+                    helper.foundBase = false;
                 }
             }
             catch (Exception)

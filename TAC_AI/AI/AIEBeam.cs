@@ -6,90 +6,90 @@ namespace TAC_AI.AI
 {
     internal static class AIEBeam
     {
-        public static void BeamMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank)
+        public static void BeamMaintainer(TankControl thisControl, TankAIHelper helper, Tank tank)
         {
             try
             {
-                if (!thisInst.CanUseBuildBeam)
+                if (!helper.CanUseBuildBeam)
                 {
                     if (tank.beam.IsActive)
                         tank.beam.EnableBeam(false);
                     return;
                 }
 
-                if (thisInst.BeamTimeoutClock > 0)
+                if (helper.BeamTimeoutClock > 0)
                 {
                     if (!tank.beam.IsActive)
                         tank.beam.EnableBeam(true);
-                    thisInst.FullBoost = false;
-                    thisInst.LightBoost = false;
+                    helper.FullBoost = false;
+                    helper.LightBoost = false;
                     thisControl.BoostControlJets = false;
                     if (tank.rootBlockTrans.up.y > 0.95f)
-                        thisInst.BeamTimeoutClock = 0;
-                    else if (thisInst.BeamTimeoutClock > 40)
+                        helper.BeamTimeoutClock = 0;
+                    else if (helper.BeamTimeoutClock > 40)
                     {
-                        thisInst.BeamTimeoutClock = 0;
+                        helper.BeamTimeoutClock = 0;
                     }
                     else
-                        thisInst.BeamTimeoutClock++;
+                        helper.BeamTimeoutClock++;
                 }
                 else
                     tank.beam.EnableBeam(false);
 
-                if (thisInst.MovementController is AIControllerAir pilot)
+                if (helper.MovementController is AIControllerAir pilot)
                 {   // Handoff all operations to AIEAirborne
-                    if (!pilot.Grounded || AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.lastTechExtents))
+                    if (!pilot.Grounded || AIEPathing.AboveHeightFromGroundTech(helper, helper.lastTechExtents))
                     {   //Become a ground vehicle for now
-                        if (tank.grounded && IsTechTippedOver(tank, thisInst))
+                        if (tank.grounded && IsTechTippedOver(tank, helper))
                         {
-                            thisInst.BeamTimeoutClock = 10;
+                            helper.BeamTimeoutClock = 10;
                         }
                         return;
                     }
                 }
 
 
-                if (!thisInst.IsMultiTech && thisInst.ForceSetBeam && thisInst.RequestBuildBeam)
+                if (!helper.IsMultiTech && helper.ForceSetBeam && helper.RequestBuildBeam)
                 {
-                    thisInst.BeamTimeoutClock = 35;
+                    helper.BeamTimeoutClock = 35;
                 }
-                else if (!thisInst.IsMultiTech && IsTechTippedOver(tank, thisInst) && thisInst.RequestBuildBeam)
+                else if (!helper.IsMultiTech && IsTechTippedOver(tank, helper) && helper.RequestBuildBeam)
                 {
-                    if (thisInst.Attempt3DNavi)
+                    if (helper.Attempt3DNavi)
                     {
                         //reduce build beam spam when aiming
-                        thisInst.actionPause++;
+                        helper.actionPause++;
 
-                        if (thisInst.ActionPause == 70)
-                            thisInst.actionPause = 100;
-                        else if (thisInst.ActionPause > 80)
+                        if (helper.ActionPause == 70)
+                            helper.actionPause = 100;
+                        else if (helper.ActionPause > 80)
                         {
-                            thisInst.BeamTimeoutClock = 1;
-                            //thisInst.ActionPause--;
+                            helper.BeamTimeoutClock = 1;
+                            //helper.ActionPause--;
                         }
-                        else if (thisInst.ActionPause == 80)
-                            thisInst.actionPause = 0;
+                        else if (helper.ActionPause == 80)
+                            helper.actionPause = 0;
                     }
                     else
                     {
-                        thisInst.BeamTimeoutClock = 1;
+                        helper.BeamTimeoutClock = 1;
                     }
                 }
                 else
                 {
-                    if (thisInst.Attempt3DNavi)
-                        thisInst.actionPause = 0;
-                    if (thisInst.MTLockedToTechBeam && thisInst.IsMultiTech)
+                    if (helper.Attempt3DNavi)
+                        helper.actionPause = 0;
+                    if (helper.MTLockedToTechBeam && helper.IsMultiTech)
                     {   //Override and disable most driving abilities - We are going to follow the host tech!
-                        if (thisInst.lastCloseAlly != null)
+                        if (helper.lastCloseAlly != null)
                         {
-                            if (thisInst.lastCloseAlly.beam.IsActive)
+                            if (helper.lastCloseAlly.beam.IsActive)
                             {
                                 //tank.beam.EnableBeam(true);
-                                var allyTrans = thisInst.lastCloseAlly.trans;
+                                var allyTrans = helper.lastCloseAlly.trans;
                                 tank.rbody.velocity = Vector3.zero;
-                                thisInst.tank.trans.rotation = Quaternion.LookRotation(allyTrans.TransformDirection(thisInst.MTOffsetRot), allyTrans.TransformDirection(thisInst.MTOffsetRotUp));
-                                thisInst.tank.trans.position = allyTrans.TransformPoint(thisInst.MTOffsetPos);
+                                helper.tank.trans.rotation = Quaternion.LookRotation(allyTrans.TransformDirection(helper.MTOffsetRot), allyTrans.TransformDirection(helper.MTOffsetRotUp));
+                                helper.tank.trans.position = allyTrans.TransformPoint(helper.MTOffsetPos);
                                 return;
                             }
                         }
@@ -104,33 +104,33 @@ namespace TAC_AI.AI
         //Disabled this as it proved annoying
         if (tank.blockman.blockCount > lastBlockCount)
         {
-            thisInst.LastBuildClock = 0;
+            helper.LastBuildClock = 0;
         }
         lastBlockCount = tank.blockman.blockCount;
 
-        if (thisInst.LastBuildClock < 200)
+        if (helper.LastBuildClock < 200)
         {
             thisControl.DriveControl = 0;
             thisControl.m_Movement.m_USE_AVOIDANCE = true;
-            thisInst.LastBuildClock++;
+            helper.LastBuildClock++;
             //thisControl.SetBeamControlState(true);
             tank.beam.nudgeSpeedForward = 0;
             tank.beam.EnableBeam(true);
 
-            if (thisInst.DANGER && thisInst.lastEnemy != null)
+            if (helper.DANGER && helper.lastEnemy != null)
             {
-                var targetTank = thisInst.lastEnemy.gameObject.GetComponent<Tank>();
-                thisControl.m_Weapons.FireAtTarget(tank, thisInst.lastEnemy.gameObject.transform.position, Extremes(targetTank.blockBounds.extents));
-                thisInst.lastWeaponAction = 1;
+                var targetTank = helper.lastEnemy.gameObject.GetComponent<Tank>();
+                thisControl.m_Weapons.FireAtTarget(tank, helper.lastEnemy.gameObject.transform.position, Extremes(targetTank.blockBounds.extents));
+                helper.lastWeaponAction = 1;
             }
             else
-                thisInst.lastWeaponAction = 0;
+                helper.lastWeaponAction = 0;
             return;
         }
         */
 
         /*
-        if (thisInst.IsLikelyJammed && thisInst.recentSpeed < 10)
+        if (helper.IsLikelyJammed && helper.recentSpeed < 10)
         {
             thisControl.DriveControl = 0;
             bool Stop = AttemptFree();
@@ -140,7 +140,7 @@ namespace TAC_AI.AI
         */
 
 
-        private static bool IsTechTippedOver(Tank tank, TankAIHelper thisInst)
+        private static bool IsTechTippedOver(Tank tank, TankAIHelper helper)
         {   // It's more crude than the built-in but should take less to process.
             if (tank.rootBlockTrans.up.y < 0)
             {   // the Tech is literally sideways
@@ -148,7 +148,7 @@ namespace TAC_AI.AI
             }
             else if (tank.rootBlockTrans.up.y < 0.25f)
             {   // If we are still moving, we DON'T Build Beam - we are climbing a slope
-                return thisInst.recentSpeed < thisInst.EstTopSped / 8;
+                return helper.recentSpeed < helper.EstTopSped / 8;
             }
             //tank.AI.IsTankOverturned()
             return false;

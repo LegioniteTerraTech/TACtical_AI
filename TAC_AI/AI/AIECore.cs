@@ -52,13 +52,40 @@ namespace TAC_AI.AI
 
         internal static HashSet<SceneryTypes> IndestructableScenery = new HashSet<SceneryTypes>
         {
-            SceneryTypes.Pillar, SceneryTypes.ScrapPile,
+            SceneryTypes.Pillar, SceneryTypes.ScrapPile, 
         };
 
 
         public static Event<Tank, string> AIMessageEvent = new Event<Tank, string>();
 
-        internal static List<TankAIHelper> AllHelpers;
+        private static List<TankAIHelper> AllHelpers = new List<TankAIHelper>();
+        internal static int HelperCountNoCheck => AllHelpers.Count;
+        internal static int HelperCountChecked => IterateAllHelpers().Count();
+        internal static void AddHelper(TankAIHelper helper) => AllHelpers.Add(helper);
+        internal static void DestroyAllHelpers()
+        {
+            foreach (var item in new List<TankAIHelper>(AllHelpers))
+            {
+                UnityEngine.Object.Destroy(item);
+            }
+            AllHelpers.Clear();
+        }
+        internal static IEnumerable<TankAIHelper> IterateAllHelpers()
+        {
+            foreach (var item in AllHelpers)
+            {
+                if (item != null && item.enabled)
+                    yield return item;
+            }
+        }
+        internal static IEnumerable<TankAIHelper> IterateAllHelpers(Func<TankAIHelper, bool> delegator)
+        {
+            foreach (var item in AllHelpers)
+            {
+                if (item != null && delegator(item))
+                    yield return item;
+            }
+        }
         internal static List<Visible> Minables;
         internal static List<ModuleHarvestReciever> Depots;
         internal static List<ModuleHarvestReciever> BlockHandlers;
@@ -71,19 +98,21 @@ namespace TAC_AI.AI
 
         // legdev
         internal static bool Feedback = false;// set this to true to get AI feedback testing
+        /*
 #if DEBUG
         internal static bool debugVisuals = true;// set this to true to get AI visual testing
 #else
         internal static bool debugVisuals = false;// set this to true to get AI visual testing
 #endif
+        */
 
-        public static Func<int, HashSet<Tank>> GetTeamTanks => TankAIManager.GetTeamTanks;
-        public static Func<int, HashSet<Tank>> GetNonEnemyTanks => TankAIManager.GetNonEnemyTanks;
-        public static Func<int, HashSet<Tank>> GetTargetTanks => TankAIManager.GetTargetTanks;
+        public static Func<int, IEnumerable<Tank>> GetTeamTanks => TankAIManager.GetTeamTanks;
+        public static Func<int, IEnumerable<Tank>> GetNonEnemyTanks => TankAIManager.GetNonEnemyTanks;
+        public static Func<int, IEnumerable<Tank>> GetTargetTanks => TankAIManager.GetTargetTanks;
 
 
         // Mining
-        public static bool FetchClosestChunkReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team)
+        public static bool FetchClosestChunkReceiver(Vector3 tankPos, float MaxScanRange, out IAIFollowable finalPos, out Tank theBase, int team, bool includeTradingStations = false)
         {
             bool fired = false;
             theBase = null;
@@ -91,7 +120,8 @@ namespace TAC_AI.AI
             float bestValue = MaxScanRange * MaxScanRange;// MAX SCAN RANGE
             foreach (ModuleHarvestReciever reciever in Depots)
             {
-                if (!reciever.tank.boundsCentreWorldNoCheck.Approximately(tankPos, 1) && reciever.tank.Team == team)
+                if (!reciever.tank.boundsCentreWorldNoCheck.Approximately(tankPos, 1) && (reciever.tank.Team == team || 
+                    (includeTradingStations && reciever.tank.Team == ManSpawn.NeutralTeam)))
                 {
                     float temp = (reciever.trans.position - tankPos).sqrMagnitude;
                     if (bestValue > temp && temp != 0)
@@ -145,7 +175,7 @@ namespace TAC_AI.AI
         // Scavenging - Under Construction!
         //private static List<Visible> looseBlocksCache = new List<Visible>();
 
-        public static bool FetchClosestBlockReceiver(Vector3 tankPos, float MaxScanRange, out Transform finalPos, out Tank theBase, int team)
+        public static bool FetchClosestBlockReceiver(Vector3 tankPos, float MaxScanRange, out IAIFollowable finalPos, out Tank theBase, int team)
         {
             bool fired = false;
             theBase = null;
@@ -203,36 +233,33 @@ namespace TAC_AI.AI
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             distanceSqr = 62500;
-            int bestStep = -1;
-            bool fired = false;
+            Tank bestStep = null;
             ToFetch = null;
             try
             {
-                HashSet<Tank> AlliesAlt = AIEPathing.AllyList(helper.tank);
-                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                foreach (var ally in AIEPathing.AllyList(helper.tank))
                 {
-                    Tank ally = AlliesAlt.ElementAt(stepper);
                     if (ally.GetHelperInsured().CanCopyControls)
                     {
                         float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                         if (distanceSqr > temp && temp > 1)
                         {
                             distanceSqr = temp;
-                            bestStep = stepper;
-                            fired = true;
+                            bestStep = ally;
                         }
                     }
                 }
-                if (bestStep == -1)
+                if (bestStep == null)
                     return false;
-                ToFetch = AlliesAlt.ElementAt(bestStep).visible;
+                ToFetch = bestStep.visible;
                 //DebugTAC_AI.Log(KickStart.ModID + ":ClosestAllyProcess " + closestTank.name);
+                return true;
             }
             catch //(Exception e)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": Crash on ClosestAllyProcess " + e);
             }
-            return fired;
+            return false;
         }
 
 
@@ -256,7 +283,7 @@ namespace TAC_AI.AI
             }
             return false;
         }
-        public static bool FetchChargedChargers(Tank tank, float MaxScanRange, out Transform finalPos, out Tank theBase, int team)
+        public static bool FetchChargedChargers(Tank tank, float MaxScanRange, out IAIFollowable finalPos, out Tank theBase, int team)
         {
             if (team == -2)
                 team = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
@@ -276,7 +303,7 @@ namespace TAC_AI.AI
                         fired = true;
                         theBase = charge.tank;
                         bestValue = temp;
-                        finalPos = charge.trans;
+                        finalPos = charge;
                     }
                 }
             }
@@ -286,15 +313,12 @@ namespace TAC_AI.AI
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             float Range = 62500;
-            int bestStep = 0;
-            bool fired = false;
+            Tank bestStep = null;
             toCharge = null;
             try
             {
-                HashSet<Tank> AlliesAlt = AIEPathing.AllyList(helper.tank);
-                for (int stepper = 0; AlliesAlt.Count > stepper; stepper++)
+                foreach (var ally in AIEPathing.AllyList(helper.tank))
                 {
-                    Tank ally = AlliesAlt.ElementAt(stepper);
                     float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                     TechEnergy.EnergyState eState = ally.EnergyRegulator.Energy(TechEnergy.EnergyType.Electric);
                     bool hasCapacity = eState.storageTotal > 200;
@@ -304,19 +328,21 @@ namespace TAC_AI.AI
                         if (Range > temp && temp > 1)
                         {
                             Range = temp;
-                            bestStep = stepper;
-                            fired = true;
+                            bestStep = ally;
                         }
                     }
                 }
-                toCharge = AlliesAlt.ElementAt(bestStep).visible;
+                if (bestStep == null)
+                    return false;
+                toCharge = bestStep.visible;
                 //DebugTAC_AI.Log(KickStart.ModID + ":ClosestAllyProcess " + closestTank.name);
+                return bestStep != null;
             }
             catch //(Exception e)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": Crash on ClosestAllyProcess " + e);
             }
-            return fired;
+            return false;
         }
 
         // Assassin
@@ -389,45 +415,11 @@ namespace TAC_AI.AI
                         RetreatingTeams.Add(Team);
                         if (Sending && ManNetwork.IsNetworked)
                             NetworkHandler.TryBroadcastNewRetreatState(Team, true);
-                        int playerTeam = Singleton.Manager<ManPlayer>.inst.PlayerTeam;
-                        if (Team == playerTeam)
+                        AIWiki.hintNPTRetreat.Show();
+                        foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
                         {
-                            foreach (Tank tech in TankAIManager.GetTeamTanks(playerTeam))
-                            {
-                                if (!tech.IsAnchored && tech.GetComponent<TankAIHelper>().lastAIType != AITreeType.AITypes.Idle)
-                                {
-                                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                    AIGlobals.PopupPlayerInfo("Fall back!", worPos);
-                                }
-                            }
-                        }
-                        else if (AIGlobals.IsBaseTeam(Team))
-                        {
-                            AIWiki.hintNPTRetreat.Show();
-                            if (AIGlobals.IsNeutralBaseTeam(Team))
-                            {
-                                foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
-                                {
-                                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                    AIGlobals.PopupNeutralInfo("Fall back!", worPos);
-                                }
-                            }
-                            else if (AIGlobals.IsFriendlyBaseTeam(Team))
-                            {
-                                foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
-                                {
-                                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                    AIGlobals.PopupAllyInfo("Fall back!", worPos);
-                                }
-                            }
-                            else
-                            {
-                                foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
-                                {
-                                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                    AIGlobals.PopupEnemyInfo("Fall back!", worPos);
-                                }
-                            }
+                            WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
+                            AIGlobals.PopupColored("Fall back!", Team, worPos);
                         }
                     }
                 }
@@ -437,40 +429,11 @@ namespace TAC_AI.AI
                     {
                         if (Sending && ManNetwork.IsNetworked)
                             NetworkHandler.TryBroadcastNewRetreatState(Team, false);
-                        if (Team == Singleton.Manager<ManPlayer>.inst.PlayerTeam)
+                        AIWiki.hintNPTRetreat.Show();
+                        foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
                         {
-                            foreach (Tank tech in TankAIManager.GetTeamTanks(Singleton.Manager<ManPlayer>.inst.PlayerTeam))
-                            {
-                                if (!tech.IsAnchored && tech.GetComponent<TankAIHelper>().lastAIType != AITreeType.AITypes.Idle)
-                                {
-                                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                    AIGlobals.PopupPlayerInfo("Engage!", worPos);
-                                }
-                            }
-                        }
-                        else if (AIGlobals.IsNeutralBaseTeam(Team))
-                        {
-                            foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
-                            {
-                                WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                AIGlobals.PopupNeutralInfo("Engage!", worPos);
-                            }
-                        }
-                        else if (AIGlobals.IsFriendlyBaseTeam(Team))
-                        {
-                            foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
-                            {
-                                WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                AIGlobals.PopupAllyInfo("Engage!", worPos);
-                            }
-                        }
-                        else
-                        {
-                            foreach (Tank tech in TankAIManager.TeamActiveMobileTechs(Team))
-                            {
-                                WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
-                                AIGlobals.PopupEnemyInfo("Engage!", worPos);
-                            }
+                            WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tech.visible);
+                            AIGlobals.PopupColored("Engage!", Team, worPos);
                         }
                     }
                 }
@@ -516,11 +479,14 @@ namespace TAC_AI.AI
 
         public static bool HasOmniCore(TankBlock block)
         {
-            return block.GetComponent<RandomAdditions.ModuleOmniCore>() && !block.GetComponent<ModuleWheels>();
+            BlockDetails BD = new BlockDetails(block.BlockType);
+            return BD.IsOmniDirectional && !BD.HasWheels;
         }
 
         public static bool ShouldBeStationary(Tank tank, TankAIHelper helper)
         {
+            if (helper.AnchorState == AIAnchorState.Unanchor)
+                return false;
             if (helper.AutoAnchor)
             {
                 if (tank.IsAnchored && !helper.PlayerAllowAutoAnchoring)
@@ -538,7 +504,9 @@ namespace TAC_AI.AI
 
             if (ShouldBeStationary(tank, helper))
             {
-                return AIDriverType.Stationary;
+                helper.AnchorStatic();
+                if (helper.DriverType != AIDriverType.AutoSet)
+                    return helper.DriverType;
             }
 
             if (KickStart.IsRandomAdditionsPresent)
@@ -554,27 +522,95 @@ namespace TAC_AI.AI
                 catch { };
             }
 
+            bool canFloat = false;
             bool isFlying = false;
             bool isFlyingDirectionForwards = true;
+            bool isOmniEngine = false;
             Vector3 biasDirection = Vector3.zero;
             Vector3 boostBiasDirection = Vector3.zero;
 
-            foreach (ModuleBooster module in BM.IterateBlockComponents<ModuleBooster>())
+            int FoilCount = 0;
+            int MovingFoilCount = 0;
+
+            int modBoostCount = 0;
+            int modHoverCount = 0;
+            int modGyroCount = 0;
+            int modWheelCount = 0;
+            int modAGCount = 0;
+            int modGunCount = 0;
+            int modDrillCount = 0;
+
+            foreach (TankBlock bloc in BM.IterateBlocks())
             {
-                //Get the slowest spooling one
-                foreach (FanJet jet in module.transform.GetComponentsInChildren<FanJet>())
+                BlockDetails BD = new BlockDetails(bloc.BlockType);
+                if (BD.IsBasic)
+                    continue;
+                if (BD.DoesMovement)
                 {
-                    if (jet.spinDelta <= 10)
+                    if (BD.HasWings)
+                        modBoostCount++;
+                    if (BD.HasHovers)
+                        modHoverCount++;
+                    if (BD.FloatsOnWater)
+                        canFloat = true;
+                    if (BD.IsGyro)
+                        modGyroCount++;
+                    if (BD.HasWheels)
+                        modWheelCount++;
+                    else if (BD.IsOmniDirectional)
+                        isOmniEngine = true;
+                    if (BD.HasAntiGravity)
+                        modAGCount++;
+                    if (BD.HasWings)
                     {
-                        biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
+                        var aero = bloc.GetComponent<ModuleWing>();
+                        if (aero)
+                        {
+                            //Get teh slowest spooling one
+                            foreach (ModuleWing.Aerofoil Afoil in aero.m_Aerofoils)
+                            {
+                                if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
+                                    MovingFoilCount++;
+                                FoilCount++;
+                            }
+                        }
                     }
+                    bool boosters = false;
+                    if (BD.HasFans)
+                    {
+                        //Get the slowest spooling one
+                        foreach (FanJet jet in bloc.transform.GetComponentsInChildren<FanJet>())
+                        {
+                            if ((float)RawTechBase.spinDat.GetValue(jet) <= 10)
+                            {
+                                biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForward) * (float)RawTechBase.thrustRate.GetValue(jet);
+                            }
+                        }
+                        boosters = true;
+                    }
+                    if (BD.HasBoosters)
+                    {
+                        //Get the slowest spooling one
+                        foreach (BoosterJet boost in bloc.transform.GetComponentsInChildren<BoosterJet>())
+                        {
+                            //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
+                            boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalThrustDirection));
+                        }
+                        boosters = true;
+                    }
+                    if (boosters)
+                        modBoostCount++;
                 }
-                foreach (BoosterJet boost in module.transform.GetComponentsInChildren<BoosterJet>())
+                if (BD.IsWeapon)
                 {
-                    //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                    boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection));
+                    if (bloc.GetComponent<ModuleWeaponGun>())
+                        modGunCount++;
+                    if (BD.IsMelee)
+                        modDrillCount++;
                 }
             }
+            DebugTAC_AI.Info(KickStart.ModID + ": Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
+
             boostBiasDirection.Normalize();
             biasDirection.Normalize();
 
@@ -590,51 +626,23 @@ namespace TAC_AI.AI
                 if (biasDirection.y > 0.6)
                     isFlyingDirectionForwards = false;
             }
-            DebugTAC_AI.Info(KickStart.ModID + ": Tech " + tank.name + " Has bias of" + biasDirection + " and a boost bias of" + boostBiasDirection);
-
-            int FoilCount = 0;
-            int MovingFoilCount = 0;
-            foreach (ModuleWing module in BM.IterateBlockComponents<ModuleWing>())
-            {
-                //Get teh slowest spooling one
-                foreach (ModuleWing.Aerofoil Afoil in module.m_Aerofoils)
-                {
-                    if (Afoil.flapAngleRangeActual > 0 && Afoil.flapTurnSpeed > 0)
-                        MovingFoilCount++;
-                    FoilCount++;
-                }
-            }
-
-            int modBoostCount = 0;
-            int modHoverCount = 0;
-            int modGyroCount = 0;
-            int modWheelCount = 0;
-            int modAGCount = 0;
-            int modGunCount = 0;
-            int modDrillCount = 0;
-
-            foreach (TankBlock bloc in BM.IterateBlocks())
-            {
-                if (bloc.GetComponent<ModuleBooster>())
-                    modBoostCount++;
-                if (bloc.GetComponent<ModuleHover>())
-                    modHoverCount++;
-                if (bloc.GetComponent<ModuleGyro>())
-                    modGyroCount++;
-                if (bloc.GetComponent<ModuleWheels>())
-                    modWheelCount++;
-                if (bloc.GetComponent<ModuleAntiGravityEngine>())
-                    modAGCount++;
-                if (bloc.GetComponent<ModuleWeaponGun>())
-                    modGunCount++;
-                if (bloc.GetComponent<ModuleDrill>())
-                    modDrillCount++;
-            }
             //Debug.Info(KickStart.ModID + ": Tech " + tank.name + "  Has block count " + blocs.Count() + "  | " + modBoostCount + " | " + modAGCount);
 
 
             if (tank.IsAnchored)
             {
+                return AIDriverType.Tank;
+            }
+            else if (BM.blockCount == 1)
+            {
+                if (isOmniEngine)
+                    return AIDriverType.Astronaut;
+                else if (isFlyingDirectionForwards && MovingFoilCount > 3)
+                    return AIDriverType.Pilot;
+                else if (!isFlyingDirectionForwards)
+                    return AIDriverType.Pilot;
+                else if (canFloat && modWheelCount == 0)
+                    return AIDriverType.Sailor;
                 return AIDriverType.Tank;
             }
             else if ((modHoverCount > 3) || (modBoostCount > 2 && (modHoverCount > 2 || modAGCount > 0)))

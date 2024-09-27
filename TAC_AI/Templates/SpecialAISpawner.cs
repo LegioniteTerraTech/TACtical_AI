@@ -21,7 +21,7 @@ namespace TAC_AI.Templates
         public TrackedAirborneAI(Tank set, bool IsSpace = false)
         {
             tank = set;
-            trackVis = ManVisible.inst.GetTrackedVisible(set.visible.ID);
+            trackVis = AIGlobals.GetTrackedVisible(set.visible.ID);
             if (!IsSpace)
                 tank.SleepEvent.Subscribe(OnStop);
             if (trackVis != null)
@@ -59,7 +59,7 @@ namespace TAC_AI.Templates
 
         private static readonly bool forceOn = false;    // spawn in creative no matter what
 
-        private static SpecialAISpawner inst;
+        internal static SpecialAISpawner inst;
         private static ManLicenses Licences;
 
         private static Tank playerTank => Singleton.playerTank;
@@ -123,7 +123,7 @@ namespace TAC_AI.Templates
             ManGameMode.GameType mode = ManGameMode.inst.GetCurrentGameType();
             AirPool.Clear();
             RawTechLoader.inst.ClearQueue();
-            RawTechExporter.Reload();
+            RawTechExporter.ReloadCheck();
             OverrideManPop.QueuedChangeToRagnarokPop();
             DebugRawTechSpawner.ShouldBeActive();
             DebugTAC_AI.Log("(DetermineActiveOnModeTypeDelayed) Next mode is " + mode.ToString());
@@ -146,7 +146,7 @@ namespace TAC_AI.Templates
         {   // 
             AirPool.Clear();
             RawTechLoader.inst.ClearQueue();
-            RawTechExporter.Reload();
+            RawTechExporter.ReloadCheck();
             OverrideManPop.QueuedChangeToRagnarokPop();
             DebugRawTechSpawner.ShouldBeActive();
             DebugTAC_AI.Log("(DetermineActiveOnMode) Next mode is " + mode.GetGameType().ToString());
@@ -183,6 +183,39 @@ namespace TAC_AI.Templates
 
 
         private static List<FactionSubTypes> factionsAvail = new List<FactionSubTypes>();
+        public static void UpdateFactionsAvailAir()
+        {
+            factionsAvail.Clear();
+            if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 0)// flight grade is 2 but random spawns start at 0
+                factionsAvail.Add(FactionSubTypes.GSO);
+            // GC literally can't fly an airborneAI
+            if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 1)
+                factionsAvail.Add(FactionSubTypes.GC);
+            if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 0)// flight grade is 1 but random spawns start at 0
+                factionsAvail.Add(FactionSubTypes.VEN);
+            if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
+                factionsAvail.Add(FactionSubTypes.HE);
+            if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
+                factionsAvail.Add(FactionSubTypes.BF);
+            if (Licences.GetLicense(FactionSubTypes.SJ).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
+                factionsAvail.Add(FactionSubTypes.SJ);
+        }
+        public static void UpdateFactionsAvailLand()
+        {
+            factionsAvail.Clear();
+            if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
+                factionsAvail.Add(FactionSubTypes.GSO);
+            if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered)
+                factionsAvail.Add(FactionSubTypes.GC);
+            if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered)
+                factionsAvail.Add(FactionSubTypes.VEN);
+            if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered)
+                factionsAvail.Add(FactionSubTypes.HE);
+            if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered)
+                factionsAvail.Add(FactionSubTypes.BF);
+            if (Licences.GetLicense(FactionSubTypes.SJ).IsDiscovered)
+                factionsAvail.Add(FactionSubTypes.SJ);
+        }
 
         public static void OverrideSpawning(ManSpawn.TechSpawnParams TSP, Vector3 pos)
         {   // 
@@ -196,23 +229,24 @@ namespace TAC_AI.Templates
                         TechData newTech = TSP.m_TechToSpawn;
                         FactionSubTypes FST = TSP.m_TechToSpawn.GetMainCorp();
                         FactionLevel lvl = RawTechLoader.TryGetPlayerLicenceLevel();
-                        if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && AI.Movement.AIEPathing.AboveTheSea(pos) &&
-                            RawTechTemplate.GetBaseTerrain(TSP.m_TechToSpawn, TSP.m_TechToSpawn.CheckIsAnchored()) == BaseTerrain.Sea)
+                        if (KickStart.AllowSeaEnemiesToSpawn && KickStart.isWaterModPresent && 
+                            AI.Movement.AIEPathing.AboveTheSeaForcedAccurate(pos) &&
+                            RawTechBase.GetBaseTerrain(TSP.m_TechToSpawn, TSP.m_TechToSpawn.CheckIsAnchored()) == BaseTerrain.Land)
                         {
-                            SetSpawnSea(TSP, FST, FST, lvl, ref newTech);
+                            TrySetSpawnSea(TSP, FST, FST, lvl, ref newTech);
                         }
                         else if (UnityEngine.Random.Range(0, 100) < KickStart.LandEnemyOverrideChance) // Override for normal Tech spawns
                         {
-                            SetSpawnLand(TSP, FST, FST, lvl, ref newTech);
+                            TrySetSpawnLand(TSP, FST, FST, lvl, ref newTech);
                         }
                     }
                 }
             }
         }
-        public static void SetSpawnLand(ManSpawn.TechSpawnParams TSP, FactionSubTypes FTE, FactionSubTypes FST,
+        public static void TrySetSpawnLand(ManSpawn.TechSpawnParams TSP, FactionSubTypes FTE, FactionSubTypes FST,
             FactionLevel lvl, ref TechData newTech)
         {
-            // OVERRIDE TECH SPAWN
+            // we try OVERRIDE TECH SPAWN
             try
             {
                 int grade = 99;
@@ -222,10 +256,16 @@ namespace TAC_AI.Templates
                         grade = ManLicenses.inst.GetCurrentLevel(FST);
                 }
                 catch { }
-                if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching))
+                RawTechPopParams RTF = RawTechPopParams.Default;
+                RTF.Faction = FTE;
+                RTF.Terrain = BaseTerrain.Land;
+                RTF.Purpose = BasePurpose.NotStationary;
+                RTF.Progression = lvl;
+                RTF.MaxGrade = grade;
+                RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                if (RawTechLoader.ShouldUseCustomTechs(out int randSelect, RTF))
                 {
-                    int randSelect = valid.GetRandomEntry();
-                    newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
+                    newTech = RawTechLoader.GetUnloadedTech(ModTechsDatabase.ExtPopTechsAll[randSelect], TSP.m_Team, true, out _);
 
                     if (newTech == null)
                     {
@@ -247,24 +287,23 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Land, 
-                        maxGrade: grade, maxPrice: KickStart.EnemySpawnPriceMatching);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                     if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                     {
-                        newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
+                        newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, true, out _);
                         if (newTech == null)
                         {
-                            DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as fetched TechData is null.  Please report this.");
+                            DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as \"" + newTech.Name + "\" fetched TechData is null.  Please report this.");
                             return;
                         }
                         if (newTech.m_BlockSpecs == null)
                         {
-                            DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as fetched TechData's block info is null.  Please report this.");
+                            DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as \"" + newTech.Name + "\" fetched TechData's block info is null.  Please report this.");
                             return;
                         }
                         if (newTech.m_BlockSpecs.Count == 0)
                         {
-                            DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as no blocks are present on modified spawning Tech.  Please report this.");
+                            DebugTAC_AI.Exception("Land Tech spawning override(PREFAB) failed as no blocks are present on modified spawning Tech \"" + newTech.Name + "\".  Please report this.");
                             return;
                         }
 
@@ -274,12 +313,13 @@ namespace TAC_AI.Templates
                     // Else we don't do anything.
                 }
             }
-            catch
+            catch (Exception e)
             {
-                DebugTAC_AI.Assert(true, KickStart.ModID + ": Attempt to swap Land tech failed!");
+                DebugTAC_AI.Log(KickStart.ModID + ": Attempt to swap Land tech failed! - " + e);
+                throw e;
             }
         }
-        public static void SetSpawnSea(ManSpawn.TechSpawnParams TSP, FactionSubTypes FTE, FactionSubTypes FST, 
+        public static void TrySetSpawnSea(ManSpawn.TechSpawnParams TSP, FactionSubTypes FTE, FactionSubTypes FST, 
             FactionLevel lvl, ref TechData newTech)
         {
             // OVERRIDE TO SHIP
@@ -294,10 +334,15 @@ namespace TAC_AI.Templates
                 catch { }
 
 
-                if (RawTechLoader.ShouldUseCustomTechs(out List<int> valid, FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade))
+                RawTechPopParams RTF = RawTechPopParams.Default;
+                RTF.Faction = FTE;
+                RTF.Progression = lvl;
+                RTF.MaxGrade = grade;
+                RTF.Terrain = BaseTerrain.Sea;
+                RTF.Purpose = BasePurpose.NotStationary;
+                if (RawTechLoader.ShouldUseCustomTechs(out int randSelect, RTF))
                 {
-                    int randSelect = valid.GetRandomEntry();
-                    newTech = RawTechLoader.GetUnloadedTech(TempManager.ExternalEnemyTechsAll[randSelect], TSP.m_Team, out _);
+                    newTech = RawTechLoader.GetUnloadedTech(ModTechsDatabase.ExtPopTechsAll[randSelect], TSP.m_Team, true, out _);
 
                     if (newTech == null)
                     {
@@ -320,10 +365,10 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(FTE, lvl, BasePurpose.NotStationary, BaseTerrain.Sea, maxGrade: grade);
+                    SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                     if (type != SpawnBaseTypes.NotAvail && !RawTechLoader.IsFallback(type))
                     {
-                        newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, out _);
+                        newTech = RawTechLoader.GetUnloadedTech(type, TSP.m_Team, true, out _);
                         if (newTech == null)
                         {
                             DebugTAC_AI.Exception("Water Tech spawning override(PREFAB) failed as fetched TechData is null.  Please report this.");
@@ -346,9 +391,10 @@ namespace TAC_AI.Templates
                     // Else we don't do anything.
                 }
             }
-            catch
+            catch (Exception e)
             {
-                DebugTAC_AI.Assert(true, KickStart.ModID + ":  Attempt to swap sea tech failed!");
+                DebugTAC_AI.Log(KickStart.ModID + ":  Attempt to swap sea tech failed! - " + e);
+                throw e;
             }
         }
 
@@ -393,13 +439,20 @@ namespace TAC_AI.Templates
             bool IsSpace = false;
             if (CreativeMode)
             {
+                RawTechPopParams RTF = RawTechPopParams.Default;
+                RTF.Faction = FactionSubTypes.NULL;
+                RTF.Offset = RawTechOffset.OffGround60Meters;
                 if (spawnSpace)
                 {
-                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionSubTypes.NULL, BaseTerrain.Space, snapTerrain: false);
+                    RTF.Terrain = BaseTerrain.Space;
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, RTF, true);
                     IsSpace = true;
                 }
                 else
-                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionSubTypes.NULL, BaseTerrain.Air, snapTerrain: false);
+                {
+                    RTF.Terrain = BaseTerrain.Air;
+                    newAirborneAI = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, RTF, true);
+                }
             }
             else
             {
@@ -437,22 +490,15 @@ namespace TAC_AI.Templates
                 return Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel < val;
             return Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel < 4;
         }
+        /// <summary>
+        /// CAN RETURN NULL
+        /// </summary>
         private static Tank SpawnPrefabAircraft(Vector3 pos, Vector3 forwards)
         {   // 
+            RawTechPopParams RTF;
             try
             {
-                factionsAvail.Clear();
-                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 0)// flight grade is 2 but random spawns start at 0
-                    factionsAvail.Add(FactionSubTypes.GSO);
-                // GC literally can't fly an airborneAI
-                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 1)
-                    factionsAvail.Add(FactionSubTypes.GC);
-                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 0)// flight grade is 1 but random spawns start at 0
-                    factionsAvail.Add(FactionSubTypes.VEN);
-                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
-                    factionsAvail.Add(FactionSubTypes.HE);
-                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
-                    factionsAvail.Add(FactionSubTypes.BF);
+                UpdateFactionsAvailAir();
                 if (factionsAvail.Count == 0)
                     return null;
 
@@ -470,14 +516,16 @@ namespace TAC_AI.Templates
                 }
                 else
                     hasAllDone = false;
-                if (factionsAvail.Contains(FactionSubTypes.GC))
-                    factionsAvail.Remove(FactionSubTypes.GC);
-                if (factionsAvail.Contains(FactionSubTypes.EXP))
-                    factionsAvail.Remove(FactionSubTypes.EXP);
 
                 // spawn and return the airborneAI
                 if (hasAllDone) // all corps unlocked by player
-                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionSubTypes.NULL, BaseTerrain.Air, maxPrice: KickStart.EnemySpawnPriceMatching);
+                {
+                    RTF = RawTechPopParams.Default;
+                    RTF.Terrain = BaseTerrain.Air;
+                    RTF.Offset = RawTechOffset.OffGround60Meters;
+                    RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, RTF, true);
+                }
 
                 // if we don't have all corps possible maxed, we do the normal spawn
 
@@ -493,9 +541,16 @@ namespace TAC_AI.Templates
                 }
                 catch { }
                 DebugTAC_AI.Log(KickStart.ModID + ": There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
+                RTF = RawTechPopParams.Default;
+                RTF.Faction = finalFaction;
+                RTF.MaxGrade = Licences.GetLicense(finalFaction).CurrentLevel;
+                RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                RTF.Offset = RawTechOffset.OffGround60Meters;
+                RTF.Terrain = BaseTerrain.Air;
+                RTF.Disarmed = unProvoked;
                 if (unProvoked)
                 {
-                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, out Tank finalTank, finalFaction, BaseTerrain.Air, unProvoked, snapTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching))
+                    if (RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, out Tank finalTank, RTF))
                     {
                         AIWiki.hintAir.Show();
                         if (unProvoked)
@@ -508,30 +563,27 @@ namespace TAC_AI.Templates
                         return null;
                 }
                 // else we do default spawn
-                return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, finalFaction, BaseTerrain.Air, unProvoked, snapTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
+                return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, RTF, true);
             }
             catch { }
             DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Could not fetch corps, resorting to random spawns");
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionSubTypes.NULL, BaseTerrain.Air, snapTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
+            RTF = RawTechPopParams.Default;
+            RTF.Terrain = BaseTerrain.Air;
+            RTF.Offset = RawTechOffset.OffGround60Meters;
+            RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, RTF, true);
         }
 
+        /// <summary>
+        /// CAN RETURN NULL
+        /// </summary>
         private static Tank SpawnPrefabSpaceship(Vector3 pos, Vector3 forwards, out bool worked)
         {   // 
             worked = false;
+            RawTechPopParams RTF;
             try
             {
-                factionsAvail.Clear();
-                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
-                    factionsAvail.Add(FactionSubTypes.GSO);
-                // GC literally can't fly an airborneAI
-                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered && Licences.GetLicense(FactionSubTypes.GC).CurrentLevel >= 2)
-                    factionsAvail.Add(FactionSubTypes.GC);
-                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered && Licences.GetLicense(FactionSubTypes.VEN).CurrentLevel >= 1)
-                    factionsAvail.Add(FactionSubTypes.VEN);
-                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered && Licences.GetLicense(FactionSubTypes.HE).CurrentLevel >= 1)
-                    factionsAvail.Add(FactionSubTypes.HE);
-                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
-                    factionsAvail.Add(FactionSubTypes.BF);
+                UpdateFactionsAvailAir();
                 if (factionsAvail.Count == 0)
                     return null;
 
@@ -546,14 +598,16 @@ namespace TAC_AI.Templates
                 }
                 else
                     hasAllDone = false;
-                if (factionsAvail.Contains(FactionSubTypes.GC))
-                    factionsAvail.Remove(FactionSubTypes.GC);
-                if (factionsAvail.Contains(FactionSubTypes.EXP))
-                    factionsAvail.Remove(FactionSubTypes.EXP);
 
                 // spawn and return the airborneAI
                 if (hasAllDone) // all corps unlocked by player
-                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, FactionSubTypes.NULL, BaseTerrain.Space, maxPrice: KickStart.EnemySpawnPriceMatching);
+                {
+                    RTF = RawTechPopParams.Default;
+                    RTF.Terrain = BaseTerrain.Air;
+                    RTF.Offset = RawTechOffset.OffGround60Meters;
+                    RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                    return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, EnemyTeam, RTF, true);
+                }
 
                 // if we don't have all corps possible maxed, we do the normal spawn
 
@@ -569,7 +623,15 @@ namespace TAC_AI.Templates
                 }
                 catch { }
                 DebugTAC_AI.Log(KickStart.ModID + ": There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
-                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), out Tank tech, finalFaction, BaseTerrain.Space, unProvoked, snapTerrain: false, Licences.GetLicense(finalFaction).CurrentLevel, maxPrice: KickStart.EnemySpawnPriceMatching);
+
+                RTF = RawTechPopParams.Default;
+                RTF.Faction = finalFaction;
+                RTF.MaxGrade = Licences.GetLicense(finalFaction).CurrentLevel;
+                RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                RTF.Offset = RawTechOffset.OffGround60Meters;
+                RTF.Terrain = BaseTerrain.Space;
+                RTF.Disarmed = unProvoked;
+                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), out Tank tech, RTF);
                 if (worked)
                 {
                     AIWiki.hintSpace.Show();
@@ -583,7 +645,11 @@ namespace TAC_AI.Templates
             catch { }
             DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Could not fetch corps, resorting to random spawns");
             worked = true;
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), FactionSubTypes.NULL, BaseTerrain.Space, snapTerrain: false, maxPrice: KickStart.EnemySpawnPriceMatching);
+            RTF = RawTechPopParams.Default;
+            RTF.Terrain = BaseTerrain.Space;
+            RTF.Offset = RawTechOffset.OffGround60Meters;
+            RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), RTF, true);
         }
 
         public static void TrySpawnTraderTroll(Vector3 pos)
@@ -599,19 +665,10 @@ namespace TAC_AI.Templates
             if (!AIEBases.IsLocationGridEmpty(pos))
                 return;
 
+            RawTechPopParams RTF;
             try
             {
-                factionsAvail.Clear();
-                if (Licences.GetLicense(FactionSubTypes.GSO).CurrentLevel >= 2)
-                    factionsAvail.Add(FactionSubTypes.GSO);
-                if (Licences.GetLicense(FactionSubTypes.GC).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.GC);
-                if (Licences.GetLicense(FactionSubTypes.VEN).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.VEN);
-                if (Licences.GetLicense(FactionSubTypes.HE).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.HE);
-                if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered)
-                    factionsAvail.Add(FactionSubTypes.BF);
+                UpdateFactionsAvailLand();
                 if (factionsAvail.Count == 0)
                     return;
                 FactionSubTypes factionSelect = factionsAvail.GetRandomEntry();
@@ -625,18 +682,39 @@ namespace TAC_AI.Templates
                 if (AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
                 {
                     int team = AIGlobals.GetRandomEnemyBaseTeam();
-                    RawTechLoader.StartBaseAtPositionNoFounder(factionSelect, pos3, team, 
+                    RawTechLoader.StartBaseAtPositionNoFounder(factionSelect, pos3, team,
                         BasePurpose.AnyNonHQ, licence);
-                    if (AIEBases.TryFindExpansionLocationGrid(pos3, pos3 + new Vector3(0,0,64), out Vector3 pos4))
+                    if (AIEBases.TryFindExpansionLocationGrid(pos3, pos3 + new Vector3(0, 0, 64), out Vector3 pos4))
                     {
-                        RawTechLoader.StartBaseAtPositionNoFounder(factionSelect, pos3, team, 
+                        RawTechLoader.StartBaseAtPositionNoFounder(factionSelect, pos3, team,
                             BasePurpose.NotStationary, licence);
                     }
                 }
                 else
-                    RawTechLoader.SpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam,
-                        new HashSet<BasePurpose> { BasePurpose.Defense }, faction: factionSelect,
-                        maxGrade: licence,  maxPrice: KickStart.EnemySpawnPriceMatching, isPopulation: true);
+                {
+                    if (1 >= UnityEngine.Random.Range(0, 2f))
+                    {   // Spawn harvest tech
+                        RTF = RawTechPopParams.Default;
+                        RTF.Faction = factionSelect;
+                        RTF.MaxGrade = licence;
+                        RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                        RTF.IsPopulation = true;
+                        RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary };
+
+                        RawTechLoader.TrySpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, RTF);
+                    }
+                    else // Spawn turret lol
+                    {
+                        RTF = RawTechPopParams.Default;
+                        RTF.Faction = factionSelect;
+                        RTF.MaxGrade = licence;
+                        RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                        RTF.IsPopulation = true;
+                        RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Defense };
+
+                        RawTechLoader.TrySpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, RTF);
+                    }
+                }
 
                 DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
                 try
@@ -652,7 +730,12 @@ namespace TAC_AI.Templates
 
             if (!AIEBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos2))
                 return;
-            RawTechLoader.SpawnSpecificTechSafe(pos2, Vector3.forward, trollTeam, new HashSet<BasePurpose> { BasePurpose.Defense }, faction: FactionSubTypes.NULL, isPopulation: true);
+            RTF = RawTechPopParams.Default;
+            RTF.Faction = FactionSubTypes.NULL;
+            RTF.IsPopulation = true;
+            RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Defense };
+
+            RawTechLoader.TrySpawnSpecificTechSafe(pos2, Vector3.forward, trollTeam, RTF);
 
             DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
             try
@@ -1269,7 +1352,7 @@ namespace TAC_AI.Templates
                 if (names.Contains(item.Name))
                     compile.Add(item);
             }
-            DebugTAC_AI.Log("Found & Compiled " + compile.Count);
+            DebugTAC_AI.Log("SpecialAISpawner: Found & Compiled " + compile.Count + " base game spawns");
         }
         internal static List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> ReturnAllBaseGameSpawns()
         {
@@ -1352,7 +1435,7 @@ namespace TAC_AI.Templates
                             {
                                 GUILayout.Label("      Tech: " + item2.tank.name);
                                 Vector3 pos = item2.tank.boundsCentreWorldNoCheck;
-                                DebugRawTechSpawner.DrawDirIndicator(pos, pos + new Vector3(0, -10, 0), Color.red);
+                                DebugExtUtilities.DrawDirIndicator(pos, pos + new Vector3(0, -10, 0), Color.red);
                             }
                         }
                     }

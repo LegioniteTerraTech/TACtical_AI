@@ -18,11 +18,11 @@ namespace TAC_AI.AI.Movement.AICores
             this.pilot.FlyStyle = AIControllerAir.FlightType.VTOL;
             pilot.Helper.GroundOffsetHeight = pilot.Helper.lastTechExtents + AIGlobals.GroundOffsetAircraft;
         }
-        public override bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core)
+        public override bool DriveMaintainer(TankAIHelper helper, Tank tank, ref EControlCoreSet core)
         {
             if (pilot.Grounded)
             {   //Become a ground vehicle for now
-                if (!AIEPathing.AboveHeightFromGroundTech(thisInst, thisInst.lastTechExtents * 2))
+                if (!AIEPathing.AboveHeightFromGroundTech(helper, helper.lastTechExtents * 2))
                 {
                     return false;
                 }
@@ -32,60 +32,61 @@ namespace TAC_AI.AI.Movement.AICores
             }
             if (tank.wheelGrounded || pilot.ForcePitchUp)
             {   // Try and takeoff like helicopter
-                pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, thisInst, pilot, AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, thisInst, thisInst.lastTechExtents * 2));
-                this.pilot.UpdateThrottle(thisInst, thisControl);
-                HelicopterUtils.AngleTowardsUp(thisControl, pilot, tank.boundsCentreWorldNoCheck, thisInst.lastDestinationCore, ref core, true);
+                pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, helper, pilot,
+                    AIEPathing.OffsetFromGroundA(tank.boundsCentreWorldNoCheck, helper, helper.lastTechExtents * 2).y);
+                pilot.UpdateThrottle(helper);
+                HelicopterUtils.AngleTowardsUp(pilot, tank.boundsCentreWorldNoCheck, helper.lastDestinationCore, ref core, true);
             }
             else
             {   //Fly like plane
-                if (pilot.PerformUTurn > 0)
+                if (PerformUTurn > 0)
                 {   //The Immelmann Turn
                     //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  U-Turn level " + pilot.PerformUTurn + "  throttle " + pilot.CurrentThrottle);
                     pilot.MainThrottle = 1;
-                    this.pilot.UpdateThrottle(thisInst, thisControl);
-                    if (tank.rootBlockTrans.InverseTransformVector(tank.rbody.velocity).z < AIGlobals.AirStallSpeed - 4)
+                    pilot.UpdateThrottle(helper);
+                    if ( helper.LocalSafeVelocity.z < AIGlobals.AirStallSpeed - 4)
                     {   //ABORT!!!
-                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Aborted U-Turn with velocity " + tank.rootBlockTrans.InverseTransformVector(pilot.Tank.rbody.velocity).z);
-                        pilot.PerformUTurn = -1;
+                        DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Aborted U-Turn with velocity " + helper.LocalSafeVelocity.z);
+                        PerformUTurn = -1;
                     }
-                    else if (Vector3.Dot(Vector3.down, tank.rbody.velocity.normalized) > 0.4f)
+                    else if (Vector3.Dot(Vector3.down,  helper.SafeVelocity.normalized) > 0.4f)
                     {   //ABORT!!!
                         DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + "  Aborted U-Turn as too much movement to the ground");
-                        pilot.PerformUTurn = -1;
+                        PerformUTurn = -1;
                     }
-                    if (pilot.PerformUTurn == 1)
+                    if (PerformUTurn == 1)
                     {
-                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
+                        AngleTowards(helper, tank, pilot, tank.boundsCentreWorldNoCheck + tank.rootBlockTrans.forward * 100);
                         if (pilot.CurrentThrottle > 0.95)
-                            pilot.PerformUTurn = 2;
+                            PerformUTurn = 2;
                     }
-                    else if (pilot.PerformUTurn == 2)
+                    else if (PerformUTurn == 2)
                     {
-                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
+                        AngleTowards(helper, tank, pilot, tank.boundsCentreWorldNoCheck + (Vector3.up * 100));
                         if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
-                            pilot.PerformUTurn = 3;
+                            PerformUTurn = 3;
                     }
-                    else if (pilot.PerformUTurn == 3)
+                    else if (PerformUTurn == 3)
                     {
-                        AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.PathPointSet);
+                        AngleTowards(helper, tank, pilot, pilot.PathPointSet);
                         if (Vector3.Dot((pilot.PathPointSet - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.6f)
-                            pilot.PerformUTurn = 0;
+                            PerformUTurn = 0;
                     }
                     return true;
                 }
-                else if (pilot.PerformUTurn == -1)
+                else if (PerformUTurn == -1)
                 {
                     pilot.MainThrottle = 1;
-                    this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.PathPointSet);
+                    pilot.UpdateThrottle(helper);
+                    AngleTowards(helper, tank, pilot, pilot.PathPointSet);
                     if (Vector3.Dot(tank.rootBlockTrans.forward, (pilot.PathPointSet - tank.boundsCentreWorldNoCheck).normalized) > 0)
-                        pilot.PerformUTurn = 0;
+                        PerformUTurn = 0;
                     return true;
                 }
                 else
                 {
-                    this.pilot.UpdateThrottle(thisInst, thisControl);
-                    AirplaneUtils.AngleTowards(thisControl, thisInst, tank, pilot, pilot.PathPointSet);
+                    pilot.UpdateThrottle(helper);
+                    AngleTowards(helper, tank, pilot, pilot.PathPointSet);
                 }
             }
 

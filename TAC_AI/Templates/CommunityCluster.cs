@@ -7,6 +7,9 @@ using System.IO;
 using UnityEngine;
 using Newtonsoft.Json;
 using TerraTechETCUtil;
+using Ionic.Zlib;
+using Snapshots;
+using HarmonyLib;
 
 namespace TAC_AI.Templates
 {
@@ -16,35 +19,86 @@ namespace TAC_AI.Templates
         {
             try
             {
-                ClusterF = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, RawTechTemplate>>(FetchPublicFromFile());
+                ClusterF = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, RawTechTemplate>>(FetchPublicTechs());
             }
-            catch { }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log(KickStart.ModID + ": LoadFromDeployed(CommunityCluster) - Files failed to load! - " + e);
+            }
         }
 
-        internal static string FetchPublicFromFile()
+        internal static string FetchPublicTechs()
         {
             string directed = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.ToString();
             string clusterHold = Path.Combine(directed, "commBatch.RTList");
-            if (File.Exists(clusterHold))
+            ResourcesHelper.ShowDebug = true;
+            try
             {
-                return RawTechExporter.LoadCommunityDeployedTechs(clusterHold);
-            }
-            else
-            {
+#if DEBUG
+                string import = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
+                string clusterHold3 = Path.Combine(import, "batchEdit.json");
+                if (File.Exists(clusterHold3))
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": FetchPublicTechs(CommunityCluster) - Loading from DEV test population file...");
+                    return File.ReadAllText(clusterHold3);
+                }
+#endif
                 string clusterHold2 = Path.Combine(directed, "batchTechs.json");
                 if (File.Exists(clusterHold2))
                 {
+                    DebugTAC_AI.Log(KickStart.ModID + ": FetchPublicTechs(CommunityCluster) - Loading from test population file...");
                     return File.ReadAllText(clusterHold2);
                 }
-                else
-                    DebugTAC_AI.LogError(KickStart.ModID + ": LoadFromDeployed(CommunityCluster) - Files missing or compromized.");
+                byte[] textData = KickStartTAC_AI.oInst.GetModContainer().GetBinaryFromModAssetBundle("commBatch");
+                if (textData != null)
+                {
+                    try
+                    {
+                        using (MemoryStream FS = new MemoryStream(textData))
+                        {
+                            DebugTAC_AI.Log(KickStart.ModID + ": FetchPublicTechs(CommunityCluster) - Loading from main population file...");
+                            return RawTechExporter.LoadCommunityDeployedTechs(FS);
+                        }
+                    }
+                    catch (Exception e)
+                    { DebugTAC_AI.Log(KickStart.ModID + ": FetchPublicTechs(CommunityCluster) - commBatch - ERROR " + e); }
+                }
+
+                //textData = KickStartTAC_AI.oInst.GetModContainer().GetTextFromModAssetBundle("commBatch");
+                if (textData == null)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": FetchPublicTechs(CommunityCluster) - FAILED from assetbundle, trying local...");
+                    if (File.Exists(clusterHold))
+                    {
+                        using (FileStream FS = File.Open(clusterHold, FileMode.Open, FileAccess.Read))
+
+                        {
+                            DebugTAC_AI.Log(KickStart.ModID + ": FetchPublicTechs(CommunityCluster)[EXTERNAL] - Loading from main population file...");
+                            return RawTechExporter.LoadCommunityDeployedTechs(FS);
+                        }
+                    }
+                }
+                //if (textData == null)
+                //    DebugTAC_AI.Assert("commBatch could not be found!");
+                DebugTAC_AI.Log(KickStart.ModID + ": FetchPublicTechs(CommunityCluster) - File " + Path.GetFileNameWithoutExtension("commBatch.RTList") +
+                    " missing or compromized - looking into our contents:");
+                ResourcesHelper.LookIntoModContents(KickStartTAC_AI.oInst.GetModContainer());
+                return "{}";
             }
-            return "{}";
+            finally
+            {
+                ResourcesHelper.ShowDebug = false;
+            }
         }
         internal static void PushDeployedToPublicFile()
         {
             string clusterHold = Path.Combine(new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.ToString(), "commBatch.RTList");
-            string compressedSerial = JsonConvert.SerializeObject(ClusterF, Formatting.None);
+            Dictionary<string, RawTechTemplate> rawExportFast = new Dictionary<string, RawTechTemplate>();
+            foreach (var item in ClusterF)
+            {
+                rawExportFast.Add(((int)item.Key).ToString(), item.Value);
+            }
+            string compressedSerial = JsonConvert.SerializeObject(rawExportFast, Formatting.None);
             RawTechExporter.SaveExternalRawTechListFileToDisk(clusterHold, compressedSerial);
             string clusterHold2 = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport", "commBatch.RTList");
             RawTechExporter.SaveExternalRawTechListFileToDisk(clusterHold2, compressedSerial);
@@ -54,16 +108,21 @@ namespace TAC_AI.Templates
         internal static string GetLocalToPublic()
         {
             Dictionary<string, RawTechTemplate> ClusterOut = new Dictionary<string, RawTechTemplate>();
-            foreach (RawTechTemplate BT in TempManager.ExternalEnemyTechsLocal)
+            int SBTCounter = (int)SpawnBaseTypes.GSOQuickBuck;
+            foreach (RawTech BT in ModTechsDatabase.ExtPopTechsLocal.OrderBy(x => x.techName))
             {
                 try
                 {
                     string nameBaseType = BT.techName.Replace(" ", "");
-                    ClusterOut.Add(nameBaseType, BT);
+                    if (!nameBaseType.Contains('#'))
+                    {
+                        SBTCounter++;
+                        ClusterOut.Add(SBTCounter.ToString(), BT.ToTemplate());
+                    }
                 }
                 catch { }
             }
-            return JsonConvert.SerializeObject(ClusterOut, Formatting.Indented, RawTechExporter.JSONDEV);
+            return JsonConvert.SerializeObject(ClusterOut, Formatting.Indented);//, RawTechExporter.JSONDEV);
         }
 
 
@@ -92,9 +151,46 @@ namespace TAC_AI.Templates
         {
             return JsonConvert.SerializeObject(ClusterF, Formatting.Indented);
         }
+        internal static void SaveCommunityPoolBackToDisk()
+        {
+            LoadPublicFromFile();
+            var disk = ManSnapshots.inst.ServiceDisk.GetSnapshotCollectionDisk();
+            if (disk == null)
+                throw new NullReferenceException("ManSnapshots.inst.ServiceDisk failed to load");
+            foreach (var item in ClusterF)
+            {
+                RawTech inst = item.Value.ToActive();
+                var snap = disk.FindSnapshot(inst.techName);
+                if (snap == null)
+                    techsToSaveSnapshots.Enqueue(inst);
+            }
+            DoSaveCommunityTechBackToDisk();
+            ClusterF.Clear();
+        }
+        private static Queue<RawTech> techsToSaveSnapshots = new Queue<RawTech>();
+        private static void DoSaveCommunityTechBackToDisk(bool success = true)
+        {
+            if (!techsToSaveSnapshots.Any() || !success)
+                return;
+            RawTech RT = techsToSaveSnapshots.Dequeue();
+            var techD = RawTechLoader.GetUnloadedTech(RT, ManPlayer.inst.PlayerTeam, true, out _);
+            ManScreenshot.inst.RenderTechImage(techD, ManSnapshots.inst.GetDiskSnapshotImageSize(),
+                true, (TechData techData, Texture2D techImage) =>
+                {
+                    Singleton.Manager<ManSnapshots>.inst.SaveSnapshotRender(techData, techImage,
+                        RT.techName, false, DoSaveCommunityTechBackToDisk);
+                });
+        }
 
 
         internal static void Organize(ref Dictionary<SpawnBaseTypes, RawTechTemplate> dict)
+        {
+            dict = dict.OrderBy(x => x.Value.faction).ThenBy(x => x.Value.terrain)
+                .ThenBy(x => x.Value.purposes.Contains(BasePurpose.NotStationary))
+                .ThenBy(x => x.Value.purposes.Contains(BasePurpose.NANI))
+                .ThenBy(x => x.Value.techName).ToDictionary(x => x.Key, x => x.Value);
+        }
+        internal static void Organize(ref Dictionary<SpawnBaseTypes, RawTech> dict)
         {
             dict = dict.OrderBy(x => x.Value.faction).ThenBy(x => x.Value.terrain)
                 .ThenBy(x => x.Value.purposes.Contains(BasePurpose.NotStationary))

@@ -24,26 +24,14 @@ namespace TAC_AI.Templates
          * 
          * 
          */
-
-        public static List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> ReturnAllCommunityStored(bool reloadPublic)
+        internal static List<KeyValuePair<SpawnBaseTypes, RawTech>> CommunityStored;
+        private static List<KeyValuePair<SpawnBaseTypes, RawTech>> CommunityClustered = new List<KeyValuePair<SpawnBaseTypes, RawTech>>();
+        public static List<KeyValuePair<SpawnBaseTypes, RawTech>> ReturnAllCommunityClustered()
         {
-            List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> batch = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
-
-            // Add Bases
-            batch.AddRange(ComHarvests);
-            batch.AddRange(ComProducts);
-            batch.AddRange(ComHQs);
-
-            // Add Mobile
-            batch.AddRange(ComLand);
-            batch.AddRange(ComSeas);
-            batch.AddRange(ComAirs);
-            batch.AddRange(ComSpaces);
-
-            if (reloadPublic)
-                CommunityCluster.LoadPublicFromFile();
+            CommunityClustered.Clear();
+            CommunityCluster.LoadPublicFromFile();
             List<SpawnBaseTypes> tempSearch = new List<SpawnBaseTypes>();
-            batch.ForEach(delegate (KeyValuePair<SpawnBaseTypes, RawTechTemplate> cand) { tempSearch.Add(cand.Key); });
+            CommunityStored.ForEach(delegate (KeyValuePair<SpawnBaseTypes, RawTech> cand) { tempSearch.Add(cand.Key); });
             // batch exporting is messy and will result in overlaps!
             foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> pair in CommunityCluster.ClusterF)
             {
@@ -51,19 +39,53 @@ namespace TAC_AI.Templates
                 {
                     if (!tempSearch.Contains(pair.Key))
                     {
-                        batch.Add(pair);
-                        tempSearch.Add(pair.Key);
+                        RawTech inst = pair.Value.ToActive();
+                        if (inst.ValidateBlocksInTech(true, true))
+                        {
+                            tempSearch.Add(pair.Key);
+                            CommunityClustered.Add(new KeyValuePair<SpawnBaseTypes, RawTech>(pair.Key, inst));
+                        }
+                        else
+                            DebugTAC_AI.LogLoad("Failed on loading " + pair.Value.techName);
+                    }
+                    else
+                    {
+                        DebugTAC_AI.LogLoad("Clash with ID " + pair.Key + ", name " + pair.Value.techName);
                     }
                 }
-                catch { }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.LogLoad("Failed on loading " + pair.Value.techName + " - " + e);
+                }
+            }
+            CommunityCluster.ClusterF.Clear();
+            return CommunityClustered;
+        }
+        public static List<KeyValuePair<SpawnBaseTypes, RawTech>> ReturnAllCommunityStored()
+        {
+            if (CommunityStored == null)
+            {
+                List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>> batch = new List<KeyValuePair<SpawnBaseTypes, RawTechTemplate>>();
+
+                // Add Bases
+                batch.AddRange(ComHarvests);
+                batch.AddRange(ComProducts);
+                batch.AddRange(ComHQs);
+
+                // Add Mobile
+                batch.AddRange(ComLand);
+                batch.AddRange(ComSeas);
+                batch.AddRange(ComAirs);
+                batch.AddRange(ComSpaces);
+                CommunityStored = new List<KeyValuePair<SpawnBaseTypes, RawTech>>();
+                ModTechsDatabase.ValidateAndAdd(batch, CommunityStored);
             }
 
-            return batch;
+            return CommunityStored;
         }
 
         public static void UnloadRemainingUnused()
         {
-            CommunityCluster.ClusterF.Clear();
             ComHarvests.Clear();
             ComProducts.Clear();
             ComHQs.Clear();

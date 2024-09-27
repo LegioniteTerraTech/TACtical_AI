@@ -9,177 +9,177 @@ namespace TAC_AI.AI.AlliedOperations
     internal static class BEnergizer
     {
         internal const int reverseFromResourceTime = 35;
-        public static void MotivateCharge(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MotivateCharge(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Energizer) what to do movement-wise
-            thisInst.IsMultiTech = false;
-            thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
+            helper.IsMultiTech = false;
+            helper.Attempt3DNavi = (helper.DriverType == AIDriverType.Pilot || helper.DriverType == AIDriverType.Astronaut);
 
-            float dist = thisInst.GetDistanceFromTask(thisInst.lastDestinationCore);
+            float dist = helper.GetDistanceFromTask(helper.lastDestinationCore);
             bool hasMessaged = false;
-            thisInst.AvoidStuff = true;
+            helper.AvoidStuff = true;
 
-            BGeneral.ResetValues(thisInst, ref direct);
+            BGeneral.ResetValues(helper, ref direct);
 
             // No running here - this is a combat case!
 
             TechEnergy.EnergyState state = tank.EnergyRegulator.Energy(TechEnergy.EnergyType.Electric);
-            if (thisInst.CollectedTarget)
+            if (helper.CollectedTarget)
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal < 0.2f)
                 {
-                    thisInst.CollectedTarget = false;
-                    thisInst.actionPause = reverseFromResourceTime;
+                    helper.CollectedTarget = false;
+                    helper.actionPause = reverseFromResourceTime;
                 }
             }
             else
             {
                 if ((state.storageTotal - state.spareCapacity) / state.storageTotal > 0.9f)
                 {
-                    thisInst.CollectedTarget = true;
-                    thisInst.actionPause = AIGlobals.ReverseDelay;
+                    helper.CollectedTarget = true;
+                    helper.actionPause = AIGlobals.ReverseDelay;
                 }
             }
 
-            if (!thisInst.CollectedTarget)
+            if (!helper.CollectedTarget)
             {   // BRANCH - Not Charged: Recharge!
-                if (thisInst.ActionPause > 0)
+                if (helper.ActionPause > 0)
                 {   // BRANCH - Reverse from Resources
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from resources...");
-                    direct.Reverse(thisInst);
-                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    direct.Reverse(helper);
+                    helper.actionPause -= KickStart.AIClockPeriod / 5;
                     return;
                 }
-                thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.JobSearchRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
-                if (!thisInst.foundBase)
+                helper.foundBase = AIECore.FetchChargedChargers(tank, helper.JobSearchRange + AIGlobals.FindBaseScanRangeExtension, out helper.lastBasePos, out helper.theBase, tank.Team);
+                if (!helper.foundBase)
                 {
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Searching for nearest charger!");
-                    thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    if (thisInst.theBase == null)
+                    helper.EstTopSped = 1;//slow down the clock to reduce lagg
+                    if (helper.theBase == null)
                         return; // There's no base!
-                    thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
+                    helper.lastBaseExtremes = helper.theBase.GetCheapBounds();
                 }
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = 1;
+                helper.ThrottleState = AIThrottleState.ForceSpeed;
+                helper.DriveVar = 1;
 
-                if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 3)
+                if (dist < helper.lastBaseExtremes + helper.lastTechExtents + 3)
                 {
-                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
-                    if (thisInst.recentSpeed == 1)
+                    helper.theBase.GetHelperInsured().SlowForApproacher(helper);
+                    if (helper.recentSpeed == 1)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                        thisInst.AvoidStuff = false; 
-                        thisInst.ForceSetDrive = true;
-                        thisInst.DriveVar = -1;
-                        //thisInst.TryHandleObstruction(hasMessaged, dist, false, false);
+                        helper.AvoidStuff = false; 
+                        helper.ThrottleState = AIThrottleState.ForceSpeed;
+                        helper.DriveVar = -1;
+                        //helper.TryHandleObstruction(hasMessaged, dist, false, false);
                     }
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arrived at nearest charger and recharging!");
-                        thisInst.AvoidStuff = false;
-                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                        thisInst.Yield = true;
-                        thisInst.SettleDown();
+                        helper.AvoidStuff = false;
+                        helper.actionPause -= KickStart.AIClockPeriod / 5;
+                        helper.ThrottleState = AIThrottleState.Yield;
+                        helper.SettleDown();
                     }
                 }
-                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 8)
+                else if (dist < helper.lastBaseExtremes + helper.lastTechExtents + 8)
                 {
-                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
-                    if (thisInst.recentSpeed < 3)
+                    helper.theBase.GetHelperInsured().SlowForApproacher(helper);
+                    if (helper.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Trying to unjam...");
-                        thisInst.AvoidStuff = false;
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, false, ref direct);
+                        helper.AvoidStuff = false;
+                        helper.TryHandleObstruction(hasMessaged, dist, false, false, ref direct);
                     }
-                    else if (thisInst.recentSpeed < 8)
+                    else if (helper.recentSpeed < 8)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Rattling off resources...");
-                        thisInst.AvoidStuff = false;
-                        thisInst.Yield = true;
+                        helper.AvoidStuff = false;
+                        helper.ThrottleState = AIThrottleState.Yield;
                     }
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Yielding base approach...");
-                        thisInst.AvoidStuff = false;
-                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                        thisInst.Yield = true;
-                        thisInst.SettleDown();
+                        helper.AvoidStuff = false;
+                        helper.actionPause -= KickStart.AIClockPeriod / 5;
+                        helper.ThrottleState = AIThrottleState.Yield;
+                        helper.SettleDown();
                     }
                 }
-                else if (dist < thisInst.lastBaseExtremes + thisInst.lastTechExtents + 12)
+                else if (dist < helper.lastBaseExtremes + helper.lastTechExtents + 12)
                 {
-                    thisInst.theBase.GetHelperInsured().SlowForApproacher(thisInst);
-                    if (thisInst.recentSpeed < 3)
+                    helper.theBase.GetHelperInsured().SlowForApproacher(helper);
+                    if (helper.recentSpeed < 3)
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  unjamming from base...");
-                        thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                        helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                     }
                     else
                     {
                         hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arrived at base!");
-                        thisInst.actionPause -= KickStart.AIClockPeriod / 5;
-                        //thisInst.Yield = true;
-                        thisInst.SettleDown();
+                        helper.actionPause -= KickStart.AIClockPeriod / 5;
+                        //helper.ThrottleState = AIThrottleState.Yield;
+                        helper.SettleDown();
                     }
                 }
-                else if (thisInst.recentSpeed < 3)
+                else if (helper.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Removing obstruction on way to base...");
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                    helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                 }
                 hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Heading back to base!");
                 direct.DriveDest = EDriveDest.ToBase;
-                thisInst.foundGoal = false;
+                helper.foundGoal = false;
             }
             else
             {   // BRANCH - Charged: Find a chargeable target
-                if (thisInst.ActionPause > 0)
+                if (helper.ActionPause > 0)
                 {   // BRANCH - Reverse from Base
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Reversing from base...");
-                    direct.Reverse(thisInst);
-                    thisInst.actionPause -= KickStart.AIClockPeriod / 5;
+                    direct.Reverse(helper);
+                    helper.actionPause -= KickStart.AIClockPeriod / 5;
                     return;
                 }
-                if (!thisInst.foundGoal)
+                if (!helper.foundGoal)
                 {
-                    thisInst.EstTopSped = 1;//slow down the clock to reduce lagg
-                    thisInst.foundGoal = AIECore.FetchLowestChargeAlly(tank.boundsCentreWorldNoCheck, thisInst, out thisInst.theResource);
+                    helper.EstTopSped = 1;//slow down the clock to reduce lagg
+                    helper.foundGoal = AIECore.FetchLowestChargeAlly(tank.boundsCentreWorldNoCheck, helper, out helper.theResource);
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Scanning for low batteries...");
-                    if (!thisInst.foundGoal)
+                    if (!helper.foundGoal)
                     {
-                        thisInst.foundBase = AIECore.FetchChargedChargers(tank, thisInst.JobSearchRange + AIGlobals.FindBaseScanRangeExtension, out thisInst.lastBasePos, out thisInst.theBase, tank.Team);
-                        if (thisInst.theBase == null)
+                        helper.foundBase = AIECore.FetchChargedChargers(tank, helper.JobSearchRange + AIGlobals.FindBaseScanRangeExtension, out helper.lastBasePos, out helper.theBase, tank.Team);
+                        if (helper.theBase == null)
                             return; // There's no base!
-                        thisInst.lastBaseExtremes = thisInst.theBase.GetCheapBounds();
+                        helper.lastBaseExtremes = helper.theBase.GetCheapBounds();
                     }
                     direct.DriveDest = EDriveDest.ToBase;
                     return; // There's no resources left!
                 }
-                thisInst.ForceSetDrive = true;
-                thisInst.DriveVar = 1;
+                helper.ThrottleState = AIThrottleState.ForceSpeed;
+                helper.DriveVar = 1;
 
-                if (dist < thisInst.lastTechExtents + 3 && thisInst.recentSpeed < 3)
+                if (dist < helper.lastTechExtents + 3 && helper.recentSpeed < 3)
                 {
-                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Charging ally at " + thisInst.theResource.centrePosition);
-                    thisInst.AvoidStuff = false;
-                    thisInst.Yield = true;
-                    thisInst.SettleDown();
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Charging ally at " + helper.theResource.centrePosition);
+                    helper.AvoidStuff = false;
+                    helper.ThrottleState = AIThrottleState.Yield;
+                    helper.SettleDown();
                 }
-                else if (thisInst.recentSpeed < 3)
+                else if (helper.recentSpeed < 3)
                 {
                     hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Removing obstruction at " + tank.transform.position);
-                    thisInst.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
+                    helper.TryHandleObstruction(hasMessaged, dist, false, true, ref direct);
                 }
-                else if (dist < thisInst.lastTechExtents + 12)
+                else if (dist < helper.lastTechExtents + 12)
                 {
-                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arriving at low battery position " + thisInst.theResource.centrePosition);
-                    thisInst.AvoidStuff = false;
-                    thisInst.Yield = true;
-                    thisInst.SettleDown();
+                    hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Arriving at low battery position " + helper.theResource.centrePosition);
+                    helper.AvoidStuff = false;
+                    helper.ThrottleState = AIThrottleState.Yield;
+                    helper.SettleDown();
                 }
-                hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Moving out to charge ally at " + thisInst.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
+                hasMessaged = AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ":  Moving out to charge ally at " + helper.theResource.centrePosition + " |Tech is at " + tank.boundsCentreWorldNoCheck);
                 direct.DriveDest = EDriveDest.ToMine;
-                thisInst.foundBase = false;
+                helper.foundBase = false;
             }
         }
     }

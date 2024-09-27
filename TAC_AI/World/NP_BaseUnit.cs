@@ -17,7 +17,7 @@ namespace TAC_AI.World
         }
         public void AddBuildBucks(int value)
         {
-            if (ManBaseTeams.TryGetBaseTeam(Team, out var ETD))
+            if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
                 ETD.AddBuildBucks(value);
             else
                 DebugTAC_AI.Assert("BuildBucks was added but ManBaseTeams didn't have the base team " +
@@ -25,7 +25,7 @@ namespace TAC_AI.World
         }
         public void SpendBuildBucks(int value)
         {
-            if (ManBaseTeams.TryGetBaseTeam(Team, out var ETD))
+            if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
                 ETD.AddBuildBucks(value);
             else
                 DebugTAC_AI.Assert("BuildBucks was added but ManBaseTeams didn't have the base team " +
@@ -33,29 +33,27 @@ namespace TAC_AI.World
         }
         public void SetBuildBucks(int value)
         {
-            if (ManBaseTeams.TryGetBaseTeam(Team, out var ETD))
+            if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
                 ETD.SetBuildBucks = value;
         }
         public int BlockCount => tech.m_TechData.m_BlockSpecs.Count;
-        public WorldPosition WorldPos => WorldPosition.FromScenePosition(tech.GetBackwardsCompatiblePosition());
         public Tank tank => null;
         public bool valid => this != null && Exists();
 
-        private readonly int RechargeRate;
-        private readonly int RechargeRateDay;
+        internal int RechargeRate;
+        internal int RechargeRateDay;
 
         public bool IsHQ => ManBaseTeams.IsTeamHQ(this);
 
-        public readonly int revenue;
-        public readonly bool isDefense = false;
-        public readonly bool isSiegeBase = false;
-        public readonly bool isHarvestBase = false;
-        public readonly bool isTechBuilder = false;
+        public int revenue;
+        public bool isDefense = false;
+        public bool isSiegeBase = false;
+        public bool isTechBuilder = false;
 
         /// <summary>
         /// If this Tech has a terminal, it can build any tech from the population
         /// </summary>
-        public readonly bool HasTerminal = false;
+        public bool HasTerminal = false;
 
         public override bool Exists()
         {
@@ -76,62 +74,11 @@ namespace TAC_AI.World
 
 
         internal NP_BaseUnit(ManSaveGame.StoredTech techIn, NP_Presence_Automatic team) :
-            base(techIn, team, techIn.m_TechData.GetMainCorporations().FirstOrDefault(), ManEnemyWorld.BaseHealthMulti)
+            base(techIn, team, techIn.m_TechData.GetMainCorporations().FirstOrDefault())
         {
             //tilePos = tilePosition;
 
-            int level = 0;
-            int rechargeRate = 0;
-            int rechargeRateDay = 0;
-            try
-            {
-                foreach (TankPreset.BlockSpec spec in tech.m_TechData.m_BlockSpecs)
-                {
-                    TankBlock TB = ManSpawn.inst.GetBlockPrefab(spec.GetBlockType());
-                    if ((bool)TB)
-                    {
-                        var MIP = TB.GetComponent<ModuleItemProducer>();
-                        if ((bool)MIP)
-                        {
-                            revenue += (int)((ManEnemyWorld.GetBiomeAutominerGains(PosScene) * ManEnemyWorld.OperatorTickDelay) /
-                                (float)ManEnemyWorld.ProdDelay.GetValue(MIP));
-                        }
-                        var ME = TB.GetComponent<ModuleEnergy>();
-                        if (ME && ME.OutputEnergyType == TechEnergy.EnergyType.Electric)
-                        {
-                            ModuleEnergy.OutputConditionFlags flags = (ModuleEnergy.OutputConditionFlags)ManEnemyWorld.PowCond.GetValue(ME);
-                            if ((flags & ModuleEnergy.OutputConditionFlags.DayTime) != 0)
-                                rechargeRateDay += Mathf.CeilToInt((float)ManEnemyWorld.PowDelay.GetValue(ME));
-                            else
-                                rechargeRate += Mathf.CeilToInt((float)ManEnemyWorld.PowDelay.GetValue(ME));
-                        }
-                    }
-                }
-                level++;
-                AddBuildBucks(RLoadedBases.GetBuildBucksFromNameExt(tech.m_TechData.Name));
-                SpawnBaseTypes SBT = RawTechLoader.GetEnemyBaseTypeFromName(RLoadedBases.EnemyBaseFunder.GetActualName(tech.m_TechData.Name));
-                HashSet<BasePurpose> BP = RawTechLoader.GetBaseTemplate(SBT).purposes;
-                Faction = tech.m_TechData.GetMainCorp();
-
-                level++;
-                if (BP.Contains(BasePurpose.Defense))
-                    isDefense = true;
-                if (BP.Contains(BasePurpose.TechProduction))
-                    isTechBuilder = true;
-                if (BP.Contains(BasePurpose.HasReceivers))
-                {
-                    isHarvestBase = true;
-                    revenue += ManEnemyWorld.GetBiomeSurfaceGains(ManWorld.inst.TileManager.CalcTileCentreScene(tilePos)) * ManEnemyWorld.OperatorTickDelay;
-                }
-                if (BP.Contains(BasePurpose.Headquarters))
-                    isSiegeBase = true;
-            }
-            catch
-            {
-                DebugTAC_AI.Log(KickStart.ModID + ": EnemyBaseUnit(EBU) Failiure on init at level " + level + "!");
-            }
-            RechargeRate = rechargeRate;
-            RechargeRateDay = rechargeRateDay;
+            ManEnemyWorld.GetStatsAsync(this);
         }
 
         internal long Generate(float deltaTime, bool isDay)

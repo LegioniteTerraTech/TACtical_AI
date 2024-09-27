@@ -9,24 +9,23 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 {
     internal static class RStation
     {
-        public static void AttackWham(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void AttackWham(TankAIHelper helper, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
-            BGeneral.ResetValues(thisInst, ref direct);
+            BGeneral.ResetValues(helper, ref direct);
 
 
-            thisInst.Attempt3DNavi = true;
-            thisInst.Retreat = true;    //Prevent the auto-driveaaaa
+            helper.Attempt3DNavi = true;
+            helper.Retreat = true;    //Prevent the auto-driveaaaa
 
-            float dist = thisInst.GetDistanceFromTask2D(mind.sceneStationaryPos);
+            float dist = helper.GetDistanceFromTask2D(mind.sceneStationaryPos);
 
-            if (thisInst.lastEnemyGet == null)
+            if (helper.lastEnemyGet == null)
             {
                 // Bases cannot LollyGag
-                //RGeneral.LollyGag(thisInst, tank, mind, ref direct, true);
+                //RGeneral.LollyGag(helper, tank, mind, ref direct, true);
                 return;
             }
-            RGeneral.Engadge(thisInst, tank, mind);
 
             if (dist > 6)
             {
@@ -36,20 +35,20 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                 direct.SetLastDest(mind.sceneStationaryPos);
                 if (Mathf.Abs(Vector3.Dot(mind.sceneStationaryPos - tank.boundsCentreWorldNoCheck, tank.rootBlockTrans.forward)) > 0.75f)
                 {   //Move back because we have GONE TOO FAR BACKWARDS
-                    thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = 1;
+                    helper.ThrottleState = AIThrottleState.ForceSpeed;
+                    helper.DriveVar = 1;
                 }
                 else
                 {   //Aim back
-                    thisInst.PivotOnly = true;
+                    helper.ThrottleState = AIThrottleState.PivotOnly;
                 }
             }
             else
             {
                 direct.DriveDest = EDriveDest.ToLastDestination;
                 direct.DriveDir = EDriveFacing.Forwards;
-                thisInst.PivotOnly = true;
-                direct.SetLastDest(thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck);
+                helper.ThrottleState = AIThrottleState.PivotOnly;
+                direct.SetLastDest(helper.lastEnemyGet.tank.boundsCentreWorldNoCheck);
             }
         }
     }

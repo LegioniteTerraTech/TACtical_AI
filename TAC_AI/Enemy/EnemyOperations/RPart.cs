@@ -13,7 +13,7 @@ namespace TAC_AI.Enemy.EnemyOperations
     /// </summary>
     internal static class RPart
     {
-        public static void MotivatePart(TankAIHelper thisInst, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
+        public static void MotivatePart(TankAIHelper helper, Tank tank, EnemyMind mind, ref EControlOperatorSet direct)
         { 
         }
     }

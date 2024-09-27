@@ -52,7 +52,7 @@ namespace TAC_AI.Templates
                         Val = 250000000
                     };
                     SavedRight = true;
-                    DebugTAC_AI.Log(KickStart.ModID + ": Fetched pop");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Fetched population defaults");
                     return true;
                 }
             }

@@ -63,7 +63,7 @@ namespace TAC_AI.AI
             return false;
         }
 
-        public static EAttackMode GetAttackStrat(Tank tank, TankAIHelper help)
+        public static EAttackMode GetAttackStrat(Tank tank, TankAIHelper helper)
         {
             bool smolTech = false;
             if (KickStart.isTweakTechPresent && tank.blockman.blockCount <= AIGlobals.SmolTechBlockThreshold)
@@ -236,7 +236,7 @@ namespace TAC_AI.AI
 
             // Determine based on Tech Size and driving class:
             // Because we want the combat to not be irritating, circle should only be used if the player has target leading
-            switch (help.DediAI)
+            switch (helper.DediAI)
             {
                 case AIType.MTMimic:
                 case AIType.MTStatic:
@@ -249,7 +249,7 @@ namespace TAC_AI.AI
                         attack = EAttackMode.Random;
                     break;
                 case AIType.Aviator:
-                    if (help.MovementController is AIControllerAir air)
+                    if (helper.MovementController is AIControllerAir air)
                     {
                         if (air.FlyStyle == AIControllerAir.FlightType.Helicopter)
                         {   // Try use our height to our advantage

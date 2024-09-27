@@ -19,14 +19,31 @@ namespace TAC_AI
         private static Sprite lineSPrite;
         private static Sprite nullSprite;
         private static WikiPageInfo RTSJump;
-        private static bool Expandable1 = false;
-        private static bool Expandable2 = false;
-        private static bool Expandable3 = false;
-        private static bool Expandable4 = false;
+        private static WikiPageInfo Airborne;
+        internal static HashSet<BlockTypes> AllValidAIs = new HashSet<BlockTypes>();
+
+        internal static void InsureAllValidAIs()
+        {
+            AllValidAIs.Clear();
+            AllValidAIs.Add(BlockTypes.GSOAIGuardController_111);
+            AllValidAIs.Add(BlockTypes.GSOAnchorAI_121);
+            AllValidAIs.Add(BlockTypes.GCAIModuleGuard_222);
+            AllValidAIs.Add(BlockTypes.BF_AIModule_Guard_212);
+            AllValidAIs.Add(BlockTypes.HE_AIModule_Guard_112);
+            AllValidAIs.Add(BlockTypes.HE_AITurret_112);
+            AllValidAIs.Add(BlockTypes.SJ_Cab_AI_122);
+            AllValidAIs.Add(BlockTypes.VENAIGuardModule_111);
+            foreach (var item in ManMods.inst.IterateModdedBlocks())
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item);
+                if (prefab && prefab.GetComponent<ModuleAIExtension>())
+                    AllValidAIs.Add(item);
+            }
+        }
 
         internal static void InitWiki()
         {
-            var tex = (Texture2D)ManPlayerRTS.GetLineMat().mainTexture;
+            var tex = (Texture2D)ManWorldRTS.GetLineMat().mainTexture;
             lineSPrite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
                 RawTechExporter.GuardAIIcon.pivot);
             nullSprite = ManUI.inst.GetSprite(ObjectTypes.Block, -1);
@@ -52,7 +69,7 @@ namespace TAC_AI
 
         private static void InitHelpers()
         {
-            new WikiPageInfo(modID, "Tools", nullSprite, PageTools);
+            new WikiPageInfo(modID, "Tools", ManIngameWiki.ToolsSprite, PageTools);
         }
         internal static void OpenInExplorer(string directory)
         {
@@ -106,63 +123,13 @@ namespace TAC_AI
         /// </summary>
         private static void PageEnemies()
         {
-            GUILayout.BeginHorizontal();
             AltUI.Sprite(RawTechExporter.aiIconsEnemy[AI.Enemy.EnemySmarts.IntAIligent], AltUI.TextfieldBorderedBlue, GUILayout.Height(128), GUILayout.Width(128));
-            GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
-
-            float airborneSpawnChance = SpecialAISpawner.AirborneAISpawnOdds / SpecialAISpawner.AirborneSpawnChance;
-            GUILayout.Label("Chances:", AltUI.LabelRedTitle);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Appear: ", AltUI.LabelWhite);
-            GUILayout.Label(airborneSpawnChance.ToString("P"), AltUI.LabelBlue);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Aircraft: ", AltUI.LabelWhite);
-            GUILayout.Label((Mathf.Clamp01(1 - SpecialAISpawner.SpaceSpawnChance)).ToString("P"), AltUI.LabelBlue);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Spaceship: ", AltUI.LabelWhite);
-            GUILayout.Label(SpecialAISpawner.SpaceSpawnChance.ToString("P"), AltUI.LabelBlue);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Only Spaceships Above: ", AltUI.LabelRed);
-            GUILayout.Label(((int)SpecialAISpawner.SpaceBeginAltitude).ToString(), AltUI.LabelBlue);
-            GUILayout.Label(" km", AltUI.LabelBlue);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
-            GUILayout.EndVertical();
-            GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText +
                 "Non-Player Prospectors" + AltUI.UIEndColor + " now think more intelligently, and can build and " +
                 AltUI.UIEnemyText + "destroy" + AltUI.UIEndColor + " others, and maybe even you as well!" +
                 "\n\n  Early-game they may be weak, but later on expect fierce competition!", AltUI.LabelWhite);
-
-            GUILayout.Label("Aggression Grades:", AltUI.LabelRedTitle);
-            GUILayout.BeginVertical(AltUI.TextfieldBordered);
-            foreach (var item in SpecialAISpawner.AirAggressionGrades)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(item.Key.ToString(), AltUI.LabelBlack);
-                GUILayout.Label(": ", AltUI.LabelBlack);
-                GUILayout.Label(item.Value.ToString(), AltUI.LabelBlack);
-                GUILayout.FlexibleSpace();
-                GUILayout.EndHorizontal();
-            }
-
-            GUILayout.Space(6);
-            GUILayout.Label("All Corps Attack after", AltUI.LabelRed);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("GSO: 4", AltUI.LabelBlack);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.EndVertical();
 
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
@@ -318,28 +285,10 @@ namespace TAC_AI
 
             GUILayout.Label("Chances:", AltUI.LabelRedTitle);
             GUILayout.BeginHorizontal();
-            GUILayout.Label("Appear:", AltUI.LabelWhite);
-            GUILayout.Label(AIGlobals.EnemyBaseMakerChance.ToString(), AltUI.LabelBlue);
+            GUILayout.Label("Approximate Range:", AltUI.LabelWhite);
+            GUILayout.Label((ManEnemyWorld.BaseSightRadius * ManWorld.inst.TileSize).ToString(), AltUI.LabelBlue);
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
-            float friendlyBaseChance = AIGlobals.NonHostileBaseChance * AIGlobals.FriendlyBaseChance;
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Enemy:", AltUI.LabelWhite);
-            GUILayout.Label((Mathf.Clamp01(1 - friendlyBaseChance - AIGlobals.NonHostileBaseChance)).ToString("P"), AltUI.LabelBlue);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Neutral:", AltUI.LabelWhite);
-            GUILayout.Label(AIGlobals.NonHostileBaseChance.ToString("P"), AltUI.LabelBlue);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Friendly:", AltUI.LabelWhite);
-            GUILayout.Label(friendlyBaseChance.ToString("P"), AltUI.LabelBlue);
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
@@ -363,7 +312,7 @@ namespace TAC_AI
             ManIngameWiki.WikiPageGroup AITypesGrouper = new ManIngameWiki.WikiPageGroup(modID,
                "A.I. Drivers", RawTechExporter.aiIcons[AIType.Escort]);
             new WikiPageInfo(modID, "Tank", RawTechExporter.aiIcons[AIType.Escort], PageTank, AITypesGrouper);
-            new WikiPageInfo(modID, "Airborne", RawTechExporter.aiIcons[AIType.Aviator], PageAir, AITypesGrouper);
+            Airborne = new WikiPageInfo(modID, "Airborne", RawTechExporter.aiIcons[AIType.Aviator], PageAir, AITypesGrouper);
             new WikiPageInfo(modID, "Rocket", RawTechExporter.aiIcons[AIType.Astrotech], PageSpace, AITypesGrouper);
             new WikiPageInfo(modID, "Ship", RawTechExporter.aiIcons[AIType.Buccaneer], PageSea, AITypesGrouper);
         }
@@ -379,6 +328,20 @@ namespace TAC_AI
             GUILayout.Label("- OPTIONAL: Drills to ignore trees", AltUI.TextfieldBlackHuge);
             ManIngameWiki.Tooltip.GUITooltip("Trees can pop-up infront of moving Techs");
             GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
@@ -411,6 +374,20 @@ namespace TAC_AI
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab && prefab.Aviator)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText +
                 "Aircraft" + AltUI.UIEndColor + " are expensive but make the fastest " + AltUI.UIBlueText +
@@ -435,6 +412,20 @@ namespace TAC_AI
             GUILayout.Label("- OPTIONAL: Bombs", AltUI.TextfieldBlackHuge);
             ManIngameWiki.Tooltip.GUITooltip("To ruin someone's day, you can use a ton of them");
             GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab && prefab.Astrotech)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
@@ -465,6 +456,20 @@ namespace TAC_AI
             GUILayout.Label("- OPTIONAL: Rudders", AltUI.TextfieldBlackHuge);
             ManIngameWiki.Tooltip.GUITooltip("Wings as rudders at the back to reduce drifting");
             GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab && prefab.Buccaneer)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
@@ -503,6 +508,20 @@ namespace TAC_AI
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText +
                 "Escorts" + AltUI.UIEndColor + " defend you.  " +
@@ -531,10 +550,27 @@ namespace TAC_AI
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab && prefab.Prospector)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText + "Harvesters" + AltUI.UIEndColor +
                 " mine out everything in sight to gather " + AltUI.UIBuyText +
                 "Resources" + AltUI.UIEndColor + " as well as make it easier to drive around on land.", AltUI.LabelWhite);
+            if (GUILayout.Button(AltUI.UIObjectiveMarkerText + "Aircraft A.I." + AltUI.UIEndColor +
+                " can also harvest, although their usefulness is quite limited.", AltUI.LabelWhite))
+                Airborne.GoHere();
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
@@ -573,6 +609,20 @@ namespace TAC_AI
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab && prefab.Assault)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText + "Scouts" + AltUI.UIEndColor +
                 " automatically ward off " + AltUI.UIEnemyText + "Enemies" + AltUI.UIEndColor + 
@@ -592,11 +642,28 @@ namespace TAC_AI
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab && prefab.Scrapper)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText + "Fetchers" + AltUI.UIEndColor +
                 " collect any stray " + AltUI.UIBlueText +
                 "Blocks" + AltUI.UIEndColor + " from the floor and return them to your " + AltUI.UIBlueText +
                 "Scrappers & SCUs" + AltUI.UIEndColor + ", keeping your turf neat and tidy.", AltUI.LabelWhite);
+            if (GUILayout.Button(AltUI.UIObjectiveMarkerText + "Aircraft A.I." + AltUI.UIEndColor +
+                " can also fetch, although their usefulness is quite limited.", AltUI.LabelWhite))
+                Airborne.GoHere();
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
@@ -611,11 +678,28 @@ namespace TAC_AI
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab && prefab.Energizer)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             GUILayout.Label(AltUI.UIObjectiveMarkerText + "Chargers" + AltUI.UIEndColor +
                 " keep your " + AltUI.UIBlueText +
                 "Techs" + AltUI.UIEndColor + " topped off with " + AltUI.UIBlueText +
                 "Energy" + AltUI.UIEndColor + " and keep them ready for action.", AltUI.LabelWhite);
+            if (GUILayout.Button(AltUI.UIObjectiveMarkerText + "Aircraft A.I." + AltUI.UIEndColor +
+                " cannot charge Techs effectively and should never be used as chargers", AltUI.LabelWhite))
+                Airborne.GoHere();
             GUILayout.FlexibleSpace();
             GUILayout.EndVertical();
         }
@@ -632,6 +716,17 @@ namespace TAC_AI
                 " and much, much more.  The possibilities really become endless with two Techs working together!\n" +
                  AltUI.UIObjectiveMarkerText + "Multi-Techs" + AltUI.UIEndColor + " are the future of bigger Techs. ", 
                  AltUI.LabelWhite);
+            var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetPage("Part"));
+            if (wikiLink.OnGUI(AltUI.LabelBlue))
+                wikiLink.linked.GoHere();
+
+            wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetPage("Turret"));
+            if (wikiLink.OnGUI(AltUI.LabelBlue))
+                wikiLink.linked.GoHere();
+
+            wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetPage("Mimic"));
+            if (wikiLink.OnGUI(AltUI.LabelBlue))
+                wikiLink.linked.GoHere();
         }
         private static void PageStatic()
         {
@@ -642,6 +737,20 @@ namespace TAC_AI
             GUILayout.Label("Upgrade: Multi+", AltUI.LabelBlueTitle);
             GUILayout.Label("Allows this to talk with non-Player allied, controlled Techs", AltUI.TextfieldBlackHuge);
             GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
@@ -660,6 +769,20 @@ namespace TAC_AI
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
             PageMultiTech();
             GUILayout.FlexibleSpace();
@@ -674,6 +797,20 @@ namespace TAC_AI
             GUILayout.Label("Upgrade: Multi+", AltUI.LabelBlueTitle);
             GUILayout.Label("Allows this to talk with non-Player allied, controlled Techs", AltUI.TextfieldBlackHuge);
             GUILayout.EndVertical();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
+            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            foreach (var item2 in AllValidAIs)
+            {
+                var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
+                if (prefab)
+                {
+                    var wikiLink = new ManIngameWiki.WikiLink(ManIngameWiki.GetBlockPage(prefab.name));
+                    if (wikiLink.OnGUI(AltUI.LabelBlue))
+                        wikiLink.linked.GoHere();
+                }
+            }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(AltUI.TextfieldBlackHuge);
@@ -772,10 +909,10 @@ namespace TAC_AI
             ".  " + AltUI.HintString("This may help you later on."), 12);
 
 
-        internal static ExtUsageHint.UsageHint hintRival = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintRival",
+        internal static ExtUsageHint.UsageHint hintInvader = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintRival",
             AltUI.EnemyString("Rival Prospectors") + " have a " + AltUI.EnemyString("Red") + " eye icon above themselves.  " +
             "They will attack YOUR turf for resources if they need to!  " + AltUI.HintString("Send them packing!"), 12);
-        internal static ExtUsageHint.UsageHint hintSubNeutral = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintSubNeutral",
+        internal static ExtUsageHint.UsageHint hintRival = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintSubNeutral",
             "<color=purple>Neutral Prospectors</color> have <color=purple>Purple</color> icons above them.  " +
             "They will neither help you or your enemies.  They will watch over passerby, but " +
             AltUI.HintString("feel free to guard your lands from them."), 10);

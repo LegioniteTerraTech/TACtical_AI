@@ -4,12 +4,13 @@ using UnityEngine;
 
 namespace TAC_AI
 {
-    internal class ModuleChargerTracker : MonoBehaviour
+    internal class ModuleChargerTracker : MonoBehaviour, IAIFollowable
     {
         TankBlock TankBlock;
         // Returns the position of itself in the world as a point the AI can pathfind to
-        public Tank tank;
+        public Tank tank { get; private set; }
         public Transform trans;
+        public Vector3 position => trans.position;
         internal float minEnergyAmount = 200;
         private bool DockingRequested = false;
 
@@ -56,7 +57,7 @@ namespace TAC_AI
 
             return (energyThis.storageTotal - energyThis.spareCapacity) > minEnergyAmount && (energyThis.storageTotal - energyThis.spareCapacity) / energyThis.storageTotal > chargeFraction;
         }
-        public void RequestDocking(TankAIHelper Approaching)
+        public void RequestDocking(TankAIHelper requesterHelper)
         {
             if (!DockingRequested)
             {
@@ -67,7 +68,7 @@ namespace TAC_AI
                 }
                 DockingRequested = true;
                 Invoke("StopDocking", 2);
-                tank.GetHelperInsured().SlowForApproacher(Approaching);
+                tank.GetHelperInsured().SlowForApproacher(requesterHelper);
             }
         }
         private void StopDocking()

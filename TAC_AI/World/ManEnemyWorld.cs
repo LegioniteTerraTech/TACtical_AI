@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,20 @@ using UnityEngine.UI;
 
 namespace TAC_AI.World
 {
+    public struct EnemyMaxDistLimit
+    {
+        public string name;
+        public EnemyMaxDistLimit(string name)
+        {
+            this.name = name;
+        }
+        public override string ToString() => name;
+    }
+    public enum SpecialUpdateType
+    {
+        None,
+        Building
+    }
     /// <summary>
     /// Manages Enemy bases that are off-screen
     /// <para>Enemy bases only attack if:</para>
@@ -43,8 +58,6 @@ namespace TAC_AI.World
         internal const int OperatorTicksKeepTarget = 4;             // How many seconds the AI will perform base actions - default 4
         public const int UnitSightRadius = 2;         // How far an enemy Tech Unit can see other enemies. IN TILES
         public const int BaseSightRadius = 4;         // How far an enemy Base Unit can see other enemies. IN TILES
-        public const int EnemyBaseCullingExtents = 8; // How far from the player should enemy bases be removed 
-        // from the world? IN TILES
         public const int EnemyRaidProvokeExtents = 4;// How far the can the enemy bases issue raids on the player. IN TILES
 
         // Movement
@@ -58,6 +71,8 @@ namespace TAC_AI.World
         // Gains - (Per second)
         public const int PassiveHQBonusIncome = 150;
         public const int ExpansionIncome = 75;
+        public const int MinimumTicksUntilBuild = (int)(AIGlobals.SLDBeforeBuilding / OperatorTickDelay) + 1;
+        public const int DelayBetweenBuilding = (int)(AIGlobals.DelayBetweenBuilding / OperatorTickDelay) + 1;
 
         // Health-Based (Volume-Based)
         //bases
@@ -116,6 +131,11 @@ namespace TAC_AI.World
         public static ManEnemyWorld inst;
         public static bool enabledThis = false;
         private static bool subToTiles = false;
+        private static uint OperatorTick = 0;
+        private static uint LastTechBuildFrame = MinimumTicksUntilBuild;
+        public static SpecialUpdateType SpecialUpdate { get; private set; } = SpecialUpdateType.None;
+
+
 
         /// <summary>
         /// (old TeamID, new TeamID) Sends when a enemy base team has "declared war" on the player
@@ -178,6 +198,88 @@ namespace TAC_AI.World
         }
         private static List<IntVector2> allSavedWorldTileCoordsCache = new List<IntVector2>();
 
+        public static Dictionary<BiomeTypes, Dictionary<FactionSubTypes, float>> VanillaFactionCorpWeights = new Dictionary<BiomeTypes, Dictionary<FactionSubTypes, float>>()
+        {
+            { BiomeTypes.Grassland, new Dictionary<FactionSubTypes, float>(){
+                { FactionSubTypes.GSO, 2},
+                { FactionSubTypes.GC, 0.4f},
+                { FactionSubTypes.VEN, 0.19f},
+                { FactionSubTypes.HE, 0.01f},
+                { FactionSubTypes.SJ, 0.75f},
+                { FactionSubTypes.BF, 0.03f},
+                { FactionSubTypes.EXP, 0.001f},
+            } },
+            { BiomeTypes.Mountains, new Dictionary<FactionSubTypes, float>(){
+                { FactionSubTypes.GSO, 0.3f},
+                { FactionSubTypes.GC, 2f},
+                { FactionSubTypes.VEN, 0.01f},
+                { FactionSubTypes.HE, 0.03f},
+                { FactionSubTypes.SJ, 0.45f},
+                { FactionSubTypes.BF, 0.001f},
+                { FactionSubTypes.EXP, 0.04f},
+            } },
+            { BiomeTypes.SaltFlats, new Dictionary<FactionSubTypes, float>(){
+                { FactionSubTypes.GSO, 0.8f},
+                { FactionSubTypes.GC, 0.2f},
+                { FactionSubTypes.VEN, 1f},
+                { FactionSubTypes.HE, 0.2f},
+                { FactionSubTypes.SJ, 0.02f},
+                { FactionSubTypes.BF, 0.6f},
+                { FactionSubTypes.EXP, 0.6f},
+            } },
+            { BiomeTypes.Ice, new Dictionary<FactionSubTypes, float>(){
+                { FactionSubTypes.GSO, 0.8f},
+                { FactionSubTypes.GC, 1f},
+                { FactionSubTypes.VEN, 0.5f},
+                { FactionSubTypes.HE, 0.001f},
+                { FactionSubTypes.SJ, 0.6f},
+                { FactionSubTypes.BF, 0.3f},
+                { FactionSubTypes.EXP, 0.6f},
+            } },
+            { BiomeTypes.Pillars, new Dictionary<FactionSubTypes, float>(){
+                { FactionSubTypes.GSO, 0.05f},
+                { FactionSubTypes.GC, 0.04f},
+                { FactionSubTypes.VEN, 0.001f},
+                { FactionSubTypes.HE, 1f},
+                { FactionSubTypes.SJ, 0.1f},
+                { FactionSubTypes.BF, 0.02f},
+                { FactionSubTypes.EXP, 0.07f},
+            } },
+            { BiomeTypes.Desert, new Dictionary<FactionSubTypes, float>(){
+                { FactionSubTypes.GSO, 0.1f},
+                { FactionSubTypes.GC, 0.2f},
+                { FactionSubTypes.VEN, 2f},
+                { FactionSubTypes.HE, 0.01f},
+                { FactionSubTypes.SJ, 0.3f},
+                { FactionSubTypes.BF, 0.4f},
+                { FactionSubTypes.EXP, 0.03f},
+            } },
+        };
+        public static FactionSubTypes EvalCorpWeight(BiomeTypes type)
+        {
+            int modRange = ManMods.inst.GetNumCustomCorps();
+            if (VanillaFactionCorpWeights.TryGetValue(type, out var vals))
+            {
+                float valT = 0;
+                foreach (var item in vals)
+                    valT += item.Value;
+                for (int i = 0; i < modRange; i++)
+                    valT += 1;
+                float val = UnityEngine.Random.Range(0, valT);
+                foreach (var item in vals)
+                {
+                    valT -= item.Value;
+                    if (valT <= 0)
+                        return item.Key;
+                }
+            }
+            int vanillaRange = Enum.GetValues(typeof(FactionSubTypes)).Length -1;
+            int select = UnityEngine.Random.Range(0, vanillaRange + modRange);
+            if (select > vanillaRange)
+                select = select - vanillaRange + 16;
+            return (FactionSubTypes)select;
+        }
+
         public static Dictionary<int, NP_Presence_Automatic> AllTeamsUnloaded {
             get
             {
@@ -206,7 +308,7 @@ namespace TAC_AI.World
             Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Unsubscribe(OnTechDestroyed);
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Unsubscribe(OnWorldLoad);
             Singleton.Manager<ManGameMode>.inst.ModeSwitchEvent.Unsubscribe(OnWorldReset);
-            ManPlayerRTS.DeInit();
+            ManWorldRTS.DeInit();
             Destroy(inst.gameObject);
             inst = null;
             setup = false;
@@ -222,7 +324,7 @@ namespace TAC_AI.World
             Singleton.Manager<ManTechs>.inst.TankDestroyedEvent.Subscribe(OnTechDestroyed);
             Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(OnWorldLoad);
             Singleton.Manager<ManGameMode>.inst.ModeSwitchEvent.Subscribe(OnWorldReset);
-            ManPlayerRTS.Initiate();
+            ManWorldRTS.Initiate();
             ManEnemySiege.Init();
             setup = true;
         }
@@ -252,6 +354,8 @@ namespace TAC_AI.World
             int count = 0;
             if (ManSaveGame.inst.CurrentState != null)
                 ManSaveGame.inst.CurrentState.m_FileHasBeenTamperedWith = true;
+            OperatorTick = 0;
+            LastTechBuildFrame = MinimumTicksUntilBuild;
             DebugRawTechSpawner.DestroyAllInvalidVisibles();
             try
             {
@@ -345,6 +449,58 @@ namespace TAC_AI.World
             }
         }
 
+
+        public static void OnBeforeTilesSpawn(List<IntVector2> tileRequestor)
+        {
+            if (!Singleton.Manager<ManPop>.inst.IsSpawningEnabled || KickStart.SpawnFoundersPositional == 0)
+                return;
+            float radius = ManWorld.inst.TileSize * 1.27f;
+            foreach (IntVector2 request in tileRequestor)
+            {
+                if (request.x % AIGlobals.NaturalBaseSpacingTiles == 0 && request.y % AIGlobals.NaturalBaseSpacingTiles == 0 &&
+                    (request.x > AIGlobals.NaturalBaseSpacingFromOriginTiles || request.x < -AIGlobals.NaturalBaseSpacingFromOriginTiles) &&
+                    (request.y > AIGlobals.NaturalBaseSpacingFromOriginTiles || request.y < -AIGlobals.NaturalBaseSpacingFromOriginTiles))
+                {
+                    if (KickStart.ActiveSpawnFoundersOffScene)
+                    {
+                        bool newTile = AIGlobals.TileNeverLoadedBefore(request);
+
+                        if (newTile)
+                        {
+                            if (!ManEncounterPlacement.IsOverlappingSafeAreaOrEncounter(ManWorld.inst.TileManager.CalcTileCentreScene(request), radius))
+                            {
+                                var statePrev = UnityEngine.Random.state;
+                                UnityEngine.Random.InitState(request.GetHashCode() + ManWorld.inst.SeedValue);
+                                if (UnityEngine.Random.Range(0f, 1f) <= KickStart.SpawnFoundersPositional)
+                                {
+                                    LastSecondAddBaseToWorldTile(request);
+                                }
+                                UnityEngine.Random.state = statePrev;
+                            }
+                        }
+                        else if (AIGlobals.TileLoadedCanSpawnNewEnemy(ManWorld.inst.TileManager.CalcTileCentreScene(request), ManWorld.inst.TileSize * 1.27f))
+                        {
+                            var statePrev = UnityEngine.Random.state;
+                            UnityEngine.Random.InitState(request.GetHashCode() + ManWorld.inst.SeedValue);
+                            if (UnityEngine.Random.Range(0f, 1f) <= KickStart.SpawnFoundersPositional)
+                            {
+                                LastSecondAddBaseToWorldTile(request);
+                            }
+                            UnityEngine.Random.state = statePrev;
+                        }
+                    }
+                    else if (AIGlobals.TileNeverLoadedBefore(request) && 
+                        !ManEncounterPlacement.IsOverlappingSafeAreaOrEncounter(ManWorld.inst.TileManager.CalcTileCentreScene(request), radius))
+                    {
+                        var statePrev = UnityEngine.Random.state;
+                        UnityEngine.Random.InitState(request.GetHashCode() + ManWorld.inst.SeedValue);
+                        if (UnityEngine.Random.Range(0f, 1f) <= KickStart.SpawnFoundersPositional)
+                            LastSecondAddBaseToWorldTile(request);
+                        UnityEngine.Random.state = statePrev;
+                    }
+                }
+            }
+        }
         public static void OnTileTechsBeforeLoad(WorldTile WT)
         {
             if (!enabledThis)
@@ -367,6 +523,72 @@ namespace TAC_AI.World
             }
         }
 
+        public static void LastSecondAddBaseToWorldTile(IntVector2 coord)
+        {
+            var WTS = ManSaveGame.inst.GetStoredTile(coord, true);
+            if (WTS.m_StoredVisibles.TryGetValue(1, out var caseL) && caseL.Any())
+                return; // Techs already exist here!
+            Quaternion baseRotation = Quaternion.LookRotation(UnityEngine.Random.onUnitSphere.SetY(0).normalized,
+                Vector3.up);
+            if (!FindFreeSpaceOnTile((baseRotation * Vector3.forward).ToVector2XZ(), WTS, out Vector2 newPosOff))
+            {
+                DebugTAC_AI.Log(KickStart.ModID + ": LastSecondAddBaseToWorldTile - Could not find a valid spot to add the Base");
+                return;
+            }
+            Vector3 posBase = newPosOff.ToVector3XZ() + ManWorld.inst.TileManager.CalcTileOriginScene(coord);
+            posBase.y = ManWorld.inst.TileManager.GetTerrainHeightAtPosition(posBase, out _);
+            Biome biome = ManWorld.inst.GetBiomeWeightsAtScenePosition(posBase).Biome(0);
+            var Terra = RawTechLoader.GetTerrain(posBase);
+            var corp = EvalCorpWeight(biome.BiomeType);
+            var team = ManBaseTeams.GetNewBaseTeam().teamID;
+
+            FactionLevel lvl;
+            int grade;
+            int cost;
+            if (KickStart.UseProcedualEnemyBaseSpawning)
+            {
+                int manhattan = Mathf.Abs(coord.x) + Mathf.Abs(coord.y);
+                lvl = (FactionLevel)Mathf.FloorToInt(manhattan * AIGlobals.NaturalBaseFactionDifficultyScalingWithCoordDist);
+                grade = Mathf.FloorToInt(manhattan * AIGlobals.NaturalBaseDifficultyScalingWithCoordDist);
+                cost = AIGlobals.NaturalBaseCostBase + Mathf.FloorToInt(manhattan * AIGlobals.NaturalBaseCostScalingWithCoordDist);
+            }
+            else
+            {
+                lvl = RawTechLoader.TryGetPlayerLicenceLevel();
+                grade = 99;
+                cost = KickStart.EnemySpawnPriceMatching;
+            }
+            RawTechPopParams RTF = RawTechPopParams.Default;
+            RTF.Faction = corp;
+            RTF.Progression = lvl;
+            RTF.Purpose = BasePurpose.Harvesting;
+            RTF.Terrain = Terra;
+            RTF.MaxGrade = grade;
+            RTF.MaxPrice = cost;
+            RawTech RTT = RawTechLoader.FilteredSelectFromAll(RTF, true, true);
+            if (RTT == null)
+                return;
+            cost -= RTT.baseCost;
+            CreateNewBase(WTS, posBase, baseRotation, team, RTT, cost * 2);
+
+
+            if (!FindFreeSpaceOnTile((baseRotation * Vector3.forward).ToVector2XZ(), WTS, out Vector2 newPosOff2))
+            {
+                DebugTAC_AI.Log(KickStart.ModID + ": LastSecondAddBaseToWorldTile - Could not find a valid spot to add the Founder");
+                return;
+            }
+            Vector3 posTech = newPosOff2.ToVector3XZ() + ManWorld.inst.TileManager.CalcTileOriginScene(coord);
+            posTech.y = ManWorld.inst.TileManager.GetTerrainHeightAtPosition(posTech, out _);
+
+            if (cost < AIGlobals.NaturalBaseCostBase)
+                cost = AIGlobals.NaturalBaseCostBase;
+            RTF.Purposes = new HashSet<BasePurpose>() { BasePurpose.Harvesting, BasePurpose.NotStationary };
+            RawTech RTT2 = RawTechLoader.FilteredSelectFromAll(RTF, true, true);
+            if (RTT2 == null)
+                return;
+            CreateNewTech(WTS, posTech, baseRotation, team, RTT2);
+            DebugTAC_AI.Log(KickStart.ModID + ": LastSecondAddBaseToWorldTile - Spawned base " + RTT.techName);
+        }
 
 
 
@@ -448,7 +670,7 @@ namespace TAC_AI.World
         /// <param name="isNew"></param>
         public static void RegisterTechUnloaded(ManSaveGame.StoredTech tech, bool isNew = true, bool forceRegister = false)
         {
-            var TV = ManVisible.inst.GetTrackedVisible(tech.m_ID);
+            var TV = AIGlobals.GetTrackedVisible(tech.m_ID);
             if (TV == null)
             {
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech unit " + tech.m_TechData.Name + " lacked TrackedVisible, fixing...");
@@ -459,7 +681,7 @@ namespace TAC_AI.World
             //    throw new Exception("NP_BaseUnit and TrackedVisible TeamID Mismatch " + TV.TeamID + " vs " + tech.m_TeamID);
             //if (TV.TeamID != TV.RadarTeamID)
             //    throw new Exception("NP_BaseUnit and TrackedVisible RadarTeamID Mismatch " + TV.TeamID + " vs " + TV.RadarTeamID);
-            if (AIGlobals.IsBaseTeam(team) || forceRegister)
+            if (AIGlobals.IsBaseTeamDynamic(team) || forceRegister)
             {   // Enemy Team
                 if (tech.m_TechData.IsBase())
                 {
@@ -475,7 +697,7 @@ namespace TAC_AI.World
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) Failiure on BASE init! - " + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) Failiure on BASE init! for " + tech.m_TechData.Name + " - " + e.Message);
                     }
                 }
                 else
@@ -492,7 +714,7 @@ namespace TAC_AI.World
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Failiure on BASE init! - " + e);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Failiure on BASE init! for " + tech.m_TechData.Name + " - " + e.Message);
                     }
                 }
             }
@@ -960,7 +1182,7 @@ namespace TAC_AI.World
         {
             if (!NPTTeams.TryGetValue(Team, out NP_Presence_Automatic EP))
             {
-                EP = new NP_Presence_Automatic(Team, AIGlobals.IsEnemyBaseTeam(Team));
+                EP = new NP_Presence_Automatic(Team, ManBaseTeams.IsEnemyBaseTeam(Team));
                 if (Team != 1)
                 {
                     DebugTAC_AI.Log(KickStart.ModID + ": ManEnemyWorld - New team " + Team + " added");
@@ -1017,7 +1239,7 @@ namespace TAC_AI.World
                     if (EMU.isFounder)
                     {
                         if (EP.teamFounder != null)
-                            DebugTAC_AI.Log(KickStart.ModID + ": ASSERT - THERE ARE TWO TEAM FOUNDERS IN TEAM " + EP.team);
+                            DebugTAC_AI.Log(KickStart.ModID + ": ASSERT - THERE ARE TWO TEAM FOUNDERS IN TEAM " + EP.Team);
                         EP.teamFounder = EMU;
                     }
                     if (EP.EMUs.Add(EMU))
@@ -1033,6 +1255,23 @@ namespace TAC_AI.World
         }
 
 
+        public static void UpdateTeam(int Team)
+        {
+            if (!ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
+                return;
+            EnemyStanding ES = ETD.EnemyMindAlignment(ManPlayer.inst.PlayerTeam);
+            foreach (var item in TankAIManager.TeamActiveTechs(Team))
+            {
+                if (item)
+                {
+                    var mind = item.GetComponent<EnemyMind>();
+                    if (item.Team == Team && mind)
+                        mind.AIControl.ResetAll(null);
+                }
+            }
+            TankAIManager.UpdateEntireTeam(Team);
+            //TankAIManager.UpdateEntireTeam(otherTeam);
+        }
         public static void ChangeTeam(int Team, int newTeam)
         {
             foreach (var item in ManTechs.inst.CurrentTechs)
@@ -1047,7 +1286,7 @@ namespace TAC_AI.World
             {
                 NPTTeams.Remove(Team);
                 EP.ChangeTeamOfAllTechsUnloaded(newTeam);
-                if (AIGlobals.IsBaseTeam(newTeam))
+                if (AIGlobals.IsBaseTeamDynamic(newTeam))
                     NPTTeams.Add(newTeam, EP);
             }
         }
@@ -1176,7 +1415,25 @@ namespace TAC_AI.World
 
 
         // TECH BUILDING
-        public static void ConstructNewTech(NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, SpawnBaseTypes SBT)
+        public static void CreateNewTech(ManSaveGame.StoredTile ST, Vector3 posInScene, Quaternion rot, int team, RawTech RTT)
+        {
+            if (ST != null)
+            {
+                TechData TD = RawTechLoader.GetUnloadedTech(RTT, team, false, out int[] bIDs);
+                if (TD != null)
+                    AddTechToTile(ST, TD, bIDs, team, posInScene, rot, false);
+            }
+        }
+        public static void CreateNewBase(ManSaveGame.StoredTile ST, Vector3 posInScene, Quaternion rot, int team, RawTech RTT, int startingBB)
+        {
+            if (ST != null)
+            {
+                TechData TD = RawTechLoader.GetUnloadedBase(RTT, team, false, out int[] bIDs, startingBB);
+                if (TD != null)
+                    AddTechToTile(ST, TD, bIDs, team, posInScene, rot, false);
+            }
+        }
+        public static void ConstructNewTech(NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1191,14 +1448,14 @@ namespace TAC_AI.World
 
                 Quaternion quat = BuilderTech.tech.m_Rotation;
                 Vector3 pos = ManWorld.inst.TileManager.CalcTileOriginScene(ST.coord) + newPosOff.ToVector3XZ();
-                TechData TD = RawTechLoader.GetUnloadedTech(RawTechLoader.GetBaseTemplate(SBT), BuilderTech.tech.m_TeamID, out int[] bIDs);
+                TechData TD = RawTechLoader.GetUnloadedTech(RawTechLoader.GetBaseTemplate(SBT), BuilderTech.tech.m_TeamID, false, out int[] bIDs);
                 if (TD != null)
                 {
                     AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, pos, quat, false);
                 }
             }
         }
-        public static void ConstructNewExpansion(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, SpawnBaseTypes SBT)
+        public static void ConstructNewBase(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1217,7 +1474,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        public static void ConstructNewTechExt(NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, RawTechTemplate BT)
+        public static void ConstructNewTechExt(NP_BaseUnit BuilderTech, NP_Presence EP, RawTech BT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1232,14 +1489,14 @@ namespace TAC_AI.World
 
                 Quaternion quat = BuilderTech.tech.m_Rotation;
                 Vector3 pos = ManWorld.inst.TileManager.CalcTileOriginScene(ST.coord) + newPosOff.ToVector3XZ();
-                TechData TD = RawTechLoader.GetUnloadedTech(BT, EP.Team, out int[] bIDs);
+                TechData TD = RawTechLoader.GetUnloadedTech(BT, EP.Team, false, out int[] bIDs);
                 if (TD != null)
                 {
                     AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, pos, quat, false);
                 }
             }
         }
-        public static void ConstructNewExpansionExt(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence_Automatic EP, RawTechTemplate BT)
+        public static void ConstructNewBaseExt(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence EP, RawTech BT)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1275,6 +1532,7 @@ namespace TAC_AI.World
                 if (OperatorTicker <= Time.time)
                 {
                     OperatorTicker = Time.time + OperatorTickDelay;
+                    OperatorTick++;
                     UpdateOperators();
                 }
                 // The Strategic AI does movement every MaintainerTickDelay seconds
@@ -1285,13 +1543,23 @@ namespace TAC_AI.World
                 }
             }
         }
-        private static List<NP_Presence_Automatic> EPScrambled = new List<NP_Presence_Automatic>();
+        private static List<NP_Presence> EPScrambled = new List<NP_Presence>();
         private static List<NP_TechUnit> TUDestroyed = new List<NP_TechUnit>();
         private void UpdateOperators()
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": ManEnemyWorld - Updating All EnemyPresence");
             try
             {
+                // We determine WHAT we want to update:
+                OperatorTick++;
+                SpecialUpdate = SpecialUpdateType.None;
+                if (OperatorTick == LastTechBuildFrame)
+                {
+                    LastTechBuildFrame = OperatorTick + DelayBetweenBuilding;
+                    SpecialUpdate = SpecialUpdateType.Building;
+                }
+
+                // Then we update the teams!
                 EPScrambled.AddRange(NPTTeams.Values);
                 EPScrambled.Shuffle();
                 int Count = EPScrambled.Count;
@@ -1300,7 +1568,20 @@ namespace TAC_AI.World
                     DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update()[RTS] - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
                     for (int step = 0; step < Count;)
                     {
-                        NP_Presence_Automatic EP = EPScrambled.ElementAt(step);
+                        NP_Presence EP = EPScrambled.ElementAt(step);
+                        if (EP.RequiresExistingTechs && EP.GlobalMakerBaseCount() == 0)
+                        {
+                            DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update()[RTS] - Team " + EP.Team + " has no production bases");
+                            if (EP.EBUs.Count == 0 && EP.EMUs.Count == 0)// NO SUCH TEAM EXISTS (no base!!!)
+                            {
+                                DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update()[RTS] - Team " + EP.Team + " has been unregistered (no units available)");
+                                TeamDestroyedEvent.Send(EP.Team);
+                                NPTTeams.Remove(EP.Team);
+                                EPScrambled.RemoveAt(step);
+                                Count--;
+                                continue; 
+                            }
+                        }
                         if (EP.UpdateOperatorRTS(TUDestroyed))
                         {
                             step++;
@@ -1325,8 +1606,21 @@ namespace TAC_AI.World
                     DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update() - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
                     for (int step = 0; step < Count;)
                     {
-                        NP_Presence_Automatic EP = EPScrambled.ElementAt(step);
-                        if (EP.UpdateOperator())
+                        NP_Presence EP = EPScrambled.ElementAt(step);
+                        if (EP.RequiresExistingTechs && EP.GlobalMakerBaseCount() == 0)
+                        {
+                            DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update() - Team " + EP.Team + " has no production bases");
+                            if (EP.EBUs.Count == 0 && EP.EMUs.Count == 0)// NO SUCH TEAM EXISTS (no base!!!)
+                            {
+                                DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update() - Team " + EP.Team + " has been unregistered (no units available)");
+                                TeamDestroyedEvent.Send(EP.Team);
+                                NPTTeams.Remove(EP.Team);
+                                EPScrambled.RemoveAt(step);
+                                Count--;
+                                continue;
+                            }
+                        }
+                        if(EP.UpdateOperator())
                         {
                             step++;
                             continue;
@@ -1467,7 +1761,7 @@ namespace TAC_AI.World
                     {
                         if (Tank.IsFriendly(unit.Team, team))
                             Allied.Add(unit);
-                        else if(Tank.IsEnemy(unit.Team, team))
+                        else if (ManBaseTeams.IsEnemy(unit.Team, team))
                             Enemy.Add(unit);
                     }
                 }
@@ -1665,35 +1959,20 @@ namespace TAC_AI.World
 
         // CALCULATIONS
         private static ExpectedSpeedAsync Speedo = new ExpectedSpeedAsync();
-        private static Queue<NP_MobileUnit> ToRead = new Queue<NP_MobileUnit>();
-        public static void CalcWrapper()
-        {
-            if (!Speedo.CollectExpectedSpeedAsync())
-            {
-                while (ToRead.Any())
-                {
-                    var caseC = ToRead.Dequeue();
-                    if (caseC.Exists())
-                    {
-                        Speedo.Setup(caseC);
-                        Speedo.CollectExpectedSpeedAsync();
-                        return;
-                    }
-                }
-            }
-        }
-        public static void GetExpectedSpeedAsync(NP_MobileUnit unit)
+        private static Queue<NP_TechUnit> ToRead = new Queue<NP_TechUnit>();
+        public static bool IsProcessingTech => ToRead.Any();
+
+        public static void GetStatsAsync(NP_TechUnit unit)
         {
             if (!ToRead.Any())
             {
-                InvokeHelper.InvokeSingleRepeat(CalcWrapper, 0.1f);
+                ToRead.Enqueue(unit);
+                InvokeHelper.InvokeCoroutine(Speedo.CollectExpectedSpeedAsync());
             }
-            ToRead.Enqueue(unit);
+            else
+                ToRead.Enqueue(unit);
         }
 
-        private const int BlockCollectIterations = 6;
-        private const int SpeedCheckIterations = 32;
-        private static List<AnimationCurve> wheelCurves = new List<AnimationCurve>();
         private static readonly FieldInfo oomph = typeof(BoosterJet).GetField("m_Force", BindingFlags.Instance | BindingFlags.NonPublic);
         
         /// <summary>
@@ -1701,178 +1980,335 @@ namespace TAC_AI.World
         /// </summary>
         protected class ExpectedSpeedAsync
         {
-            NP_MobileUnit unit = null;
+            private const int BlockCollectIterations = 16;
+            private const int SpeedCheckIterations = 32;
+
+            NP_TechUnit unit = null;
             ManSaveGame.StoredTech sTech = null;
+            List<AnimationCurve> wheelCurves = new List<AnimationCurve>();
             int curStep = 0;
+            long healthAll = 0;
+            long shieldCoverAll = 0;
+            long batteryAll = 0;
+            int AttackPower = 1;
             float TotalMass = 1;
             float TorqueForceGrounded = 1;
             float MaxRPM = 0;
-            int WheelsCount = 0;
+            int WheelsOrGenRechargeCount = 0;
             float WheelRadius = 0;
             float ForceAirborne = 1;
             float FuelPotential = 0;
             float RechargePotential = 0;
             float BoostPotential = 0;
             float ConsumePotential = 0;
-            int ControlSurfCount = 0;
+            int ControlSurfOrGenDayRechargeCount = 0;
             float ControlSurfCombinedStallSpeed = 1;
             float LiftAssistance = 1;
-            public void Setup(NP_MobileUnit Tech)
+            bool harvester = false;
+            public void Setup(NP_TechUnit Tech)
             {
                 unit = Tech;
                 sTech = Tech.tech;
                 curStep = 0;
+                AttackPower = 0;
+                healthAll = 1;
+                shieldCoverAll = 1;
+                batteryAll = 1;
                 TotalMass = 1;
                 TorqueForceGrounded = 1;
                 MaxRPM = 0;
-                WheelsCount = 0;
+                WheelsOrGenRechargeCount = 0;
                 WheelRadius = 0;
                 ForceAirborne = 1;
                 FuelPotential = 0;
                 RechargePotential = 0;
                 BoostPotential = 0;
                 ConsumePotential = 0;
-                ControlSurfCount = 0;
+                ControlSurfOrGenDayRechargeCount = 0;
                 ControlSurfCombinedStallSpeed = 1;
                 LiftAssistance = 1;
+                harvester = false;
             }
-            public bool CollectExpectedSpeedAsync()
+            public IEnumerator CollectExpectedSpeedAsync()
             {
-                if (!unit.Exists())
-                    return true;
-                int nextVal = Mathf.Min(sTech.m_TechData.m_BlockSpecs.Count, curStep + BlockCollectIterations);
-                for (; curStep < nextVal; curStep++)
+                while (ToRead.Any())
                 {
-                    TankPreset.BlockSpec item = sTech.m_TechData.m_BlockSpecs[curStep];
-                    BlockTypes BT = BlockIndexer.GetBlockIDLogFree(item.block);
-                    if (BT != BlockTypes.GSOAIController_111)
+                    var caseC = ToRead.Dequeue();
+                    if (caseC.Exists())
+                        Speedo.Setup(caseC);
+                    else
+                        continue;
+                    DebugTAC_AI.Log("Tech " + unit.Name + " queued for out-of-scene speed calc");
+
+                    if (unit is NP_MobileUnit mobile)
                     {
-                        var block = ManSpawn.inst.GetBlockPrefab(BT);
-                        if (block)
+                        while (curStep < sTech.m_TechData.m_BlockSpecs.Count)
                         {
-                            TotalMass += block.m_DefaultMass;
-                            if (TryGetComponent(block, out ModuleWheels wheels))
+                            int nextVal = Mathf.Min(sTech.m_TechData.m_BlockSpecs.Count, curStep + BlockCollectIterations);
+                            for (; curStep < nextVal; curStep++)
                             {
-                                var wParams = wheels.m_WheelParams;
-                                if (wParams.radius > 0)
+                                TankPreset.BlockSpec item = sTech.m_TechData.m_BlockSpecs[curStep];
+                                BlockTypes BT = BlockIndexer.GetBlockIDLogFree(item.block);
+                                if (BT != BlockTypes.GSOAIController_111)
                                 {
-                                    var tParams = wheels.m_TorqueParams;
-                                    WheelsCount++;
-                                    WheelRadius += wParams.radius;
-                                    TorqueForceGrounded += tParams.torqueCurveMaxTorque;
-                                    MaxRPM += tParams.torqueCurveMaxRpm;
-                                    wheelCurves.Add(tParams.torqueCurveDrive);
-                                }
-                            }
-                            if (TryGetComponent(block, out ModuleBooster boosters))
-                            {
-                                foreach (var item2 in block.GetComponentsInChildren<BoosterJet>())
-                                {
-                                    BoostPotential += (float)oomph.GetValue(item2);
-                                    ConsumePotential += item2.BurnRate;
-                                }
-                                foreach (var item2 in block.GetComponentsInChildren<FanJet>())
-                                {
-                                    ForceAirborne += item2.force;
-                                }
-                            }
-                            if (TryGetComponent(block, out ModuleFuelTank fuel))
-                            {
-                                FuelPotential += fuel.Capacity;
-                                RechargePotential += fuel.RefillRate;
-                            }
-                            if (TryGetComponent(block, out ModuleHover hovers))
-                            {
-                                float unitForce = 0;
-                                foreach (var item2 in block.GetComponentsInChildren<HoverJet>())
-                                {
-                                    unitForce += item2.forceMax;
-                                }
-                                ForceAirborne += unitForce;
-                            }
-                            if (TryGetComponent(block, out ModuleWing wings))
-                            {
-                                if (wings.m_Aerofoils != null)
-                                {
-                                    foreach (var wing in wings.m_Aerofoils)
+                                    BlockDetails BD = BlockIndexer.GetBlockDetails(BT);
+                                    var block = ManSpawn.inst.GetBlockPrefab(BT);
+                                    if (block)
                                     {
-                                        if (wing.flapAngleRangeActual > 0 && wing.flapTurnSpeed > 0)
+                                        healthAll += Mathf.Max(block.GetComponent<ModuleDamage>().maxHealth, 1);
+                                        TotalMass += block.m_DefaultMass;
+                                        if (BD.IsWeapon)
                                         {
-                                            ControlSurfCount++;
-                                            float speedStall = 0;
-                                            for (; wing.liftCurve.Evaluate(speedStall) < 0.5f && speedStall < 150; 
-                                                speedStall += 10)
+                                            AttackPower += block.filledCells.Length;
+                                        }
+                                        if (BD.UsesChunks)
+                                            harvester = true;
+                                        if (BD.IsBattery)
+                                        {
+                                            var store = block.GetComponent<ModuleEnergyStore>();
+                                            if (store)
+                                                batteryAll += Mathf.CeilToInt(store.m_Capacity);
+                                        }
+                                        if (BD.IsBubble)
+                                        {
+                                            var shield = block.GetComponent<ModuleShieldGenerator>();
+                                            if (shield)
+                                                shieldCoverAll += GetShieldRadiusHealthCoverage(shield.m_Radius);
+                                        }
+
+
+                                        if (BD.HasWheels && TryGetComponent(block, out ModuleWheels wheels))
+                                        {
+                                            var wParams = wheels.m_WheelParams;
+                                            if (wParams.radius > 0)
                                             {
+                                                var tParams = wheels.m_TorqueParams;
+                                                WheelsOrGenRechargeCount++;
+                                                WheelRadius += wParams.radius;
+                                                TorqueForceGrounded += tParams.torqueCurveMaxTorque;
+                                                MaxRPM += tParams.torqueCurveMaxRpm;
+                                                wheelCurves.Add(tParams.torqueCurveDrive);
                                             }
-                                            ControlSurfCombinedStallSpeed += speedStall;
+                                        }
+                                        if (BD.HasBoosters && TryGetComponent(block, out ModuleBooster boosters))
+                                        {
+                                            foreach (var item2 in block.GetComponentsInChildren<BoosterJet>())
+                                            {
+                                                BoostPotential += (float)oomph.GetValue(item2);
+                                                ConsumePotential += item2.BurnRate;
+                                            }
+                                            foreach (var item2 in block.GetComponentsInChildren<FanJet>())
+                                            {
+                                                ForceAirborne += (float)RawTechBase.thrustRate.GetValue(item2);
+                                            }
+                                        }
+                                        if (BD.IsFuelTank && TryGetComponent(block, out ModuleFuelTank fuel))
+                                        {
+                                            FuelPotential += fuel.Capacity;
+                                            RechargePotential += fuel.RefillRate;
+                                        }
+                                        if (BD.HasHovers && TryGetComponent(block, out ModuleHover hovers))
+                                        {
+                                            float unitForce = 0;
+                                            foreach (var item2 in block.GetComponentsInChildren<HoverJet>())
+                                            {
+                                                unitForce += item2.forceMax;
+                                            }
+                                            ForceAirborne += unitForce;
+                                        }
+                                        if (BD.HasWings && TryGetComponent(block, out ModuleWing wings))
+                                        {
+                                            if (wings.m_Aerofoils != null)
+                                            {
+                                                foreach (var wing in wings.m_Aerofoils)
+                                                {
+                                                    if (wing.flapAngleRangeActual > 0 && wing.flapTurnSpeed > 0)
+                                                    {
+                                                        ControlSurfOrGenDayRechargeCount++;
+                                                        float speedStall = 0;
+                                                        for (; wing.liftCurve.Evaluate(speedStall) < 0.5f && speedStall < 150;
+                                                            speedStall += 10)
+                                                        {
+                                                        }
+                                                        ControlSurfCombinedStallSpeed += speedStall;
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
+                            yield return null;
                         }
-                    }
-                }
-
-                return nextVal == curStep;
-            }
-            public void Finalize()
-            {
-                if (WheelsCount > 0)
-                {
-                    WheelRadius /= WheelsCount;
-                    MaxRPM /= WheelsCount;
-                }
-
-                if (FuelPotential > 0 && RechargePotential > 0)
-                {
-                    float ExpectedBoostUptime = ConsumePotential / FuelPotential;
-                    float ExpectedBoostCycle = ExpectedBoostUptime + (FuelPotential / RechargePotential);
-                    float ExpectedBoostEfficiency = ExpectedBoostUptime / ExpectedBoostCycle;
-                    ForceAirborne += ExpectedBoostEfficiency * BoostPotential;
-                }
-                float MaxSpeed = 0;
-                for (int step = 0; step < SpeedCheckIterations; step++)
-                {
-                    float wheelForce = 0;
-                    if (WheelsCount > 0)
-                    {
-                        float wheelAngleVelo = (MaxSpeed / (WheelRadius * Mathf.PI * 2)) / MaxRPM;
-                        float wheelForceMulti = 0;
-                        foreach (var item in wheelCurves)
+                        if (shieldCoverAll > 0 && batteryAll > 0)
                         {
-                            wheelForceMulti += item.Evaluate(wheelAngleVelo);
+                            float ShieldEffectiveness = Mathf.Clamp01((float)healthAll / shieldCoverAll);
+                            mobile.MaxShield = (long)(ShieldEffectiveness * batteryAll * BatteryToHealthConversionRate);
+                            mobile.Shield = mobile.MaxShield;
                         }
-                        wheelForceMulti /= WheelsCount;
-                        wheelForce = wheelForceMulti * TorqueForceGrounded;
+                        else
+                        {
+                            mobile.MaxShield = 0;
+                            mobile.Shield = 0;
+                        }
+                        mobile.MaxHealth = (long)(healthAll * BaseHealthMulti);
+                        mobile.Health = mobile.MaxHealth;
+                        mobile.BaseAttackPower = AttackPower;
+
+                        yield return null;
+                        if (WheelsOrGenRechargeCount > 0)
+                        {
+                            WheelRadius /= WheelsOrGenRechargeCount;
+                            MaxRPM /= WheelsOrGenRechargeCount;
+                        }
+
+                        if (FuelPotential > 0 && RechargePotential > 0)
+                        {
+                            float ExpectedBoostUptime = ConsumePotential / FuelPotential;
+                            float ExpectedBoostCycle = ExpectedBoostUptime + (FuelPotential / RechargePotential);
+                            float ExpectedBoostEfficiency = ExpectedBoostUptime / ExpectedBoostCycle;
+                            ForceAirborne += ExpectedBoostEfficiency * BoostPotential;
+                        }
+                        yield return null;
+                        float MaxSpeed = 0;
+                        for (int step = 0; step < SpeedCheckIterations; step++)
+                        {
+                            float wheelForce = 0;
+                            if (WheelsOrGenRechargeCount > 0)
+                            {
+                                float wheelAngleVelo = (MaxSpeed / (WheelRadius * Mathf.PI * 2)) / MaxRPM;
+                                float wheelForceMulti = 0;
+                                foreach (var item in wheelCurves)
+                                {
+                                    wheelForceMulti += item.Evaluate(wheelAngleVelo);
+                                }
+                                wheelForceMulti /= WheelsOrGenRechargeCount;
+                                wheelForce = wheelForceMulti * TorqueForceGrounded;
+                            }
+                            float CombinedForces = ForceAirborne + wheelForce;
+                            float Acceleration = CombinedForces / TotalMass;
+                            MaxSpeed += Acceleration;
+                            float Drag = (MaxSpeed * MaxSpeed) * 0.001f;
+                            MaxSpeed -= Drag;
+                        }
+                        yield return null;
+                        wheelCurves.Clear();
+
+                        float ExpectedWeight = TankAIManager.GravMagnitude * TotalMass;
+                        float ExpectedLiftMaxCapacity = 0;
+
+                        float ControlSurfExpectedStallSpeed = ControlSurfCombinedStallSpeed / Mathf.Max(1, ControlSurfOrGenDayRechargeCount);
+                        if (ControlSurfExpectedStallSpeed < MaxSpeed)
+                            ExpectedLiftMaxCapacity += LiftAssistance * ForceAirborne;
+                        mobile.IsAirborne = ExpectedLiftMaxCapacity + ForceAirborne >= ExpectedWeight;
+                        mobile.MoveSpeed = MaxSpeed;
+                        DebugTAC_AI.Log("Tech " + unit.Name + " is given speed of " +
+                            mobile.MoveSpeed + ", can fly: " + mobile.IsAirborne);
                     }
-                    float CombinedForces = ForceAirborne + wheelForce;
-                    float Acceleration = CombinedForces / TotalMass;
-                    MaxSpeed += Acceleration;
-                    float Drag = (MaxSpeed * MaxSpeed) * 0.001f;
-                    MaxSpeed -= Drag;
-                }
-                wheelCurves.Clear();
+                    else if (unit is NP_BaseUnit baseUnit)
+                    {
+                        while (curStep < sTech.m_TechData.m_BlockSpecs.Count)
+                        {
+                            int nextVal = Mathf.Min(sTech.m_TechData.m_BlockSpecs.Count, curStep + BlockCollectIterations);
+                            for (; curStep < nextVal; curStep++)
+                            {
+                                TankPreset.BlockSpec item = sTech.m_TechData.m_BlockSpecs[curStep];
+                                BlockTypes BT = BlockIndexer.GetBlockIDLogFree(item.block);
+                                if (BT != BlockTypes.GSOAIController_111)
+                                {
+                                    BlockDetails BD = BlockIndexer.GetBlockDetails(BT);
+                                    var block = ManSpawn.inst.GetBlockPrefab(BT);
+                                    if (block)
+                                    {
+                                        healthAll += Mathf.Max(block.GetComponent<ModuleDamage>().maxHealth, 1);
+                                        TotalMass += block.m_DefaultMass;
+                                        if (BD.IsWeapon)
+                                        {
+                                            AttackPower += block.filledCells.Length;
+                                        }
+                                        if (BD.UsesChunks)
+                                            harvester = true;
+                                        if (BD.IsBattery)
+                                        {
+                                            var store = block.GetComponent<ModuleEnergyStore>();
+                                            if (store)
+                                                batteryAll += Mathf.CeilToInt(store.m_Capacity);
+                                        }
+                                        if (BD.IsBubble)
+                                        {
+                                            var shield = block.GetComponent<ModuleShieldGenerator>();
+                                            if (shield)
+                                                shieldCoverAll += GetShieldRadiusHealthCoverage(shield.m_Radius);
+                                        }
 
-                float ExpectedWeight = Physics.gravity.y * TotalMass;
-                float ExpectedLiftMaxCapacity = 0;
 
-                float ControlSurfExpectedStallSpeed = ControlSurfCombinedStallSpeed / Mathf.Max(1, ControlSurfCount);
-                if (ControlSurfExpectedStallSpeed < MaxSpeed)
-                    ExpectedLiftMaxCapacity += LiftAssistance * ForceAirborne;
-                unit.IsAirborne = ExpectedLiftMaxCapacity + ForceAirborne >= ExpectedWeight;
-                unit.MoveSpeed = MaxSpeed;
-                DebugTAC_AI.Log("Tech " + unit.Name + " is given speed of " + 
-                    unit.MoveSpeed + ", can fly: " + unit.IsAirborne);
-            }
-            public bool GetExpectedSpeedAsync()
-            {
-                if (CollectExpectedSpeedAsync())
-                {
-                    if (unit.Exists())
-                        Finalize();
-                    return false;
+                                        if (BD.IsAutominer)
+                                        {
+                                            var MIP = block.GetComponent<ModuleItemProducer>();
+                                            if ((bool)MIP)
+                                            {
+                                                baseUnit.revenue += (int)((GetBiomeAutominerGains(sTech.m_Position) * OperatorTickDelay) /
+                                                    (float)ProdDelay.GetValue(MIP));
+                                            }
+                                        }
+                                        if (BD.IsGenerator)
+                                        {
+                                            var ME = block.GetComponent<ModuleEnergy>();
+                                            if (ME && ME.OutputEnergyType == TechEnergy.EnergyType.Electric)
+                                            {
+                                                ModuleEnergy.OutputConditionFlags flags = (ModuleEnergy.OutputConditionFlags)PowCond.GetValue(ME);
+                                                if ((flags & ModuleEnergy.OutputConditionFlags.DayTime) != 0)
+                                                    WheelsOrGenRechargeCount += Mathf.CeilToInt((float)PowDelay.GetValue(ME));
+                                                else
+                                                    ControlSurfOrGenDayRechargeCount += Mathf.CeilToInt((float)PowDelay.GetValue(ME));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            yield return null;
+                        }
+                        if (shieldCoverAll > 0 && batteryAll > 0)
+                        {
+                            float ShieldEffectiveness = Mathf.Clamp01((float)healthAll / shieldCoverAll);
+                            baseUnit.MaxShield = (long)(ShieldEffectiveness * batteryAll * BatteryToHealthConversionRate);
+                            baseUnit.Shield = baseUnit.MaxShield;
+                        }
+                        else
+                        {
+                            baseUnit.MaxShield = 0;
+                            baseUnit.Shield = 0;
+                        }
+                        baseUnit.MaxHealth = (long)(healthAll * BaseHealthMulti);
+                        baseUnit.Health = baseUnit.MaxHealth;
+                        baseUnit.BaseAttackPower = AttackPower;
+
+                        yield return null;
+                        baseUnit.RechargeRate = WheelsOrGenRechargeCount;
+                        baseUnit.RechargeRateDay = ControlSurfOrGenDayRechargeCount;
+                        baseUnit.AddBuildBucks(RLoadedBases.GetBuildBucksFromNameExt(sTech.m_TechData.Name));
+                        RawTech RT = RawTechLoader.GetEnemyBaseTypeFromNameFull(RLoadedBases.EnemyBaseFunder.GetActualName(sTech.m_TechData.Name));
+                        if (RT != null)
+                        {
+                            var purps = RT.purposes;
+
+                            yield return null;
+
+                            if (purps.Contains(BasePurpose.Defense))
+                                baseUnit.isDefense = true;
+                            if (purps.Contains(BasePurpose.TechProduction))
+                                baseUnit.isTechBuilder = true;
+                            if (purps.Contains(BasePurpose.HasReceivers))
+                            {
+                                baseUnit.handlesChunks = true;
+                                baseUnit.revenue += GetBiomeSurfaceGains(ManWorld.inst.TileManager.CalcTileCentreScene(
+                                    sTech.m_WorldPosition.TileCoord)) * OperatorTickDelay;
+                            }
+                            if (purps.Contains(BasePurpose.Headquarters))
+                                baseUnit.isSiegeBase = true;
+                        }
+                    }
                 }
-                return true;
             }
         }
         public static bool TryGetComponent<T>(TankBlock block, out T Comp) where T : Component
@@ -1936,7 +2372,7 @@ namespace TAC_AI.World
                     if (item.Value != null)
                     {
                         activeCount++;
-                        types[AIGlobals.GetNPTTeamType(item.Key)]++;
+                        types[AIGlobals.GetNPTTeamTypeForDebug(item.Key)]++;
                     }
                 }
                 if (GUILayout.Button("Total: " + AllTeamsUnloaded.Count + " | Active: " + activeCount))
@@ -1954,7 +2390,7 @@ namespace TAC_AI.World
                         }
                         if (enabledTabs.Contains(item.Key))
                         {
-                            foreach (var item2 in AllTeamsUnloaded.TakeWhile(x => AIGlobals.GetNPTTeamType(x.Key) == item.Key))
+                            foreach (var item2 in AllTeamsUnloaded.TakeWhile(x => AIGlobals.GetNPTTeamTypeForDebug(x.Key) == item.Key))
                             {
                                 if (GUILayout.Button("Team: [" + item2.Key.ToString() + "] - " + TeamNamer.GetTeamName(item2.Key)))
                                 {
@@ -2005,34 +2441,34 @@ namespace TAC_AI.World
                                     foreach (var item3 in item2.Value.EMUs)
                                     {
                                         SB.Append(item3.Name + ", ");
-                                        var posV = ManVisible.inst.GetTrackedVisible(item3.ID);
+                                        var posV = AIGlobals.GetTrackedVisible(item3.ID);
                                         if (posV != null)
                                         {
                                             var vec = posV.GetWorldPosition().ScenePosition;
-                                            switch (AIGlobals.GetNPTTeamType(item2.Value.team))
+                                            switch (AIGlobals.GetNPTTeamTypeForDebug(item2.Value.Team))
                                             {
                                                 case NP_Types.Player:
-                                                    DebugRawTechSpawner.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
+                                                    DebugExtUtilities.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
                                                         AIGlobals.PlayerColor, Time.deltaTime);
                                                     break;
                                                 case NP_Types.Friendly:
-                                                    DebugRawTechSpawner.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
+                                                    DebugExtUtilities.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
                                                         AIGlobals.FriendlyColor, Time.deltaTime);
                                                     break;
                                                 case NP_Types.Neutral:
-                                                    DebugRawTechSpawner.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
+                                                    DebugExtUtilities.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
                                                         AIGlobals.NeutralColor, Time.deltaTime);
                                                     break;
                                                 case NP_Types.NonAggressive:
-                                                    DebugRawTechSpawner.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
+                                                    DebugExtUtilities.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
                                                         AIGlobals.NeutralColor, Time.deltaTime);
                                                     break;
                                                 case NP_Types.SubNeutral:
-                                                    DebugRawTechSpawner.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
+                                                    DebugExtUtilities.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0),
                                                         AIGlobals.NeutralColor, Time.deltaTime);
                                                     break;
                                                 case NP_Types.Enemy:
-                                                    DebugRawTechSpawner.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0), 
+                                                    DebugExtUtilities.DrawDirIndicator(vec, vec + new Vector3(0, 4, 0), 
                                                         AIGlobals.EnemyColor, Time.deltaTime);
                                                     break;
                                                 default:

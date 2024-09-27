@@ -37,9 +37,10 @@ namespace TAC_AI.AI.Movement
         /// TerrainHeightVarianceMaxDifference
         /// </summary>
         public static float THVMD => KickStart.TerrainHeight;
+        public static float vertOffset => KickStart.TerrainHeightOffset;
         public const byte maxAltByte = 128;
         private static float Delta = 1f / chunksPerTileWH;
-        private static float EvalRad = 1.42f * Delta * THVMD;
+        private static float EvalRad = 1.42f * Delta * ManWorld.inst.TileSize;
         private static bool sub = false;
 
 #if DEBUG
@@ -91,25 +92,25 @@ namespace TAC_AI.AI.Movement
                                         {
                                             case SceneryBlocker.Shape.Sphere:
                                                 float radius2 = (float)rad.GetValue(item2);
-                                                DebugRawTechSpawner.DrawDirIndicatorSphere(scenePosGrounded, radius2, Color.magenta, drawDelay);
+                                                DebugExtUtilities.DrawDirIndicatorSphere(scenePosGrounded, radius2, Color.magenta, drawDelay);
                                                 break;
                                             case SceneryBlocker.Shape.RectangularPrism:
-                                                DebugRawTechSpawner.DrawDirIndicatorRecPriz(scenePosGrounded - (Vector3.up * 25), ((Vector2)size.GetValue(item2)).ToVector3XZ(50), Color.magenta, drawDelay);
+                                                DebugExtUtilities.DrawDirIndicatorRecPriz(scenePosGrounded - (Vector3.up * 25), ((Vector2)size.GetValue(item2)).ToVector3XZ(50), Color.magenta, drawDelay);
                                                 break;
                                             case SceneryBlocker.Shape.Circle:
                                                 float radius = (float)rad.GetValue(item2);
-                                                DebugRawTechSpawner.DrawDirIndicatorCircle(scenePosGrounded + (Vector3.up * 50), Vector3.up, Vector3.forward, radius, Color.magenta, drawDelay);
-                                                DebugRawTechSpawner.DrawDirIndicator(scenePosGrounded + (Vector3.up * 50), scenePosGrounded, Color.magenta, drawDelay);
-                                                DebugRawTechSpawner.DrawDirIndicatorCircle(scenePosGrounded, Vector3.up, Vector3.forward, radius, Color.magenta, drawDelay);
+                                                DebugExtUtilities.DrawDirIndicatorCircle(scenePosGrounded + (Vector3.up * 50), Vector3.up, Vector3.forward, radius, Color.magenta, drawDelay);
+                                                DebugExtUtilities.DrawDirIndicator(scenePosGrounded + (Vector3.up * 50), scenePosGrounded, Color.magenta, drawDelay);
+                                                DebugExtUtilities.DrawDirIndicatorCircle(scenePosGrounded, Vector3.up, Vector3.forward, radius, Color.magenta, drawDelay);
                                                 break;
                                         }
                                         switch (item2.Mode)
                                         {
                                             case SceneryBlocker.BlockMode.Spawn:
-                                                DebugRawTechSpawner.DrawDirIndicator(WP.ScenePosition, WP.ScenePosition + new Vector3(0, 10, 0), Color.blue, drawDelay);
+                                                DebugExtUtilities.DrawDirIndicator(WP.ScenePosition, WP.ScenePosition + new Vector3(0, 10, 0), Color.blue, drawDelay);
                                                 break;
                                             case SceneryBlocker.BlockMode.Regrow:
-                                                DebugRawTechSpawner.DrawDirIndicator(WP.ScenePosition, WP.ScenePosition + new Vector3(0, 10, 0), Color.green, drawDelay);
+                                                DebugExtUtilities.DrawDirIndicator(WP.ScenePosition, WP.ScenePosition + new Vector3(0, 10, 0), Color.green, drawDelay);
                                                 break;
                                         }
                                     }
@@ -120,7 +121,7 @@ namespace TAC_AI.AI.Movement
                                     foreach (var item2 in item.Value.GetEntireTileUnpathable())
                                     {
                                         Vector3 scenePos = item2.ScenePosition;
-                                        Templates.DebugRawTechSpawner.DrawDirIndicator(scenePos, scenePos + new Vector3(0, 10, 0), Color.red, drawDelay);
+                                        DebugExtUtilities.DrawDirIndicator(scenePos, scenePos + new Vector3(0, 10, 0), Color.red, drawDelay);
                                     }
                                 }
                             }
@@ -527,7 +528,6 @@ namespace TAC_AI.AI.Movement
         public static byte GetDifficulty(Vector3 scenePos, AIEAutoPather pather)
         {
             float ToFill = pather.MoveGridScale * AIEAutoPather.PathingRadiusMulti;
-
             byte bestDiff = 0;
             Vector2 posAltSub = scenePos.ToVector2XZ() - new Vector2(ToFill / 2, ToFill / 2);
             Vector2 posAltPos = scenePos.ToVector2XZ() + new Vector2(ToFill / 2, ToFill / 2);
@@ -832,7 +832,7 @@ namespace TAC_AI.AI.Movement
         internal static bool GetActiveAlt(Vector3 scenePos, out float height, out Collider col)
         {
             //DebugTAC_AI.Log("GetActiveAlt Triggered");
-            scenePos.y += THVMD - 50;
+            scenePos.y += THVMD + vertOffset;
             if (Physics.SphereCast(scenePos, EvalRad, -Vector3.up, out RaycastHit hit, THVMD, layerMask, QueryTriggerInteraction.Ignore))
             {
                 height = scenePos.y - hit.distance;
@@ -858,7 +858,7 @@ namespace TAC_AI.AI.Movement
         }
         internal static byte SceneAltToChunkAlt(float height)
         {
-            return (byte)(Mathf.Clamp(Mathf.Clamp01((height + 50f) / THVMD) * maxAltByte,
+            return (byte)(Mathf.Clamp(Mathf.Clamp01((height - vertOffset) / THVMD) * maxAltByte,
                         AIEAutoPather2D.BaseDifficulty, maxAltByte));
         }
         internal static byte GetChunkAlt(Vector3 scenePos, bool Throws)
@@ -1032,7 +1032,7 @@ namespace TAC_AI.AI.Movement
                         return height;
                     }
                 }
-                return (((float)(chunkByte >> 1) / maxAltByte) * THVMD) - 50f;
+                return (((float)(chunkByte >> 1) / maxAltByte) * THVMD) + vertOffset;
             }
             internal byte GetChunkByte(WorldPosition pos, bool Throws)
             {
@@ -1266,8 +1266,8 @@ namespace TAC_AI.AI.Movement
                                 Vector3 pos = item2.StartPosWP.ScenePosition;
                                 Vector3 posEnd = item2.EndPosWP.ScenePosition;
                                 GUILayout.Label("        Tech: " + pos + " | Dest " + posEnd);
-                                DebugRawTechSpawner.DrawDirIndicator(pos, pos + new Vector3(0, 10, 0), Color.red);
-                                DebugRawTechSpawner.DrawDirIndicator(posEnd, posEnd + new Vector3(0, 10, 0), Color.green);
+                                DebugExtUtilities.DrawDirIndicator(pos, pos + new Vector3(0, 10, 0), Color.red);
+                                DebugExtUtilities.DrawDirIndicator(posEnd, posEnd + new Vector3(0, 10, 0), Color.green);
                             }
                         }
                     }

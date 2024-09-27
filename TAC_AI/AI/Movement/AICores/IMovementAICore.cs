@@ -14,7 +14,7 @@ namespace TAC_AI.AI.Movement.AICores
         /// DriveMaintainer is the most frequently updated out of the AI operations.  
         ///   Use this for matters that must be updated quickly and frequently.
         /// </summary>
-        bool DriveMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank, ref EControlCoreSet core);
+        bool DriveMaintainer(TankAIHelper helper, Tank tank, ref EControlCoreSet core);
 
         void Initiate(Tank tank, IMovementAIController controller);
 
@@ -31,12 +31,16 @@ namespace TAC_AI.AI.Movement.AICores
         bool DriveDirectorRTS(ref EControlCoreSet core); // FOR RTS CONTROL
 
         bool DriveDirectorEnemy(Enemy.EnemyMind mind, ref EControlCoreSet core);
+        bool DriveDirectorEnemyRTS(Enemy.EnemyMind mind, ref EControlCoreSet core);
 
+        /// <summary> Director </summary>
         bool TryAdjustForCombat(bool between, ref Vector3 pos, ref EControlCoreSet core); 
 
+        /// <summary> Director </summary>
         bool TryAdjustForCombatEnemy(Enemy.EnemyMind mind, ref Vector3 pos, ref EControlCoreSet core);
 
         Vector3 AvoidAssist(Vector3 targetIn, Vector3 predictionOffset);
 
+        float GetDrive { get; }
     }
 }

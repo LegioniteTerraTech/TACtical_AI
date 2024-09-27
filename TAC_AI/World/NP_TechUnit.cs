@@ -73,66 +73,21 @@ namespace TAC_AI.World
 
         public long MaxHealth;
         public long MaxShield;
-        private int BaseAttackPower;
+        internal int BaseAttackPower;
         public int AttackPower => Mathf.CeilToInt(BaseAttackPower * ((float)Health / MaxHealth));
-        public readonly bool isArmed = false;
-        public readonly bool canHarvest = false;
+        public bool isArmed = false;
+        public bool handlesChunks = false;
 
-        protected NP_TechUnit(ManSaveGame.StoredTech techIn, NP_Presence_Automatic team, FactionSubTypes faction, float healthMulti)
+        protected NP_TechUnit(ManSaveGame.StoredTech techIn, NP_Presence_Automatic team, FactionSubTypes faction)
         {
+            if (techIn == null)
+                throw new NullReferenceException("techIn cannot be null!");
+            tech = techIn;
+            Health = -1;
+            if (team == null)
+                throw new NullReferenceException("team cannot be null!");
             teamInst = team;
             Faction = faction;
-            int level = 0;
-            long healthAll = 1;
-            long shieldCoverAll = 0;
-            long batteryAll = 0;
-            try
-            {
-                //tilePos = tilePosition;
-                tech = techIn;
-
-                foreach (TankPreset.BlockSpec spec in tech.m_TechData.m_BlockSpecs)
-                {
-                    TankBlock TB = ManSpawn.inst.GetBlockPrefab(spec.GetBlockType());
-                    if ((bool)TB)
-                    {
-                        var Weap = TB.GetComponent<ModuleWeapon>();
-                        if ((bool)Weap)
-                        {
-                            isArmed = true;
-                            BaseAttackPower += TB.filledCells.Length;
-                        }
-                        if (TB.GetComponent<ModuleItemHolderBeam>())
-                            canHarvest = true;
-                        var store = TB.GetComponent<ModuleEnergyStore>();
-                        if (store)
-                            batteryAll += Mathf.CeilToInt(store.m_Capacity);
-                        var shield = TB.GetComponent<ModuleShieldGenerator>();
-                        if (shield)
-                            shieldCoverAll += ManEnemyWorld.GetShieldRadiusHealthCoverage(shield.m_Radius);
-
-                        healthAll += Mathf.Max(TB.GetComponent<ModuleDamage>().maxHealth, 1);
-                    }
-                }
-                if (shieldCoverAll > 0 && batteryAll > 0)
-                {
-                    float ShieldEffectiveness = Mathf.Clamp01((float)healthAll / shieldCoverAll);
-                    MaxShield = (long)(ShieldEffectiveness * batteryAll * ManEnemyWorld.BatteryToHealthConversionRate);
-                    Shield = MaxShield;
-                }
-                else
-                {
-                    MaxShield = 0;
-                    Shield = 0;
-                }
-                level++;
-                Health = (long)(healthAll * healthMulti);
-                MaxHealth = (long)(healthAll * healthMulti);
-            }
-            catch
-            {
-                DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Failiure on init at level " + level + "!");
-            }
         }
 
 

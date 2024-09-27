@@ -27,7 +27,7 @@ namespace TAC_AI.AI
                 if (FindNewExpansionBase(tech, tech.boundsCentreWorld + (tech.rootBlockTrans.forward * 64), out Vector3 pos, true))
                 {
                     //var clone = techToMake.techData.GetShallowClonedCopy();
-                    RawTechLoader.SpawnTechFragment(pos, tech.Team, new RawTechTemplate(techToMake.techData, true));
+                    RawTechLoader.SpawnTechFragment(pos, tech.Team, new RawTech(techToMake.techData, true));
                 }
             }
             catch (Exception e)
@@ -44,7 +44,7 @@ namespace TAC_AI.AI
                 helper.InsureTechMemor("SetupBookmarkBuilder", false);
 
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech " + helper.tank.name + " Setup for SetupTechAutoConstruction");
-                helper.TechMemor.SetupForNewTechConstruction(helper, builder.blueprint);
+                helper.TechMemor.SetupForNewTechConstruction(helper, builder.blueprint.savedTech);
                 if (builder.instant)
                 {
                     AIERepair.Turboconstruct(helper.tank, helper.TechMemor, true);
@@ -68,8 +68,8 @@ namespace TAC_AI.AI
             if (BookmarkBuilder.TryGet(helper.tank, out BookmarkBuilder builder))
             {
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech " + helper.tank.name + 
-                    " Setup for SetupTechAutoConstruction with string length " + builder.blueprint.Count());
-                helper.TechMemor.SetupForNewTechConstruction(helper, builder.blueprint);
+                    " Setup for SetupTechAutoConstruction with block count " + builder.blueprint.savedTech.Count);
+                helper.TechMemor.SetupForNewTechConstruction(helper, builder.blueprint.savedTech);
                 if (builder.instant)
                 {
                     AIERepair.Turboconstruct(helper.tank, helper.TechMemor, true);

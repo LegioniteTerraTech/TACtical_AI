@@ -127,9 +127,9 @@ namespace TAC_AI.AI.Enemy
             catch { } // it failed - [patch later]
             return success;
         }
-        internal static bool EnemyRepairStepper(TankAIHelper thisInst, Tank tank, EnemyMind mind, bool Super = false)
+        internal static bool EnemyRepairStepper(TankAIHelper helper, Tank tank, EnemyMind mind, bool Super = false)
         {
-            //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + ": - EnemyRepairStepper " + mind.TechMemor.blockIntegrityDirty + " | " + thisInst.PendingDamageCheck);
+            //DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + ": - EnemyRepairStepper " + mind.TechMemor.blockIntegrityDirty + " | " + helper.PendingDamageCheck);
             if (!(bool)mind.TechMemor)
             {
                 DebugTAC_AI.Assert(KickStart.ModID + ": Enemy AI " + tank.name + ":  Tried to call EnemyRepairStepper when TechMemor is NULL");
@@ -137,33 +137,33 @@ namespace TAC_AI.AI.Enemy
             }
             if (mind.TechMemor.ReserveSuperGrabs > 0)
             {
-                thisInst.PendingDamageCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.ReserveSuperGrabs);
+                helper.PendingDamageCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.ReserveSuperGrabs);
                 mind.TechMemor.ReserveSuperGrabs = 0;
             }
-            else if (thisInst.RepairStepperClock <= 0)
+            else if (helper.RepairStepperClock <= 0)
             {
-                //thisInst.AttemptedRepairs = 0;
-                float prevVal = thisInst.RepairStepperClock;
+                //helper.AttemptedRepairs = 0;
+                float prevVal = helper.RepairStepperClock;
                 if (AIGlobals.TurboAICheat)
                 {
-                    thisInst.RepairStepperClock = 0;
-                    thisInst.TechMemor.ReserveSuperGrabs = 5 * KickStart.AIClockPeriod;
+                    helper.RepairStepperClock = 0;
+                    helper.TechMemor.ReserveSuperGrabs = 5 * KickStart.AIClockPeriod;
                 }
                 else if (tank.IsAnchored)
                 {   // Enemy bases must be allowed to build or they will not work!
                     if (mind.AIControl.Provoked == 0)
                     {
                         if (!Super)
-                            thisInst.RepairStepperClock = AIERepair.bDelaySafe;
+                            helper.RepairStepperClock = AIERepair.bDelaySafe;
                         else
-                            thisInst.RepairStepperClock = AIERepair.bDelaySafe / 2;
+                            helper.RepairStepperClock = AIERepair.bDelaySafe / 2;
                     }
                     else
                     {
                         if (!Super)
-                            thisInst.RepairStepperClock = AIERepair.bDelayCombat;
+                            helper.RepairStepperClock = AIERepair.bDelayCombat;
                         else
-                            thisInst.RepairStepperClock = AIERepair.bDelayCombat / 2;
+                            helper.RepairStepperClock = AIERepair.bDelayCombat / 2;
                     }
                 }
                 else
@@ -173,35 +173,35 @@ namespace TAC_AI.AI.Enemy
                     if (mind.AIControl.Provoked == 0)
                     {
                         if (!Super)
-                            thisInst.RepairStepperClock = AIERepair.eDelaySafe / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                            helper.RepairStepperClock = AIERepair.eDelaySafe / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                         else
-                            thisInst.RepairStepperClock = (AIERepair.eDelaySafe / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                            helper.RepairStepperClock = (AIERepair.eDelaySafe / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                     }
                     else
                     {
                         if (!Super)
-                            thisInst.RepairStepperClock = AIERepair.eDelayCombat / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                            helper.RepairStepperClock = AIERepair.eDelayCombat / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                         else
-                            thisInst.RepairStepperClock = (AIERepair.eDelayCombat / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
+                            helper.RepairStepperClock = (AIERepair.eDelayCombat / 4) / Mathf.Max((int)mind.CommanderSmarts + 1, 1);
                     }
                 }
-                if (thisInst.PendingDamageCheck) //&& thisInst.AttemptedRepairs == 0)
+                if (helper.PendingDamageCheck) //&& helper.AttemptedRepairs == 0)
                 {
                     try
                     {
-                        if (thisInst.RepairStepperClock < 1)
-                            thisInst.RepairStepperClock = 1;
+                        if (helper.RepairStepperClock < 1)
+                            helper.RepairStepperClock = 1;
                         int initialBlockCount = tank.blockman.blockCount;
-                        float OverdueTime = Mathf.Abs(prevVal / thisInst.RepairStepperClock);
+                        float OverdueTime = Mathf.Abs(prevVal / helper.RepairStepperClock);
                         if (OverdueTime >= 2)
                         {
                             int blocksToAdd = Mathf.CeilToInt(OverdueTime);
-                            thisInst.PendingDamageCheck = !EnemyInstaRepair(tank, mind, blocksToAdd);
-                            thisInst.RepairStepperClock -= (OverdueTime - blocksToAdd) * thisInst.RepairStepperClock;
+                            helper.PendingDamageCheck = !EnemyInstaRepair(tank, mind, blocksToAdd);
+                            helper.RepairStepperClock -= (OverdueTime - blocksToAdd) * helper.RepairStepperClock;
                         }
                         else if (mind.TechMemor.SystemsCheck() && PreRepairPrep(tank, mind))
                         {   // Cheaper to check twice than to use GetMissingBlockTypes when not needed.
-                            thisInst.RepairStepperClock -= OverdueTime * thisInst.RepairStepperClock;
+                            helper.RepairStepperClock -= OverdueTime * helper.RepairStepperClock;
                             mind.TechMemor.RushAttachOpIfNeeded();
                             //bool hardest = KickStart.EnemyBlockDropChance == 0;
                             List<TankBlock> fBlocks = mind.TechMemor.FindBlocksNearbyTank();
@@ -210,39 +210,39 @@ namespace TAC_AI.AI.Enemy
                             {
                                 if (EnemyRepairLerp(tank, mind, CanGrabFromInventory(mind), ref fBlocks, ref typesMissing))
                                 {
-                                    thisInst.PendingDamageCheck = mind.TechMemor.SystemsCheck();
+                                    helper.PendingDamageCheck = mind.TechMemor.SystemsCheck();
                                 }
                                 else
                                 {
                                     DebugTAC_AI.Log("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
                                         + " | PreRepair lerp: " + PreRepairPrep(tank, mind));
-                                    thisInst.PendingDamageCheck = false; // cannot repair as invalid block 
+                                    helper.PendingDamageCheck = false; // cannot repair as invalid block 
                                 }
                             }
                             else
                             {
                                 QueueEnemyRepairLerp(tank, mind, CanGrabFromInventory(mind), ref fBlocks, ref typesMissing);
-                                thisInst.PendingDamageCheck = mind.TechMemor.SystemsCheck();
+                                helper.PendingDamageCheck = mind.TechMemor.SystemsCheck();
                             }
                             mind.TechMemor.UpdateMissingBlockTypes(typesMissing);
-                            //thisInst.AttemptedRepairs = 1;
+                            //helper.AttemptedRepairs = 1;
                         }
                         else
                         {
                             DebugTAC_AI.Log("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
                                 + " | PreRepair lerp: " + PreRepairPrep(tank, mind));
-                            thisInst.PendingDamageCheck = false;
+                            helper.PendingDamageCheck = false;
                         }
                         
 
-                        if (!thisInst.PendingDamageCheck)
+                        if (!helper.PendingDamageCheck)
                         {
                             if (mind.StartedAnchored)
                             {
                                 mind.AIControl.AdjustAnchors();
                                 mind.TechMemor.MakeMinersMineUnlimited();
                             }
-                            thisInst.FinishedRepairEvent.Send(thisInst);
+                            helper.FinishedRepairEvent.Send(helper);
                             if (mind.TechMemor.IsDesignComplete())
                             {
                                 DebugTAC_AI.Log(KickStart.ModID + ": EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
@@ -267,35 +267,35 @@ namespace TAC_AI.AI.Enemy
                 }
             }
             else
-                thisInst.RepairStepperClock -= KickStart.AIClockPeriod;
+                helper.RepairStepperClock -= KickStart.AIClockPeriod;
 
             if (mind.TechMemor.ReserveSuperGrabs < 0)
                 mind.TechMemor.ReserveSuperGrabs = 0;
-            thisInst.UpdateDamageThreshold();
-            return thisInst.PendingDamageCheck;
+            helper.UpdateDamageThreshold();
+            return helper.PendingDamageCheck;
         }
 
 
         // EXPERIMENTAL - AI-Based new Tech building
-        public static bool EnemyNewTechConstruction(TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static bool EnemyNewTechConstruction(TankAIHelper helper, Tank tank, EnemyMind mind)
         {
-            if (thisInst.PendingDamageCheck)// && thisInst.AttemptedRepairs == 0)
+            if (helper.PendingDamageCheck)// && helper.AttemptedRepairs == 0)
             {
-                thisInst.PendingDamageCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.IterateReturnContents().Count() + 10);
+                helper.PendingDamageCheck = !EnemyInstaRepair(tank, mind, mind.TechMemor.IterateReturnContents().Count() + 10);
             }
             else
             {
-                if (thisInst.RepairStepperClock == 1)
+                if (helper.RepairStepperClock == 1)
                 {
-                    //thisInst.AttemptedRepairs = 0;
-                    thisInst.RepairStepperClock = 0;
+                    //helper.AttemptedRepairs = 0;
+                    helper.RepairStepperClock = 0;
                 }
-                else if (thisInst.RepairStepperClock == 0)
-                    thisInst.RepairStepperClock = 20;
+                else if (helper.RepairStepperClock == 0)
+                    helper.RepairStepperClock = 20;
                 else
-                    thisInst.RepairStepperClock--;
+                    helper.RepairStepperClock--;
             }
-            return thisInst.PendingDamageCheck;
+            return helper.PendingDamageCheck;
         }
     }
 }

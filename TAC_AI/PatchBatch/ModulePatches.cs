@@ -42,61 +42,68 @@ namespace TAC_AI
             internal static Type target = typeof(ModuleWeapon);
             static readonly FieldInfo targDeli = typeof(TargetAimer).GetField("AimDelegate", BindingFlags.NonPublic | BindingFlags.Instance);
             //AllowAIToAimAtScenery - On targeting
-            private static bool UpdateAim_Prefix(ModuleWeapon __instance)
+            
+            private static bool UpdateAim_Prefix(ModuleWeapon __instance, IModuleWeapon ___m_WeaponComponent, ref TargetAimer ___m_TargetAimer)
             {
                 if (!KickStart.EnableBetterAI)
                     return true;
                 try
                 {
-                    var AICommand = __instance.transform.root.GetComponent<TankAIHelper>();
+                    var AICommand = __instance.block.tank.GetHelperInsured();
                     if (AICommand)
                     {
-                        if (AICommand.ActiveAimState == AIWeaponState.Obsticle && AICommand.Obst.IsNotNull())
+                        switch (AICommand.ActiveAimState)
                         {
-                            Visible obstVis = AICommand.Obst.GetComponent<Visible>();
-                            if (obstVis)
-                            {
-                                if (!obstVis.isActive)
-                                {
+                            case AIWeaponState.Normal:
+                                break;
+                            case AIWeaponState.Enemy:
+                                break;
+                            case AIWeaponState.HoldFire:
+                                ___m_TargetAimer.AimAtWorldPos(___m_WeaponComponent.GetFireTransform().position +
+                                    __instance.block.trans.TransformDirection(new Vector3(0, -0.5f, 1)), __instance.RotateSpeed);
+                                return false;
+                            case AIWeaponState.Obsticle:
+                                Visible obstVis = AICommand.Obst.GetComponent<Visible>();
+                                if (obstVis && !obstVis.isActive)
                                     AICommand.Obst = null;
-                                }
-                            }
-                            var ta = __instance.GetComponent<TargetAimer>();
-                            if (ta)
-                            {
-                                Func<Vector3, Vector3> func = (Func<Vector3, Vector3>)targDeli.GetValue(ta);
-                                if (func != null)
+                                if (___m_TargetAimer)
                                 {
-                                    ta.AimAtWorldPos(func(AICommand.Obst.position + (Vector3.up * 2)), __instance.RotateSpeed);
+                                    Func<Vector3, Vector3> func = (Func<Vector3, Vector3>)targDeli.GetValue(___m_TargetAimer);
+                                    if (func != null)
+                                    {
+                                        ___m_TargetAimer.AimAtWorldPos(func(AICommand.Obst.position + (Vector3.up * 2)), __instance.RotateSpeed);
+                                    }
+                                    else
+                                    {
+                                        ___m_TargetAimer.AimAtWorldPos(AICommand.Obst.position + (Vector3.up * 2), __instance.RotateSpeed);
+                                    }
                                 }
-                                else
-                                {
-                                    ta.AimAtWorldPos(AICommand.Obst.position + (Vector3.up * 2), __instance.RotateSpeed);
-                                }
-                            }
-                            return false;
+                                return false;
+                            case AIWeaponState.Mimic:
+                                break;
+                            default:
+                                break;
                         }
                     }
                 }
                 catch { }
                 return true;
             }
+            
 
             static readonly FieldInfo aimers = typeof(ModuleWeapon).GetField("m_TargetAimer", BindingFlags.NonPublic | BindingFlags.Instance),
                 aimerTargPos = typeof(TargetAimer).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance),
                 WeaponTargPos = typeof(ModuleWeapon).GetField("m_TargetPosition", BindingFlags.NonPublic | BindingFlags.Instance);
             //PatchAimingSystemsToHelpAI
-            private static void UpdateAutoAimBehaviour_Postfix(ModuleWeapon __instance)
+            private static void UpdateAutoAimBehaviour_Postfix(ModuleWeapon __instance, ref TargetAimer ___m_TargetAimer, ref Vector3 ___m_TargetPosition)
             {
                 if (!KickStart.EnableBetterAI)
                     return;
                 if (!KickStart.isWeaponAimModPresent)
                 {
-                    TargetAimer thisAimer = (TargetAimer)aimers.GetValue(__instance);
-
-                    if (thisAimer.HasTarget)
+                    if (___m_TargetAimer.HasTarget)
                     {
-                        WeaponTargPos.SetValue(__instance, (Vector3)aimerTargPos.GetValue(thisAimer));
+                        ___m_TargetPosition = (Vector3)aimerTargPos.GetValue(___m_TargetAimer);
                     }
                 }
             }
@@ -145,16 +152,16 @@ namespace TAC_AI
 
             static readonly FieldInfo progress = typeof(ModuleItemConsume).GetField("m_ConsumeProgress", BindingFlags.NonPublic | BindingFlags.Instance);
             static readonly FieldInfo sellStolen = typeof(ModuleItemConsume).GetField("m_OperateItemInterceptedBy", BindingFlags.NonPublic | BindingFlags.Instance);
-
+            private static Dictionary<ModuleItemConsume, int> ReservedSell = new Dictionary<ModuleItemConsume, int>();
             //LetNPCsSellStuff
             private static bool InitRecipeOutput_Prefix(ModuleItemConsume __instance)
             {
                 int team = 0;
-                if (__instance.block?.tank)
-                {
+                if (ReservedSell.TryGetValue(__instance, out int TeamOwner))
+                    team = TeamOwner;
+                else if (__instance.block?.tank)
                     team = __instance.block.tank.Team;
-                }
-                if (AIGlobals.IsBaseTeam(team))
+                if (ManNetwork.IsHost && AIGlobals.IsBaseTeamDynamic(team))
                 {
                     ModuleItemConsume.Progress pog = (ModuleItemConsume.Progress)progress.GetValue(__instance);
                     if (pog.currentRecipe.m_OutputType == RecipeTable.Recipe.OutputType.Money && sellStolen.GetValue(__instance) == null)
@@ -163,29 +170,28 @@ namespace TAC_AI
                         int sellGain = (int)(pog.currentRecipe.m_MoneyOutput * KickStart.EnemySellGainModifier);
 
                         string moneyGain = Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain);
-                        if (AIGlobals.IsNeutralBaseTeam(team))
+
+                        if (KickStart.DisplayEnemyEvents && AIGlobals.PopupColored(moneyGain, team, pos))
                         {
-                            if (KickStart.DisplayEnemyEvents)
-                                AIGlobals.PopupNeutralInfo(moneyGain, pos);
                             RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                             return false;
-                        }
-                        else if (AIGlobals.IsFriendlyBaseTeam(team))
-                        {
-                            if (KickStart.DisplayEnemyEvents)
-                                AIGlobals.PopupAllyInfo(moneyGain, pos);
-                            RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
-                            return false;
-                        }
-                        else
-                        {
-                            if (KickStart.DisplayEnemyEvents)
-                                AIGlobals.PopupEnemyInfo(moneyGain, pos);
-                            RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
                         }
                     }
                 }
                 return true;
+            }
+            private static void DestroyItem_Prefix(ModuleItemConsume __instance, ref Visible item)
+            {
+                if (__instance.block?.tank)
+                {
+                    int team = __instance.block.tank.Team;
+                    if (team == ManSpawn.NeutralTeam && ManBaseTeams.inst.TradingSellOffers.TryGetValue(item.ID, out int teamOwner))
+                    {
+                        item.RecycledEvent.Unsubscribe(ManBaseTeams.PickupRecycled);
+                        ManBaseTeams.inst.TradingSellOffers.Remove(item.ID);
+                        ReservedSell[__instance] = teamOwner;
+                    }
+                }
             }
         }
         internal static class ModuleHeartPatches
@@ -197,10 +203,10 @@ namespace TAC_AI
             private static void UpdatePickupTargets_Prefix(ModuleHeart __instance)
             {
                 var valid = __instance.GetComponent<ModuleItemHolder>();
-                if (valid)
+                if (ManNetwork.IsHost && valid)
                 {
                     int team = __instance.block.tank.Team;
-                    if (ManNetwork.IsHost && AIGlobals.IsBaseTeam(team))
+                    if (AIGlobals.IsBaseTeamDynamic(team))
                     {
                         ModuleItemHolder.Stack stack = valid.SingleStack;
                         Vector3 vec = stack.BasePosWorld();
@@ -210,30 +216,14 @@ namespace TAC_AI
                             if (!vis.IsPrePickup && vis.block)
                             {
                                 float magnitude = (vis.centrePosition - vec).magnitude;
-                                if (magnitude <= (float)PNR.GetValue(__instance) && Singleton.Manager<ManPointer>.inst.DraggingItem != vis)
+                                if (magnitude <= (float)PNR.GetValue(__instance) && ManPointer.inst.DraggingItem != vis)
                                 {
-                                    WorldPosition pos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(__instance.block.visible);
-                                    int sellGain = (int)(KickStart.EnemySellGainModifier * Singleton.Manager<RecipeManager>.inst.GetBlockSellPrice(vis.block.BlockType));
+                                    WorldPosition pos = ManOverlay.inst.WorldPositionForFloatingText(__instance.block.visible);
+                                    int sellGain = (int)(KickStart.EnemySellGainModifier * RecipeManager.inst.GetBlockSellPrice(vis.block.BlockType));
 
-                                    string moneyGain = Singleton.Manager<Localisation>.inst.GetMoneyStringWithSymbol(sellGain);
-                                    if (AIGlobals.IsNeutralBaseTeam(team))
-                                    {
-                                        if (KickStart.DisplayEnemyEvents)
-                                            AIGlobals.PopupNeutralInfo(moneyGain, pos);
+                                    string moneyGain = Localisation.inst.GetMoneyStringWithSymbol(sellGain);
+                                    if (KickStart.DisplayEnemyEvents && AIGlobals.PopupColored(moneyGain, team, pos))
                                         RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
-                                    }
-                                    else if (AIGlobals.IsFriendlyBaseTeam(team))
-                                    {
-                                        if (KickStart.DisplayEnemyEvents)
-                                            AIGlobals.PopupAllyInfo(moneyGain, pos);
-                                        RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
-                                    }
-                                    else
-                                    {
-                                        if (KickStart.DisplayEnemyEvents)
-                                            AIGlobals.PopupEnemyInfo(moneyGain, pos);
-                                        RLoadedBases.TryAddMoney(sellGain, __instance.block.tank.Team);
-                                    }
                                 }
                             }
                         }
@@ -247,9 +237,11 @@ namespace TAC_AI
                 if (__instance.block.tank.IsNull())
                     return;
                 // Setup trolls if Population Injector is N/A
-                if (KickStart.enablePainMode && KickStart.AllowEnemiesToStartBases && SpecialAISpawner.thisActive && Singleton.Manager<ManPop>.inst.IsSpawningEnabled && Singleton.Manager<ManWorld>.inst.Vendors.IsVendorSCU(__instance.block.BlockType))
+                if (KickStart.enablePainMode && KickStart.AllowEnemiesToStartBases && SpecialAISpawner.thisActive && 
+                    ManPop.inst.IsSpawningEnabled && 
+                    ManWorld.inst.Vendors.IsVendorSCU(__instance.block.BlockType))
                 {
-                    if (Singleton.Manager<ManWorld>.inst.GetTerrainHeight(__instance.transform.position, out _))
+                    if (ManWorld.inst.GetTerrainHeight(__instance.transform.position, out _))
                     {
                         SpecialAISpawner.TrySpawnTraderTroll(__instance.transform.position);
                     }
@@ -273,10 +265,10 @@ namespace TAC_AI
                         var tank = __instance.block.tank;
                         if (tank)
                         {
-                            var tankAIHelp = tank.gameObject.GetComponent<TankAIHelper>();
-                            if (tankAIHelp)
+                            var helper = tank.gameObject.GetComponent<TankAIHelper>();
+                            if (helper)
                             {
-                                if (tankAIHelp.ControlTech(__instance.block.tank.control))
+                                if (helper.ControlTech(__instance.block.tank.control))
                                 {
                                     __result = true;
                                     return false;
@@ -297,28 +289,42 @@ namespace TAC_AI
 
 
         // Resources/Collection
-        internal static class ModuleItemHolderBeamPatches
+        internal static class ResourceDispenserPatches
         {
             internal static Type target = typeof(ResourceDispenser);
 
-            private static void InitState_Prefix(ResourceDispenser __instance)
+            private static void OnSpawn_Postfix(ResourceDispenser __instance)
             {
                 try
                 {
                     //DebugTAC_AI.Log(KickStart.ModID + ": Added resource to list (InitState)");
-                    if (!AIECore.Minables.Contains(__instance.visible))
+                    var dmg = __instance.GetComponent<Damageable>();
+                    if (dmg && !dmg.Invulnerable && !AIECore.Minables.Contains(__instance.visible))
                         AIECore.Minables.Add(__instance.visible);
                     //else
                     //    DebugTAC_AI.Log(KickStart.ModID + ": RESOURCE WAS ALREADY ADDED! (InitState)");
                 }
                 catch { } // null call
             }
-            private static void Restore_Prefix(ResourceDispenser __instance, ref ResourceDispenser.PersistentState state)
+            private static void InitState_Postfix(ResourceDispenser __instance)
+            {
+                try
+                {
+                    //DebugTAC_AI.Log(KickStart.ModID + ": Added resource to list (InitState)");
+                    var dmg = __instance.GetComponent<Damageable>();
+                    if (dmg && !dmg.Invulnerable && !AIECore.Minables.Contains(__instance.visible))
+                        AIECore.Minables.Add(__instance.visible);
+                    //else
+                    //    DebugTAC_AI.Log(KickStart.ModID + ": RESOURCE WAS ALREADY ADDED! (InitState)");
+                }
+                catch { } // null call
+            }
+            private static void Restore_Postfix(ResourceDispenser __instance, ref ResourceDispenser.PersistentState state)
             {
                 try
                 {
                     //DebugTAC_AI.Log(KickStart.ModID + ": Added resource to list (Restore)");
-                    if (!state.removedFromWorld)
+                    if (!state.removedFromWorld && state.health > 0)
                     {
                         if (!AIECore.Minables.Contains(__instance.visible))
                             AIECore.Minables.Add(__instance.visible);

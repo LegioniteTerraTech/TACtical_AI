@@ -123,11 +123,17 @@ namespace TAC_AI
         public bool Builder = false;        // Can the AI build new Techs?
         //public bool AnimeAI = false;      // Do we attempt a hookup to the AnimeAI mod and display a character for this AI?
 
-        public float MaxCombatRange = 100;  // Range to chase enemy
-        public float MinCombatRange = 50;  // Minimum range to enemy
+        /// <summary>
+        /// Range to chase enemy
+        /// </summary>
+        public float MaxCombatRange = 100;
+        /// <summary>
+        /// Minimum range to enemy
+        /// </summary>
+        public float MinCombatRange = 50;
 
         /// <summary>
-        /// Changed to OnFirstAttach
+        /// Changed from OnFirstAttach
         /// </summary>
         protected override void Pool()
         {
@@ -168,6 +174,11 @@ namespace TAC_AI
             AltUI.ObjectiveString("Better Future's") + " mobile A.I. " + AltUI.HighlightString("Plan") + " paths, handle " +
             AltUI.HighlightString("Space") + ", block " + AltUI.HighlightString("Repair") +
             ", and use the " + AltUI.HighlightString("Inventory") + ".", 10);
+
+        private static ExtUsageHint.UsageHint hintSJm = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintSJm",
+            AltUI.ObjectiveString("Space Junkers'") + " mobile A.I. can " + AltUI.HighlightString("Plan") + " paths, " + 
+            AltUI.HighlightString("Mine") + ", " + AltUI.HighlightString("Fetch") + " blocks, block "
+            + AltUI.HighlightString("Repair") + ", and sail " + AltUI.HighlightString("Ships") + ".", 10);
 
         public override void OnGrabbed()
         {
@@ -215,9 +226,9 @@ namespace TAC_AI
                 return;
             }
             SavedAI = block.tank.GetHelperInsured().DediAI;
-            //var thisInst = block.tank.GetHelperInsured();
-            //thisInst.AIList.Add(this);
-            //thisInst.RefreshAI();
+            //var helper = block.tank.GetHelperInsured();
+            //helper.AIList.Add(this);
+            //helper.RefreshAI();
         }
         public override void OnDetach()
         {
@@ -230,10 +241,10 @@ namespace TAC_AI
                 DebugTAC_AI.Info(KickStart.ModID + ": ModuleAIExtention - Tank IS NULL AND BLOCK IS LOOSE");
                 return;
             }
-            var thisInst = block.tank.GetHelperInsured();
-            //thisInst.AIList.Remove(this);
+            var helper = block.tank.GetHelperInsured();
+            //helper.AIList.Remove(this);
             //if (!TankBlock.IsBeingRecycled())
-            //    thisInst.RefreshAI();
+            //    helper.RefreshAI();
             SavedAI = AIType.Escort;
         }
 
@@ -266,9 +277,9 @@ namespace TAC_AI
                 {
                     Prospector = true;
                     Energizer = true;
-                    Scrapper = true;  // Temp Testing
-                    AutoAnchor = true; // temp testing
-                    SelfRepairAI = true; // EXTREMELY POWERFUL
+                    Scrapper = true; 
+                    AutoAnchor = true;
+                    //SelfRepairAI = true; // EXTREMELY POWERFUL
                     MTForAll = true;
                     MeleePreferred = true;
                     AdvAvoidence = true;
@@ -310,6 +321,17 @@ namespace TAC_AI
                     MinCombatRange = 60;
                     MaxCombatRange = 250;
                 }
+                else if (name == "SJ_AI_Module_Guard_122")
+                {
+                    Assault = true;
+                    Prospector = true;
+                    Scrapper = true;
+                    Buccaneer = true;
+                    AutoAnchor = true;
+                    MinCombatRange = 30;
+                    MaxCombatRange = 125;
+                    AdvAvoidence = true;
+                }
                 /*
                 else if (name == "RR_AI_Module_Guard_212")
                 {
@@ -317,14 +339,6 @@ namespace TAC_AI
                     AdvAvoidence = true;
                     MinCombatRange = 160;
                     MaxCombatRange = 220;
-                }
-                else if (name == "SJ_AI_Module_Guard_122")
-                {
-                    Prospector = true;
-                    Scrapper = true;
-                    MTForAll = true;
-                    MinCombatRange = 60;
-                    MaxCombatRange = 120;
                 }
                 else if (name == "TSN_AI_Module_Guard_312")
                 {
@@ -406,25 +420,25 @@ namespace TAC_AI
             {
                 if (Serialize(false))
                 {
-                    var thisInst = block.tank.GetHelperInsured();
-                    if (thisInst.DediAI != SavedAI || thisInst.DriverType != SavedAIDriver)
+                    var helper = block.tank.GetHelperInsured();
+                    if (helper.DediAI != SavedAI || helper.DriverType != SavedAIDriver)
                     {
                         if (KickStart.TransferLegacyIfNeeded(SavedAI, out AIType newtype, out AIDriverType driver))
                         {
                             SavedAIDriver = driver;
                             SavedAI = newtype;
                         }
-                        thisInst.SetDriverType(SavedAIDriver);
-                        thisInst.DediAI = SavedAI;
+                        helper.SetDriverType(SavedAIDriver);
+                        helper.DediAI = SavedAI;
                         DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
-                        thisInst.dirtyAI = true;
+                        helper.dirtyAI = true;
                         if (WasMobileAnchor)
                         { 
                         }
                     }
                     if (RTSActive)
                     {
-                        thisInst.RTSDestination = GetRTSScenePos();
+                        helper.RTSDestination = GetRTSScenePos();
                     }
                     return true;
                 }
@@ -438,8 +452,8 @@ namespace TAC_AI
             KickStart.TryHookUpToSafeSavesIfNeeded();
             if (Saving)
             {
-                var help = tank.GetHelperInsured();
-                SaveRTS(help, help.RTSDestination);
+                var helper = tank.GetHelperInsured();
+                SaveRTS(helper, helper.RTSDestination);
                 AISettingsSet.StringSerial(tank, true, ref BooleanSerial);
                 return this.SerializeToSafe();
             }
@@ -531,28 +545,28 @@ namespace TAC_AI
                             SerialData serialData2 = Module.SerialData<SerialData>.Retrieve(blockSpec.saveState);
                             if (serialData2 != null)
                             {
-                                var thisInst = block.tank.GetHelperInsured();
-                                if (thisInst.DediAI != serialData2.savedMode)
+                                var helper = block.tank.GetHelperInsured();
+                                if (helper.DediAI != serialData2.savedMode)
                                 {
-                                    thisInst.DediAI = serialData2.savedMode;
-                                    thisInst.RefreshAI();
+                                    helper.DediAI = serialData2.savedMode;
+                                    helper.RefreshAI();
                                     //if (serialData2.savedMode == AIType.Aviator)
-                                    //    thisInst.RecalibrateMovementAIController();
+                                    //    helper.RecalibrateMovementAIController();
                                 }
                                 SavedAI = serialData2.savedMode;
                                 if (serialData2.wasRTS)
                                 {
                                     RTSActive = true;
-                                    thisInst.RTSDestination = serialData2.RTSPos;
+                                    helper.RTSDestination = serialData2.RTSPos;
                                 }
                                 if (KickStart.TransferLegacyIfNeeded(SavedAI, out AIType newtype, out AIDriverType driver))
                                 {
                                     SavedAIDriver = driver;
                                     SavedAI = newtype;
                                 }
-                                thisInst.SetDriverType(SavedAIDriver);
-                                thisInst.DediAI = SavedAI;
-                                thisInst.PlayerAllowAutoAnchoring = WasMobileAnchor;
+                                helper.SetDriverType(SavedAIDriver);
+                                helper.DediAI = SavedAI;
+                                helper.PlayerAllowAutoAnchoring = WasMobileAnchor;
                                 if (LastTargetVisibleID != -1)
                                 {
                                     TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(LastTargetVisibleID);
@@ -563,54 +577,54 @@ namespace TAC_AI
                                             case ObjectTypes.Vehicle:
                                                 if (TV.visible != null)
                                                 {
-                                                    if (TV.visible.tank.IsEnemy(tank.Team))
+                                                    if (ManBaseTeams.IsEnemy(tank.Team, TV.visible.tank.Team))
                                                     {
-                                                        if (thisInst.DediAI == AIType.Assault)
+                                                        if (helper.DediAI == AIType.Assault)
                                                         {
-                                                            thisInst.theResource = TV.visible;
-                                                            thisInst.foundGoal = TV.visible;
+                                                            helper.theResource = TV.visible;
+                                                            helper.foundGoal = TV.visible;
                                                         }
                                                         else
                                                         {
-                                                            thisInst.lastEnemy = TV.visible;
+                                                            helper.lastEnemy = TV.visible;
                                                         }
                                                     }
-                                                    else if (thisInst.DediAI == AIType.Aegis)
+                                                    else if (helper.DediAI == AIType.Aegis)
                                                     {
-                                                        thisInst.theResource = TV.visible;
-                                                        thisInst.foundGoal = TV.visible;
+                                                        helper.theResource = TV.visible;
+                                                        helper.foundGoal = TV.visible;
                                                     }
                                                 }
                                                 break;
                                             case ObjectTypes.Block:
-                                                if (thisInst.DediAI == AIType.Scrapper)
+                                                if (helper.DediAI == AIType.Scrapper)
                                                 {
-                                                    thisInst.theResource = TV.visible;
-                                                    thisInst.foundGoal = TV.visible;
+                                                    helper.theResource = TV.visible;
+                                                    helper.foundGoal = TV.visible;
                                                 }
                                                 else
-                                                    DebugTAC_AI.LogError("AI " + thisInst.name + " expected to be Scrapper for visible ID " +
-                                                        LastTargetVisibleID + " of type " + TV.ObjectType + " but was " + thisInst.DediAI + " instead");
+                                                    DebugTAC_AI.LogError("AI " + helper.name + " expected to be Scrapper for visible ID " +
+                                                        LastTargetVisibleID + " of type " + TV.ObjectType + " but was " + helper.DediAI + " instead");
                                                 break;
                                             case ObjectTypes.Scenery:
-                                                if (thisInst.DediAI == AIType.Prospector)
+                                                if (helper.DediAI == AIType.Prospector)
                                                 {
-                                                    thisInst.theResource = TV.visible;
-                                                    thisInst.foundGoal = TV.visible;
+                                                    helper.theResource = TV.visible;
+                                                    helper.foundGoal = TV.visible;
                                                 }
                                                 else
-                                                    DebugTAC_AI.LogError("AI " + thisInst.name + " expected to be Prospector for visible ID " +
-                                                        LastTargetVisibleID + " of type " + TV.ObjectType + " but was " + thisInst.DediAI + " instead");
+                                                    DebugTAC_AI.LogError("AI " + helper.name + " expected to be Prospector for visible ID " +
+                                                        LastTargetVisibleID + " of type " + TV.ObjectType + " but was " + helper.DediAI + " instead");
                                                 break;
                                             default:
-                                                DebugTAC_AI.LogError("AI " + thisInst.name + " wasn't expecting a " + TV.ObjectType + " for visible ID " +
+                                                DebugTAC_AI.LogError("AI " + helper.name + " wasn't expecting a " + TV.ObjectType + " for visible ID " +
                                                     LastTargetVisibleID);
                                                 break;
                                         }
                                     }
                                 }
                                 //DebugTAC_AI.Log(KickStart.ModID + ": Loaded " + SavedAI.ToString() + " from gameObject " + gameObject.name);
-                                TankAIManager.AILoadedEvent.Send(thisInst);
+                                TankAIManager.AILoadedEvent.Send(helper);
                             }
                         }
                     }

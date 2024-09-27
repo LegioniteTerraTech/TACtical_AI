@@ -32,28 +32,28 @@ namespace TAC_AI.AI
             }
             try
             {
-                tank.AI.SetBehaviorType(AITreeType.AITypes.Escort);
                 BlockManager BM = tank.blockman;
-                TankAIHelper help = tank.GetHelperInsured();
+                TankAIHelper helper = tank.GetHelperInsured();
+                helper.SetAIControl(AITreeType.AITypes.Escort);
                 if (BM.blockCount > 0)
                 {
                     if (BM.IterateBlockComponents<ModuleWheels>().Count() > 0 || BM.IterateBlockComponents<ModuleHover>().Count() > 0)
-                        help.DediAI = AIType.Escort;
+                        helper.DediAI = AIType.Escort;
                     else
                     {
                         if (BM.IterateBlockComponents<ModuleWeapon>().Count() > 0)
-                            help.DediAI = AIType.MTTurret;
+                            helper.DediAI = AIType.MTTurret;
                         else
-                            help.DediAI = AIType.MTStatic;
+                            helper.DediAI = AIType.MTStatic;
                     }
                 }
                 else
                 {   // We assume flares or a drone/infantry to launch
-                    help.DediAI = AIType.Escort;
+                    helper.DediAI = AIType.Escort;
                 }
-                help.SetDriverType(AIECore.HandlingDetermine(tank, help));
-                help.lastCloseAlly = mother;
-                DebugTAC_AI.Log(KickStart.ModID + ": AIESplitHandler - Set to " + help.DediAI + " for " + tank.name);
+                helper.SetDriverType(AIECore.HandlingDetermine(tank, helper));
+                helper.lastCloseAlly = mother;
+                DebugTAC_AI.Log(KickStart.ModID + ": AIESplitHandler - Set to " + helper.DediAI + " for " + tank.name);
             }
             catch
             {

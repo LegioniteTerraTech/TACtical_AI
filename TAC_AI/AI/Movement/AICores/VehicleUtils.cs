@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Reflection;
 using UnityEngine;
 using TAC_AI.AI.Enemy;
 using TAC_AI.World;
@@ -11,12 +11,8 @@ namespace TAC_AI.AI.Movement.AICores
 {
     internal static class VehicleUtils
     {
-        public static bool FixControlReversal(this TankControl thisControl)
-        {
-            return !(thisControl.ActiveScheme == null || !thisControl.ActiveScheme.ReverseSteering) &&
-                thisControl.CurState.m_InputMovement.z < -0.01f && 
-                Vector3.Dot(thisControl.Tech.rbody.velocity, thisControl.Tech.rootBlockTrans.forward) < 0f;
-        }
+        internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
+
         private const float ignoreSteeringAboveAngle = 0.925f;
         private const float strictForwardsLowerSteeringAboveAngle = 0.775f;
         private const float forwardsLowerSteeringAboveAngle = 0.6f;
@@ -26,7 +22,7 @@ namespace TAC_AI.AI.Movement.AICores
         /// <summary>
         /// Controls how hard the Tech should turn when pursuing a target vector
         /// </summary>
-        public static bool Turner(TankControl thisControl, TankAIHelper helper, Vector3 destVec, ref EControlCoreSet core)
+        public static bool Turner(TankAIHelper helper, Vector3 destVec, float drive, ref EControlCoreSet core)
         {
             float turnVal = 1;
             float forwards = Vector2.Dot(destVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
@@ -55,21 +51,20 @@ namespace TAC_AI.AI.Movement.AICores
                     else
                     {*/
                     float strength = Mathf.Log10(1 + Mathf.Max(0, forwards * 9));
-                    thisControl.DriveControl = Mathf.Sign(thisControl.CurState.m_InputMovement.z) * Mathf.Clamp(Mathf.Max(Mathf.Abs(thisControl.CurState.m_InputMovement.z), strength), -1, 1);
+                    helper.DriveControl = Mathf.Sign(drive) * Mathf.Clamp(Mathf.Max(Mathf.Abs(drive), strength), -1, 1);
                     //}
                 }
                 if (turnVal < 0 || turnVal > 1 || float.IsNaN(turnVal))
                     DebugTAC_AI.Exception("Invalid Turnval  NaN " + float.IsNaN(turnVal) + "  negative " + (turnVal < 0));
-
-                if (thisControl.FixControlReversal())
-                    thisControl.m_Movement.FaceDirection(helper.tank, new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                if (helper.FixControlReversal(drive))
+                    helper.SteerControl(new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
                 else
-                    thisControl.m_Movement.FaceDirection(helper.tank, destVec, turnVal);
+                    helper.SteerControl(destVec, turnVal);
                 return true;
             }
             else
             {
-                if (forwards > ignoreSteeringAboveAngle && thisControl.CurState.m_InputMovement.z >= MaxThrottleToTurnFull)
+                if (forwards > ignoreSteeringAboveAngle && drive >= MaxThrottleToTurnFull)
                     return false;
                 else
                 {
@@ -88,7 +83,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {
-                        if (thisControl.CurState.m_InputMovement.z <= MaxThrottleToTurnAccurate)
+                        if (drive <= MaxThrottleToTurnAccurate)
                         {
                             if (!(bool)helper.lastCloseAlly && forwards > forwardsLowerSteeringAboveAngle)
                             {
@@ -105,10 +100,10 @@ namespace TAC_AI.AI.Movement.AICores
                     if (turnVal < 0 || turnVal > 1 || float.IsNaN(turnVal))
                         DebugTAC_AI.Exception("Invalid Turnval  NaN " + float.IsNaN(turnVal) + "  negative " + (turnVal < 0));
                 }
-                if (thisControl.FixControlReversal())
-                    thisControl.m_Movement.FaceDirection(helper.tank, new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                if (helper.FixControlReversal(drive))
+                    helper.SteerControl(new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
                 else
-                    thisControl.m_Movement.FaceDirection(helper.tank, destVec, turnVal);
+                    helper.SteerControl(destVec, turnVal);
                 return true;
             }
         }
@@ -121,8 +116,9 @@ namespace TAC_AI.AI.Movement.AICores
         /// </summary>
         public static void TurnerHovership(TankControl thisControl, TankAIHelper helper, Vector3 destVec, ref EControlCoreSet core)
         {
+            Transform rootBlock = helper.tank.rootBlockTrans;
             float turnVal = 1;
-            float forwards = Vector2.Dot(destVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
+            float forwards = Vector2.Dot(destVec.ToVector2XZ().normalized, rootBlock.forward.ToVector2XZ().normalized);
 
             if (forwards <= ignoreSteeringAboveAngleAir)
             {
@@ -147,7 +143,7 @@ namespace TAC_AI.AI.Movement.AICores
                         turnVal = Mathf.Clamp(strength, 0, 1);
                     }
                 }
-                if (thisControl.FixControlReversal())
+                if (helper.FixControlReversal(rootBlock.InverseTransformVector(destVec).z))
                     thisControl.m_Movement.FaceDirection(helper.tank, new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
                 else
                     thisControl.m_Movement.FaceDirection(helper.tank, destVec, turnVal);
@@ -155,61 +151,102 @@ namespace TAC_AI.AI.Movement.AICores
         }
 
 
+        public static void ModerateThrust3D(TankAIHelper helper, ref Vector3 driveVal, Vector3 TtWRatios, Vector3 tankPos, Vector3 localSpaceTargPos, float propLerpSpeed)
+        {
+            ModerateThrustAxis(helper, ref driveVal.x, TtWRatios.x, tankPos.x, localSpaceTargPos.x, propLerpSpeed);
+            ModerateThrustAxis(helper, ref driveVal.y, TtWRatios.y, tankPos.y, localSpaceTargPos.y, propLerpSpeed);
+            ModerateThrustAxis(helper, ref driveVal.z, TtWRatios.z, tankPos.z, localSpaceTargPos.z, propLerpSpeed);
+        }
+        public static void ModerateThrustAxis(TankAIHelper helper, ref float driveVal, float TtWRatio, float tankPos, float localSpaceTargPos, float propLerpSpeed)
+        {
+            float deltaVelo = localSpaceTargPos - tankPos - helper.SafeVelocity.y;
+
+            float timeCurToReach;
+
+            float deltaThrottle;
+            if (deltaVelo < 0f)
+            {
+                deltaThrottle = -propLerpSpeed * 0.9f;
+                float curAccel = ((TtWRatio * driveVal) - 1f) * TankAIManager.GravMagnitude;
+                if (curAccel < 0f)
+                    timeCurToReach = deltaVelo / Mathf.Min(curAccel, -0.001f);
+                else
+                    timeCurToReach = 9001f;
+            }
+            else
+            {
+                deltaThrottle = propLerpSpeed * 0.9f;
+                float curAccel = ((TtWRatio * driveVal) - 1f) * TankAIManager.GravMagnitude;
+                if (curAccel > 0f)
+                    timeCurToReach = deltaVelo / Mathf.Max(curAccel, 0.001f);
+                else
+                    timeCurToReach = 9001f;
+            }
+
+            if (timeCurToReach > 1f)
+                driveVal += deltaThrottle;
+            else // throttleShiftDelay >= timeCurToReach
+                driveVal += deltaThrottle * timeCurToReach;
+        }
+
+
         public static bool GetPathingTargetRTS(AIControllerDefault controller, out Vector3 pos, ref EControlCoreSet core)
         {
-            var help = controller.Helper;
-            var tank = help.tank;
+            var helper = controller.Helper;
+            var tank = helper.tank;
             pos = controller.PathPoint;
             try
             {
-                help.MinimumRad = 0.5f;
+                helper.AutoSpacing = 0.5f;
                 core.DriveDir = EDriveFacing.Forwards;
-                if (help.IsMultiTech)
+                if (helper.IsMultiTech)
                 {   //Override and disable most driving abilities
                     core.DrivePathing = EDrivePathing.IgnoreAll;
 
-                    pos = MultiTechUtils.HandleMultiTech(help, tank, ref core);
+                    pos = MultiTechUtils.HandleMultiTech(helper, tank, ref core);
                 }
                 else
                 {
                     core.DriveDir = EDriveFacing.Forwards;
                     bool Combat = false;
-                    if (!help.IsGoingToRTSDest)
+                    if (!helper.IsGoingToRTSDest)
                         Combat = controller.AICore.TryAdjustForCombat(true, ref pos, ref core); //If we are set to chase then chase with proper AI
-                    if (!Combat)
+                    if (Combat)
+                        core.DrivePathing = EDrivePathing.OnlyImmedeate;
+                    else
                     {
-                        if (help.recentSpeed < 10 && controller.Helper.GetDistanceFromTask(help.RTSDestination) < 32)
+                        if (helper.recentSpeed < 10 && controller.Helper.GetDistanceFromTask(helper.RTSDestination) < 32)
                         {
-                            if (ManNetwork.IsNetworked || ManPlayerRTS.HasMovementQueue(help))
+                            if (ManNetwork.IsNetworked || ManWorldRTS.HasMovementQueue(helper))
                             {
-                                help.ForceSetDrive = true;
-                                help.DriveVar = 1;
+                                helper.ThrottleState = AIThrottleState.ForceSpeed;
+                                helper.DriveVar = 1;
                                 core.DrivePathing = EDrivePathing.PrecisePath;
                                 core.StrictTurning = true;
 
-                                if (!help.IsGoingToRTSDest)
+                                if (!helper.IsGoingToRTSDest)
                                     pos = tank.boundsCentreWorldNoCheck;
                                 else
-                                    pos = help.RTSDestination;
+                                    pos = helper.RTSDestination;
                             }
                             else
                             {
-                                help.PivotOnly = true;
+                                helper.ThrottleState = AIThrottleState.PivotOnly;
                                 core.Stop();
 
-                                if (help.lastEnemyGet != null)
+                                if (helper.lastEnemyGet != null)
                                 {
-                                    pos = help.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                                    pos = helper.lastEnemyGet.tank.boundsCentreWorldNoCheck;
                                 }
                                 else
                                 {
                                     core.DrivePathing = EDrivePathing.PrecisePath;
                                     core.StrictTurning = true;
 
-                                    if (!help.IsGoingToRTSDest)
+                                    if (!helper.IsGoingToRTSDest)
                                         pos = tank.boundsCentreWorldNoCheck;
                                     else
-                                        pos = help.RTSDestination;
+                                        pos = helper.RTSDestination;
                                 }
                             }
                         }
@@ -217,14 +254,15 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             core.DrivePathing = EDrivePathing.PrecisePath;
                             core.StrictTurning = true;
-                            if (!help.IsGoingToRTSDest)
+                            if (!helper.IsGoingToRTSDest)
+                            {
                                 pos = tank.boundsCentreWorldNoCheck;
+                                core.Stop();
+                            }
                             else
-                                pos = help.RTSDestination;
+                                pos = helper.RTSDestination;
                         }
                     }
-                    else
-                        core.DrivePathing = EDrivePathing.OnlyImmedeate;
                 }
             }
             catch (Exception e)
@@ -237,10 +275,10 @@ namespace TAC_AI.AI.Movement.AICores
                     DebugTAC_AI.Log(KickStart.ModID + ": AI Main Mode - " + tank.AI.GetAICategory().ToString());
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
                         DebugTAC_AI.Log(KickStart.ModID + ": AI Tree Mode - " + tree.ToString());
-                    DebugTAC_AI.Log(KickStart.ModID + ": Last AI Tree Mode - " + help.lastAIType.ToString());
-                    DebugTAC_AI.Log(KickStart.ModID + ": Player - " + help.lastPlayer.tank.name);
-                    if ((bool)help.lastEnemyGet)
-                        DebugTAC_AI.Log(KickStart.ModID + ": Target - " + help.lastEnemyGet.tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Last AI Tree Mode - " + helper.lastAIType.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": Player - " + helper.lastPlayer.tank.name);
+                    if ((bool)helper.lastEnemyGet)
+                        DebugTAC_AI.Log(KickStart.ModID + ": Target - " + helper.lastEnemyGet.tank.name);
                     DebugTAC_AI.Log(KickStart.ModID + ": " + e);
                 }
                 catch
@@ -252,128 +290,239 @@ namespace TAC_AI.AI.Movement.AICores
             return true;
         }
 
+        public static bool GetPathingTargetRTSEnemy(AIControllerDefault controller, out Vector3 pos, ref EControlCoreSet core)
+        {
+            var helper = controller.Helper;
+            var tank = helper.tank;
+            pos = controller.PathPoint;
+            EnemyMind mind = controller.EnemyMind;
+            try
+            {
+                helper.AutoSpacing = 0.5f;
+                core.DriveDir = EDriveFacing.Forwards;
+                if (helper.IsMultiTech)
+                {   //Override and disable most driving abilities
+                    core.DrivePathing = EDrivePathing.IgnoreAll;
+
+                    pos = MultiTechUtils.HandleMultiTech(helper, tank, ref core);
+                }
+                else
+                {
+                    core.DriveDir = EDriveFacing.Forwards;
+                    bool Combat = false;
+                    if (!helper.IsGoingToRTSDest)
+                        Combat = controller.AICore.TryAdjustForCombatEnemy(mind, ref pos, ref core); //If we are set to chase then chase with proper AI
+                    if (Combat)
+                        core.DrivePathing = EDrivePathing.OnlyImmedeate;
+                    else
+                    {
+                        if (helper.recentSpeed < 10 && controller.Helper.GetDistanceFromTask(helper.RTSDestination) < 32)
+                        {
+                            if (ManNetwork.IsNetworked || ManWorldRTS.HasMovementQueue(helper))
+                            {
+                                helper.ThrottleState = AIThrottleState.ForceSpeed;
+                                helper.DriveVar = 1;
+                                core.DrivePathing = EDrivePathing.PrecisePath;
+                                core.StrictTurning = true;
+
+                                if (!helper.IsGoingToRTSDest)
+                                    pos = tank.boundsCentreWorldNoCheck;
+                                else
+                                    pos = helper.RTSDestination;
+                            }
+                            else
+                            {
+                                helper.ThrottleState = AIThrottleState.PivotOnly;
+                                core.Stop();
+
+                                if (helper.lastEnemyGet != null)
+                                {
+                                    pos = helper.lastEnemyGet.tank.boundsCentreWorldNoCheck;
+                                }
+                                else
+                                {
+                                    core.DrivePathing = EDrivePathing.PrecisePath;
+                                    core.StrictTurning = true;
+
+                                    if (!helper.IsGoingToRTSDest)
+                                        return GetPathingTargetEnemy(controller, out pos, ref core);
+                                    else
+                                        pos = helper.RTSDestination;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            core.DrivePathing = EDrivePathing.PrecisePath;
+                            core.StrictTurning = true;
+                            if (!helper.IsGoingToRTSDest)
+                                return GetPathingTargetEnemy(controller, out pos, ref core);
+                            else
+                                pos = helper.RTSDestination;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": ERROR IN VehicleAICore - GetPathingTargetRTS");
+                    DebugTAC_AI.Log(KickStart.ModID + ": Tank - " + tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Helper - " + (bool)controller.Helper);
+                    DebugTAC_AI.Log(KickStart.ModID + ": AI Main Mode - " + tank.AI.GetAICategory().ToString());
+                    if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
+                        DebugTAC_AI.Log(KickStart.ModID + ": AI Tree Mode - " + tree.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": Last AI Tree Mode - " + helper.lastAIType.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": Player - " + helper.lastPlayer.tank.name);
+                    if ((bool)helper.lastEnemyGet)
+                        DebugTAC_AI.Log(KickStart.ModID + ": Target - " + helper.lastEnemyGet.tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": " + e);
+                }
+                catch
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": Missing variable(s)");
+                }
+            }
+            core.lastDestination = controller.GetDestination();
+            return true;
+        }
+
         public static bool GetPathingTarget(AIControllerDefault controller, out Vector3 pos, ref EControlCoreSet core)
         {
-            var help = controller.Helper;
-            var tank = help.tank;
+            var helper = controller.Helper;
+            var tank = helper.tank;
             pos = controller.PathPoint;
             try
             {
-                if (help.IsMultiTech)
+                if (helper.IsMultiTech)
                 {   //Override and disable most driving abilities
                     core.DrivePathing = EDrivePathing.IgnoreAll;
-                    pos = MultiTechUtils.HandleMultiTech(help, tank, ref core);
+                    pos = MultiTechUtils.HandleMultiTech(helper, tank, ref core);
                 }
-                else if (help.DriveDestDirected == EDriveDest.Override)
+                else if (helper.DriveDestDirected == EDriveDest.Override)
                 {
                     core.DrivePathing = EDrivePathing.IgnoreAll;
                     core.DriveDir = EDriveFacing.Forwards;
                     core.DriveDest = EDriveDest.Override;
                 }
-                else if (help.DriveDestDirected == EDriveDest.ToBase)
+                else if (helper.DriveDestDirected == EDriveDest.ToBase)
                 {
-                    if (help.lastBasePos.IsNotNull())
+                    if (helper.lastBasePos.IsNotNull())
                     {
                         core.DriveDir = EDriveFacing.Forwards;
                         core.DrivePathing = EDrivePathing.PrecisePath;
-                        if (help.Yield)
+                        if (helper.ThrottleState == AIThrottleState.PivotOnly)
                         {
-                            help.MinimumRad = 0;
+                            helper.AutoSpacing = 0;
                             core.StrictTurning = true;
                         }
                         else
                         {
-                            help.MinimumRad = Mathf.Max(help.lastTechExtents - 2, 0.5f);
+                            helper.AutoSpacing = Mathf.Max(helper.lastTechExtents - 2, 0.5f);
                         }
-                        pos = help.lastBasePos.position;
+                        pos = helper.lastBasePos.position;
                     }
                     else
+                    {
                         core.Stop();
+                        DebugTAC_AI.Log("lastBasePos is null when " + helper.name + " was told to go to the base");
+                    }
                 }
-                else if (help.DriveDestDirected == EDriveDest.ToMine)
+                else if (helper.DriveDestDirected == EDriveDest.ToMine)
                 {
-                    if (help.theResource.tank != null)
+                    if (helper.theResource == null)
                     {
-                        core.DriveDir = EDriveFacing.Forwards;
-                        if (help.PivotOnly)
-                        {
-                            core.DrivePathing = EDrivePathing.IgnoreAll;
-                            core.StrictTurning = true;
-                            help.MinimumRad = 0;
-                        }
-                        else
-                        {
-                            core.DriveDir = EDriveFacing.Forwards;
-                            core.DrivePathing = EDrivePathing.PrecisePathIgnoreScenery;
-                            if (help.FullMelee)
-                            {
-                                help.MinimumRad = 0;
-                            }
-                            else
-                            {
-                                help.MinimumRad = help.lastTechExtents + 2;
-                            }
-                            if (help.Yield)
-                                core.StrictTurning = true;
-                        }
-                        pos = help.theResource.tank.boundsCentreWorldNoCheck;
+                        core.Stop();
+                        DebugTAC_AI.Log("theResource is null when " + helper.name + " was told to go to the mines");
                     }
                     else
                     {
-                        if (help.PivotOnly)
+                        if (helper.theResource.tank != null)
                         {
-                            core.DrivePathing = EDrivePathing.IgnoreAll;
                             core.DriveDir = EDriveFacing.Forwards;
-                            help.MinimumRad = 0;
-
-                            pos = help.theResource.trans.position;
-                        }
-                        else
-                        {
-                            if (help.FullMelee)
+                            if (helper.ThrottleState == AIThrottleState.PivotOnly)
                             {
-                                core.DriveDir = EDriveFacing.Forwards;
-                                core.DrivePathing = EDrivePathing.PrecisePathIgnoreScenery;
-                                help.MinimumRad = 0;
-
-                                pos = help.theResource.trans.position;
+                                core.DrivePathing = EDrivePathing.IgnoreAll;
+                                core.StrictTurning = true;
+                                helper.AutoSpacing = 0;
                             }
                             else
                             {
                                 core.DriveDir = EDriveFacing.Forwards;
                                 core.DrivePathing = EDrivePathing.PrecisePathIgnoreScenery;
-                                help.MinimumRad = help.lastTechExtents + 2;
+                                if (helper.FullMelee)
+                                {
+                                    helper.AutoSpacing = 0;
+                                }
+                                else
+                                {
+                                    helper.AutoSpacing = helper.lastTechExtents + 2;
+                                }
+                                if (helper.ThrottleState == AIThrottleState.Yield)
+                                    core.StrictTurning = true;
+                            }
+                            pos = helper.theResource.tank.boundsCentreWorldNoCheck;
+                        }
+                        else
+                        {
+                            if (helper.ThrottleState == AIThrottleState.PivotOnly)
+                            {
+                                core.DrivePathing = EDrivePathing.IgnoreAll;
+                                core.DriveDir = EDriveFacing.Forwards;
+                                helper.AutoSpacing = 0;
 
-                                pos = help.theResource.centrePosition;
+                                pos = helper.theResource.trans.position;
+                            }
+                            else
+                            {
+                                if (helper.FullMelee)
+                                {
+                                    core.DriveDir = EDriveFacing.Forwards;
+                                    core.DrivePathing = EDrivePathing.PrecisePathIgnoreScenery;
+                                    helper.AutoSpacing = 0;
+
+                                    pos = helper.theResource.trans.position;
+                                }
+                                else
+                                {
+                                    core.DriveDir = EDriveFacing.Forwards;
+                                    core.DrivePathing = EDrivePathing.PrecisePathIgnoreScenery;
+                                    helper.AutoSpacing = helper.lastTechExtents + 2;
+
+                                    pos = helper.theResource.trans.position;
+                                }
                             }
                         }
                     }
                 }
-                else if (help.DediAI == AIType.Aegis)
+                else if (helper.DediAI == AIType.Aegis)
                 {
-                    core.DrivePathing = EDrivePathing.Path;
-                    help.theResource = AIEPathing.ClosestUnanchoredAlly(AIEPathing.AllyList(controller.Tank),
-                        controller.Tank.boundsCentreWorldNoCheck, Mathf.Pow(help.MaxCombatRange * 2, 2), out float bestval, tank).visible;
-                    if (help.lastOperatorRange > help.MaxCombatRange || !controller.AICore.TryAdjustForCombat(true, ref pos, ref core))
+                    if (helper.ThrottleState == AIThrottleState.PivotOnly)
+                        core.DrivePathing = EDrivePathing.IgnoreAll;
+                    else
+                        core.DrivePathing = EDrivePathing.Path;
+                    helper.theResource = AIEPathing.ClosestUnanchoredAlly(AIEPathing.AllyList(controller.Tank),
+                        controller.Tank.boundsCentreWorldNoCheck, Mathf.Pow(helper.MaxCombatRange * 2, 2), out float bestval, tank)?.visible;
+                    if (helper.lastOperatorRange > helper.MaxCombatRange || !controller.AICore.TryAdjustForCombat(true, ref pos, ref core))
                     {
-                        if (help.theResource.IsNotNull())
+                        if (helper.theResource.IsNotNull())
                         {
-                            if (help.IsDirectedMovingFromDest)
+                            if (helper.IsDirectedMovingFromDest)
                             {
-                                core.DrivePathing = EDrivePathing.PathInv;
                                 core.DriveDir = EDriveFacing.Forwards;
                                 core.DriveDest = EDriveDest.FromLastDestination;
-                                help.MinimumRad = 0.5f;
+                                helper.AutoSpacing = 0;//0.5f;
 
-                                pos = help.theResource.tank.boundsCentreWorldNoCheck;
+                                pos = helper.theResource.tank.boundsCentreWorldNoCheck;
                             }
-                            else if (help.IsDirectedMovingToDest)
+                            else if (helper.IsDirectedMovingToDest)
                             {
                                 core.DriveDir = EDriveFacing.Forwards;
                                 core.DriveDest = EDriveDest.ToLastDestination;
-                                help.MinimumRad = help.lastTechExtents + help.theResource.GetCheapBounds() + 5;
+                                helper.AutoSpacing = helper.lastTechExtents + helper.theResource.GetCheapBounds() + 5;
 
-                                pos = help.theResource.tank.boundsCentreWorldNoCheck;
+                                pos = helper.theResource.tank.boundsCentreWorldNoCheck;
                             }
                             else
                             {
@@ -401,34 +550,33 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {
-                        if (help.PivotOnly)
+                        if (helper.ThrottleState == AIThrottleState.PivotOnly)
                             core.DrivePathing = EDrivePathing.IgnoreAll;
                         else
                             core.DrivePathing = EDrivePathing.Path;
-                        if (help.lastPlayer)
+                        if (helper.lastPlayer)
                         {
-                            if (help.IsDirectedMovingFromDest)
+                            if (helper.IsDirectedMovingFromDest)
                             {
-                                core.DrivePathing = EDrivePathing.Path;//PathInv;
                                 core.DriveDir = EDriveFacing.Forwards;
                                 core.DriveDest = EDriveDest.FromLastDestination;
-                                help.MinimumRad = 0.5f;
+                                helper.AutoSpacing = 0.01f;//0.5f;
 
-                                pos = help.lastPlayer.tank.boundsCentreWorldNoCheck;
+                                pos = helper.lastPlayer.tank.boundsCentreWorldNoCheck;
                             }
-                            else if (help.IsDirectedMovingToDest)
+                            else if (helper.IsDirectedMovingToDest)
                             {
                                 core.DriveDir = EDriveFacing.Forwards;
-                                help.MinimumRad = help.lastTechExtents + help.lastPlayer.GetCheapBounds() + 5;
+                                helper.AutoSpacing = helper.lastTechExtents + helper.lastPlayer.GetCheapBounds() + 5;
 
-                                pos = help.lastPlayer.tank.boundsCentreWorldNoCheck;
-                                if (help.Yield)
+                                pos = helper.lastPlayer.tank.boundsCentreWorldNoCheck;
+                                if (helper.ThrottleState == AIThrottleState.Yield)
                                     core.StrictTurning = true;
                             }
                             else
                             {
                                 core.DrivePathing = EDrivePathing.IgnoreAll;
-                                help.PivotOnly = true;
+                                helper.ThrottleState = AIThrottleState.PivotOnly;
                                 core.Stop();
                                 //DebugTAC_AI.Log(KickStart.ModID + ": AI IDLE");
                             }
@@ -451,10 +599,10 @@ namespace TAC_AI.AI.Movement.AICores
                     DebugTAC_AI.Log(KickStart.ModID + ": AI Main Mode - " + tank.AI.GetAICategory().ToString());
                     if (tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree))
                         DebugTAC_AI.Log(KickStart.ModID + ": AI Tree Mode - " + tree.ToString());
-                    DebugTAC_AI.Log(KickStart.ModID + ": Last AI Tree Mode - " + help.lastAIType.ToString());
-                    DebugTAC_AI.Log(KickStart.ModID + ": Player - " + help.lastPlayer.tank.name);
-                    if ((bool)help.lastEnemyGet)
-                        DebugTAC_AI.Log(KickStart.ModID + ": Target - " + help.lastEnemyGet.tank.name);
+                    DebugTAC_AI.Log(KickStart.ModID + ": Last AI Tree Mode - " + helper.lastAIType.ToString());
+                    DebugTAC_AI.Log(KickStart.ModID + ": Player - " + helper.lastPlayer.tank.name);
+                    if ((bool)helper.lastEnemyGet)
+                        DebugTAC_AI.Log(KickStart.ModID + ": Target - " + helper.lastEnemyGet.tank.name);
                     DebugTAC_AI.Log(KickStart.ModID + ": " + e);
                 }
                 catch
@@ -462,14 +610,14 @@ namespace TAC_AI.AI.Movement.AICores
                     DebugTAC_AI.Log(KickStart.ModID + ": Missing variable(s)");
                 }
             }
-            core.lastDestination = pos;
+            core.lastDestination = controller.GetTargetDestination();
             return true;
         }
         
         public static bool GetPathingTargetEnemy(AIControllerDefault controller, out Vector3 pos, ref EControlCoreSet core)
         {
             int errorCode = 0;
-            var help = controller.Helper;
+            var helper = controller.Helper;
             try
             {
                 pos = controller.PathPoint;
@@ -477,83 +625,94 @@ namespace TAC_AI.AI.Movement.AICores
 
                 if (mind.IsNull())
                     return false;
-                if (help.DriveDestDirected == EDriveDest.Override)
+                if (helper.DriveDestDirected == EDriveDest.Override)
                 {
                     errorCode = 100;
                     core.DrivePathing = EDrivePathing.IgnoreAll;
                     core.DriveDir = EDriveFacing.Forwards;
                     core.DriveDest = EDriveDest.Override;
                 }
-                else if (help.DriveDestDirected == EDriveDest.ToBase)
+                else if (helper.DriveDestDirected == EDriveDest.ToBase)
                 {
                     errorCode = 200;
-                    if (help.lastBasePos.IsNotNull())
+                    if (helper.lastBasePos.IsNotNull())
                     {
                         core.DriveDir = EDriveFacing.Forwards;
-                        help.MinimumRad = Mathf.Max(help.lastTechExtents - 2, 0.5f);
+                        helper.AutoSpacing = Mathf.Max(helper.lastTechExtents - 2, 0.5f);
                         core.DrivePathing = EDrivePathing.PrecisePath;
 
-                        pos = help.lastBasePos.position;
-                        if (help.Yield)
+                        pos = helper.lastBasePos.position;
+                        if (helper.ThrottleState == AIThrottleState.Yield)
                             core.StrictTurning = true;
                     }
                     else
                         core.Stop();
                 }
-                else if (help.DriveDestDirected == EDriveDest.ToMine)
+                else if (helper.DriveDestDirected == EDriveDest.ToMine)
                 {
                     errorCode = 300;
-                    if (help.PivotOnly)
+                    if (helper.theResource == null)
                     {
-                        errorCode = 301;
-                        core.DrivePathing = EDrivePathing.IgnoreAll;
-                        core.DriveDir = EDriveFacing.Forwards;
-                        help.MinimumRad = 0;
+                        core.Stop();
+                        DebugTAC_AI.Log("theResource is null when " + helper.name + " was told to go to the mines");
 
-                        pos = help.theResource.trans.position;
                     }
                     else
                     {
-                        errorCode = 302;
-                        core.DrivePathing = EDrivePathing.PrecisePathIgnoreScenery;
-                        core.DriveDir = EDriveFacing.Forwards;
-                        if (mind.LikelyMelee)
+                        if (helper.ThrottleState == AIThrottleState.PivotOnly)
                         {
-                            help.MinimumRad = 0;
+                            errorCode = 301;
+                            core.DrivePathing = EDrivePathing.IgnoreAll;
+                            core.DriveDir = EDriveFacing.Forwards;
+                            helper.AutoSpacing = 0;
+
+                            pos = helper.theResource.trans.position;
                         }
                         else
                         {
-                            help.MinimumRad = help.lastTechExtents + 2;
+                            errorCode = 302;
+                            core.DrivePathing = EDrivePathing.PrecisePathIgnoreScenery;
+                            core.DriveDir = EDriveFacing.Forwards;
+                            if (mind.LikelyMelee)
+                            {
+                                helper.AutoSpacing = 0;
+                            }
+                            else
+                            {
+                                helper.AutoSpacing = helper.lastTechExtents + 2;
+                            }
+                            pos = helper.theResource.trans.position;
                         }
-                        pos = help.theResource.trans.position;
                     }
                 }
                 else if (mind.CommanderMind == EnemyAttitude.Guardian)
                 {
-                    core.DrivePathing = EDrivePathing.Path;
-                    help.theResource = AIEPathing.ClosestUnanchoredAlly(AIEPathing.AllyList(controller.Tank),
-                        controller.Tank.boundsCentreWorldNoCheck, Mathf.Pow(help.MaxCombatRange * 2, 2), 
-                        out float bestval, help.tank).visible;
-                    if (help.lastOperatorRange > help.MaxCombatRange || !controller.AICore.TryAdjustForCombat(true, ref pos, ref core))
+                    if (helper.ThrottleState == AIThrottleState.PivotOnly)
+                        core.DrivePathing = EDrivePathing.IgnoreAll;
+                    else
+                        core.DrivePathing = EDrivePathing.Path;
+                    helper.theResource = AIEPathing.ClosestUnanchoredAlly(AIEPathing.AllyList(controller.Tank),
+                        controller.Tank.boundsCentreWorldNoCheck, Mathf.Pow(helper.MaxCombatRange * 2, 2),
+                        out float bestval, helper.tank)?.visible;
+                    if (helper.lastOperatorRange > helper.MaxCombatRange || !controller.AICore.TryAdjustForCombat(true, ref pos, ref core))
                     {
-                        if (help.theResource.IsNotNull())
+                        if (helper.theResource.IsNotNull())
                         {
-                            if (help.IsDirectedMovingFromDest)
+                            if (helper.IsDirectedMovingFromDest)
                             {
-                                core.DrivePathing = EDrivePathing.PathInv;
                                 core.DriveDir = EDriveFacing.Forwards;
                                 core.DriveDest = EDriveDest.FromLastDestination;
-                                help.MinimumRad = 0.5f;
+                                helper.AutoSpacing = 0;//0.5f;
 
-                                pos = help.theResource.tank.boundsCentreWorldNoCheck;
+                                pos = helper.theResource.tank.boundsCentreWorldNoCheck;
                             }
-                            else if (help.IsDirectedMovingToDest)
+                            else if (helper.IsDirectedMovingToDest)
                             {
                                 core.DriveDir = EDriveFacing.Forwards;
                                 core.DriveDest = EDriveDest.ToLastDestination;
-                                help.MinimumRad = help.lastTechExtents + help.theResource.GetCheapBounds() + 5;
+                                helper.AutoSpacing = helper.lastTechExtents + helper.theResource.GetCheapBounds() + 5;
 
-                                pos = help.theResource.tank.boundsCentreWorldNoCheck;
+                                pos = helper.theResource.tank.boundsCentreWorldNoCheck;
                             }
                             else
                             {
@@ -576,12 +735,12 @@ namespace TAC_AI.AI.Movement.AICores
                 else
                 {
                     errorCode = 400;
-                    if (help.Retreat)
+                    if (helper.Retreat)
                     {
-                        pos = help.lastDestinationOp;
+                        pos = helper.lastDestinationOp;
                         core.DrivePathing = EDrivePathing.Path;
                         core.DriveDest = EDriveDest.ToLastDestination;
-                        help.MinimumRad = 0.5f;
+                        helper.AutoSpacing = 0.5f;
                     }
                     else if (controller.AICore.TryAdjustForCombatEnemy(mind, ref pos, ref core))
                     {
@@ -589,29 +748,30 @@ namespace TAC_AI.AI.Movement.AICores
                     }
                     else
                     {
-                        if (help.PivotOnly)
+                        if (helper.ThrottleState == AIThrottleState.PivotOnly)
                             core.DrivePathing = EDrivePathing.IgnoreAll;
                         else
                             core.DrivePathing = EDrivePathing.Path;
                         core.DriveDir = EDriveFacing.Forwards;
-                        if (help.IsDirectedMovingFromDest)
+                        if (helper.IsDirectedMovingFromDest)
                         {
                             core.DriveDest = EDriveDest.FromLastDestination;
-                            help.MinimumRad = 0.5f;
-                            core.DrivePathing = EDrivePathing.OnlyImmedeate;
+                            helper.AutoSpacing = 0.01f;
+                            //help.MinimumRad = 0.5f;
+                            //core.DrivePathing = EDrivePathing.OnlyImmedeate;
 
-                            pos = help.lastDestinationCore;
+                            pos = helper.lastDestinationCore;
                         }
-                        else if (help.IsDirectedMovingToDest)
+                        else if (helper.IsDirectedMovingToDest)
                         {
                             core.DriveDest = EDriveDest.ToLastDestination;
                             if (mind.EvilCommander == EnemyHandling.Stationary)
-                                help.MinimumRad = 0.5f;
+                                helper.AutoSpacing = 0.5f;
                             else
-                                help.MinimumRad = help.lastTechExtents + 8;
+                                helper.AutoSpacing = helper.lastTechExtents + 8;
 
-                            pos = help.lastDestinationCore;
-                            if (help.Yield)
+                            pos = helper.lastDestinationCore;
+                            if (helper.ThrottleState == AIThrottleState.Yield)
                                 core.StrictTurning = true;
                         }
                     }
@@ -622,7 +782,7 @@ namespace TAC_AI.AI.Movement.AICores
             catch (NullReferenceException)
             {
                 DebugTAC_AI.Assert("GetPathingTargetEnemy - ERROR " + errorCode);
-                help.theResource = null;
+                helper.theResource = null;
                 throw;
             }
         }

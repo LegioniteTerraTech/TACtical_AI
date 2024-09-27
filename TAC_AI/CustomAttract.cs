@@ -24,7 +24,7 @@ namespace TAC_AI
         internal static List<SpecialAttract.AttractInfo> InitAttracts => new List<SpecialAttract.AttractInfo>()
         {
             new SpecialAttract.AttractInfo(AttractType.BaseVBase.ToString(), 1.25f, null, StartBaseVBase),
-            new SpecialAttract.AttractInfo(AttractType.Dogfight.ToString(), 50000.25f, null, StartDogfight),
+            new SpecialAttract.AttractInfo(AttractType.Dogfight.ToString(), 5.25f, null, StartDogfight),
             new SpecialAttract.AttractInfo(AttractType.Harvester.ToString(), 3.75f, null, StartHarvester, null, true),
             new SpecialAttract.AttractInfo(AttractType.BaseSiege.ToString(), 2.25f, null, StartBaseSiege, EndBaseSiege),
             new SpecialAttract.AttractInfo(AttractType.Invader.ToString(), 0.75f, null, StartInvader),
@@ -58,9 +58,13 @@ namespace TAC_AI
             int team1 = AIGlobals.GetRandomEnemyBaseTeam();
             var tanksToConsider = SpecialAttract.GetRandomStartingPositions();
 
-            RawTechLoader.SpawnSpecificTech(tanksToConsider[0], Vector3.forward, team1, new HashSet<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting });
+            RawTechPopParams RTF = RawTechPopParams.Default;
+            RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.NotStationary, BasePurpose.Harvesting };
+
+            RawTechLoader.TrySpawnSpecificTech(tanksToConsider[0], Vector3.forward, team1, RTF);
             Tank first = ManTechs.inst.IterateTechs().FirstOrDefault();
-            RawTechLoader.SpawnSpecificTech(spawn, Vector3.forward, team1, new HashSet<BasePurpose> { BasePurpose.Harvesting, BasePurpose.HasReceivers });
+            RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Harvesting, BasePurpose.HasReceivers };
+            RawTechLoader.TrySpawnSpecificTech(spawn, Vector3.forward, team1, RTF);
             rTime.SetValue(__instance, Time.time + __instance.resetTime);
             spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
             SpecialAttract.SetupTechCam(first);
@@ -186,7 +190,7 @@ namespace TAC_AI
             int team1 = AIGlobals.GetRandomEnemyBaseTeam();
             var tanksToConsider = SpecialAttract.GetRandomStartingPositions();
 
-            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, team1, BaseTerrain.Land, purpose: BasePurpose.Headquarters);
+            RawTechLoader.SpawnAttractTech(spawn, Vector3.forward, team1, BaseTerrain.Land, purpose: BasePurpose.AnyNonHQ);
             return true;
         }
 

@@ -5,7 +5,7 @@ namespace TAC_AI.AI
 {
     internal static class AIEWeapons
     {
-        public static void WeaponDirector(TankControl thisControl, TankAIHelper thisInst, Tank tank)
+        public static void WeaponDirector(TankControl thisControl, TankAIHelper helper, Tank tank)
         {
             float FinalAim;
 
@@ -13,28 +13,47 @@ namespace TAC_AI.AI
             {
                 if (!tank.beam.IsActive)
                 {
-                    if (thisInst.AttackEnemy && thisInst.lastEnemyGet.IsNotNull())
+                    if (helper.lastEnemyGet?.tank)
                     {
-                        thisInst.WeaponState = AIWeaponState.Enemy;
-                        if (tank.IsAnchored)
+                        if (helper.AttackEnemy && ManBaseTeams.IsEnemy(tank.Team, helper.lastEnemyGet.tank.Team))
                         {
-                            Vector3 aimTo = (thisInst.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
-                            float driveAngle = Vector3.Angle(aimTo, tank.rootBlockTrans.forward);
-                            if (Mathf.Abs(driveAngle) >= AIGlobals.AnchorAimDampening)
-                                FinalAim = 1;
-                            else
-                                FinalAim = Mathf.Abs(driveAngle / AIGlobals.AnchorAimDampening);
-                            thisControl.m_Movement.FaceDirection(tank, aimTo, FinalAim);//Face the music
+                            helper.WeaponState = AIWeaponState.Enemy;
+                            helper.SuppressFiring(false);
+                            if (tank.IsAnchored)
+                            {
+                                Vector3 aimTo = (helper.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
+                                float driveAngle = Vector3.Angle(aimTo, tank.rootBlockTrans.forward);
+                                if (Mathf.Abs(driveAngle) >= AIGlobals.AnchorAimDampening)
+                                    FinalAim = 1;
+                                else
+                                    FinalAim = Mathf.Abs(driveAngle / AIGlobals.AnchorAimDampening);
+                                thisControl.m_Movement.FaceDirection(tank, aimTo, FinalAim);//Face the music
+                            }
+                        }
+                        else
+                        {
+                            helper.WeaponState = AIWeaponState.HoldFire;
+                            helper.SuppressFiring(true);
                         }
                     }
-                    else if (thisInst.Obst.IsNotNull())
+                    else if (helper.Obst.IsNotNull())
                     {
-                        thisInst.WeaponState = AIWeaponState.Obsticle;
+                        helper.WeaponState = AIWeaponState.Obsticle;
+                        helper.SuppressFiring(false);
                     }
                     else
                     {
-                        thisInst.WeaponState = 0;
+                        if (tank.TechIsPlayerControlled())
+                            helper.WeaponState = AIWeaponState.Normal;
+                        else
+                            helper.WeaponState = AIWeaponState.HoldFire;
+                        helper.SuppressFiring(false);
                     }
+                }
+                else
+                {
+                    helper.WeaponState = AIWeaponState.HoldFire;
+                    helper.SuppressFiring(true);
                 }
             }
             catch
@@ -43,82 +62,103 @@ namespace TAC_AI.AI
             }
         }
 
-        public static void WeaponMaintainer(TankControl thisControl, TankAIHelper thisInst, Tank tank)
+        public static void WeaponMaintainer(TankAIHelper helper, Tank tank)
         {
-            thisInst.ActiveAimState = 0;
+            helper.ActiveAimState = AIWeaponState.Normal;
             if (!tank.beam.IsActive)
             {
-                if (!thisInst.FIRE_ALL && thisInst.AIAlign == AIAlignment.Player && 
+                if (!helper.FIRE_ALL && helper.AIAlign == AIAlignment.Player && 
                     !ManNetwork.IsNetworked && AIGlobals.PlayerClientFireCommand() &&
-                    ManPlayerRTS.inst.LocalPlayerTechsControlled.Contains(thisInst))
-                    thisInst.FIRE_ALL = true;
+                    ManWorldRTS.inst.LocalPlayerTechsControlled.Contains(helper))
+                    helper.FIRE_ALL = true;
 
-                if (thisInst.IsMultiTech)
+                if (helper.IsMultiTech)
                 {   // sync to host tech
-                    if (thisInst.lastCloseAlly.IsNotNull())
+                    if (helper.lastCloseAlly.IsNotNull())
                     {
-                        if (thisInst.lastEnemyGet.IsNotNull())
+                        if (helper.lastEnemyGet.IsNotNull())
                         {
-                            thisInst.ActiveAimState = AIWeaponState.Mimic;
-                            var targetTank = thisInst.lastEnemyGet.tank;
+                            helper.ActiveAimState = AIWeaponState.Mimic;
+                            var targetTank = helper.lastEnemyGet.tank;
                             if (targetTank)
-                                thisControl.m_Weapons.AimAtTarget(tank, targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
+                                helper.AimWeapons(targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
                             else
-                                thisControl.m_Weapons.AimAtTarget(tank, thisInst.lastEnemyGet.centrePosition, thisInst.lastEnemyGet.GetCheapBounds() + 1);
-                            if (thisInst.FIRE_ALL)
-                                thisControl.m_Weapons.FireWeapons(tank);
+                                helper.AimWeapons(helper.lastEnemyGet.centrePosition, helper.lastEnemyGet.GetCheapBounds() + 1);
+                            if (helper.FIRE_ALL)
+                                helper.FireAllWeapons();
                         }
-                        else if (thisInst.lastCloseAlly.control.FireControl)
+                        else if (helper.lastCloseAlly.control.FireControl)
                         {
-                            thisControl.m_Weapons.FireWeapons(tank);
+                            helper.FireAllWeapons();
                         }
                     }
                 }
-                else if (thisInst.WeaponState == AIWeaponState.Obsticle)
+                else
                 {
-                    if (thisInst.Obst.IsNotNull())
+                    switch (helper.WeaponState)
                     {
-                        try
-                        {
-                            //DebugTAC_AI.Log(KickStart.ModID + ":Trying to shoot at " + thisInst.Obst.name);
-                            thisInst.ActiveAimState = AIWeaponState.Obsticle;
-                            thisControl.m_Weapons.AimAtTarget(tank, thisInst.Obst.position + Vector3.up, 3f); 
-                            if (thisInst.FIRE_ALL)
-                                thisControl.m_Weapons.FireWeapons(tank);
-                        }
-                        catch
-                        {
-                            DebugTAC_AI.Log(KickStart.ModID + ": WeaponDirector - Crash on targeting scenery");
-                        }
-                        try
-                        {
-                            if (thisInst.Obst.GetComponent<Damageable>().Invulnerable)
+                        case AIWeaponState.Enemy:
+                            if (helper.lastEnemyGet != null)
                             {
-                                thisInst.Obst = null;
+                                var targetTank = helper.lastEnemyGet.tank;
+                                helper.ActiveAimState = AIWeaponState.Enemy;
+                                if (targetTank)
+                                    helper.AimWeapons(targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
+                                else
+                                    helper.AimWeapons(helper.lastEnemyGet.centrePosition, helper.lastEnemyGet.GetCheapBounds() + 1);
+                                if (helper.FIRE_ALL)
+                                    helper.FireAllWeapons();
                             }
-                        }
-                        catch
-                        {
-                            DebugTAC_AI.Log(KickStart.ModID + ": Obst HAS NO DAMAGEABLE");
-                        }
+                            break;
+                        case AIWeaponState.HoldFire:
+                            helper.ActiveAimState = AIWeaponState.HoldFire;
+                            if (helper.lastEnemyGet != null)
+                            {
+                                var targetTank = helper.lastEnemyGet.tank;
+                                Vector3 target;
+                                if (targetTank)
+                                    target = targetTank.boundsCentreWorldNoCheck;
+                                else
+                                    target = helper.lastEnemyGet.centrePosition;
+                                helper.AimWeapons(target + (Vector3.down * 0.5f * (target - tank.boundsCentreWorldNoCheck).magnitude), 0);
+                            }
+                            break;
+                        case AIWeaponState.Obsticle:
+                            if (helper.Obst.IsNotNull())
+                            {
+                                try
+                                {
+                                    //DebugTAC_AI.Log(KickStart.ModID + ":Trying to shoot at " + helper.Obst.name);
+                                    helper.ActiveAimState = AIWeaponState.Obsticle;
+                                    helper.AimWeapons(helper.Obst.position + Vector3.up, 3f);
+                                    if (helper.FIRE_ALL)
+                                        helper.FireAllWeapons();
+                                }
+                                catch
+                                {
+                                    DebugTAC_AI.Log(KickStart.ModID + ": WeaponDirector - Crash on targeting scenery");
+                                }
+                                try
+                                {
+                                    if (helper.Obst.GetComponent<Damageable>().Invulnerable)
+                                    {
+                                        helper.Obst = null;
+                                    }
+                                }
+                                catch
+                                {
+                                    DebugTAC_AI.Log(KickStart.ModID + ": Obst HAS NO DAMAGEABLE");
+                                }
+                            }
+                            break;
+                        case AIWeaponState.Normal:
+                        case AIWeaponState.Mimic:
+                        default:
+                            if (helper.FIRE_ALL)
+                                helper.FireAllWeapons();
+                            break;
                     }
-                }
-                else if (thisInst.WeaponState == AIWeaponState.Enemy)
-                {
-                    if (thisInst.lastEnemyGet != null)
-                    {
-                        thisInst.ActiveAimState = AIWeaponState.Enemy;
-                        var targetTank = thisInst.lastEnemyGet.tank;
-                        if (targetTank)
-                            thisControl.m_Weapons.AimAtTarget(tank, targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
-                        else
-                            thisControl.m_Weapons.AimAtTarget(tank, thisInst.lastEnemyGet.centrePosition, thisInst.lastEnemyGet.GetCheapBounds() + 1);
-                        if (thisInst.FIRE_ALL)
-                            thisControl.m_Weapons.FireWeapons(tank);
-                    }
-                }
-                else if (thisInst.FIRE_ALL)
-                    thisControl.m_Weapons.FireWeapons(tank);
+                } 
             }
         }
 

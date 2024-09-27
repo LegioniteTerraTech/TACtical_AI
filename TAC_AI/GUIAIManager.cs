@@ -96,6 +96,8 @@ namespace TAC_AI
                     var title = AltUI.UIAlphaText + (!lastTank.name.NullOrEmpty() ? lastTank.name == "recycled tech" ? "None Selected" : lastTank.name : "NO NAME") + "</color>";
                     //"AI Mode Select"
                     HotWindow = GUI.Window(AIManagerID, HotWindow, GUIHandler, title, AltUI.MenuLeft);
+                    if (UIHelpersExt.MouseIsOverSubMenu(HotWindow))
+                        ManModGUI.IsMouseOverAnyModGUI = 2;
                     AltUI.EndUI();
                 }
             }
@@ -303,7 +305,7 @@ namespace TAC_AI
             }
 
             string textRTS = "<color=#ffffffff>Order</color>";
-            if (KickStart.AllowStrategicAI)
+            if (KickStart.AllowPlayerRTSHUD)
             {
                 if (GUI.Button(new Rect(100, 115, 80, 30), lastTank.RTSControlled ? new GUIContent(textRTS, "ACTIVE") : new GUIContent(textRTS, "Go to last target"),
                     lastTank.RTSControlled ? AltUI.ButtonGreenActive : AltUI.ButtonGreen))
@@ -311,14 +313,14 @@ namespace TAC_AI
                     bool toTog = !lastTank.RTSControlled;
                     lastTank.SetRTSState(toTog);
                     int select = 0;
-                    int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
+                    int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
                     for (int step = 0; amount > step; step++)
                     {
-                        TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                        if ((bool)tankInst && tankInst != lastTank)
+                        TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                        if ((bool)helper && helper != lastTank)
                         {
                             select++;
-                            tankInst.SetRTSState(toTog);
+                            helper.SetRTSState(toTog);
                         }
                     }
                     if (select > 0)
@@ -505,9 +507,9 @@ namespace TAC_AI
                 clicked = true;
             }
 
-            Texture textRTS = ManPlayerRTS.GetLineMat().mainTexture;
+            Texture textRTS = ManWorldRTS.GetLineMat().mainTexture;
             //string textRTS = "<color=#ffffffff>Order</color>";
-            if (KickStart.AllowStrategicAI)
+            if (KickStart.AllowPlayerRTSHUD)
             {
                 if (GUILayout.Button(lastTank.RTSControlled ? new GUIContent(textRTS, "ACTIVE") : new GUIContent(textRTS, "Go to last target"),
                     lastTank.RTSControlled ? AltUI.ButtonGreenActive : AltUI.ButtonGreen, GLO, GLH))
@@ -515,14 +517,14 @@ namespace TAC_AI
                     bool toTog = !lastTank.RTSControlled;
                     lastTank.SetRTSState(toTog);
                     int select = 0;
-                    int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
+                    int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
                     for (int step = 0; amount > step; step++)
                     {
-                        TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                        if ((bool)tankInst && tankInst != lastTank)
+                        TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                        if ((bool)helper && helper != lastTank)
                         {
                             select++;
-                            tankInst.SetRTSState(toTog);
+                            helper.SetRTSState(toTog);
                         }
                     }
                     if (select > 0)
@@ -646,32 +648,29 @@ namespace TAC_AI
         }
         private static void GUIAnchorButton()
         {
-            if (lastTank.PlayerAllowAutoAnchoring)
+            if (!lastTank.tank.IsAnchored)//(lastTank.PlayerAllowAutoAnchoring)
             {
-                if (lastTank.tank.Anchors.NumPossibleAnchors > 0)
+                if (lastTank.tank.Anchors.NumPossibleAnchors < 1)
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AltUI.ButtonGrey);
+                else if (!lastTank.CanAnchorSafely)
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AltUI.ButtonRed);
+                else if (!lastTank.CanAttemptAnchor)
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Rough Terrain", "Too rough to deploy anchors. Try somewhere else."), AltUI.ButtonRed);
+                else
                 {
-                    if (lastTank.CanAnchorSafely)
+                    if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AltUI.ButtonGreen))
                     {
-                        if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AltUI.ButtonGreen))
+                        ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
+                        if (ManNetwork.IsHost)
                         {
-                            ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
-                            if (ManNetwork.IsHost)
-                            {
-                                lastTank.PlayerAllowAutoAnchoring = false;
-                                lastTank.TryAnchor();
-                            }
-                            AIDriver = AIDriverType.Stationary;
-                            changeAI = AIType.Escort;
-                            SetOptionDriver(AIDriver);
-                            SetOption(changeAI);
+                            lastTank.PlayerAllowAutoAnchoring = false;
+                            lastTank.TryInsureAnchor();
                         }
+                        AIDriver = AIDriverType.Stationary;
+                        changeAI = AIType.Escort;
+                        SetOptionDriver(AIDriver);
+                        SetOption(changeAI);
                     }
-                    else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AltUI.ButtonRed))
-                    {
-                    }
-                }
-                else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AltUI.ButtonGrey))
-                {
                 }
             }
             else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Mobilize", "Detach from ground"), AltUI.ButtonGreen))
@@ -679,7 +678,7 @@ namespace TAC_AI
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
                 if (ManNetwork.IsHost)
                 {
-                    lastTank.UnAnchor();
+                    lastTank.Unanchor();
                     lastTank.PlayerAllowAutoAnchoring = true;
                 }
                 AIDriver = AIDriverType.AutoSet;
@@ -691,30 +690,27 @@ namespace TAC_AI
             GUILayoutOption GLH = GUILayout.Height(HotWindow.width / 6.25f);
             if (lastTank.PlayerAllowAutoAnchoring)
             {
-                if (lastTank.tank.Anchors.NumPossibleAnchors > 0)
+                if (lastTank.tank.Anchors.NumPossibleAnchors < 1)
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AltUI.ButtonGrey);
+                else if (!lastTank.CanAnchorSafely)
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AltUI.ButtonRed);
+                else if (!lastTank.CanAttemptAnchor)
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Rough Terrain", "Too rough to deploy anchors. Try somewhere else."), AltUI.ButtonRed);
+                else
                 {
-                    if (lastTank.CanAnchorSafely)
+                    if (GUILayout.Button(new GUIContent("Stop & Anchor", "Fixate to ground"), AltUI.ButtonGreen, GLH))
                     {
-                        if (GUILayout.Button(new GUIContent("Stop & Anchor", "Fixate to ground"), AltUI.ButtonGreen, GLH))
+                        ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
+                        if (ManNetwork.IsHost)
                         {
-                            ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
-                            if (ManNetwork.IsHost)
-                            {
-                                lastTank.PlayerAllowAutoAnchoring = false;
-                                lastTank.TryAnchor();
-                            }
-                            AIDriver = AIDriverType.Stationary;
-                            changeAI = AIType.Escort;
-                            SetOptionDriver(AIDriver);
-                            SetOption(changeAI);
+                            lastTank.PlayerAllowAutoAnchoring = false;
+                            lastTank.TryInsureAnchor();
                         }
+                        AIDriver = AIDriverType.Stationary;
+                        changeAI = AIType.Escort;
+                        SetOptionDriver(AIDriver);
+                        SetOption(changeAI);
                     }
-                    else if (GUILayout.Button(new GUIContent("Enemy Jammed", "Enemy too close!"), AltUI.ButtonRed, GLH))
-                    {
-                    }
-                }
-                else if (GUILayout.Button(new GUIContent("No Anchors", "Needs working anchors"), AltUI.ButtonGrey, GLH))
-                {
                 }
             }
             else if (GUILayout.Button(new GUIContent("Mobilize", "Detach from ground"), AltUI.ButtonGreen, GLH))
@@ -722,7 +718,7 @@ namespace TAC_AI
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
                 if (ManNetwork.IsHost)
                 {
-                    lastTank.UnAnchor();
+                    lastTank.Unanchor();
                     lastTank.PlayerAllowAutoAnchoring = true;
                 }
                 if (AIDriver == AIDriverType.Stationary)
@@ -911,10 +907,7 @@ namespace TAC_AI
 
 
         internal static FieldInfo bubble = typeof(Tank).GetField("m_Overlay", BindingFlags.NonPublic | BindingFlags.Instance);
-        /// <summary>
-        /// Only sets the first unit
-        /// </summary>
-        /// <param name="driver"></param>
+
         internal static void SetOptionDriver(AIDriverType driver, bool playSFX = true)
         {
             try
@@ -923,47 +916,7 @@ namespace TAC_AI
                     return;
                 if (!lastTank.tank)
                     return;
-                if (ManNetwork.IsNetworked)
-                {
-                    try
-                    {
-                        NetworkHandler.TryBroadcastNewAIState(lastTank.tank.netTech.netId.Value, AIType.Null, driver);
-
-                        lastTank.OnSwitchAI(false);
-                        if (driver == AIDriverType.AutoSet)
-                            lastTank.ExecuteAutoSetNoCalibrate();
-                        else
-                            lastTank.SetDriverType(driver);
-                        lastTank.ForceAllAIsToEscort(true, false);
-                        lastTank.ForceRebuildAlignment();
-                        if (lastTank.DriverType != driver)
-                        {
-                            WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                            AIGlobals.PopupPlayerInfo(lastTank.DriverType.ToString(), worPos);
-                        }
-
-                    }
-                    catch (Exception e)
-                    {
-                        DebugTAC_AI.Log(KickStart.ModID + ": Error on sending AI Option change!!!\n" + e);
-                    }
-                }
-                else
-                {
-                    lastTank.OnSwitchAI(false);
-                    if (driver == AIDriverType.AutoSet)
-                        lastTank.ExecuteAutoSetNoCalibrate();
-                    else
-                        lastTank.SetDriverType(driver);
-                    lastTank.ForceAllAIsToEscort(true, false);
-                    lastTank.ForceRebuildAlignment();
-                    if (lastTank.DriverType != driver)
-                    {
-                        WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(lastTank.tank.visible);
-                        AIGlobals.PopupPlayerInfo(lastTank.DriverType.ToString(), worPos);
-                    }
-
-                }
+                SetOptionDriverCase(lastTank, driver);
                 inst.TrySetOptionDriverRTS(driver);
                 if (playSFX)
                 {
@@ -990,25 +943,24 @@ namespace TAC_AI
                     }
                 }
                 //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
-                DebugTAC_AI.Log(KickStart.ModID + ": Set " + lastTank.name + " to driver " + driver);
             }
             catch { }
         }
         private void TrySetOptionDriverRTS(AIDriverType driver)
         {
-            if (!(bool)ManPlayerRTS.inst)
+            if (!(bool)ManWorldRTS.inst)
                 return;
-            if (ManPlayerRTS.PlayerIsInRTS || ManPlayerRTS.PlayerRTSOverlay)
+            if (ManWorldRTS.PlayerIsInRTS || ManWorldRTS.PlayerRTSOverlay)
             {
                 int select = 0;
-                int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
+                int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
                 for (int step = 0; amount > step; step++)
                 {
-                    TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                    if ((bool)tankInst && tankInst != lastTank)
+                    TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                    if ((bool)helper && helper != lastTank)
                     {
                         select++;
-                        SetOptionDriverCase(tankInst, driver);
+                        SetOptionDriverCase(helper, driver);
                     }
                 }
                 DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionRTS - Set " + amount + " Techs to drive " + driver);
@@ -1016,27 +968,32 @@ namespace TAC_AI
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionDriverCase(TankAIHelper tankInst, AIDriverType driver)
+        private static void SetOptionDriverCase(TankAIHelper helper, AIDriverType driver)
         {
-            if (tankInst.IsNull())
+            if (helper.IsNull())
                 return;
+            bool guess = driver == AIDriverType.AutoSet;
+            if (guess)
+                DebugTAC_AI.Log(KickStart.ModID + ": Given " + lastTank.name + " set to driver " + driver);
+            else
+                DebugTAC_AI.Assert(KickStart.ModID + ": Set " + lastTank.name + " to driver " + driver);
             AIDriverType locDediAI = AIDriverType.Tank;
             switch (driver)
             {
                 case AIDriverType.Astronaut:
-                    if (tankInst.isAstrotechAvail)
+                    if (helper.isAstrotechAvail)
                         locDediAI = driver;
                     break;
                 case AIDriverType.Pilot:
-                    if (tankInst.isAviatorAvail)
+                    if (helper.isAviatorAvail)
                         locDediAI = driver;
                     break;
                 case AIDriverType.Sailor:
-                    if (tankInst.isBuccaneerAvail)
+                    if (helper.isBuccaneerAvail)
                         locDediAI = driver;
                     break;
                 case AIDriverType.Stationary:
-                    if (tankInst.tank.Anchors.NumPossibleAnchors < 1 || !tankInst.CanAnchorSafely)
+                    if (helper.tank.Anchors.NumPossibleAnchors < 1 || !helper.CanAnchorNow)
                         return;
                     break;
                 case AIDriverType.AutoSet:
@@ -1049,20 +1006,19 @@ namespace TAC_AI
             {
                 try
                 {
-                    NetworkHandler.TryBroadcastNewAIState(tankInst.tank.netTech.netId.Value, AIType.Null, locDediAI);
-                    tankInst.OnSwitchAI(false);
-                    tankInst.ForceAllAIsToEscort(true, false);
-                    if (driver == AIDriverType.AutoSet)
-                        tankInst.ExecuteAutoSetNoCalibrate();
+                    NetworkHandler.TryBroadcastNewAIState(helper.tank.netTech.netId.Value, AIType.Null, locDediAI);
+                    helper.OnSwitchAI(false);
+                    if (guess)
+                        helper.ExecuteAutoSetNoCalibrate();
                     else
-                        tankInst.SetDriverType(driver);
-                    tankInst.ForceRebuildAlignment();
-                    if (tankInst.DriverType != driver)
+                        helper.SetDriverType(driver);
+                    helper.ForceAllAIsToEscort(true, false);
+                    helper.ForceRebuildAlignment();
+                    if (helper.DriverType != driver)
                     {
-                        WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
+                        WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(helper.tank.visible);
                         AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                     }
-
                 }
                 catch (Exception e)
                 {
@@ -1071,19 +1027,25 @@ namespace TAC_AI
             }
             else
             {
-                tankInst.OnSwitchAI(false);
-                tankInst.ForceAllAIsToEscort(true, false);
+                helper.OnSwitchAI(false);
                 if (driver == AIDriverType.AutoSet)
-                    tankInst.ExecuteAutoSetNoCalibrate();
+                    helper.ExecuteAutoSetNoCalibrate();
                 else
-                    tankInst.SetDriverType(driver);
-                tankInst.ForceRebuildAlignment();
-                if (tankInst.DriverType != driver)
+                    helper.SetDriverType(driver);
+                //DebugTAC_AI.Log(KickStart.ModID + ": 1");
+                helper.ForceAllAIsToEscort(true, true);
+                //DebugTAC_AI.Log(KickStart.ModID + ": 2");
+                helper.ForceRebuildAlignment();
+                //DebugTAC_AI.Log(KickStart.ModID + ": 3");
+                if (helper.DriverType != driver)
                 {
-                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
+                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(helper.tank.visible);
                     AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                 }
+                DebugTAC_AI.Log(KickStart.ModID + ": 41");
             }
+            if (guess)
+                DebugTAC_AI.Assert(KickStart.ModID + ": Set " + lastTank.name + " to driver " + driver);
         }
 
         public static void SetOption(AIType dediAI, bool playSFX = true)
@@ -1177,19 +1139,19 @@ namespace TAC_AI
         }
         private void TrySetOptionRTS(AIType dediAI)
         {
-            if (!(bool)ManPlayerRTS.inst)
+            if (!(bool)ManWorldRTS.inst)
                 return;
-            if (ManPlayerRTS.PlayerIsInRTS || ManPlayerRTS.PlayerRTSOverlay)
+            if (ManWorldRTS.PlayerIsInRTS || ManWorldRTS.PlayerRTSOverlay)
             {
                 int select = 0;
-                int amount = ManPlayerRTS.inst.LocalPlayerTechsControlled.Count;
+                int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
                 for (int step = 0; amount > step; step++)
                 {
-                    TankAIHelper tankInst = ManPlayerRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                    if ((bool)tankInst && tankInst != lastTank)
+                    TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
+                    if ((bool)helper && helper != lastTank)
                     {
                         select++;
-                        SetOptionCase(tankInst, dediAI);
+                        SetOptionCase(helper, dediAI);
                     }
                 }
                 DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionRTS - Set " + amount + " Techs to mode " + dediAI);
@@ -1197,45 +1159,45 @@ namespace TAC_AI
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionCase(TankAIHelper tankInst, AIType dediAI)
+        private static void SetOptionCase(TankAIHelper helper, AIType dediAI)
         {
-            if (tankInst.IsNull())
+            if (helper.IsNull())
                 return;
             AIType locDediAI;
             switch (dediAI)
             {
                 case AIType.Aegis:
-                    if (tankInst.isAegisAvail)
+                    if (helper.isAegisAvail)
                         locDediAI = dediAI;
                     else
                         locDediAI = AIType.Escort;
                     break;
                 case AIType.Aviator:
-                    if (tankInst.isAviatorAvail)
+                    if (helper.isAviatorAvail)
                         locDediAI = dediAI;
                     else
                         locDediAI = AIType.Escort;
                     break;
                 case AIType.Buccaneer:
-                    if (tankInst.isBuccaneerAvail)
+                    if (helper.isBuccaneerAvail)
                         locDediAI = dediAI;
                     else
                         locDediAI = AIType.Escort;
                     break;
                 case AIType.Energizer:
-                    if (tankInst.isEnergizerAvail)
+                    if (helper.isEnergizerAvail)
                         locDediAI = dediAI;
                     else
                         locDediAI = AIType.Escort;
                     break;
                 case AIType.Prospector:
-                    if (tankInst.isProspectorAvail)
+                    if (helper.isProspectorAvail)
                         locDediAI = dediAI;
                     else
                         locDediAI = AIType.MTStatic;
                     break;
                 case AIType.Scrapper:
-                    if (tankInst.isScrapperAvail)
+                    if (helper.isScrapperAvail)
                         locDediAI = dediAI;
                     else
                         locDediAI = AIType.MTStatic;
@@ -1248,16 +1210,16 @@ namespace TAC_AI
             {
                 try
                 {
-                    NetworkHandler.TryBroadcastNewAIState(tankInst.tank.netTech.netId.Value, locDediAI, AIDriverType.Null);
-                    tankInst.OnSwitchAI(true);
-                    tankInst.ForceAllAIsToEscort(true, false);
-                    if (tankInst.DediAI != dediAI)
+                    NetworkHandler.TryBroadcastNewAIState(helper.tank.netTech.netId.Value, locDediAI, AIDriverType.Null);
+                    helper.OnSwitchAI(true);
+                    if (helper.DediAI != dediAI)
                     {
-                        WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
+                        WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(helper.tank.visible);
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
-                    tankInst.DediAI = locDediAI;
-                    tankInst.ForceRebuildAlignment();
+                    helper.DediAI = locDediAI;
+                    helper.ForceAllAIsToEscort(true, false);
+                    helper.ForceRebuildAlignment();
 
                 }
                 catch (Exception e)
@@ -1267,15 +1229,15 @@ namespace TAC_AI
             }
             else
             {
-                tankInst.OnSwitchAI(false);
-                tankInst.ForceAllAIsToEscort(true, false);
-                if (tankInst.DediAI != dediAI)
+                helper.OnSwitchAI(false);
+                if (helper.DediAI != dediAI)
                 {
-                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(tankInst.tank.visible);
+                    WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(helper.tank.visible);
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
-                tankInst.DediAI = locDediAI;
-                tankInst.ForceRebuildAlignment();
+                helper.DediAI = locDediAI;
+                helper.ForceAllAIsToEscort(true, false);
+                helper.ForceRebuildAlignment();
             }
         }
         internal void DelayedExtraNoise()
@@ -1308,49 +1270,49 @@ namespace TAC_AI
             isAviatorAvail = false;
             isBuccaneerAvail = false;
         }
-        internal static void GetInfo(TankAIHelper AIEx)
+        internal static void GetInfo(TankAIHelper helper)
         {
-            if (AIEx.isAegisAvail)
+            if (helper.isAegisAvail)
                 isAegisAvail = true;
-            if (AIEx.isAssassinAvail)
+            if (helper.isAssassinAvail)
                 isAssassinAvail = true;
 
             // Collectors
-            if (AIEx.isProspectorAvail)
+            if (helper.isProspectorAvail)
                 isProspectorAvail = true;
-            if (AIEx.isScrapperAvail)
+            if (helper.isScrapperAvail)
                 isScrapperAvail = true;
-            if (AIEx.isEnergizerAvail)
+            if (helper.isEnergizerAvail)
                 isEnergizerAvail = true;
 
             // Pilots
-            if (AIEx.isAviatorAvail)
+            if (helper.isAviatorAvail)
                 isAviatorAvail = true;
-            if (AIEx.isBuccaneerAvail)
+            if (helper.isBuccaneerAvail)
                 isBuccaneerAvail = true;
-            if (AIEx.isAstrotechAvail)
+            if (helper.isAstrotechAvail)
                 isAstrotechAvail = true;
         }
 
 
         internal static void LaunchSubMenuClickableRTS()
         {
-            if (!KickStart.EnableBetterAI || !ManPlayerRTS.inst.IsNotNull())
+            if (!KickStart.EnableBetterAI || !ManWorldRTS.inst.IsNotNull())
             {
                 return;
             }
-            if (ManPlayerRTS.inst.Leading)
+            if (ManWorldRTS.inst.Leading)
             {
                 try
                 {
-                    if (ManPlayerRTS.PlayerIsInRTS || ManPlayerRTS.PlayerRTSOverlay)
+                    if (ManWorldRTS.PlayerIsInRTS || ManWorldRTS.PlayerRTSOverlay)
                     {
-                        if (ManPlayerRTS.inst.LocalPlayerTechsControlled.Count > 0)
+                        if (ManWorldRTS.inst.LocalPlayerTechsControlled.Count > 0)
                         {
                             Vector3 Mous = Input.mousePosition;
                             xMenu = Mous.x - (10 + HotWindow.width);
                             yMenu = Display.main.renderingHeight - Mous.y + 10;
-                            lastTank = ManPlayerRTS.inst.Leading;
+                            lastTank = ManWorldRTS.inst.Leading;
                         }
                         else
                         {
@@ -1436,28 +1398,7 @@ namespace TAC_AI
             HotWindow.x = xMenu;
             HotWindow.y = yMenu;
         }
-        internal static bool MouseIsOverSubMenu()
-        {
-            if (!KickStart.EnableBetterAI)
-            {
-                return false;
-            }
-            if (isCurrentlyOpen)
-            {
-                Vector3 Mous = Input.mousePosition;
-                Mous.y = Display.main.renderingHeight - Mous.y;
-                float xMenuMin = HotWindow.x;
-                float xMenuMax = HotWindow.x + HotWindow.width;
-                float yMenuMin = HotWindow.y;
-                float yMenuMax = HotWindow.y + HotWindow.height;
-                //DebugTAC_AI.Log(Mous + " | " + xMenuMin + " | " + xMenuMax + " | " + yMenuMin + " | " + yMenuMax);
-                if (Mous.x > xMenuMin && Mous.x < xMenuMax && Mous.y > yMenuMin && Mous.y < yMenuMax)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
+       
 
         private void Update()
         {
@@ -1465,7 +1406,7 @@ namespace TAC_AI
             {
                 windowTimer -= Time.deltaTime;
             }
-            if (windowTimer < 0 && !MouseIsOverSubMenu())
+            if (windowTimer < 0 && !UIHelpersExt.MouseIsOverSubMenu(HotWindow))
             {
                 CloseSubMenuClickable();
                 windowTimer = 0;

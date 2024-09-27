@@ -19,41 +19,41 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
 
         public void Execute()
         {
-            TankAIHelper thisInst = Mind.AIControl;
-            Tank tank = thisInst.tank;
+            TankAIHelper helper = Mind.AIControl;
+            Tank tank = helper.tank;
 
-            EControlOperatorSet direct = thisInst.GetDirectedControl();
+            EControlOperatorSet direct = helper.GetDirectedControl();
 
             switch (this.Mind.EvilCommander)
             {
                 case EnemyHandling.Wheeled:
-                    RWheeled.AttackVroom(thisInst, tank, Mind, ref direct);
+                    RWheeled.AttackVroom(helper, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Airplane:
-                    RAircraft.AttackWoosh(thisInst, tank, Mind, ref direct);
+                    RAircraft.AttackWoosh(helper, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Chopper:
-                    RChopper.AttackShwa(thisInst, tank, Mind, ref direct);
+                    RChopper.AttackShwa(helper, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Starship:
-                    RStarship.AttackZoom(thisInst, tank, Mind, ref direct);
+                    RStarship.AttackZoom(helper, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Naval:
-                    RNaval.AttackWhish(thisInst, tank, Mind, ref direct);
+                    RNaval.AttackWhish(helper, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.SuicideMissile:
                     // IDK, May make this obsolete and just use plane AI for this instead.
-                    RCrashMissile.AttackCrash(thisInst, tank, Mind, ref direct);
+                    RCrashMissile.AttackCrash(helper, tank, Mind, ref direct);
                     break;
                 case EnemyHandling.Stationary:
-                    RStation.AttackWham(thisInst, tank, Mind, ref direct);
+                    RStation.AttackWham(helper, tank, Mind, ref direct);
                     break;
             }
-            if (thisInst.Retreat)
+            if (helper.Retreat)
             {
-                RCore.GetRetreatLocation(thisInst, tank, Mind, ref direct);
+                RCore.GetRetreatLocation(helper, tank, Mind, ref direct);
             }
-            thisInst.SetDirectedControl(direct);
+            helper.SetDirectedControl(direct);
         }
     }
 }

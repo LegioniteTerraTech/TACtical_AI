@@ -11,10 +11,25 @@ using TerraTechETCUtil;
 
 namespace TAC_AI
 {
+    public static class AIGlobalsExt
+    {
+        public static bool TechIsPlayerControlled(this Tank tank)
+        {
+            try
+            {
+                if (ManNetwork.IsNetworked)
+                    return TankAIManager.IsPlayerControlled(tank);
+                else
+                    return tank.PlayerFocused;
+            }
+            catch { }
+            return false;
+        }
+    }
     /// <summary>
     /// Stores all global information for this mod. Edit at your own risk.
     /// </summary>
-    public static class AIGlobals
+    public class AIGlobals
     {
         public static bool AIAttract => ManGameMode.inst.GetCurrentGameType() != ManGameMode.GameType.Attract;
 
@@ -120,16 +135,6 @@ namespace TAC_AI
             }
             return false;
         }
-        public static bool TechIsMPPlayerControlled(this Tank tank)
-        {
-            try
-            {
-                if (ManNetwork.IsNetworked)
-                    return ManNetwork.inst.GetAllPlayerTechs().Contains(tank);
-            }
-            catch { }
-            return false;
-        }
 
 
         // AIERepair contains the self-repair stats
@@ -146,6 +151,14 @@ namespace TAC_AI
         public const int LethalTechSize = 256;
         public const int MaxEradicatorTechs = 2;
         public const int MaxBlockLimitAttract = 128;
+
+        // BASES
+        public const int NaturalBaseSpacingFromOriginTiles = 2;
+        public const int NaturalBaseSpacingTiles = 2;
+        public const int NaturalBaseCostBase = 250000;
+        public const int NaturalBaseCostScalingWithCoordDist = 27500;
+        public const float NaturalBaseDifficultyScalingWithCoordDist = 0.135f;
+        public const float NaturalBaseFactionDifficultyScalingWithCoordDist = 0.2f;
 
         // GENERAL AI PARAMETERS
         public const float DefaultMaxObjectiveRange = 750;
@@ -242,20 +255,22 @@ namespace TAC_AI
         }
 
         public static IntVector3 RTSDisabled => IntVector3.invalid;
+        // General 
+        public const float YieldSpeed = 10;
 
         // Elevation
         public const float GroundOffsetGeneralAir = 10;
         public const float GroundOffsetRTSAir = 24;
         public const float GroundOffsetAircraft = 22;
-        public const float GroundOffsetChopper = 13.5f;
-        public const float GroundOffsetCrashWarnChopper = 11.5f;
+        public const float GroundOffsetChopper = 8.5f;
+        public const float GroundOffsetChopperExtra = 5f;
+        public const float GroundOffsetCrashWarnChopperDelta = -2.5f;
 
         // Anchors
         public const float SafeAnchorDist = 50f;     // enemy too close to anchor
         /// <summary> How much do we dampen anchor movements by? </summary>
         public const int AnchorAimDampening = 45;
-        public const short AlliedAnchorAttempts = 12;
-        public const short NPTAnchorAttempts = 12;
+        public const short MaxAnchorAttempts = 3;//12;
 
         // Unjamming
         public const int UnjamUpdateStart = 120;
@@ -283,12 +298,21 @@ namespace TAC_AI
         public const float FindItemScanRangeExtension = 50;
         public const float FindBaseScanRangeExtension = 500;
         public const int ReverseDelay = 60;
-        public const float PlayerAISpeedPanicDividend = 6;
+        public const float PlayerAISpeedPanicDividend = 8;//6;
         public const float EnemyAISpeedPanicDividend = 9;
         /// <summary>Depth that land Techs are able to drive into</summary>
         public const float WaterDepthTechHeightPercent = 0.35f;
 
         // Control the aircrafts and AI
+        public const float PropLerpStrictness = 10f;// 10
+        public const int MaxTakeoffFailiures = 240;
+        public const float BoosterThrustBias = 0.5f;
+        /// <summary> TtWR = Thrust to Weight Ratio </summary>
+        public const float ImmelmanTtWRThreshold = 1.5f;
+        public static float ChopperDownAntiBounce = 0.5f;//1.25f;
+        public static float ChopperThrottleDamper = 1.25f;//2.5f;
+
+
         public const float AircraftPreCrashDetection = 1.6f;
         public const float AircraftDestSuccessRadius = 32;
         public const float AerofoilSluggishnessBaseValue = 30;
@@ -304,8 +328,12 @@ namespace TAC_AI
         public const float AirMaxYaw = 0.2f; // 0 - 1 (float)
         public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
 
-        public const float ChopperOperatingExtraPower = 1.38f;
         public const float ChopperChillFactorMulti = 30f;
+        public const float ChopperMaxDeltaAnglePercent = 0.25f;// 0.25f
+        public const float ChopperAngleNudgePercent = 0.15f;// 0.15f
+        public const float ChopperAngleDoPitchPercent = 0.2f;
+        public const float ChopperMaxAnglePercent = 0.35f;
+        public const float ChopperSpeedCounterPitch = 12f;
 
         public const float HovershipHorizontalDriveMulti = 1.25f;
         public const float HovershipUpDriveMulti = 1f;
@@ -321,7 +349,7 @@ namespace TAC_AI
 
 
         // Item Handling
-        public const float MinimumCloseInSpeed = 1.6f;      // If we are closing in on our target slower than this (with wrong heading), we drive slowly
+        public const float MinimumCloseInSpeedSqr = 2.56f;      // If we are closing in on our target slower than this (with wrong heading), we drive slowly
         public const float BlockAttachDelay = 0.75f;        // How long until we actually attach the block when playing the placement animation
         public const float MaxBlockGrabRange = 47.5f;       // Less than player range to compensate for precision
         public const float MaxBlockGrabRangeAlt = 5;        // Lowered range to allow scrap magnets to have a chance
@@ -345,9 +373,10 @@ namespace TAC_AI
         public const float PestererSwitchDelay = 12.5f; // Seconds before Pesterers find a new random target
 
 
-
         // ENEMY AI PARAMETERS
         // Active Enemy AI Techs
+        public const float AngerDropRelations = 2500;
+        public const float AngerCoolPerSec = 250 * 1.1f;
         public const int DefaultEnemyScanRange = 150;
         public const int TileFringeDist = 96;
         public const float BatteryRetreatPercent = 0.25f;
@@ -370,7 +399,7 @@ namespace TAC_AI
 
         // Non-Player Base Checks
         public static bool StartingBasesAreAirdropped = false;
-        public const float EnemyBaseMakerChance = 25;
+        public static float EnemyBaseMakerChance = 25;
         public const float StartBaseMinSpacing = 450;
         public static bool AllowInfAutominers = true;
         public static bool NoBuildWhileInCombat = true;
@@ -388,6 +417,11 @@ namespace TAC_AI
         public const int MPEachBaseProfits = 250;
         public const float RaidCooldownTimeSecs = 1200;
         public const int IgnoreBaseCullingTilesFromOrigin = 8388607;
+        /// <summary>
+        /// SaveLoadDelay
+        /// </summary>
+        public const float SLDBeforeBuilding = 90;
+        public const float DelayBetweenBuilding = 30;
 
         public const float MaximumNeutralMonitorSqr = 75 ^ 2;//175
 
@@ -396,7 +430,8 @@ namespace TAC_AI
         // ENEMY BASE TEAMS
         internal static Color EnemyColor = new Color(0.95f, 0.1f, 0.1f, 1);
 
-        internal static Color NeutralColor = new Color(0.5f, 0, 0.5f, 1);
+        internal static Color NeutralColor = new Color(0.3f, 0, 0.7f, 1);
+        internal static Color SubNeutralColor = new Color(0.5f, 0, 0.5f, 1);
         internal static Color FriendlyColor = new Color(0.2f, 0.95f, 0.2f, 1);
 
 
@@ -404,9 +439,17 @@ namespace TAC_AI
         public const int EnemyTeamsRangeStart = -1073741828;
                                                //2147483647 
         internal static bool IsAttract => ManGameMode.inst.GetCurrentGameType() == ManGameMode.GameType.Attract;
+
+        private const float BaseChanceNonHosileDefaultMulti = 0.1f;//0.25f;
+        public static float AttackableNeutralBaseChanceMulti = 0.5f * BaseChanceNonHosileDefaultMulti;
+        public static float FriendlyBaseChanceMulti = 0.25f * BaseChanceNonHosileDefaultMulti;
+        public static float NonHostileBaseChance => AttackableNeutralBaseChanceMulti;
+        public static float FriendlyBaseChance => FriendlyBaseChanceMulti;
+        /*
         public static float BaseChanceGoodMulti => 1 - ((KickStart.difficulty + 50) / 200f); // 25%
         public static float NonHostileBaseChance => 0.5f * BaseChanceGoodMulti; // 50% at easiest
         public static float FriendlyBaseChance => 0.25f * BaseChanceGoodMulti;  // 12.5% at easiest
+        */
 
         internal static bool TurboAICheat
         {
@@ -484,36 +527,35 @@ namespace TAC_AI
         }
 
 
-        public static bool IsBaseTeam(int team)
-        {
-            return ManBaseTeams.IsBaseTeam(team);
-        }
-        public static NP_Types GetNPTTeamType(int team)
+        public static bool IsBaseTeamAny(int team) => ManBaseTeams.IsBaseTeamAny(team);
+        public static bool IsBaseTeamDynamic(int team) => ManBaseTeams.IsBaseTeamDynamic(team);
+        public static bool IsBaseTeamStatic(int team) => ManBaseTeams.IsBaseTeamStatic(team);
+        internal static NP_Types GetNPTTeamTypeForDebug(int team)
         {
             if (team == ManPlayer.inst.PlayerTeam)
                 return NP_Types.Player;
-            else if (IsBaseTeam(team))
+            else if (IsBaseTeamAny(team))
             {
-                if (IsEnemyBaseTeam(team))
-                    return NP_Types.Enemy;
-                else if (IsNeutralBaseTeam(team))
-                    return NP_Types.Neutral;
-                else if (IsNonAggressiveTeam(team))
-                    return NP_Types.NonAggressive;
-                else if (IsSubNeutralBaseTeam(team))
-                    return NP_Types.SubNeutral;
-                else
-                    return NP_Types.Friendly;
+                switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+                {
+                    case TeamRelations.AlwaysAttack:
+                    case TeamRelations.Enemy:
+                        return NP_Types.Enemy;
+                    case TeamRelations.SubNeutral:
+                        return NP_Types.SubNeutral;
+                    case TeamRelations.Neutral:
+                        return NP_Types.Neutral;
+                    case TeamRelations.Friendly:
+                        return NP_Types.Friendly;
+                    case TeamRelations.AITeammate:
+                        return NP_Types.Player;
+                    default:
+                        return NP_Types.NonNPT;
+                }
             }
             else
                 return NP_Types.NonNPT;
         }
-
-        public static Func<int, bool> IsEnemyBaseTeam => ManBaseTeams.IsEnemyBaseTeam;
-        public static Func<int, bool> IsNonAggressiveTeam => ManBaseTeams.IsNonAggressiveTeam;
-        public static Func<int, bool> IsSubNeutralBaseTeam => ManBaseTeams.IsSubNeutralBaseTeam;
-        public static Func<int, bool> IsNeutralBaseTeam => ManBaseTeams.IsNeutralBaseTeam;
-        public static Func<int, bool> IsFriendlyBaseTeam => ManBaseTeams.IsFriendlyBaseTeam;
 
 
         public static int GetRandomBaseTeam(bool forceValidTeam = false)
@@ -530,50 +572,115 @@ namespace TAC_AI
                         return GetRandomAllyBaseTeam();
                 }
                 else if (shift)
-                    return GetRandomNeutralBaseTeam();
+                    return GetRandomSubNeutralBaseTeam();
             }
 
-            if (ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.percentChanceExisting)
-                return ManBaseTeams.GetRandomExistingBaseTeam().teamID;
-            else
+            if (UnityEngine.Random.Range(0f, 1f) <= NonHostileBaseChance)
             {
-                if (UnityEngine.Random.Range(0f, 1f) <= NonHostileBaseChance)
-                {
-                    if (UnityEngine.Random.Range(0f, 1f) <= FriendlyBaseChance)
-                        return GetRandomAllyBaseTeam();
-                    else
-                        return GetRandomNeutralBaseTeam();
-                }
-                return GetRandomEnemyBaseTeam();
+                if (UnityEngine.Random.Range(0f, 1f) <= FriendlyBaseChance)
+                    return GetRandomAllyBaseTeam(false);
+                else
+                    return GetRandomSubNeutralBaseTeam(false);
             }
+            return GetRandomEnemyBaseTeam(false);
         }
-        public static int GetRandomEnemyBaseTeam()
+        public static int GetRandomEnemyBaseTeam(bool forceNew = true)
         {
-            var teamInst = ManBaseTeams.GetNewBaseTeam();
-            teamInst.relations = TeamRelations.Enemy;
+            if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
+                ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.Enemy, out var teamInst))
+                return teamInst.teamID;
+            teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst.defaultRelations = TeamRelations.Enemy;
             return teamInst.teamID;
         }
-        public static int GetRandomSubNeutralBaseTeam()
+        /// <summary>
+        /// Attackable neutral
+        /// </summary>
+        public static int GetRandomSubNeutralBaseTeam(bool forceNew = true)
         {
-            var teamInst = ManBaseTeams.GetNewBaseTeam();
-            teamInst.relations = TeamRelations.HoldFire;
+            if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
+                ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.SubNeutral, out var teamInst))
+                return teamInst.teamID;
+            teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst.defaultRelations = TeamRelations.SubNeutral;
             return teamInst.teamID;
         }
-        public static int GetRandomNeutralBaseTeam()
+        /// <summary>
+        /// Non-attackable neutral
+        /// </summary>
+        public static int GetRandomNeutralBaseTeam(bool forceNew = true)
         {
-            var teamInst = ManBaseTeams.GetNewBaseTeam();
-            teamInst.relations = TeamRelations.Neutral;
+            if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
+                ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.Neutral, out var teamInst))
+                return teamInst.teamID;
+            teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst.defaultRelations = TeamRelations.Neutral;
             return teamInst.teamID;
         }
-        public static int GetRandomAllyBaseTeam()
+        public static int GetRandomAllyBaseTeam(bool forceNew = true)
         {
-            var teamInst = ManBaseTeams.GetNewBaseTeam();
+            if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
+                ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.Friendly, out var teamInst))
+                return teamInst.teamID;
+            teamInst = ManBaseTeams.GetNewBaseTeam();
             teamInst.SetFriendly(ManPlayer.inst.PlayerTeam);
             return teamInst.teamID;
         }
 
+        public static TrackedVisible GetTrackedVisible(int ID)
+        {
+            return ManVisible.inst.GetTrackedVisible(ID);
+        }
+        public static TrackedVisible GetTrackedVisible(Tank tech)
+        {
+            if (ManNetwork.IsNetworked)
+            {
+                try
+                {
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
+                    Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
+                    {
+                        m_HostID = TV.HostID,
+                        m_CheatBypassInventory = true,
+                    }
+                    );
+                }
+                catch { }
+                return null;
+            }
+            else
+            {
+                return ManVisible.inst.GetTrackedVisible(tech.visible.ID);
+            }
+        }
 
-
+        internal static bool PopupColored(string text, int team, WorldPosition pos)
+        {
+            switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+            {
+                case TeamRelations.AlwaysAttack:
+                case TeamRelations.Enemy:
+                    PopupEnemyInfo(text, pos);
+                    return true;
+                case TeamRelations.SubNeutral:
+                    PopupSubNeutralInfo(text, pos);
+                    return true;
+                case TeamRelations.Neutral:
+                    PopupNeutralInfo(text, pos);
+                    return true;
+                case TeamRelations.Friendly:
+                    PopupAllyInfo(text, pos);
+                    return true;
+                case TeamRelations.AITeammate:
+                    PopupPlayerInfo(text, pos);
+                    return true;
+                case TeamRelations.MissionControl:
+                    break;
+                default:
+                    break;
+            }
+            return false;
+        }
 
         private static bool playerSavedOver = false;
         private static FloatingTextOverlayData playerOverEdit;
@@ -609,6 +716,19 @@ namespace TAC_AI
             AltUI.PopupCustomInfo(text, pos, enemyOverEdit);
         }
 
+        private static bool subNeutralSavedOver = false;
+        private static FloatingTextOverlayData subNeutralOverEdit;
+        private static GameObject subNeutralTextStor;
+        //private static CanvasGroup subNeutralCanGroup;
+        internal static void PopupSubNeutralInfo(string text, WorldPosition pos)
+        {
+            if (!subNeutralSavedOver)
+            {
+                subNeutralTextStor = AltUI.CreateCustomPopupInfo("NewTextSubNeutral", SubNeutralColor, out subNeutralOverEdit);
+                subNeutralSavedOver = true;
+            }
+            AltUI.PopupCustomInfo(text, pos, subNeutralOverEdit);
+        }
 
         private static bool neutralSavedOver = false;
         private static FloatingTextOverlayData NeutralOverEdit;
@@ -640,6 +760,54 @@ namespace TAC_AI
             }
             AltUI.PopupCustomInfo(text, pos, AllyOverEdit);
             //DebugTAC_AI.Log(KickStart.ModID + ": PopupAllyInfo - Threw popup \"" + text + "\"");
+        }
+
+
+
+        internal static bool TileNeverLoadedBefore(IntVector2 coord) => ManWorld.inst.IsTileUsableForNewSetPiece(coord);
+        internal static bool TileLoadedCanSpawnNewEnemy(Vector3 posScene, float radius)
+        {
+            TileManager TM = ManWorld.inst.TileManager;
+            WorldPosition WP = WorldPosition.FromScenePosition(posScene);
+            IntVector2 tileCoord = WP.TileCoord;
+            Vector2 RadSqr = new Vector2(radius, radius);
+            Vector2 vector = TM.CalcMinWorldCoords(tileCoord) + ManWorld.inst.TerrainGenerationOffset - RadSqr;
+            Vector2 vector2 = TM.CalcMaxWorldCoords(tileCoord) + ManWorld.inst.TerrainGenerationOffset + RadSqr;
+            foreach (SceneryBlocker item in ManWorld.inst.VendorSpawner.SceneryBlockersOverlappingWorldCoords(vector, vector2))
+            {
+                if (item.IsBlockingPos(SceneryBlocker.BlockMode.Regrow, posScene, radius))
+                    return false;
+            }
+            foreach (SceneryBlocker item in ManWorld.inst.LandmarkSpawner.SceneryBlockersOverlappingWorldCoords(vector, vector2))
+            {
+                if (item.IsBlockingPos(SceneryBlocker.BlockMode.Regrow, posScene, radius))
+                    return false;
+            }
+            if (ManEncounterPlacement.IsOverlappingSafeAreaOrEncounter(posScene, radius))
+                return false;
+            WorldTile worldTile = TM.LookupTile(tileCoord, false);
+            if (worldTile != null && worldTile.IsLoaded)
+            {
+                foreach (var item in worldTile.Visibles[1])
+                {
+                    if ((item.Value.centrePosition - posScene).WithinSquareXZ(radius))
+                        return false;
+                }
+            }
+            else
+            {
+                ManSaveGame.StoredTile storedTile = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(tileCoord, false);
+                List<ManSaveGame.StoredVisible> list;
+                if (storedTile != null && storedTile.m_StoredVisibles.TryGetValue(1, out list) && list != null)
+                {
+                    foreach (ManSaveGame.StoredVisible storedVisible in list)
+                    {
+                        if ((storedVisible.GetBackwardsCompatiblePosition() - posScene).WithinSquareXZ(radius))
+                            return false;
+                    }
+                }
+            }
+            return true;
         }
     }
 }

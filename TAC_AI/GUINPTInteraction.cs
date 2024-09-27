@@ -115,7 +115,7 @@ namespace TAC_AI.AI
             if (button == ManPointer.Event.RMB && down && KickStart.IsIngame && Input.GetKey(KeyCode.T) && ManPointer.inst.targetTank)
             {
                 int team = ManPointer.inst.targetTank.Team;
-                if (team == ManPlayer.inst.PlayerTeam || AIGlobals.IsBaseTeam(team))
+                if (team == ManPlayer.inst.PlayerTeam || AIGlobals.IsBaseTeamDynamic(team))
                 {
                     if (ManPointer.inst.targetTank)
                         GetTank(ManPointer.inst.targetTank);
@@ -134,12 +134,12 @@ namespace TAC_AI.AI
             }
             catch (Exception)
             {
-                throw new Exception("Display is worthless");
+                throw new Exception("Display is null");
             }
 
             try
             {
-                techCost = Mathf.RoundToInt(RawTechTemplate.GetBBCost(lastTank) * AIGlobals.BribeMulti);
+                techCost = Mathf.RoundToInt(RawTechBase.GetBBCost(lastTank) * AIGlobals.BribeMulti);
             }
             catch (Exception)
             {
@@ -147,7 +147,7 @@ namespace TAC_AI.AI
             }
             try
             {
-                if (ManBaseTeams.TryGetBaseTeam(lastTank.Team, out var ETD))
+                if (ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTank.Team, out var ETD))
                 {
                     var teamUnloaded = ManEnemyWorld.GetTeam(lastTank.Team);
                     if (teamUnloaded != null)
@@ -236,10 +236,10 @@ namespace TAC_AI.AI
                 GUILayout.EndHorizontal();
             }
             else
-                GUILayout.Label("<b>No Bases?</b>");
+                GUILayout.Label("<b>No Bases? :C</b>");
             GUIContent bribeButton;
             bool afford = ManPlayer.inst.CanAfford(teamFunds + teamCost);
-            if (ManBaseTeams.TryGetBaseTeam(lastTeam, out var ETD))
+            if (ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTeam, out var ETD))
             {
                 if (ManPlayer.inst.PlayerTeam == lastTeam)
                 {
@@ -253,15 +253,15 @@ namespace TAC_AI.AI
                     if (afford)
                     {
                         string nextAllyState;
-                        if (AIGlobals.IsFriendlyBaseTeam(lastTeam))
+                        if (ManBaseTeams.IsFriendlyBaseTeam(lastTeam))
                         {
                             nextAllyState = "Your Team";
                         }
-                        else if (AIGlobals.IsSubNeutralBaseTeam(lastTeam))
+                        else if (ManBaseTeams.IsSubNeutralBaseTeam(lastTeam))
                         {
                             nextAllyState = "Friendly";
                         }
-                        else if (AIGlobals.IsEnemyBaseTeam(lastTeam))
+                        else if (ManBaseTeams.IsEnemyBaseTeam(lastTeam))
                         {
                             nextAllyState = "Neutral";
                         }
@@ -280,7 +280,7 @@ namespace TAC_AI.AI
                             ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Buy);
                             ManPlayer.inst.PayMoney(teamFunds);
                             ETD.AddBuildBucks(teamFunds);
-                            if (AIGlobals.IsFriendlyBaseTeam(lastTeam))
+                            if (ManBaseTeams.IsFriendlyBaseTeam(lastTeam))
                             {
                                 int newTeam = ManPlayer.inst.PlayerTeam;
                                 ManEnemyWorld.ChangeTeam(lastTeam, newTeam);
@@ -289,7 +289,7 @@ namespace TAC_AI.AI
                             else
                             {
                                 ETD.ImproveRelations(playerTeam);
-                                if (AIGlobals.IsFriendlyBaseTeam(lastTeam))
+                                if (ManBaseTeams.IsFriendlyBaseTeam(lastTeam))
                                 {
                                     UIHelpersExt.BigF5broningBanner(playerTeam,
                                         ETD.teamName + " is now allied!");
@@ -306,9 +306,9 @@ namespace TAC_AI.AI
         }
         private static void GUIBaseAnnoy(int lastTeam, int teamFunds)
         {
-            if (Singleton.playerTank && ManBaseTeams.TryGetBaseTeam(lastTeam, out var ETD))
+            if (Singleton.playerTank && ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTeam, out var ETD))
             {
-                if (ETD.Alignment(playerTeam) == TeamRelations.AITeammate)
+                if (ManBaseTeams.IsTeammate(ETD.teamID, playerTeam))
                 {
                     if (GUILayout.Button(new GUIContent(randomEvict, "Return"), AltUI.ButtonRed))
                     {
@@ -320,10 +320,10 @@ namespace TAC_AI.AI
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.PayloadIncoming);
                         var mind = lastTank?.GetComponent<EnemyMind>();
-                        if (!AIGlobals.IsEnemyBaseTeam(lastTeam))
+                        if (!ManBaseTeams.IsEnemyBaseTeam(lastTeam))
                         {
                             ETD.DegradeRelations(playerTeam);
-                            if (ETD.Alignment(playerTeam) == TeamRelations.Enemy)
+                            if (ManBaseTeams.IsEnemy(ETD.teamID, playerTeam))
                             {
                                 ManEnemyWorld.TeamWarEvent.Send(lastTeam, lastTeam);
                                 UIHelpersExt.BigF5broningBanner(TeamNamer.GetTeamName(lastTeam) + " is now hostile!");
@@ -346,7 +346,7 @@ namespace TAC_AI.AI
         private static void GUIBaseTeam()
         { // Bases that store BB
             int teamFunds = 0;
-            if (ManBaseTeams.TryGetBaseTeam(lastTank.Team, out var ETD))
+            if (ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTank.Team, out var ETD))
             {
                 teamFunds = ETD.BuildBucks;
             }
@@ -366,7 +366,7 @@ namespace TAC_AI.AI
             GUILayout.Label("<b>" + teamName + "</b>");//¥¥
             GUILayout.BeginHorizontal();
             GUILayout.Label("¥¥: ");
-            if (ManBaseTeams.TryGetBaseTeam(lastTank.Team, out ETD))
+            if (ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTank.Team, out ETD))
                 GUILayout.Label(ETD.BuildBucks.ToString());
             else
                 GUILayout.Label("???");
@@ -423,7 +423,7 @@ namespace TAC_AI.AI
             {
                 if (bribeAmount > 0 && ManPlayer.inst.CanAfford(bribeAmount))
                 {
-                    if (ManBaseTeams.TryGetBaseTeam(lastTank.Team, out var ETD))
+                    if (ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTank.Team, out var ETD))
                     {
                         ManPlayer.inst.PayMoney(bribeAmount);
                         ETD.AddBuildBucks(bribeAmount);
@@ -431,7 +431,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (ManBaseTeams.TryGetBaseTeam(lastTank.Team, out var ETD))
+                    if (ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTank.Team, out var ETD))
                     {
                         ManPlayer.inst.AddMoney(ETD.BuildBucks);
                         ETD.SetBuildBucks = 0;
@@ -537,7 +537,7 @@ namespace TAC_AI.AI
             }
             else if (ManBaseTeams.IsTeammate(lastTank.Team, playerTeam))
             {
-                if (ManBaseTeams.TryGetBaseTeam(lastTank.Team, out var ETD))
+                if (ManBaseTeams.TryGetBaseTeamDynamicOnly(lastTank.Team, out var ETD))
                 {
                     GUILayout.BeginHorizontal(AltUI.TextfieldBlackHuge);
                     GUILayout.Label("Money: ", AltUI.LabelWhite);

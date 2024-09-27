@@ -10,7 +10,7 @@ namespace TAC_AI.AI.Enemy
 {
     public static class RBolts
     {
-        internal static void ManageBolts(TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        internal static void ManageBolts(TankAIHelper helper, Tank tank, EnemyMind mind)
         {
             //if (tank.IsSleeping)
             //    return;
@@ -21,17 +21,17 @@ namespace TAC_AI.AI.Enemy
                 //DO NOT CALL THE TWO BELOW WITHOUT EnemyMemory!!!  THEY WILL ACT LIKE DEFAULT BUT WORSE!!!
                 case EnemyBolts.AtFull:         // Blow up passively at full health (or we are an area town base)
                     if (RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && 
-                        !thisInst.PendingDamageCheck && AIGlobals.CanSplitTech())
+                        !helper.PendingDamageCheck && AIGlobals.CanSplitTech())
                         mind.BlowBolts();
                     break;
                 case EnemyBolts.AtFullOnAggro:  // Blow up if enemy is in range and on full health
-                    if (thisInst.lastEnemyGet.IsNotNull() && RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && 
-                        !thisInst.PendingDamageCheck && AIGlobals.CanSplitTech())
+                    if (helper.lastEnemyGet.IsNotNull() && RLoadedBases.TeamGlobalMobileTechCount(tank.Team) < KickStart.EnemyTeamTechLimit && 
+                        !helper.PendingDamageCheck && AIGlobals.CanSplitTech())
                         mind.BlowBolts();
                     break;
                 case EnemyBolts.Default:        // Blow up like default - first enemy sighting
                 default:                        // Unimplemented
-                    if (thisInst.lastEnemyGet.IsNotNull() && AIGlobals.CanSplitTech())
+                    if (helper.lastEnemyGet.IsNotNull() && AIGlobals.CanSplitTech())
                         mind.BlowBolts();
                     break;
             }

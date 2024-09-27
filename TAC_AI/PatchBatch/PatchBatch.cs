@@ -24,7 +24,7 @@ namespace TAC_AI
     public class KickStartTAC_AI : ModBase
     {
         
-        internal static KickStartTAC_AI oInst;
+        internal static TerraTechETCUtil.ModDataHandle oInst;
 
         bool isInit = false;
         public override bool HasEarlyInit()
@@ -35,9 +35,10 @@ namespace TAC_AI
         // IDK what I should init here...
         public override void EarlyInit()
         {
-            if (oInst == null)
+            if (oInst == default)
             {
-                oInst = this;
+                oInst = new TerraTechETCUtil.ModDataHandle(KickStart.ModID);
+                /*
                 try
                 {
                     KickStart.PatchMod();
@@ -47,6 +48,7 @@ namespace TAC_AI
                     DebugTAC_AI.Log(KickStart.ModID + ": Error on patch");
                     DebugTAC_AI.Log(e);
                 }
+                */
             }
         }
         public IEnumerable<float> InitIterator()
@@ -60,11 +62,11 @@ namespace TAC_AI
             KickStart.ShouldBeActive = true;
             if (!isInit)
             {
-                if (oInst == null)
-                    oInst = this;
+                if (oInst == default)
+                    oInst = new TerraTechETCUtil.ModDataHandle(KickStart.ModID);
                 try
                 {
-                    TerraTechETCUtil.ModStatusChecker.EncapsulateSafeInit("Advanced AI", 
+                    TerraTechETCUtil.ModStatusChecker.EncapsulateSafeInit(KickStart.ModID, 
                         KickStart.MainOfficialInit, KickStart.DeInitALL);
                 }
                 catch { }
@@ -176,45 +178,41 @@ namespace TAC_AI
                 }
             }
         }
+
+        [HarmonyPatch(typeof(ModuleItemHolder.Stack))]
+        [HarmonyPatch("Take", new Type[] { typeof(Visible), typeof(bool), typeof(int), typeof(bool) })]
+        private class TakeDetect
+        {
+            private static void Prefix(ModuleItemHolder __instance, ref Visible item)
+            {
+                if (__instance.block?.tank && 
+                    __instance.block.tank.Team == ManSpawn.NeutralTeam)
+                {
+                    if (item.holderStack?.myHolder?.block?.tank != null)
+                    {
+                        int prevHolderTeam = item.holderStack.myHolder.block.tank.Team;
+                        if (prevHolderTeam == ManSpawn.NeutralTeam)
+                        {
+                            // Do nothing, it is still valid while held!
+                        }
+                        else if (ManBaseTeams.IsBaseTeamDynamic(prevHolderTeam))
+                        {   // Affiliate this resource with the correct team
+                            if (!ManBaseTeams.inst.TradingSellOffers.ContainsKey(item.ID))
+                            {
+                                ManBaseTeams.inst.TradingSellOffers.Add(item.ID, prevHolderTeam);
+                                item.RecycledEvent.Subscribe(ManBaseTeams.PickupRecycled);
+                            }
+                        }
+                        else if (ManBaseTeams.inst.TradingSellOffers.ContainsKey(item.ID))
+                        {   // it was moved elsewhere, AKA dropped from trading station by some ungodly method
+                            ManBaseTeams.inst.TradingSellOffers.Remove(item.ID);
+                            item.RecycledEvent.Unsubscribe(ManBaseTeams.PickupRecycled);
+                        }
+                    }
+                }
+            }
+        }
 #if DEBUG
-        [HarmonyPatch(typeof(Tank))]
-        [HarmonyPatch("IsEnemy", typeof(int), typeof(int))]
-        internal static class TankTeamPatch
-        {
-
-            // Leg testing
-            private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
-            {
-                bool team1Player = ManSpawn.IsPlayerTeam(teamID1);
-                bool team2Player = ManSpawn.IsPlayerTeam(teamID2);
-                if ((team1Player && AIGlobals.IsFriendlyBaseTeam(teamID2)) || 
-                (team2Player && AIGlobals.IsFriendlyBaseTeam(teamID1)) ||
-                ManBaseTeams.IsUnattackable(teamID1, teamID2) ||
-                (DebugRawTechSpawner.DevCheatNoAttackPlayer && (team1Player || team2Player) && !ManNetwork.IsNetworked))
-                {
-                    __result = false;
-                    return false;
-                }
-                return true;
-            }
-        }
-        [HarmonyPatch(typeof(Tank))]
-        [HarmonyPatch("IsFriendly", typeof(int), typeof(int))]
-        internal static class TankTeamPatch2
-        {
-
-            private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
-            {
-                if (DebugRawTechSpawner.DevCheatPlayerEnemyBaseTeam && (ManSpawn.IsPlayerTeam(teamID1) || 
-                ManSpawn.IsPlayerTeam(teamID2)) && !ManNetwork.IsNetworked ||
-                ManBaseTeams.IsTeammate(teamID1, teamID2))
-                {
-                    __result = true;
-                    return false;
-                }
-                return true;
-            }
-        }
         // DEBUGGGGGGGGGGGGGG
         /*
         [HarmonyPatch(typeof(Debug))]
@@ -223,7 +221,7 @@ namespace TAC_AI
         {
             private static bool Prefix(ref Vector3 start, ref Vector3 end, ref Color color)
             {
-                DebugRawTechSpawner.DrawDirIndicator(start, end, color);
+                DebugExtUtilities.DrawDirIndicator(start, end, color);
                 return false;
             }
         }
@@ -233,7 +231,7 @@ namespace TAC_AI
         {
             private static bool Prefix(ref Vector3 center, ref float radius)
             {
-                DebugRawTechSpawner.DrawDirIndicatorSphere(center, radius, Color.blue);
+                DebugExtUtilities.DrawDirIndicatorSphere(center, radius, Color.blue);
                 return false;
             }
         }
@@ -243,7 +241,7 @@ namespace TAC_AI
         {
             private static bool Prefix(ref Vector3 center, ref Vector3 size)
             {
-                DebugRawTechSpawner.DrawDirIndicatorRecPriz(center, size, Color.magenta);
+                DebugExtUtilities.DrawDirIndicatorRecPriz(center, size, Color.magenta);
                 return false;
             }
         }
@@ -253,11 +251,11 @@ namespace TAC_AI
         {
             private static bool Prefix(ref Vector3 from, ref Vector3 to)
             {
-                DebugRawTechSpawner.DrawDirIndicator(from, to, Color.grey);
+                DebugExtUtilities.DrawDirIndicator(from, to, Color.grey);
                 return false;
             }
         }*/
-#else
+#endif
         [HarmonyPatch(typeof(Tank))]
         [HarmonyPatch("IsEnemy", typeof(int), typeof(int))]//
         internal static class TankTeamPatch
@@ -286,7 +284,6 @@ namespace TAC_AI
                 return true;
             }
         }
-#endif
         /*
         [HarmonyPatch(typeof(TankControl))]
         [HarmonyPatch("ActiveScheme", methodType: MethodType.Getter)]

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -12,6 +13,10 @@ using TAC_AI.World;
 using TAC_AI.AI.Movement;
 using SafeSaves;
 using TerraTechETCUtil;
+using System.Runtime.CompilerServices;
+using Snapshots;
+
+
 
 #if !STEAM
 using ModHelper.Config;
@@ -24,7 +29,8 @@ using Nuterra.NativeOptions;
 namespace TAC_AI
 {
     // Previously an extension to RandomAdditions, TACtical AI is the AI branch of the mod.
-    //
+    //   Featuring a simple to use, fully-fledged AI which adapts to its vehicle nearly instantly
+    //   based on the parts attached to it, with minimal manual intervention.
     public class KickStart
     {
         internal const string ModID = "Advanced AI";
@@ -32,6 +38,9 @@ namespace TAC_AI
 
 
         public static FactionSubTypes factionAttractOST = FactionSubTypes.NULL;
+
+        public static bool UseProcedualEnemyBaseSpawning = false;
+        public static bool DoPopSpawnCostCheck = false;
 
 #if STEAM
         public static bool ShouldBeActive = false;//
@@ -54,6 +63,7 @@ namespace TAC_AI
         //internal static bool testEnemyAI = true; // OBSOLETE
 
         public static float TerrainHeight = ManWorld.inst.TileSize;
+        public static float TerrainHeightOffset = -50;
 
         internal static int EnemyTeamTechLimit = 6;// Allow the bases plus 6 additional capacity of the AIs' choosing
 
@@ -101,8 +111,8 @@ namespace TAC_AI
         {
             get
             {
-                if (ManPlayerRTS.PlayerIsInRTS)
-                    return AllowStrategicAI && AutopilotPlayerRTS;
+                if (ManWorldRTS.PlayerIsInRTS)
+                    return AllowPlayerRTSHUD && AutopilotPlayerRTS;
                 return AutopilotPlayerMain;
             }
         }
@@ -126,6 +136,9 @@ namespace TAC_AI
         public static bool AllowAISelfRepairInMP = false;
 
         public static int ForceRemoveOverEnemyMaxCap = 4;
+        public static bool ActiveSpawnFoundersOffScene = false;
+        /// <summary> % Chance NPT Founders spawn when a tile is loaded for the first time </summary>
+        public static float SpawnFoundersPositional = 0.2f;
         internal static bool AllowEnemiesToStartBases { get { return MaxEnemyBaseLimit != 0; } }
         internal static bool AllowEnemyBaseExpand { get { return MaxBasesPerTeam != 0; } }
         public static int LandEnemyOverrideChance {
@@ -140,14 +153,53 @@ namespace TAC_AI
         public static bool AllowAirEnemiesToSpawn = true;
         public static float AirEnemiesSpawnRate = 1;
         public static bool AllowSeaEnemiesToSpawn = true;
+        /// <summary>
+        /// Block spawning of Vanilla Techs when applicable
+        /// </summary>
         public static bool TryForceOnlyPlayerSpawns = false;
+        /// <summary>
+        /// Block spawning of This mod's Global Population Techs when applicable
+        /// </summary>
+        public static bool TryForceOnlyPlayerLocalSpawns = false;
         public static bool AllowEnemiesToMine = true;
         public static bool DesignsToLog = false;
         public static bool CommitDeathMode = false;
         public static bool CatMode = false;
 
+        public static bool AllowPlayerRTSHUD = true;
         public static bool AllowStrategicAI = true;
-        public static bool CullFarEnemyBases = true;
+        public static List<EnemyMaxDistLimit> limitTypes = new List<EnemyMaxDistLimit>()
+        {
+            new EnemyMaxDistLimit("Never"),
+            new EnemyMaxDistLimit("Beyond 4 Tiles"),
+            new EnemyMaxDistLimit("Beyond 8 Tiles"),
+            new EnemyMaxDistLimit("Beyond 16 Tiles"),
+            new EnemyMaxDistLimit("Beyond 32 Tiles"),
+        };
+        public static int CullFarEnemyBasesMode = 0;
+        public static bool CullFarEnemyBases => CullFarEnemyBasesDistance == int.MaxValue;
+        public static void UpdateCullDist()
+        {
+            switch (CullFarEnemyBasesMode)
+            {
+                case 0:
+                    CullFarEnemyBasesDistance = int.MaxValue;
+                    break;
+                case 1:
+                    CullFarEnemyBasesDistance = 4;
+                    break;
+                case 2:
+                    CullFarEnemyBasesDistance = 8;
+                    break;
+                case 3:
+                    CullFarEnemyBasesDistance = 16;
+                    break;
+                default:
+                    throw new NotImplementedException("Unknown EnemyMaxDistLimit mode: " + CullFarEnemyBasesMode);
+            }
+        }
+        public static int CullFarEnemyBasesDistance = 8;// How far from the player should enemy bases be removed 
+        // from the world? IN TILES
         public static float EnemySellGainModifier = 1; // multiply enemy sell gains by this value
 
         //public static bool DestroyTreesInWater = false;
@@ -221,7 +273,7 @@ namespace TAC_AI
                     return int.MaxValue; // allow EVERYTHING
                 if (Singleton.playerTank.IsNotNull())
                 {
-                    lastPlayerTechPrice = RawTechTemplate.GetBBCost(Singleton.playerTank);
+                    lastPlayerTechPrice = RawTechBase.GetBBCost(Singleton.playerTank);
                 }
                 int priceMax = (int)((((float)(Difficulty + 50) / 100) + 0.5f) * lastPlayerTechPrice);
                 // Easiest results in 50% max player cost spawns, Hardest results in 250% max player cost spawns, Regular is is 150% max player cost spawns.
@@ -318,15 +370,23 @@ namespace TAC_AI
 
             if (LookForMod("RandomAdditions"))
             {
-                DebugTAC_AI.Log(KickStart.ModID + ": Found RandomAdditions!  Enabling advanced AI for parts!");
+                DebugTAC_AI.Log(ModID + ": Found RandomAdditions!  Enabling advanced AI for parts!");
                 IsRandomAdditionsPresent = true;
             }
             else IsRandomAdditionsPresent = false;
 
             if (LookForMod("WaterMod"))
             {
-                DebugTAC_AI.Log(KickStart.ModID + ": Found Water Mod!  Enabling water-related features!");
-                isWaterModPresent = true;
+                try
+                {
+                    _ = GetWaterHeightCanCrash();
+                    isWaterModPresent = true;
+                    DebugTAC_AI.Log(ModID + ": Found Water Mod!  Enabling water-related features!");
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log(ModID + ": Found Water Mod!  Failed to hook... " + e);
+                }
             }
             else isWaterModPresent = false;
 
@@ -424,8 +484,41 @@ namespace TAC_AI
             }
         }
 
+        public static void InitSpecialPatch()
+        {
+            DebugTAC_AI.DoLogLoading = true;
+            Debug_TTExt.LogAll = true;
+            var targetMethod = typeof(SnapshotServiceDesktop).GetMethod("UpdateSnapshotCacheOnStartup", BindingFlags.Instance | BindingFlags.Public).
+                GetCustomAttribute<IteratorStateMachineAttribute>().StateMachineType.
+                GetMethod("MoveNext", BindingFlags.NonPublic | BindingFlags.Instance);
+            harmonyInstance.Patch(targetMethod, transpiler: new HarmonyMethod(typeof(KickStart).
+                GetMethod("SpecialPatchTranspiler", BindingFlags.NonPublic | BindingFlags.Static)));
+            BlockIndexer.UseVanillaFallbackSnapUtility = false;
+            //MassPatcher.MassPatchAllWithin(harmonyInstance, typeof(SpecialPatchBatch), "Advanced AI", true);
+            /*
+            /// convert below to masspatcher - giving me stupid attitude "cannot find" bullshit
+            var targetMethod2 = typeof(ManScreenshot).GetMethod("RunSnapshotConversionTool", BindingFlags.Static | BindingFlags.Public);
+            harmonyInstance.Patch(targetMethod2, prefix: new HarmonyMethod(typeof(KickStart).
+                GetMethod("BlockBuggedConverter", BindingFlags.NonPublic | BindingFlags.Static)));
+            */
+            //SpecialAISpawner.inst.StartCoroutine((IEnumerator)typeof(SnapshotServiceDesktop).GetMethod("UpdateSnapshotCacheOnStartup",
+            //    BindingFlags.Instance | BindingFlags.Public).CreateDelegate(typeof(IEnumerator)));
+        }
+        private static IEnumerable<CodeInstruction> SpecialPatchTranspiler(IEnumerable<CodeInstruction> collection)
+        {
+            bool found = false;
+            foreach (var item in collection)
+            {
+                if (!found && item.operand is string str && str == "/Snapshots")
+                    item.operand = "/SnapshotsCommunity";
+                yield return item;
+            }
+        }
+        
+        
         public static void MainOfficialInit()
         {
+            
             //Where the fun begins
 #if STEAM
             DebugTAC_AI.Log(KickStart.ModID + ": MAIN (Steam Workshop Version) startup");
@@ -438,10 +531,11 @@ namespace TAC_AI
 #endif
             //throw new NullReferenceException("CrashHandle");
 
+            //SafeSaves.DebugSafeSaves.LogAll = true;
             //Initiate the madness
-            PatchMod();
-
             HookToSafeSaves();
+
+            //TinySettingsUtil.TryLoadFromDiskStatic<AIGlobals>("TAC_AI_Globals");
 
             ManBaseTeams.Initiate();
             TankAIManager.Initiate();
@@ -452,6 +546,8 @@ namespace TAC_AI
             ManEnemyWorld.Initiate();
             SpecialAISpawner.Initiate();
             GUINPTInteraction.Initiate();
+
+            PatchMod();
 
 
             AIERepair.RefreshDelays();
@@ -473,6 +569,23 @@ namespace TAC_AI
             }
             AIWiki.InitWiki();
             ManGameMode.inst.ModeSwitchEvent.Subscribe(OnModeSwitch);
+#if DEBUG
+            /*
+            var list = ManSnapshots.inst.ServiceDisk.GetSnapshotCollectionDisk().Snapshots;
+            if (list.Any())
+            {
+                var temp = list[0];
+                list.RemoveAt(0);
+                list.Add(temp);
+            }*/
+            InitSpecialPatch();
+#endif
+            ResourcesHelper.ModsPostLoadEvent.Subscribe(AfterBlocksLoaded);
+        }
+        private static void AfterBlocksLoaded()
+        {
+            if (!firedAfterBlockInjector)//KickStart.isBlockInjectorPresent && 
+                DelayedBaseLoader();
         }
         private static void OnModeSwitch()
         {
@@ -495,9 +608,6 @@ namespace TAC_AI
             }
 
             //Initiate the madness
-            PatchMod();
-            yield return 0.1f;
-
             HookToSafeSaves();
             yield return 0.16f;
 
@@ -533,6 +643,10 @@ namespace TAC_AI
 
             InitSettings();
             yield return 1f;
+
+            PatchMod();
+            yield return 0.1f;
+
 
             if (CustomAttract.Attracts == null)
             {
@@ -588,6 +702,8 @@ namespace TAC_AI
                 }
             }
 
+            UpdateCullDist();
+            ResourcesHelper.BlocksPostChangeEvent.Subscribe(AIWiki.InsureAllValidAIs);
         }
 
         public static void DeInitCheck()
@@ -715,7 +831,7 @@ namespace TAC_AI
         {
             DebugTAC_AI.Log(KickStart.ModID + ": LAUNCHED MODDED BLOCKS BASE VALIDATOR");
             BlockIndexer.ConstructBlockLookupList();
-            TempManager.ValidateAllStringTechs();
+            ModTechsDatabase.ValidateAllStringTechs();
             DebugRawTechSpawner.Initiate();
             firedAfterBlockInjector = true;
         }
@@ -734,6 +850,7 @@ namespace TAC_AI
         }
         public static void OnLoadManagers(bool Doing)
         {
+            DebugTAC_AI.Log("OnLoadManagers");
             if (Doing)
             {
                 ManBaseTeams.OnWorldPreLoad();
@@ -912,311 +1029,6 @@ namespace TAC_AI
 
     }
 
-    public class KickStartConfigHelper
-    {
-        internal static void PushExtModConfigHandlingConfigOnly()
-        {
-            KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
-
-            PushExtModConfigSetup();
-
-            OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
-        }
-        internal static ModConfig PushExtModConfigSetup()
-        {
-            ModConfig thisModConfig = new ModConfig();
-            if (!thisModConfig.ReadConfigJsonFile())
-            {
-                LoadingHintsExt.MandatoryHints.Add(AltUI.ObjectiveString("Advanced AI") + " adds multiple layers of depth and " +
-                AltUI.EnemyString("difficulty") + " to TerraTech.  " +
-                AltUI.HintString("Best suited for prospecting veterans looking for a new challenge."));
-            }
-            thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
-            thisModConfig.BindConfig<KickStart>(null, "RetreatHotkeySav");
-            thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
-            thisModConfig.BindConfig<KickStart>(null, "AIClockPeriodSet");
-            thisModConfig.BindConfig<AIEPathMapper>(null, "PathRequestsToCalcPerFrame");
-            thisModConfig.BindConfig<KickStart>(null, "MuteNonPlayerRacket");
-            thisModConfig.BindConfig<KickStart>(null, "enablePainMode");
-            thisModConfig.BindConfig<KickStart>(null, "DisplayEnemyEvents");
-            thisModConfig.BindConfig<RawTechExporter>(null, "ExportJSONInsteadOfRAWTECH");
-            thisModConfig.BindConfig<KickStart>(null, "difficulty");
-            thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepair");
-            thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepairInMP");
-            thisModConfig.BindConfig<KickStart>(null, "LandEnemyOverrideChanceSav");
-            thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
-            thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
-            thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
-            thisModConfig.BindConfig<KickStart>(null, "MaxEnemyBaseLimit");
-            thisModConfig.BindConfig<KickStart>(null, "MaxBasesPerTeam");
-            thisModConfig.BindConfig<KickStart>(null, "AllowSeaEnemiesToSpawn");
-            thisModConfig.BindConfig<KickStart>(null, "AirEnemiesSpawnRate");
-            thisModConfig.BindConfig<KickStart>(null, "DesignsToLog");
-            thisModConfig.BindConfig<KickStart>(null, "AIPopMaxLimit");
-            thisModConfig.BindConfig<KickStart>(null, "TryForceOnlyPlayerSpawns");
-            thisModConfig.BindConfig<KickStart>(null, "CommitDeathMode");
-            thisModConfig.BindConfig<KickStart>(null, "CatMode");
-            thisModConfig.BindConfig<KickStart>(null, "EnemySellGainModifier");
-            thisModConfig.BindConfig<KickStart>(null, "CullFarEnemyBases");
-            thisModConfig.BindConfig<KickStart>(null, "ForceRemoveOverEnemyMaxCap"); 
-
-            // RTS
-            thisModConfig.BindConfig<KickStart>(null, "AllowStrategicAI");
-            thisModConfig.BindConfig<KickStart>(null, "UseClassicRTSControls");
-            thisModConfig.BindConfig<KickStart>(null, "UseNumpadForGrouping");
-            thisModConfig.BindConfig<KickStart>(null, "CommandHotkeySav");
-            thisModConfig.BindConfig<KickStart>(null, "CommandBoltsHotkeySav");
-            thisModConfig.BindConfig<KickStart>(null, "MultiSelectKeySav");
-            thisModConfig.BindConfig<KickStart>(null, "ModeSelectKeySav");
-
-            KickStart.RetreatHotkey = (KeyCode)KickStart.RetreatHotkeySav;
-            KickStart.CommandHotkey = (KeyCode)KickStart.CommandHotkeySav;
-            KickStart.CommandBoltsHotkey = (KeyCode)KickStart.CommandBoltsHotkeySav;
-            KickStart.MultiSelect = (KeyCode)KickStart.MultiSelectKeySav;
-            return thisModConfig;
-        }
-        internal static void PushExtModConfigHandling()
-        {
-            KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
-
-            var thisModConfig = PushExtModConfigSetup();
-            try
-            {
-                KickStartNativeOptions.PushExtModOptionsHandling(thisModConfig);
-            }
-            catch (Exception e)
-            {
-                throw new Exception("PushExtModOptionsHandling within PushExtModConfigHandling hit exception - ", e);
-            }
-            finally
-            {
-                OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
-            }
-        }
-    }
-
-    public class KickStartNativeOptions
-    {
-        // NativeOptions Parameters
-        public static OptionKey retreatHotkey;
-        public static OptionKey commandHotKey;
-        public static OptionKey commandBoltsHotKey;
-        public static OptionKey groupSelectKey;
-        public static OptionKey modeSelectKey;
-        public static OptionToggle commandClassic;
-        public static OptionToggle betterAI;
-        public static OptionToggle aiSelfRepair;
-        public static OptionToggle aiSelfRepair2;
-        public static OptionRange dodgePeriod;
-        public static OptionRange aiUpkeepRefresh; //AIClockPeriod
-        public static OptionRange aiPathing;
-        public static OptionToggle muteNonPlayerBuildRacket;
-        public static OptionToggle allowOverLevelBlocksDrop;
-        public static OptionToggle exportReadableRAW;
-        public static OptionToggle displayEvents;
-        public static OptionToggle painfulEnemies;
-        public static OptionRange diff;
-        public static OptionRange landEnemyChangeChance;
-        public static OptionRange blockRecoveryChance;
-        public static OptionToggle permitEradication;
-        public static OptionToggle infEnemySupplies;
-        public static OptionRange enemyExpandLim;
-        public static OptionRange enemyAirSpawn;
-        public static OptionToggle enemySeaSpawn;
-        public static OptionToggle playerMadeTechsOnly;
-        public static OptionRange enemyBaseCount;
-        public static OptionRange enemyMaxCount;
-        public static OptionRange enemyMaxCountForceLim;
-        public static OptionToggle ragnarok;
-        public static OptionToggle copycat;
-        public static OptionToggle enemyStrategic;
-        public static OptionToggle enemyMiners;
-        public static OptionToggle useKeypadForGroups;
-        public static OptionToggle enemyBaseCulling;
-
-        public static OptionToggle WarnEnemyLock;
-
-        internal static void PushExtModOptionsHandling()
-        {
-            var TACAI = KickStart.ModID + " - A.I. General";
-#if !STEAM  // Because this toggle is reserved for the loading and unloading of the mod in STEAM release
-            betterAI = new OptionToggle("<b>Enable Mod</b>", TACAI, KickStart.EnableBetterAI);
-            betterAI.onValueSaved.AddListener(() => { KickStart.EnableBetterAI = betterAI.SavedValue; });
-#endif
-            WarnEnemyLock = new OptionToggle("Flying Enemy Warnings", TACAI, KickStart.WarnOnEnemyLock);
-            WarnEnemyLock.onValueSaved.AddListener(() => { KickStart.WarnOnEnemyLock = WarnEnemyLock.SavedValue; });
-            muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, KickStart.MuteNonPlayerRacket);
-            muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { KickStart.MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; });
-            exportReadableRAW = new OptionToggle("Export .JSON instead of .RAWTECH", TACAI, RawTechExporter.ExportJSONInsteadOfRAWTECH);
-            exportReadableRAW.onValueSaved.AddListener(() => { RawTechExporter.ExportJSONInsteadOfRAWTECH = exportReadableRAW.SavedValue; });
-
-            retreatHotkey = new OptionKey("Retreat Button", TACAI, KickStart.RetreatHotkey);
-            retreatHotkey.onValueSaved.AddListener(() =>
-            {
-                KickStart.RetreatHotkey = retreatHotkey.SavedValue;
-                KickStart.RetreatHotkeySav = (int)KickStart.RetreatHotkey;
-            });
-            dodgePeriod = new OptionRange("A.I. Dodge Processing Laziness", TACAI, KickStart.AIDodgeCheapness - 1, 0, 60, 5);
-            dodgePeriod.onValueSaved.AddListener(() => { KickStart.AIDodgeCheapness = (int)dodgePeriod.SavedValue + 1; });
-            aiPathing = new OptionRange("A.I. Pathfinding Speed", TACAI, AIEPathMapper.PathRequestsToCalcPerFrame, 0, 6, 1);
-            aiPathing.onValueSaved.AddListener(() => { 
-                AIEPathMapper.PathRequestsToCalcPerFrame = (int)aiPathing.SavedValue;
-            });
-
-            var TACAISP = KickStart.ModID + " - A.I. Single Player";
-            aiUpkeepRefresh = new OptionRange("A.I. Awareness Update Laziness", TACAISP, KickStart.AIClockPeriodSet, 5, 50, 5);
-            aiUpkeepRefresh.onValueSaved.AddListener(() => { KickStart.AIClockPeriodSet = (short)aiUpkeepRefresh.SavedValue; });
-            aiSelfRepair = new OptionToggle("Allow Mobile A.I.s to Build", TACAISP, KickStart.AllowAISelfRepair);
-            aiSelfRepair.onValueSaved.AddListener(() => { KickStart.AllowAISelfRepair = aiSelfRepair.SavedValue; });
-
-            var TACAIMP = KickStart.ModID + " - A.I. MP Host";
-            aiSelfRepair2 = new OptionToggle("Mobile A.I. Building - Requires Beefy Networking", TACAIMP, KickStart.AllowAISelfRepairInMP);
-            aiSelfRepair2.onValueSaved.AddListener(() => { KickStart.AllowAISelfRepairInMP = aiSelfRepair2.SavedValue; });
-
-
-            var TACAIRTS = KickStart.ModID + " - Real-Time Strategy [RTS] Mode";
-            enemyStrategic = new OptionToggle("Enable RTS A.I.", TACAIRTS, KickStart.AllowStrategicAI);//\nRandomAdditions and TweakTech highly advised for best experience
-            enemyStrategic.onValueSaved.AddListener(() => {
-                KickStart.AllowStrategicAI = enemyStrategic.SavedValue;
-                if (KickStart.AllowStrategicAI)
-                {
-                    ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManPlayerRTS.DelayedInitiate, KickStart.DeInitALL);
-                }
-                else
-                {
-                }
-            });
-            commandHotKey = new OptionKey("Enable RTS Overlay Hotkey", TACAIRTS, KickStart.CommandHotkey);
-            commandHotKey.onValueSaved.AddListener(() =>
-            {
-                KickStart.CommandHotkey = commandHotKey.SavedValue;
-                KickStart.CommandHotkeySav = (int)KickStart.CommandHotkey;
-            });
-            groupSelectKey = new OptionKey("Multi-Select Hotkey", TACAIRTS, KickStart.MultiSelect);
-            groupSelectKey.onValueSaved.AddListener(() =>
-            {
-                KickStart.MultiSelect = groupSelectKey.SavedValue;
-                KickStart.MultiSelectKeySav = (int)KickStart.MultiSelect;
-            });
-            commandBoltsHotKey = new OptionKey("Detonate Bolts Hotkey", TACAIRTS, KickStart.CommandBoltsHotkey);
-            commandBoltsHotKey.onValueSaved.AddListener(() =>
-            {
-                KickStart.CommandBoltsHotkey = commandBoltsHotKey.SavedValue;
-                KickStart.CommandBoltsHotkeySav = (int)KickStart.CommandBoltsHotkey;
-            });
-            modeSelectKey = new OptionKey("A.I. Menu Hotkey", TACAIRTS, KickStart.ModeSelect);
-            modeSelectKey.onValueSaved.AddListener(() =>
-            {
-                KickStart.ModeSelect = modeSelectKey.SavedValue;
-                KickStart.ModeSelectKeySav = (int)KickStart.ModeSelect;
-            });
-            commandClassic = new OptionToggle("Classic RTS Controls", TACAIRTS, KickStart.UseClassicRTSControls);
-            commandClassic.onValueSaved.AddListener(() => { KickStart.UseClassicRTSControls = commandClassic.SavedValue; });
-            useKeypadForGroups = new OptionToggle("Enable Keypad for Grouping - Check Num Lock", TACAIRTS, KickStart.UseNumpadForGrouping);
-            useKeypadForGroups.onValueSaved.AddListener(() => { KickStart.UseNumpadForGrouping = useKeypadForGroups.SavedValue; });
-
-            var TACAIEnemies = KickStart.ModID + " - Non-Player Techs (NPT) General";
-            painfulEnemies = new OptionToggle("<b>Enable Advanced NPTs</b>", TACAIEnemies, KickStart.enablePainMode);
-            painfulEnemies.onValueSaved.AddListener(() => { KickStart.enablePainMode = painfulEnemies.SavedValue; });
-            diff = new OptionRange("NPT Difficulty [Easy-Medium-Hard]", TACAIEnemies, KickStart.difficulty, -50, 150, 25);
-            diff.onValueSaved.AddListener(() =>
-            {
-                KickStart.difficulty = (int)diff.SavedValue;
-                AIERepair.RefreshDelays();
-            });
-            displayEvents = new OptionToggle("Show NPT Events", TACAIEnemies, KickStart.DisplayEnemyEvents);
-            displayEvents.onValueSaved.AddListener(() => { KickStart.DisplayEnemyEvents = displayEvents.SavedValue; });
-            enemyMiners = new OptionToggle("NPTs Can Mine", TACAIEnemies, KickStart.AllowEnemiesToMine);
-            enemyMiners.onValueSaved.AddListener(() => { KickStart.AllowEnemiesToMine = enemyMiners.SavedValue; });
-            blockRecoveryChance = new OptionRange("NPT Block Drop Chance", TACAIEnemies, KickStart.EnemyBlockDropChance, 0, 100, 10);
-            blockRecoveryChance.onValueSaved.AddListener(() => {
-                KickStart.EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue;
-                Globals.inst.m_BlockSurvivalChance = (float)((float)KickStart.EnemyBlockDropChance / 100.0f);
-
-                if (KickStart.EnemyBlockDropChance == 0)
-                {
-                    Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
-                }
-                else
-                    Globals.inst.moduleDamageParams.detachMeterFillFactor = KickStart.SavedDefaultEnemyFragility;
-            });
-            infEnemySupplies = new OptionToggle("All NPTechs Cheat Blocks", TACAIEnemies, KickStart.EnemiesHaveCreativeInventory);
-            infEnemySupplies.onValueSaved.AddListener(() => { KickStart.EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; });
-            enemyBaseCount = new OptionRange("Max Unique NPT Base Teams Active [0-6]", TACAIEnemies, KickStart.MaxEnemyBaseLimit, 0, 6, 1);
-            enemyBaseCount.onValueSaved.AddListener(() => { KickStart.MaxEnemyBaseLimit = (int)enemyBaseCount.SavedValue; });
-            enemyExpandLim = new OptionRange("Max NPT Anchored Techs [0-12]", TACAIEnemies, KickStart.MaxBasesPerTeam, 0, 12, 3);
-            enemyExpandLim.onValueSaved.AddListener(() => { KickStart.MaxBasesPerTeam = (int)enemyExpandLim.SavedValue; });
-            enemyBaseCulling = new OptionToggle("Remove Far NPT Bases", TACAIEnemies, KickStart.CullFarEnemyBases);
-            enemyBaseCulling.onValueSaved.AddListener(() => { KickStart.CullFarEnemyBases = enemyBaseCulling.SavedValue; });
-
-            if (!KickStart.isPopInjectorPresent)
-            {
-                var TACAIEnemiesPop = KickStart.ModID + " - Non-Player Techs (NPT) Spawning";
-                enemyMaxCount = new OptionRange("NPTechs Spawn Limit [6-32]", TACAIEnemiesPop, KickStart.AIPopMaxLimit, 6, 32, 1);
-                enemyMaxCount.onValueSaved.AddListener(() =>
-                {
-                    KickStart.AIPopMaxLimit = (int)enemyMaxCount.SavedValue;
-                    KickStart.OverrideEnemyMax();
-                });
-                enemyMaxCountForceLim = new OptionRange("NPTechs Limit Overflow [1-12]", TACAIEnemiesPop, KickStart.ForceRemoveOverEnemyMaxCap, 1, 12, 1);
-                enemyMaxCountForceLim.onValueSaved.AddListener(() => 
-                { 
-                    KickStart.ForceRemoveOverEnemyMaxCap = (int)enemyMaxCountForceLim.SavedValue; 
-                });
-
-                landEnemyChangeChance = new OptionRange("NPT Land RawTechs Chance [0-100]", TACAIEnemiesPop, KickStart.LandEnemyOverrideChance, 0, 100, 5);
-                landEnemyChangeChance.onValueSaved.AddListener(() => { KickStart.LandEnemyOverrideChance = (int)landEnemyChangeChance.SavedValue; });
-                enemyAirSpawn = new OptionRange("NPT Aircraft Frequency [0x - 2x - 4x]", TACAIEnemiesPop, KickStart.AirEnemiesSpawnRate, 0, 4, 0.5f);
-                enemyAirSpawn.onValueSaved.AddListener(() => {
-                    KickStart.AirEnemiesSpawnRate = (int)enemyAirSpawn.SavedValue;
-                    if (KickStart.AirEnemiesSpawnRate == 0)
-                        KickStart.AllowAirEnemiesToSpawn = false;
-                    else
-                    {
-                        SpecialAISpawner.AirSpawnInterval = 60 / KickStart.AirEnemiesSpawnRate;
-                        KickStart.AllowAirEnemiesToSpawn = true;
-                    }
-                });
-                enemySeaSpawn = new OptionToggle("NPT Sea Spawning (Needs Water Mod)", TACAIEnemiesPop, KickStart.AllowSeaEnemiesToSpawn);
-                enemySeaSpawn.onValueSaved.AddListener(() => { KickStart.AllowSeaEnemiesToSpawn = enemySeaSpawn.SavedValue; });
-                playerMadeTechsOnly = new OptionToggle("Disable Built-In Spawn Pool (\"Raw Techs\" Folder Only)", TACAIEnemiesPop, KickStart.TryForceOnlyPlayerSpawns);
-                playerMadeTechsOnly.onValueSaved.AddListener(() => { KickStart.TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue; });
-                permitEradication = new OptionToggle("<b>Eradicators</b> - Huge NPT Tech Spawns - Requires Beefy Computer", TACAIEnemiesPop, KickStart.EnemyEradicators);
-                permitEradication.onValueSaved.AddListener(() => { KickStart.EnemyEradicators = permitEradication.SavedValue; });
-                ragnarok = new OptionToggle("<b>Ragnarok</b> - Death To All (Anything Can Spawn) - Requires Beefy Computer", TACAIEnemiesPop, KickStart.CommitDeathMode);
-                ragnarok.onValueSaved.AddListener(() =>
-                {
-                    KickStart.CommitDeathMode = ragnarok.SavedValue;
-                    OverrideManPop.ChangeToRagnarokPop(KickStart.CommitDeathMode);
-                }); 
-                /*
-                copycat = new OptionToggle("<b>Copy Cat</b> - Enemy can use your local Tech snaps!", TACAIEnemiesPop, KickStart.CatMode);
-                copycat.onValueSaved.AddListener(() =>
-                {
-                    KickStart.CatMode = copycat.SavedValue;
-                });*/
-            }
-            if (KickStart.EnemyBlockDropChance == 0)
-            {
-                Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
-            }
-
-            if (KickStart.AirEnemiesSpawnRate == 0)
-                KickStart.AllowAirEnemiesToSpawn = false;
-            else
-            {
-                SpecialAISpawner.AirSpawnInterval = 60 / KickStart.AirEnemiesSpawnRate;
-                KickStart.AllowAirEnemiesToSpawn = true;
-            }
-        }
-
-        internal static void PushExtModOptionsHandling(ModConfig thisModConfig)
-        {
-            PushExtModOptionsHandling();
-            if (thisModConfig != null)
-                NativeOptionsMod.onOptionsSaved.AddListener(() => { thisModConfig.WriteConfigJsonFile(); });
-        }
-    }
     public static class VectorExtentions
     {
         public static bool WithinBox(this Vector3 vec, float extents)

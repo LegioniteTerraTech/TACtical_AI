@@ -35,17 +35,17 @@ namespace TAC_AI
                 try
                 {
                     Tank tank = transform.root.GetComponent<Tank>();
-                    TankAIHelper help = tank.GetHelperInsured();
+                    TankAIHelper helper = tank.GetHelperInsured();
                     tank.FixupAnchors(true);
                     if (tank.IsAnchored)
                         tank.Anchors.UnanchorAll(true);
                     if (!tank.IsAnchored)
                     {
-                        help.TryReallyAnchor();
+                        helper.AnchorIgnoreChecks();
                         if (!tank.IsAnchored)
                         {
                             DebugTAC_AI.Log(KickStart.ModID + ": Anchor is being stubborn");
-                            help.TryReallyAnchor();
+                            helper.AnchorIgnoreChecks();
                         }
                     }
                     GetComponent<TankBlock>().SubToBlockAttachConnected(LoadNow, null);

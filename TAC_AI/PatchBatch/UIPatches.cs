@@ -35,9 +35,9 @@ namespace TAC_AI
             {
                 if (!CursorChanger.AddedNewCursors)
                     return;
-                if (ManPlayerRTS.PlayerIsInRTS)
+                if (ManWorldRTS.PlayerIsInRTS)
                 {
-                    switch (ManPlayerRTS.cursorState)
+                    switch (ManWorldRTS.cursorState)
                     {
                         case RTSCursorState.Empty:
                             //__result = CursorChanger.CursorIndexCache[1];
@@ -67,9 +67,9 @@ namespace TAC_AI
                             break;
                     }
                 }
-                else if (ManPlayerRTS.PlayerRTSOverlay && __result == GameCursor.CursorState.Default)
+                else if (ManWorldRTS.PlayerRTSOverlay && __result == GameCursor.CursorState.Default)
                 {
-                    switch (ManPlayerRTS.cursorState)
+                    switch (ManWorldRTS.cursorState)
                     {
                         case RTSCursorState.Empty:
                             //__result = CursorChanger.CursorIndexCache[1];
@@ -117,23 +117,31 @@ namespace TAC_AI
             {
                 if (KickStart.EnableBetterAI)
                 {
+                    //DebugTAC_AI.Log("Panel colored RefreshMarker_Postfix");
                     try
                     {
                         Tank tank = (Tank)tech.GetValue(__instance);
                         //RawTechExporter.lastTech = tank.GetComponent<TankAIHelper>();
 
                         LocatorPanel Panel = (LocatorPanel)panel.GetValue(__instance);
+                        /*
                         InvokeHelper.Invoke(() =>
                         {
                             try
                             {
                             }
                             catch { }
-                        }, 0.125f);
+                        }, 0.125f);*/
+                        /*
+                        if (!tank.IsNotNull())
+                            DebugTAC_AI.Assert("tank is NULL");
+                        if (!Panel.IsNotNull())
+                            DebugTAC_AI.Assert("Panel is NULL");
+                        */
 
-                        if (KickStart.EnableBetterAI && tank.IsNotNull() && Panel.IsNotNull())
+                        if (tank.IsNotNull() && Panel.IsNotNull())
                         {
-                            TankAIHelper lastTech = tank.GetComponent<TankAIHelper>();
+                            TankAIHelper lastTech = tank.GetHelperInsured(); //tank.GetComponent<TankAIHelper>();
                             if (lastTech.IsNotNull())
                             {
                                 Image cache = (Image)icon.GetValue(Panel);
@@ -142,23 +150,36 @@ namespace TAC_AI
                                 int Team = lastTech.tank.Team;
 
                                 Panel.BottomName = TeamNamer.GetTeamName(Team).ToString();
-                                if (AIGlobals.IsFriendlyBaseTeam(Team))
+                                if (ManBaseTeams.IsFriendlyBaseTeam(Team))
                                 {
                                     cache.color = AIGlobals.FriendlyColor;
                                     cacheB.color = AIGlobals.FriendlyColor;
                                     back.SetValue(Panel, cacheB);
+                                    //DebugTAC_AI.Log("Panel colored IsFriendlyBaseTeam");
                                 }
-                                else if (AIGlobals.IsNeutralBaseTeam(Team))
+                                else if (ManBaseTeams.IsNeutralBaseTeam(Team))
                                 {
                                     cache.color = AIGlobals.NeutralColor;
                                     cacheB.color = AIGlobals.NeutralColor;
                                     back.SetValue(Panel, cacheB);
+                                    //DebugTAC_AI.Log("Panel colored IsNeutralBaseTeam");
                                 }
-                                else if (AIGlobals.IsSubNeutralBaseTeam(Team))
+                                else if (ManBaseTeams.IsSubNeutralBaseTeam(Team))
                                 {
-                                    cache.color = AIGlobals.EnemyColor;
-                                    cacheB.color = AIGlobals.EnemyColor;
+                                    cache.color = AIGlobals.SubNeutralColor;
+                                    cacheB.color = AIGlobals.SubNeutralColor;
                                     back.SetValue(Panel, cacheB);
+                                    //DebugTAC_AI.Log("Panel colored IsSubNeutralBaseTeam");
+                                }
+                                else
+                                {
+                                    /*
+                                    DebugTAC_AI.Log("Panel colored not?  Our team: " + tank.Team);
+                                    foreach (var item in ManBaseTeams.inst.teams)
+                                    {
+                                        DebugTAC_AI.Log("  Team " + item.Key + ", relation " + item.Value.Alignment(ManBaseTeams.playerTeam));
+                                    }
+                                    */
                                 }
                                 if (tank.IsAnchored)
                                 {   // Use anchor icon
@@ -297,6 +318,7 @@ namespace TAC_AI
                     catch (Exception e)
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": SendUpdateAIDisp - Player not close enough - " + e);
+                        throw e;
                     }
                 }
             }
@@ -313,13 +335,17 @@ namespace TAC_AI
                 {
                     case RadarTypes.Base:
                     case RadarTypes.Vehicle:
-                        if (AIGlobals.IsFriendlyBaseTeam(trackedVisible.RadarTeamID))
+                        if (ManBaseTeams.IsFriendlyBaseTeam(trackedVisible.RadarTeamID))
                         {
                             iconColour = AIGlobals.FriendlyColor;
                         }
-                        else if (AIGlobals.IsNeutralBaseTeam(trackedVisible.RadarTeamID))
+                        else if (ManBaseTeams.IsNeutralBaseTeam(trackedVisible.RadarTeamID))
                         {
                             iconColour = AIGlobals.NeutralColor;
+                        }
+                        else if (ManBaseTeams.IsSubNeutralBaseTeam(trackedVisible.RadarTeamID))
+                        {
+                            iconColour = AIGlobals.SubNeutralColor;
                         }
                         break;
                 }

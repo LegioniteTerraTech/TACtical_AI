@@ -7,6 +7,7 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Movement.AICores;
 using UnityEngine;
+using TerraTechETCUtil;
 
 namespace TAC_AI.AI
 {
@@ -40,7 +41,9 @@ namespace TAC_AI.AI
         }
 
         //Manuvering (Post-Pathfinding)
+        /// <summary> The point where the AI is driving towards.  This is NOT the destination! </summary>
         public Vector3 PathPoint { get => PathPointMain.ScenePosition; }// Where land and spaceships coordinate movement
+        /// <summary> The point where the AI is driving towards.  This is NOT the destination! </summary>
         private WorldPosition PathPointMain = WorldPosition.FromScenePosition(Vector3.zero);// Where land and spaceships coordinate movement
         public Vector3 PathPointSet
         {
@@ -60,10 +63,11 @@ namespace TAC_AI.AI
                 PathPointMain = WorldPosition.FromScenePosition(value);
             }
         }// Where land and spaceships coordinate movement
+        public float GetDrive => _AI.GetDrive;
 
         //Tech Drive Data Gathering
         public Vector3 BoostBias = Vector3.zero;// Center of thrust of all boosters, center of boost
-        public float BoosterThrustBias = 0.5f;
+        //public float BoosterThrustBias = 0.5f;
 
         //AI Pathfinding
         public bool AutoPathfind { get; set; } = false;
@@ -210,10 +214,9 @@ namespace TAC_AI.AI
             }
         }
 
-        public void DriveMaintainer(TankControl thisControl, ref EControlCoreSet core)
+        public void DriveMaintainer(ref EControlCoreSet core)
         {
-            thisControl.m_Movement.m_USE_AVOIDANCE = this.Helper.AvoidStuff;
-            this.AICore.DriveMaintainer(thisControl, this.Helper, this.Tank, ref core);
+            AICore.DriveMaintainer(Helper, Tank, ref core);
         }
 
         public void Initiate(Tank tank, TankAIHelper helper, EnemyMind mind = null)
@@ -224,7 +227,7 @@ namespace TAC_AI.AI
 
             if (mind.IsNull())
             {
-                //if (thisInst.isAstrotechAvail && thisInst.DediAI == AIECore.DediAIType.Aviator)
+                //if (helper.isAstrotechAvail && helper.DediAI == AIECore.DediAIType.Aviator)
                 //    InitiateForVTOL(tank, this);
                 switch (helper.DriverType)
                 {
@@ -290,17 +293,19 @@ namespace TAC_AI.AI
                 //Get the slowest spooling one
                 foreach (FanJet jet in module.transform.GetComponentsInChildren<FanJet>())
                 {
-                    if (jet.spinDelta <= 10)
+                    float thrust = (float)RawTechBase.thrustRate.GetValue(jet);
+                    float spin = (float)RawTechBase.spinDat.GetValue(jet);
+                    if (spin <= 10)
                     {
-                        biasDirection -= Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards) * jet.force;
-                        if (jet.spinDelta < lowestDelta)
-                            lowestDelta = jet.spinDelta;
+                        biasDirection -= Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForward) * thrust;
+                        if (spin < lowestDelta)
+                            lowestDelta = spin;
                     }
                     //Vector3 fanDirection = (Vector3) fanDir.GetValue(jet);
                     //if (fanDirection.x < -0.5)
-                    if (Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForwards).z < -0.5)
+                    if (Tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForward).z < -0.5)
                     {
-                        fanThrust += jet.force;
+                        fanThrust += thrust;
                     }
                 }
                 foreach (BoosterJet boost in module.transform.GetComponentsInChildren<BoosterJet>())
@@ -314,38 +319,39 @@ namespace TAC_AI.AI
                     float force = (float)boostGet.GetValue(boost);
                     //Vector3 jetDirection = (Vector3) boostDir.GetValue(boost);
                     //if (jetDirection.x < -0.5)
-                    if (Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection)).z < -0.5)
+                    if (Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalThrustDirection)).z < -0.5)
                     {
                         boosterThrust += force;
                     }
 
                     //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
-                    boostBiasDirection -= Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalBoostDirection)) * force;
+                    boostBiasDirection -= Tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalThrustDirection)) * force;
                 }
             }
 
             //float totalThrust = (fanThrust + boosterThrust * this.BoosterThrustBias);
             BoostBias = boostBiasDirection.normalized;
         }
-        public void TryBoost(TankControl TC, bool forwardsOnly = true)
+        public void TryBoost(bool forwardsOnly = true)
         {
             if (Helper.Obst)
                 return; // Prevent thrusting into trees
-            if (BoostBias.z > 0.75f && forwardsOnly)
+            if (forwardsOnly)
             {
-                TC.BoostControlJets = true;
+                if (BoostBias.z > 0.75f)
+                    Helper.MaxBoost();
             }
             else
             {
-                TC.BoostControlJets = true;
+                Helper.MaxBoost();
             }
         }
-        public void TryBoost(TankControl TC, Vector3 headingLocalCab)
+        public void TryBoost(Vector3 headingLocalCab)
         {
             if (Helper.Obst)
                 return; // Prevent thrusting into trees
             if (Vector3.Dot(BoostBias, headingLocalCab) > 0.75f)
-                TC.BoostControlJets = true;
+                Helper.MaxBoost();
         }
 
 

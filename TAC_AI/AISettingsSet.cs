@@ -159,7 +159,7 @@ namespace TAC_AI
         private bool useInventory;
 
         public static AISettingsSet DefaultSettable => new AISettingsSet(
-            5000, 
+            50, 
             5000,
             AIGlobals.DefaultMaxTargetingRange, 
             AIGlobals.DefaultMaxObjectiveRange, 

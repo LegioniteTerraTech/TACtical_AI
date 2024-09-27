@@ -15,10 +15,10 @@ namespace TAC_AI.World
         public readonly bool isFounder = false;
 
         public NP_MobileUnit(ManSaveGame.StoredTech techIn, NP_Presence_Automatic team, FactionSubTypes FST) :
-            base(techIn, team, FST, ManEnemyWorld.MobileHealthMulti)
+            base(techIn, team, FST)
         {
             isFounder = tech.m_TechData.IsTeamFounder();
-            ManEnemyWorld.GetExpectedSpeedAsync(this);
+            ManEnemyWorld.GetStatsAsync(this);
         }
         public static float GetSpeedLegacy(ManSaveGame.StoredTech tech, FactionSubTypes faction)
         {

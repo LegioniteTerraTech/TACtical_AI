@@ -16,12 +16,14 @@ namespace TAC_AI.AI
     internal class TankAIManager : MonoBehaviour
     {
         internal static FieldInfo rangeOverride = typeof(ManTechs).GetField("m_SleepRangeFromCamera", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static FieldInfo liveSetPieces = typeof(ManWorld).GetField("m_SetPiecesPlacement", BindingFlags.NonPublic | BindingFlags.Instance);
 
         internal static TankAIManager inst;
         private static Tank lastPlayerTech;
         public static Event<TankAIHelper> AILoadedEvent = new Event<TankAIHelper>();
         public static Event<int> TeamCreatedEvent = new Event<int>();
         public static Event<int> TeamDestroyedEvent = new Event<int>();
+        internal static List<ManWorld.TerrainSetPiecePlacement> SetPieces = null;
 
         internal static Dictionary<int, KeyValuePair<RequestSeverity, Visible>> targetingRequests = new Dictionary<int, KeyValuePair<RequestSeverity, Visible>>();
 
@@ -37,6 +39,9 @@ namespace TAC_AI.AI
         internal static float LastRealTime = 0;
         internal static float DeltaRealTime = 0;
 
+        internal static Vector3 GravVector = Physics.gravity;
+        internal static float GravMagnitude = Physics.gravity.magnitude;
+
         private const float DefaultTime = 1.0f;
         private const float SlowedTime = 0.25f;
         private const float FastTime = 3f; // fooling around
@@ -45,7 +50,7 @@ namespace TAC_AI.AI
         public static ManToolbar.ToolbarToggle toggleAuto;
         internal static void TogglePlayerAutopilot(bool state)
         {
-            if (KickStart.AllowStrategicAI && ManPlayerRTS.PlayerIsInRTS)
+            if (KickStart.AllowPlayerRTSHUD && ManWorldRTS.PlayerIsInRTS)
             {
                 KickStart.AutopilotPlayerRTS = state;
                 toggleAuto.SetToggleState(KickStart.AutopilotPlayerRTS);
@@ -70,7 +75,6 @@ namespace TAC_AI.AI
             AIECore.Chargers = new List<ModuleChargerTracker>();
             AIECore.RetreatingTeams = new HashSet<int>();
             teamsIndexed = new Dictionary<int, TeamIndex>();
-            AIECore.AllHelpers = new List<TankAIHelper>();
             Singleton.Manager<ManPauseGame>.inst.PauseEvent.Subscribe(inst.OnPaused);
             Singleton.Manager<ManTechs>.inst.TankPostSpawnEvent.Subscribe(OnTankAddition);
             Singleton.Manager<ManTechs>.inst.TankTeamChangedEvent.Subscribe(OnTankChange);
@@ -87,6 +91,7 @@ namespace TAC_AI.AI
                 rangeOverride.SetValue(ManTechs.inst, AIGlobals.EnemyExtendActionRange);
                 DebugTAC_AI.Log(KickStart.ModID + ": Extended enemy Tech interaction range to " + AIGlobals.EnemyExtendActionRange + ".");
             }
+            SetPieces = (List<ManWorld.TerrainSetPiecePlacement>)liveSetPieces.GetValue(ManWorld.inst);
         }
 #if STEAM
         internal void CheckNextFrameNeedsDeInit()
@@ -108,14 +113,13 @@ namespace TAC_AI.AI
             Singleton.Manager<ManTechs>.inst.TankTeamChangedEvent.Unsubscribe(OnTankChange);
             Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Unsubscribe(OnPlayerTechChange);
             Singleton.Manager<ManVisible>.inst.OnStoppedTrackingVisible.Unsubscribe(OnVisibleNoLongerTracked);
-            DestroyAllHelpers();
-            AIECore.AllHelpers = null;
             teamsIndexed = null;
             AIECore.RetreatingTeams = null;
             AIECore.Chargers = null;
             AIECore.BlockHandlers = null;
             AIECore.Depots = null;
             AIECore.Minables = null;
+            AIECore.DestroyAllHelpers();
             inst.enabled = false;
             Destroy(inst.gameObject);
             inst = null;
@@ -129,14 +133,6 @@ namespace TAC_AI.AI
             }
         }
 #endif
-        private static void DestroyAllHelpers()
-        {
-            foreach (var item in new List<TankAIHelper>(AIECore.AllHelpers))
-            {
-                Destroy(item);
-            }
-            AIECore.AllHelpers.Clear();
-        }
 
         public static void RegisterMissionTechVisID(int vis)
         {
@@ -174,8 +170,11 @@ namespace TAC_AI.AI
             //if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
             //helper.ResetAll(tonk);
             //helper.OnTechTeamChange();
-            helper.dirty = true;
+            helper.dirtyDesign = true;
             helper.dirtyAI = true;
+            helper.RunState = AIRunState.Advanced;
+            helper.enabled = true;
+            DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  OnTankAddition - Spawned!");
 
             //QueueUpdater.Send();
         }
@@ -190,6 +189,14 @@ namespace TAC_AI.AI
             //RemoveTech(tonk);
             //helper.ResetAll(tonk);
             helper.OnTechTeamChange();
+            if (tonk.FirstUpdateAfterSpawn)
+            {
+                helper.dirtyDesign = true;
+                helper.dirtyAI = true;
+                helper.RunState = AIRunState.Advanced;
+                helper.enabled = true;
+                DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Spawned!");
+            }
             //IndexTech(tonk, info.m_NewTeam);
             DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Called OnTankChange");
             //QueueUpdater.Send();
@@ -206,7 +213,11 @@ namespace TAC_AI.AI
             CheckDestroyedTeams();
             //DebugTAC_AI.Log(KickStart.ModID + ": Allied AI " + tonk.name + ":  Called OnTankRecycled");
 
-            helper.OverrideAllControls = false;
+            if (helper.AIControlOverride != null)
+            {
+                helper.AIControlOverride(helper, TankAIHelper.ExtControlStatus.Recycle);
+                helper.AIControlOverride = null;
+            }
 
             var mind = tonk.GetComponent<EnemyMind>();
             if ((bool)mind)
@@ -258,7 +269,8 @@ namespace TAC_AI.AI
         }
 
         /// <summary> DO NOT ALTER </summary>
-        private static HashSet<Tank> emptyHash = new HashSet<Tank>();
+        private static readonly HashSet<Tank> emptyHash = new HashSet<Tank>();
+        /// <summary>  DO NOT EDIT OUTPUT </summary>
         public static HashSet<Tank> GetTeamTanks(int Team)
         {
             if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
@@ -268,6 +280,7 @@ namespace TAC_AI.AI
             }
             return emptyHash;
         }
+        /// <summary>  DO NOT EDIT OUTPUT </summary>
         public static HashSet<Tank> GetNonEnemyTanks(int Team)
         {
             if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
@@ -277,6 +290,7 @@ namespace TAC_AI.AI
             }
             return emptyHash;
         }
+        /// <summary>  DO NOT EDIT OUTPUT </summary>
         public static HashSet<Tank> GetTargetTanks(int Team)
         {
             if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
@@ -304,10 +318,21 @@ namespace TAC_AI.AI
             IndexTech(tonk, tonk.Team);
             CheckDestroyedTeams();
         }
+        internal static void UpdateEntireTeam(int team)
+        {
+            foreach (var item in new List<Tank>(GetTeamTanks(team)))
+            {
+                RemoveTech(item);
+                IndexTech(item, team);
+            }
+            CheckDestroyedTeams();
+        }
         private static void IndexTech(Tank tonk, int Team)
         {
             if (tonk?.visible == null || !tonk.visible.isActive)
                 return;
+            //if (ManBaseTeams.IsEnemy(Team, Team))
+            //    throw new InvalidOperationException("Cannot add tech which fights amongst selves - team " + TeamNamer.GetTeamName(Team));
             tonk.TankRecycledEvent.Subscribe(OnTankRecycled);
             try
             {
@@ -318,7 +343,7 @@ namespace TAC_AI.AI
                     {
                         if (item == null || item == tonk)
                             continue;
-                        if (item.IsEnemy(Team))
+                        if (ManBaseTeams.IsEnemy(item.Team, Team))
                             TI.Targets.Add(item);
                         else
                             TI.NonHostile.Add(item);
@@ -330,18 +355,18 @@ namespace TAC_AI.AI
                 }
                 foreach (KeyValuePair<int, TeamIndex> TI in teamsIndexed)
                 {
-                    if (Tank.IsEnemy(TI.Key, Team))
+                    if (TI.Key == Team)
+                    {
+                        TI.Value.Teammates.Add(tonk);
+                        //RemoveAllInvalid(TI.Value.Teammates);
+                    }
+                    if (ManBaseTeams.IsEnemy(TI.Key, Team))
                     {
                         TI.Value.Targets.Add(tonk);
                         //RemoveAllInvalid(TI.Value.Targets);
                     }
                     else
                     {
-                        if (TI.Key == Team)
-                        {
-                            TI.Value.Teammates.Add(tonk);
-                            //RemoveAllInvalid(TI.Value.Teammates);
-                        }
                         TI.Value.NonHostile.Add(tonk);
                         //RemoveAllInvalid(TI.Value.NonHostile);
                     }
@@ -375,6 +400,7 @@ namespace TAC_AI.AI
                 KeyValuePair<int, TeamIndex> TI = teamsIndexed.ElementAt(step);
                 if (!TI.Value.Teammates.Any())
                 {
+                    //DebugTAC_AI.Assert("OnTeamDestroyedCheck - removed team " + TI.Key + " due to no more teammates");
                     TeamDestroyedEvent.Send(TI.Key);
                     teamsIndexed.Remove(TI.Key);
                 }
@@ -386,7 +412,7 @@ namespace TAC_AI.AI
         {
             try
             {
-                SendChatServer("Warning: This server is using Advanced AI!  If you are new to the game, I would suggest you play safe. RTS Mode: " + KickStart.AllowStrategicAI + "");
+                SendChatServer("Warning: This server is using Advanced AI!  If you are new to the game, I would suggest you play safe. Enemies RTS Mode: " + KickStart.AllowStrategicAI + "");
             }
             catch { }
         }
@@ -417,7 +443,7 @@ namespace TAC_AI.AI
         internal static ManTechs.TechIterator TeamActiveMobileTechsInCombat(int Team)
         {
             return ManTechs.inst.IterateTechsWhere(x => x.Team == Team && !x.IsBase() && 
-            x.GetHelperInsured() is TankAIHelper help && help && help.AttackEnemy && help.lastEnemyGet);
+            x.GetHelperInsured() is TankAIHelper helper && helper && helper.AttackEnemy && helper.lastEnemyGet);
         }
         private void RunFocusFireRequests()
         {
@@ -494,7 +520,7 @@ namespace TAC_AI.AI
             if (Time.timeScale > 0)
             {
                 DeltaRealTime = Time.realtimeSinceStartup - LastRealTime;
-                if (ManPlayerRTS.PlayerIsInRTS && !ManNetwork.IsNetworked)
+                if (ManWorldRTS.PlayerIsInRTS && !ManNetwork.IsNetworked)
                 {
                     if (Input.GetKey(KeyCode.LeftControl))
                     {
@@ -517,12 +543,27 @@ namespace TAC_AI.AI
             }
             LastRealTime = Time.realtimeSinceStartup;
         }
+        public static bool IsPlayerControlled(Tank tank) => PlayerControlledTanks.Contains(tank);
+        private static HashSet<Tank> PlayerControlledTanks = new HashSet<Tank>();
         private void Update()
         {
+            PlayerControlledTanks.Clear();
+            if (ManNetwork.IsNetworked)
+            {
+                foreach (var item in ManNetwork.inst.GetAllPlayerTechs())
+                    PlayerControlledTanks.Add(item);
+            }
+            else if (Singleton.playerTank)
+                PlayerControlledTanks.Add(Singleton.playerTank);
             AIGlobals.SceneTechCount = -1;
             AIGlobals.HideHud = AIGlobals.GetHideHud;
-            if (Input.GetKeyDown(KeyCode.Quote))
-                AIECore.debugVisuals = !AIECore.debugVisuals;
+            if (GravVector != Physics.gravity)
+            {
+                GravVector = Physics.gravity;
+                GravMagnitude = GravVector.magnitude;
+            }
+
+            // if (Input.GetKeyDown(KeyCode.Quote))  AIECore.debugVisuals = !AIECore.debugVisuals;
 
             if (Input.GetKeyDown(KickStart.RetreatHotkey) && ManHUD.inst.HighlightedOverlay == null)
                 AIECore.ToggleTeamRetreat(Singleton.Manager<ManPlayer>.inst.PlayerTeam);
@@ -600,20 +641,26 @@ namespace TAC_AI.AI
         {
             if (!KickStart.EnableBetterAI)
                 return;
-            for (int step = 0; step < AIECore.AllHelpers.Count; step++)
+            foreach (var helper in AIECore.IterateAllHelpers())
+                helpersActive.Add(helper);
+            try
             {
-                var helper = AIECore.AllHelpers[step];
-                if (helper != null && helper.isActiveAndEnabled)
-                    helpersActive.Add(helper);
+                foreach (var item in helpersActive)
+                    item.OnPreUpdate();
             }
-            foreach (var item in helpersActive)
+            catch (Exception e)
             {
-                item.OnPreUpdate();
+                throw new Exception("A significant cascading failiure happened while updating all TankAIHelper.OnPreUpdate()", e);
             }
             StaggerUpdateAllHelpersDirAndOps();
-            foreach (var item in helpersActive)
+            try
             {
-                item.OnPostUpdate();
+                foreach (var item in helpersActive)
+                    item.OnPostUpdate();
+            }
+            catch (Exception e)
+            {
+                throw new Exception("A significant cascading failiure happened while updating all TankAIHelper.OnPostUpdate()", e);
             }
             helpersActive.Clear();
         }
@@ -623,40 +670,68 @@ namespace TAC_AI.AI
             int numOpUpdate = Mathf.Min(helpersActive.Count, OperationsToUpdateThisFrame());
             if (ManNetwork.IsHost)
             {
-                while (numDirUpdate > 0)
+                try
                 {
-                    if (clockHelperStepDirectors >= helpersActive.Count)
-                        clockHelperStepDirectors = 0;
-                    helpersActive[clockHelperStepDirectors].OnUpdateHostAIDirectors();
-                    clockHelperStepDirectors++;
-                    numDirUpdate--;
+                    while (numDirUpdate > 0)
+                    {
+                        if (clockHelperStepDirectors >= helpersActive.Count)
+                            clockHelperStepDirectors = 0;
+                        helpersActive[clockHelperStepDirectors].OnUpdateHostAIDirectors();
+                        clockHelperStepDirectors++;
+                        numDirUpdate--;
+                    }
                 }
-                while (numOpUpdate > 0)
+                catch (Exception e)
                 {
-                    if (clockHelperStepOperations >= helpersActive.Count)
-                        clockHelperStepOperations = 0;
-                    helpersActive[clockHelperStepOperations].OnUpdateHostAIOperations();
-                    clockHelperStepOperations++;
-                    numOpUpdate--;
+                    throw new Exception("(Networked: " + ManNetwork.IsNetworked + ") A significant cascading failiure happened while updating all TankAIHelper.OnUpdateHostAIDirectors()", e);
+                }
+                try
+                {
+                    while (numOpUpdate > 0)
+                    {
+                        if (clockHelperStepOperations >= helpersActive.Count)
+                            clockHelperStepOperations = 0;
+                        helpersActive[clockHelperStepOperations].OnUpdateHostAIOperations();
+                        clockHelperStepOperations++;
+                        numOpUpdate--;
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("(Networked: " + ManNetwork.IsNetworked + ") A significant cascading failiure happened while updating all TankAIHelper.OnUpdateHostAIOperations()", e);
                 }
             }
             else
             {
-                while (numDirUpdate > 0)
+                try
                 {
-                    if (clockHelperStepDirectors >= helpersActive.Count)
-                        clockHelperStepDirectors = 0;
-                    helpersActive[clockHelperStepDirectors].OnUpdateClientAIDirectors();
-                    clockHelperStepDirectors++;
-                    numDirUpdate--;
+                    while (numDirUpdate > 0)
+                    {
+                        if (clockHelperStepDirectors >= helpersActive.Count)
+                            clockHelperStepDirectors = 0;
+                        helpersActive[clockHelperStepDirectors].OnUpdateClientAIDirectors();
+                        clockHelperStepDirectors++;
+                        numDirUpdate--;
+                    }
                 }
-                while (numOpUpdate > 0)
+                catch (Exception e)
                 {
-                    if (clockHelperStepOperations >= helpersActive.Count)
-                        clockHelperStepOperations = 0;
-                    helpersActive[clockHelperStepOperations].OnUpdateClientAIOperations();
-                    clockHelperStepOperations++;
-                    numOpUpdate--;
+                    throw new Exception("(Networked: " + ManNetwork.IsNetworked + ") A significant cascading failiure happened while updating all TankAIHelper.OnUpdateClientAIDirectors()", e);
+                }
+                try
+                {
+                    while (numOpUpdate > 0)
+                    {
+                        if (clockHelperStepOperations >= helpersActive.Count)
+                            clockHelperStepOperations = 0;
+                        helpersActive[clockHelperStepOperations].OnUpdateClientAIOperations();
+                        clockHelperStepOperations++;
+                        numOpUpdate--;
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("(Networked: " + ManNetwork.IsNetworked + ") A significant cascading failiure happened while updating all TankAIHelper.OnUpdateClientAIOperations()", e);
                 }
             }
         }
@@ -664,7 +739,18 @@ namespace TAC_AI.AI
         {
             if (!ManPauseGame.inst.IsPaused && KickStart.EnableBetterAI)
             {
-                UpdateAllHelpers();
+                try
+                {
+                    UpdateAllHelpers();
+                }
+                catch (Exception e)
+                {
+                    if (!TankAIHelper.updateErrored)
+                    {
+                        DebugTAC_AI.LogWarnPlayerOnce("TankAIManager.FixedUpdate() Critical error", e);
+                        TankAIHelper.updateErrored = true;
+                    }
+                }
             }
         }
 
@@ -693,21 +779,17 @@ namespace TAC_AI.AI
                 {
                     types.Add(item, 0);
                 }
-                for (int step = 0; step < AIECore.AllHelpers.Count; step++)
+                foreach (var helper in AIECore.IterateAllHelpers())
                 {
-                    var helper = AIECore.AllHelpers[step];
-                    if (helper != null && helper.isActiveAndEnabled)
-                    {
-                        activeCount++;
-                        alignments[helper.AIAlign]++;
-                        types[helper.DediAI]++;
-                        if (helper.tank.IsAnchored)
-                            baseCount++;
-                    }
+                    activeCount++;
+                    alignments[helper.AIAlign]++;
+                    types[helper.DediAI]++;
+                    if (helper.tank.IsAnchored)
+                        baseCount++;
                 }
                 GUILayout.Label("  Capacity: " + KickStart.MaxEnemyWorldCapacity);
                 GUILayout.Label("  Num Bases: " + baseCount);
-                if (GUILayout.Button("Total: " + AIECore.AllHelpers.Count + " | Active: " + activeCount))
+                if (GUILayout.Button("Pooled: " + AIECore.HelperCountNoCheck + " | Active: " + activeCount))
                     controlledDisp = !controlledDisp;
                 if (controlledDisp)
                 {
@@ -731,12 +813,11 @@ namespace TAC_AI.AI
                         }
                         if (enabledTabs.Contains(item.Key))
                         {
-                            foreach (var item2 in AIECore.AllHelpers.FindAll(x => x != null &&
-                            x.isActiveAndEnabled && x.DediAI == item.Key))
+                            foreach (var item2 in AIECore.IterateAllHelpers(x => x.DediAI == item.Key))
                             {
                                 Vector3 pos = item2.tank.boundsCentreWorldNoCheck;
                                 GUILayout.Label("  Tech: " + item2.tank.name + " | Pos: " + pos);
-                                DebugRawTechSpawner.DrawDirIndicator(pos, pos + new Vector3(0, 32, 0), Color.white);
+                                DebugExtUtilities.DrawDirIndicator(pos, pos + new Vector3(0, 32, 0), Color.white);
                             }
                         }
                     }

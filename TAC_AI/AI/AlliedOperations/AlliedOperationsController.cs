@@ -14,10 +14,10 @@ namespace TAC_AI.AI.AlliedOperations
     /// </summary>
     internal interface AIOperation
     {
-        void Init(TankAIHelper thisInst);
-        void DeInit(TankAIHelper thisInst);
-        void MovementActions(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct);
-        void OnSerialize(TankAIHelper thisInst, Tank tank, bool saving);
+        void Init(TankAIHelper helper);
+        void DeInit(TankAIHelper helper);
+        void MovementActions(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct);
+        void OnSerialize(TankAIHelper helper, Tank tank, bool saving);
     }
 
     internal class AlliedOperationsController

@@ -7,6 +7,8 @@ using TerraTechETCUtil;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Movement.AICores;
 using TAC_AI.AI.Enemy.EnemyOperations;
+using TAC_AI.World;
+using TAC_AI.Templates;
 
 
 namespace TAC_AI.AI.Enemy
@@ -109,9 +111,9 @@ namespace TAC_AI.AI.Enemy
 
 
         public bool AttackPlayer => CommanderAlignment == EnemyStanding.Enemy;
-        public bool AttackAny => CommanderAlignment < EnemyStanding.SubNeutral;
-        public bool CanCallRetreat => AIGlobals.IsBaseTeam(Tank.Team);
-        public bool CanDoRetreat => AIGlobals.IsBaseTeam(Tank.Team) || IsPopulation;
+        //public bool AttackAny => CommanderAlignment < EnemyStanding.SubNeutral;
+        public bool CanCallRetreat => AIGlobals.IsBaseTeamAny(Tank.Team);
+        public bool CanDoRetreat => AIGlobals.IsBaseTeamAny(Tank.Team) || IsPopulation;
 
 
         public void Initiate()
@@ -130,11 +132,19 @@ namespace TAC_AI.AI.Enemy
         }
         public void Refresh()
         {
+            if (Tank == null)
+                throw new NullReferenceException("Tank null");
+            if (AIControl == null)
+                throw new NullReferenceException("AIControl null");
+            if (AIControl.MovementController == null)
+                throw new NullReferenceException("AIControl.MovementController null");
+
             if (GetComponents<EnemyMind>().Count() > 1)
                 DebugTAC_AI.Log(KickStart.ModID + ": ASSERT: THERE IS MORE THAN ONE EnemyMind ON " + Tank.name + "!!!");
 
             //DebugTAC_AI.Log(KickStart.ModID + ": Refreshing Enemy AI for " + Tank.name);
             EnemyOpsController = new EnemyOperationsController(this);
+            AIControl.RunState = AIRunState.Advanced;
             AIControl.MovementController.UpdateEnemyMind(this);
             AIControl.AvoidStuff = true;
             AIControl.EndPursuit();
@@ -189,7 +199,27 @@ namespace TAC_AI.AI.Enemy
             if (dingus.SourceTank && dingus.Damage > AIGlobals.DamageAlertThreshold)
             {
                 Hurt = true;
-                if (AIControl.Provoked == 0)
+                if (ManBaseTeams.IsSubNeutralBaseTeam(Tank.Team))
+                {
+                    int teamAttacker = dingus.SourceTank.Team;
+                    if (teamAttacker == ManPlayer.inst.PlayerTeam)
+                        ManBaseTeams.AttackComplainPlayer(Tank.boundsCentreWorldNoCheck, Tank.Team);
+                    if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Tank.Team, out var ETD) && ETD.DegradeRelations(teamAttacker, dingus.Damage))
+                    {
+                        ManEnemyWorld.UpdateTeam(Tank.Team);
+                        return;
+                    }
+                    /*
+                    ManEnemyWorld.ChangeTeam(tank.Team, AIGlobals.GetRandomEnemyBaseTeam());
+                    RandomSetMindAttack(Mind, tank);
+                    Mind.CommanderAlignment = EnemyStanding.Enemy;
+                    */
+                }
+                else
+                {
+                    AIControl.FIRE_ALL = true; // we do not want subneutrals firing all - this WILL cause collateral
+                }
+                if (AIControl.Provoked <= 0)
                 {
                     AIControl.lastEnemy = dingus.SourceTank.visible;
                     GetRevengeOn(AIControl.lastEnemyGet);
@@ -201,21 +231,20 @@ namespace TAC_AI.AI.Enemy
                     else if (CommanderSmarts > EnemySmarts.Mild)
                     {
                         // Execute remote orders to allied units - Attack that threat!
-                        if (AIGlobals.IsNeutralBaseTeam(Tank.Team))
+                        if (ManBaseTeams.IsSubNeutralBaseTeam(Tank.Team))
                             RLoadedBases.RequestFocusFireNPTs(this, AIControl.lastEnemyGet, RequestSeverity.Warn);
                         else
                             RLoadedBases.RequestFocusFireNPTs(this, AIControl.lastEnemyGet, RequestSeverity.ThinkMcFly);
                     }
                 }
                 AIControl.Provoked = AIGlobals.ProvokeTime;
-                AIControl.FIRE_ALL = true;
             }
         }
         public static void OnBlockLoss(TankBlock blockLoss, Tank tonk)
         {
             try
             {
-                if (tonk.FirstUpdateAfterSpawn)
+                if (tonk.FirstUpdateAfterSpawn || RawTechLoader.Rebuilding)
                     return;
                 var mind = tonk.GetComponent<EnemyMind>();
                 mind.AIControl.FIRE_ALL = true;

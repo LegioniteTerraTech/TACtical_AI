@@ -24,7 +24,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManPlayerRTS.DelayedInitiate, KickStart.DeInitALL);
+                    ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManWorldRTS.DelayedInitiate, KickStart.DeInitALL);
                 }
                 catch { }
             }
@@ -66,7 +66,7 @@ namespace TAC_AI
                             if (attached)
                             {
                                 Singleton.Manager<ManNetwork>.inst.ServerNetBlockAttachedToTech.Send(tank, netBlock, canidate);
-                                tank.GetHelperInsured().dirty = true;
+                                tank.GetHelperInsured().dirtyDesign = true;
 
                                 Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.BlockAttach, BAM);
                                 if (netBlock.block != null)
@@ -121,6 +121,16 @@ namespace TAC_AI
             {
                 if (objectType == ObjectTypes.Vehicle)
                     ManEnemyWorld.VisibleUnloaded(storedVisible);
+            }
+        }
+        internal static class TileManagerPatches
+        {
+            internal static Type target = typeof(TileManager);
+
+            private static void UpdateTileRequestStates_Postfix(TileManager __instance,
+                ref List<IntVector2> tileCoordsToCreate)
+            {
+                ManEnemyWorld.OnBeforeTilesSpawn(tileCoordsToCreate);
             }
         }
 

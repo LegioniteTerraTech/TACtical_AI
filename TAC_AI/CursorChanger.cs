@@ -44,15 +44,15 @@ namespace TAC_AI
             if (ResourcesHelper.TryGetModContainer("Advanced AI", out ModContainer MC))
             {
                 Cache = CursorChangeHelper.GetCursorChangeCache(RawTechExporter.DLLDirectory, "AI_Icons", MC,
-                    "AIOrderAttack",
-                    "AIOrderEmpty",
-                    "AIOrderMove",
-                    "AIOrderSelect",
-                    "AIOrderBlock",
-                    "AIOrderSelect",
-                    "AIOrderMine",
-                    "AIOrderAegis",
-                    "AIOrderScout"
+                    new KeyValuePair<string, bool>("AIOrderAttack", false),
+                    new KeyValuePair<string, bool>("AIOrderEmpty", false),
+                    new KeyValuePair<string, bool>("AIOrderMove", false),
+                    new KeyValuePair<string, bool>("AIOrderSelect", false),
+                    new KeyValuePair<string, bool>("AIOrderBlock", false),
+                    new KeyValuePair<string, bool>("AIOrderSelect", false),
+                    new KeyValuePair<string, bool>("AIOrderMine", false),
+                    new KeyValuePair<string, bool>("AIOrderAegis", false),
+                    new KeyValuePair<string, bool>("AIOrderScout", false)
                     );
             }
             else

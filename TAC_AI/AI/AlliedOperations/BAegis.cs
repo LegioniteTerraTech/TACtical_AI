@@ -9,81 +9,80 @@ namespace TAC_AI.AI.AlliedOperations
 {
     internal static class BAegis 
     {
-        public static void MotivateProtect(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MotivateProtect(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Aegis) what to do movement-wise
-            thisInst.lastPlayer = thisInst.GetPlayerTech();
-            thisInst.foundGoal = false;
+            helper.lastPlayer = helper.GetPlayerTech();
+            helper.foundGoal = false;
 
-            thisInst.IsMultiTech = false;
-            thisInst.Attempt3DNavi = (thisInst.DriverType == AIDriverType.Pilot || thisInst.DriverType == AIDriverType.Astronaut);
+            helper.IsMultiTech = false;
+            helper.Attempt3DNavi = (helper.DriverType == AIDriverType.Pilot || helper.DriverType == AIDriverType.Astronaut);
 
-            BGeneral.ResetValues(thisInst, ref direct);
+            BGeneral.ResetValues(helper, ref direct);
 
-            if (thisInst.theResource == null)
+            if (helper.theResource == null)
                 return;
-            if (thisInst.theResource.tank == null)
+            if (helper.theResource.tank == null)
                 return;
-            if (thisInst.theResource.tank == tank)
+            if (helper.theResource.tank == tank)
             {
                 DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tank.name + ":  Aegis - error: trying to protect self");
                 return;
             }
 
-            direct.SetLastDest(thisInst.theResource.tank.boundsCentreWorldNoCheck);
-            float dist = thisInst.GetDistanceFromTask(direct.lastDestination, thisInst.theResource.GetCheapBounds());
-            float range = thisInst.MaxObjectiveRange + thisInst.lastTechExtents;
+            direct.SetLastDest(helper.theResource.tank.boundsCentreWorldNoCheck);
+            float dist = helper.GetDistanceFromTask(direct.lastDestination, helper.theResource.GetCheapBounds());
+            float range = helper.MaxObjectiveRange + helper.lastTechExtents;
             bool hasMessaged = false;
 
-            float AllyExt = thisInst.theResource.GetCheapBounds();
+            float AllyExt = helper.theResource.GetCheapBounds();
 
-            if ((bool)thisInst.lastEnemyGet && !thisInst.Retreat && thisInst.lastOperatorRange <= thisInst.MaxCombatRange)
+            if ((bool)helper.lastEnemyGet && !helper.Retreat && helper.lastOperatorRange <= helper.MaxCombatRange)
             {   // combat pilot will take care of the rest
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
+                if (!helper.IsTechMovingAbs(helper.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
+                    helper.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
                 }
-                thisInst.ChaseThreat = true;
+                helper.ChaseThreat = true;
                 return;
             }
             else
-                thisInst.ChaseThreat = false;
+                helper.ChaseThreat = false;
 
-            if (dist < thisInst.lastTechExtents + AllyExt + 2)
+            if (dist < helper.lastTechExtents + AllyExt + 2)
             {
-                if (thisInst.AvoidStuff)
+                if (helper.AvoidStuff)
                 {
-                    thisInst.DelayedAnchorClock = 0;
-                    AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving " + thisInst.theResource.tank.name + " some room...");
+                    helper.DelayedAnchorClock = 0;
+                    AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Giving " + helper.theResource.tank.name + " some room...");
                     direct.DriveAwayFacingTowards();
-                    thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = -1;
-                    if (thisInst.unanchorCountdown > 0)
-                        thisInst.unanchorCountdown--;
-                    if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
+                    helper.ThrottleState = AIThrottleState.ForceSpeed;
+                    helper.DriveVar = -1;
+                    if (helper.unanchorCountdown > 0)
+                        helper.unanchorCountdown--;
+                    if (helper.AutoAnchor && helper.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
                     {
                         if (tank.Anchors.NumIsAnchored > 0)
                         {
-                            thisInst.unanchorCountdown = 15;
-                            thisInst.UnAnchor();
+                            helper.unanchorCountdown = 15;
+                            helper.Unanchor();
                         }
                     }
                 }
                 else
                 {   //Else we are holding off because someone is trying to dock.
                     AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Waiting for other tech to finish their actions...");
-                    thisInst.AvoidStuff = true;
-                    thisInst.SettleDown();
-                    if (thisInst.DelayedAnchorClock < 15)
-                        thisInst.DelayedAnchorClock++;
-                    if (thisInst.CanAutoAnchor)
+                    helper.AvoidStuff = true;
+                    helper.SettleDown();
+                    if (helper.DelayedAnchorClock < 15)
+                        helper.DelayedAnchorClock++;
+                    if (helper.CanAutoAnchor)
                     {
-                        if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
+                        if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                         {
                             AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                            thisInst.TryAnchor();
-                            thisInst.anchorAttempts++;
+                            helper.TryInsureAnchor();
                         }
                     }
                 }
@@ -93,23 +92,22 @@ namespace TAC_AI.AI.AlliedOperations
                 // Time to go!
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Departing!");
                 direct.DriveDest = EDriveDest.ToLastDestination;
-                thisInst.anchorAttempts = 0; 
-                thisInst.DelayedAnchorClock = 0;
-                if (thisInst.unanchorCountdown > 0)
-                    thisInst.unanchorCountdown--;
-                if (thisInst.AutoAnchor && thisInst.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
+                helper.DelayedAnchorClock = 0;
+                if (helper.unanchorCountdown > 0)
+                    helper.unanchorCountdown--;
+                if (helper.AutoAnchor && helper.PlayerAllowAutoAnchoring && tank.Anchors.NumPossibleAnchors >= 1)
                 {
                     if (tank.Anchors.NumIsAnchored > 0)
                     {
                         AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Time to pack up and move out!");
-                        thisInst.unanchorCountdown = 15;
-                        thisInst.UnAnchor();
+                        helper.unanchorCountdown = 15;
+                        helper.Unanchor();
                     }
                 }
             }
             else if (dist >= range + AllyExt)
             {
-                thisInst.DelayedAnchorClock = 0;
+                helper.DelayedAnchorClock = 0;
                 direct.DriveDest = EDriveDest.ToLastDestination;
 
 
@@ -117,69 +115,69 @@ namespace TAC_AI.AI.AlliedOperations
                 if (dist > range * 2)
                 {
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Oh Crafty they are too far!");
-                    thisInst.Urgency += KickStart.AIClockPeriod / 2f;
-                    thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = 1f;
-                    thisInst.LightBoost = true;
+                    helper.Urgency += KickStart.AIClockPeriod / 2f;
+                    helper.ThrottleState = AIThrottleState.ForceSpeed;
+                    helper.DriveVar = 1f;
+                    helper.LightBoost = true;
                     //DebugTAC_AI.Log(KickStart.ModID + ": AI drive " + tank.control.DriveControl);
-                    if (thisInst.UrgencyOverload > 0)
-                        thisInst.UrgencyOverload -= KickStart.AIClockPeriod / 5f;
+                    if (helper.UrgencyOverload > 0)
+                        helper.UrgencyOverload -= KickStart.AIClockPeriod / 5f;
                 }
-                if (thisInst.UrgencyOverload > 50)
+                if (helper.UrgencyOverload > 50)
                 {
                     //Are we just randomly angry for too long? let's fix that
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
-                    thisInst.EstTopSped = 1;
-                    thisInst.AvoidStuff = true;
-                    thisInst.UrgencyOverload = 0;
+                    helper.EstTopSped = 1;
+                    helper.AvoidStuff = true;
+                    helper.UrgencyOverload = 0;
                 }
                 //URGENCY REACTION
-                if (thisInst.Urgency > 20)
+                if (helper.Urgency > 20)
                 {
                     //FARRR behind! BOOSTERS NOW!
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": I AM SUPER FAR BEHIND!");
-                    thisInst.AvoidStuff = false;
-                    thisInst.FullBoost = true; // WE ARE SOO FAR BEHIND
-                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
+                    helper.AvoidStuff = false;
+                    helper.FullBoost = true; // WE ARE SOO FAR BEHIND
+                    helper.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
-                else if (thisInst.Urgency > 2)
+                else if (helper.Urgency > 2)
                 {
                     //Behind and we must catch up
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Wait for meeeeeeeeeee!");
-                    thisInst.AvoidStuff = false;
-                    thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = 1;
-                    thisInst.LightBoost = true;
-                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
+                    helper.AvoidStuff = false;
+                    helper.ThrottleState = AIThrottleState.ForceSpeed;
+                    helper.DriveVar = 1;
+                    helper.LightBoost = true;
+                    helper.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
-                else if (thisInst.Urgency > 1 && thisInst.recentSpeed < 10)
+                else if (helper.Urgency > 1 && helper.recentSpeed < 10)
                 {
                     //bloody tree moment
                     hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": GET OUT OF THE WAY NUMBNUT!");
-                    thisInst.AvoidStuff = false;
-                    thisInst.FIRE_ALL = true;
-                    thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = 0.5f;
-                    thisInst.UrgencyOverload += KickStart.AIClockPeriod / 5f;
+                    helper.AvoidStuff = false;
+                    helper.FIRE_ALL = true;
+                    helper.ThrottleState = AIThrottleState.ForceSpeed;
+                    helper.DriveVar = 0.5f;
+                    helper.UrgencyOverload += KickStart.AIClockPeriod / 5f;
                 }
                 //OBSTRUCTION MANAGEMENT
-                if (!thisInst.IsTechMoving(thisInst.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
+                if (!helper.IsTechMovingAbs(helper.EstTopSped / AIGlobals.PlayerAISpeedPanicDividend))
                 {
-                    thisInst.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
+                    helper.TryHandleObstruction(hasMessaged, dist, true, true, ref direct);
                 }
-                else if (!thisInst.IsTechMoving(thisInst.EstTopSped / 2))
+                else if (!helper.IsTechMovingAbs(helper.EstTopSped / 2))
                 {
                     // Moving a bit too slow for what we can do
                     AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Trying to catch up!");
-                    thisInst.Urgency += KickStart.AIClockPeriod / 5f;
-                    thisInst.ForceSetDrive = true;
-                    thisInst.DriveVar = 1;
+                    helper.Urgency += KickStart.AIClockPeriod / 5f;
+                    helper.ThrottleState = AIThrottleState.ForceSpeed;
+                    helper.DriveVar = 1;
                 }
                 else
                 {
                     //Things are going smoothly
-                    thisInst.AvoidStuff = true;
-                    thisInst.SettleDown();
+                    helper.AvoidStuff = true;
+                    helper.SettleDown();
                 }
             }
             else if (dist < (range / 2) + AllyExt)
@@ -187,17 +185,16 @@ namespace TAC_AI.AI.AlliedOperations
                 //Likely stationary
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
                 //direct.lastDestination = tank.transform.position;
-                thisInst.AvoidStuff = true;
-                thisInst.SettleDown();
-                if (thisInst.DelayedAnchorClock < 15)
-                    thisInst.DelayedAnchorClock++;
-                if (thisInst.CanAutoAnchor)
+                helper.AvoidStuff = true;
+                helper.SettleDown();
+                if (helper.DelayedAnchorClock < 15)
+                    helper.DelayedAnchorClock++;
+                if (helper.CanAutoAnchor)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
+                    if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                     {
                         AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                        thisInst.TryAnchor();
-                        thisInst.anchorAttempts++;
+                        helper.TryInsureAnchor();
                     }
                 }
             }
@@ -207,18 +204,17 @@ namespace TAC_AI.AI.AlliedOperations
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
 
                 //direct.lastDestination = tank.transform.position;
-                thisInst.AvoidStuff = true;
-                thisInst.SettleDown();
-                //thisInst.DriveVar = 0;
-                if (thisInst.DelayedAnchorClock < 15)
-                    thisInst.DelayedAnchorClock++;
-                if (thisInst.CanAutoAnchor)
+                helper.AvoidStuff = true;
+                helper.SettleDown();
+                //helper.DriveVar = 0;
+                if (helper.DelayedAnchorClock < 15)
+                    helper.DelayedAnchorClock++;
+                if (helper.CanAutoAnchor)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && thisInst.anchorAttempts <= AIGlobals.AlliedAnchorAttempts)
+                    if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                     {
                         AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                        thisInst.TryAnchor();
-                        thisInst.anchorAttempts++;
+                        helper.TryInsureAnchor();
                     }
                 }
             }

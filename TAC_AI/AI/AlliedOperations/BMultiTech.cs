@@ -11,200 +11,200 @@ namespace TAC_AI.AI.AlliedOperations
 {
     internal static class BMultiTech
     {
-        public static void MTStatic(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MTStatic(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
         {   // stay still
-            thisInst.lastPlayer = thisInst.GetPlayerTech();
-            thisInst.IsMultiTech = true;
+            helper.lastPlayer = helper.GetPlayerTech();
+            helper.IsMultiTech = true;
 
-            BGeneral.ResetValues(thisInst, ref direct);
+            BGeneral.ResetValues(helper, ref direct);
 
-            thisInst.AttackEnemy = false;
-            thisInst.PivotOnly = true;
+            helper.AttackEnemy = false;
+            helper.ThrottleState = AIThrottleState.PivotOnly;
         }
 
-        public static void MimicAllClosestAlly(TankAIHelper thisInst, Tank tank, ref EControlOperatorSet direct)
+        public static void MimicAllClosestAlly(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
         {
-            thisInst.lastPlayer = thisInst.GetPlayerTech();
-            thisInst.IsMultiTech = true;
-            thisInst.Attempt3DNavi = true;
+            helper.lastPlayer = helper.GetPlayerTech();
+            helper.IsMultiTech = true;
+            helper.Attempt3DNavi = true;
 
             Tank hostTech;
             float dist;
             Tank copyTargVis;
-            BGeneral.ResetValues(thisInst, ref direct);
+            BGeneral.ResetValues(helper, ref direct);
             try
             {
-                float range = thisInst.MinCombatRange;
-                if (!thisInst.AllMT)
+                float range = helper.MinCombatRange;
+                if (!helper.AllMT)
                 {
-                    hostTech = thisInst.GetPlayerTech().tank;
+                    hostTech = helper.GetPlayerTech().tank;
                     if (hostTech == null)
                     {
-                        thisInst.MTLockedToTechBeam = false;
-                        thisInst.MTMimicHostAvail = false;
+                        helper.MTLockedToTechBeam = false;
+                        helper.MTMimicHostAvail = false;
                         return;
                     }
                     if (hostTech == tank)
                     {
-                        thisInst.MTLockedToTechBeam = false;
-                        thisInst.MTMimicHostAvail = false;
+                        helper.MTLockedToTechBeam = false;
+                        helper.MTMimicHostAvail = false;
                         return;
                     }
                     dist = (tank.boundsCentreWorldNoCheck - hostTech.boundsCentreWorldNoCheck).magnitude;
                     if (dist > range)
                     {
-                        thisInst.MTLockedToTechBeam = false;
-                        thisInst.MTMimicHostAvail = false;
+                        helper.MTLockedToTechBeam = false;
+                        helper.MTMimicHostAvail = false;
                         return;
                     }
-                    thisInst.theResource = hostTech.visible;
+                    helper.theResource = hostTech.visible;
                     copyTargVis = hostTech;
                 }
                 else
                 {
-                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, thisInst, out float distSqr, out var vis))
+                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, helper, out float distSqr, out var vis))
                         hostTech = vis.tank;
                     else
                         hostTech = null;
                     //hostTech = AIEPathing.ClosestAllyPrecision(AIEPathing.AllyList(tank), tank.boundsCentreWorldNoCheck, out dist, tank);
                     if (hostTech == null)
-                        hostTech = thisInst.GetPlayerTech().tank;
+                        hostTech = helper.GetPlayerTech().tank;
                     if (hostTech == null || distSqr > range * range)
                     {
-                        thisInst.MTLockedToTechBeam = false;
-                        thisInst.MTMimicHostAvail = false;
+                        helper.MTLockedToTechBeam = false;
+                        helper.MTMimicHostAvail = false;
                         return;
                     }
-                    thisInst.theResource = hostTech.visible;
+                    helper.theResource = hostTech.visible;
                     copyTargVis = hostTech;
                     dist = Mathf.Sqrt(distSqr);
                 }
 
-                //float range = thisInst.lastTechExtents + vis.GetCheapBounds();
-                if (!thisInst.MTMimicHostAvail)
+                //float range = helper.lastTechExtents + vis.GetCheapBounds();
+                if (!helper.MTMimicHostAvail)
                 {
-                    thisInst.MTMimicHostAvail = true;
+                    helper.MTMimicHostAvail = true;
                 }
-                else if (thisInst.MTMimicHostAvail && dist > range)
+                else if (helper.MTMimicHostAvail && dist > range)
                 {
-                    thisInst.MTMimicHostAvail = false;
+                    helper.MTMimicHostAvail = false;
                     // Make sure the player did not force the tech under the ground on release
                     if (AIEPathMapper.GetAltitudeLoadedOnly(tank.boundsCentreWorldNoCheck, out float height))
                         if (tank.boundsCentreWorldNoCheck.y < height)
                             tank.visible.MoveAboveGround();
                 }
-                if (!thisInst.MTLockedToTechBeam && copyTargVis.beam.IsActive && dist < range)
+                if (!helper.MTLockedToTechBeam && copyTargVis.beam.IsActive && dist < range)
                 {
-                    thisInst.MTOffsetPos = copyTargVis.trans.InverseTransformPoint(tank.trans.position);
-                    thisInst.MTOffsetRot = copyTargVis.trans.InverseTransformDirection(tank.trans.forward);
-                    thisInst.MTOffsetRotUp = copyTargVis.trans.InverseTransformDirection(tank.trans.up);
-                    //DebugTAC_AI.Log(KickStart.ModID + ":AI " + tank.name + ": Synced position to " + thisInst.MTOffsetPos + " and rot to " + thisInst.MTOffsetRot);
-                    thisInst.MTLockedToTechBeam = true;
+                    helper.MTOffsetPos = copyTargVis.trans.InverseTransformPoint(tank.trans.position);
+                    helper.MTOffsetRot = copyTargVis.trans.InverseTransformDirection(tank.trans.forward);
+                    helper.MTOffsetRotUp = copyTargVis.trans.InverseTransformDirection(tank.trans.up);
+                    //DebugTAC_AI.Log(KickStart.ModID + ":AI " + tank.name + ": Synced position to " + helper.MTOffsetPos + " and rot to " + helper.MTOffsetRot);
+                    helper.MTLockedToTechBeam = true;
                 }
-                else if (thisInst.MTLockedToTechBeam && !copyTargVis.beam.IsActive)
+                else if (helper.MTLockedToTechBeam && !copyTargVis.beam.IsActive)
                 {
-                    thisInst.MTLockedToTechBeam = false;
+                    helper.MTLockedToTechBeam = false;
                 }
-                if (!thisInst.MTLockedToTechBeam && thisInst.MTMimicHostAvail)
+                if (!helper.MTLockedToTechBeam && helper.MTMimicHostAvail)
                 {
-                    TankControl.State controlCopyTarget = thisInst.theResource.tank.control.CurState;
-                    thisInst.FullBoost = controlCopyTarget.m_BoostJets;
-                    thisInst.FirePROPS = controlCopyTarget.m_BoostProps;
+                    TankControl.State controlCopyTarget = helper.theResource.tank.control.CurState;
+                    helper.FullBoost = controlCopyTarget.m_BoostJets;
+                    helper.FirePROPS = controlCopyTarget.m_BoostProps;
                 }
             }
             catch
             {
-                thisInst.MTLockedToTechBeam = false;
-                thisInst.MTMimicHostAvail = false;
+                helper.MTLockedToTechBeam = false;
+                helper.MTMimicHostAvail = false;
             }
         }
-        public static void BeamLockWithinBounds(TankAIHelper thisInst, Tank tank)
+        public static void BeamLockWithinBounds(TankAIHelper helper, Tank tank)
         {
             Tank hostTech;
             float dist;
             Tank vis;
             try
             {
-                if (!thisInst.AllMT)
+                if (!helper.AllMT)
                 {
-                    hostTech = thisInst.GetPlayerTech().tank;
+                    hostTech = helper.GetPlayerTech().tank;
                     if (hostTech == null)
                     {
-                        thisInst.MTLockedToTechBeam = false;
+                        helper.MTLockedToTechBeam = false;
                         return;
                     }
                     if (hostTech == tank)
                     {
-                        thisInst.MTLockedToTechBeam = false;
+                        helper.MTLockedToTechBeam = false;
                         return;
                     }
-                    thisInst.theResource = hostTech.visible;
+                    helper.theResource = hostTech.visible;
                     vis = hostTech;
                     dist = (tank.boundsCentreWorldNoCheck - hostTech.boundsCentreWorldNoCheck).magnitude;
                 }
                 else
                 {
-                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, thisInst, out float distSqr, out var vis2))
+                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, helper, out float distSqr, out var vis2))
                         hostTech = vis2.tank;
                     else
                         hostTech = null;
                     //hostTech = AIEPathing.ClosestAllyPrecision(AIEPathing.AllyList(tank), tank.boundsCentreWorldNoCheck, out dist, tank);
                     if (hostTech == null)
                     {
-                        thisInst.MTLockedToTechBeam = false;
+                        helper.MTLockedToTechBeam = false;
                         return;
                     }
-                    thisInst.theResource = hostTech.visible;
+                    helper.theResource = hostTech.visible;
                     vis = hostTech;
                     dist = Mathf.Sqrt(distSqr);
                 }
 
-                float range = thisInst.lastTechExtents + vis.GetCheapBounds();
-                if (!thisInst.MTLockedToTechBeam && vis.beam.IsActive && dist < range)
+                float range = helper.lastTechExtents + vis.GetCheapBounds();
+                if (!helper.MTLockedToTechBeam && vis.beam.IsActive && dist < range)
                 {
-                    thisInst.MTOffsetPos = vis.trans.InverseTransformPoint(tank.trans.position);
-                    thisInst.MTOffsetRot = vis.trans.InverseTransformDirection(tank.trans.forward);
-                    thisInst.MTOffsetRotUp = vis.trans.InverseTransformDirection(tank.trans.up);
-                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Synced position to " + thisInst.MTOffsetPos + " and rot to " + thisInst.MTOffsetRot);
-                    thisInst.MTLockedToTechBeam = true;
+                    helper.MTOffsetPos = vis.trans.InverseTransformPoint(tank.trans.position);
+                    helper.MTOffsetRot = vis.trans.InverseTransformDirection(tank.trans.forward);
+                    helper.MTOffsetRotUp = vis.trans.InverseTransformDirection(tank.trans.up);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Synced position to " + helper.MTOffsetPos + " and rot to " + helper.MTOffsetRot);
+                    helper.MTLockedToTechBeam = true;
                 }
-                else if (thisInst.MTLockedToTechBeam && !vis.beam.IsActive)
+                else if (helper.MTLockedToTechBeam && !vis.beam.IsActive)
                 {
-                    thisInst.MTLockedToTechBeam = false;
+                    helper.MTLockedToTechBeam = false;
                 }
             }
             catch
             {
-                thisInst.MTLockedToTechBeam = false;
+                helper.MTLockedToTechBeam = false;
             }
         }
 
-        public static void MimicDefend(TankAIHelper thisInst, Tank tank)
+        public static void MimicDefend(TankAIHelper helper, Tank tank)
         {
             // Determines the weapons actions and aiming of the AI, this one is for MTs that have a host
-            thisInst.AttackEnemy = false;
-            if (thisInst.theResource?.tank)
+            helper.AttackEnemy = false;
+            if (helper.theResource?.tank)
             {   //Get the tech the player is aiming at
-                thisInst.lastEnemy = thisInst.theResource.tank.Weapons.GetManualTarget();
-                if (thisInst.lastEnemyGet.IsNull())
-                    thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                helper.lastEnemy = helper.theResource.tank.Weapons.GetManualTarget();
+                if (helper.lastEnemyGet.IsNull())
+                    helper.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
             }
             else
-                thisInst.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
-            if (thisInst.lastEnemyGet != null)
+                helper.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            if (helper.lastEnemyGet != null)
             {
-                Vector3 aimTo = (thisInst.lastEnemyGet.transform.position - tank.transform.position).normalized;
-                thisInst.Urgency++;
-                if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || thisInst.Urgency >= 30)
+                Vector3 aimTo = (helper.lastEnemyGet.transform.position - tank.transform.position).normalized;
+                helper.Urgency++;
+                if (Mathf.Abs((tank.rootBlockTrans.forward - aimTo).magnitude) < 0.15f || helper.Urgency >= 30)
                 {
-                    thisInst.AttackEnemy = true;
-                    thisInst.Urgency = 30;
+                    helper.AttackEnemy = true;
+                    helper.Urgency = 30;
                 }
             }
             else
             {
-                thisInst.Urgency = 0;
-                thisInst.AttackEnemy = false;
+                helper.Urgency = 0;
+                helper.AttackEnemy = false;
             }
         }
     }

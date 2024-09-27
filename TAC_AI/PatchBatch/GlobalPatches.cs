@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -11,12 +12,26 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using HarmonyLib;
+using Snapshots;
 
 namespace TAC_AI
 {
     internal class GlobalPatches
     {
         // GAME
+#if DEBUG
+        internal static class SnapshotServiceDesktopPatches
+        {
+            internal static Type target = typeof(SnapshotServiceDesktop);
+
+            //Redirect to our tech population
+            private static void GetFilePath_Prefix(ref string relativePath)
+            {
+                if (relativePath == "Snapshots")
+                    relativePath = "SnapshotsCommunity";
+            }
+        }
+#endif
         /*
         internal static class ManSpawnPatches
         {
@@ -50,6 +65,7 @@ namespace TAC_AI
                     TankAIManager.RegisterMissionTechVisID(vis.ID);
             }
         }
+        /*
         internal static class ModePatches
         {
             internal static Type target = typeof(Mode);
@@ -60,7 +76,7 @@ namespace TAC_AI
                 if (!KickStart.firedAfterBlockInjector)//KickStart.isBlockInjectorPresent && 
                     KickStart.DelayedBaseLoader();
             }
-        }
+        }*/
         internal static class ModeMainPatches
         {
             internal static Type target = typeof(ModeMain);
@@ -72,7 +88,7 @@ namespace TAC_AI
                 if (!KickStart.isPopInjectorPresent && KickStart.isWaterModPresent)
                 {
                     DebugTAC_AI.Log(KickStart.ModID + ": Precheck validated");
-                    if (AI.Movement.AIEPathing.AboveTheSea(Singleton.playerTank.boundsCentreWorld))
+                    if (AI.Movement.AIEPathing.AboveTheSeaForcedAccurate(Singleton.playerTank.boundsCentreWorld))
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": Attempting retrofit");
                         PlayerSpawnAid.TryBotePlayerSpawn();
@@ -245,28 +261,37 @@ namespace TAC_AI
             internal static Type target = typeof(TechAI);
 
             static readonly FieldInfo currentTreeActual = typeof(TechAI).GetField("m_CurrentAITreeType", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            private static bool ControlTech_Prefix(TechAI __instance)
+            {
+                var tAI = __instance.gameObject.GetComponent<AI.TankAIHelper>();
+                if (tAI.IsNotNull())
+                    return tAI.RunState == AIRunState.Default;
+                return true;
+            }
+            
             //ForceAIToComplyAnchorCorrectly - (Allied AI state changing remotes) On Auto Setting Tech AI
             private static void UpdateAICategory_Postfix(TechAI __instance)
             {
                 var tAI = __instance.gameObject.GetComponent<AI.TankAIHelper>();
                 if (tAI.IsNotNull())
                 {
-                    if (tAI.JustUnanchored && tAI.AIAlign == AIAlignment.Player)
+                    if (tAI.AnchorStateAIInsure && tAI.AIAlign == AIAlignment.Player)
                     {   //Set the AI back to escort to continue operations if autoanchor is true
+                        tAI.AnchorStateAIInsure = false;
                         __instance.SetBehaviorType(AITreeType.AITypes.Escort);
+                        /*
                         if (!__instance.TryGetCurrentAIType(out AITreeType.AITypes type))
                         {
                             if (type != AITreeType.AITypes.Escort)
                             {
+                                __instance.SetBehaviorType(AITreeType.AITypes.Escort);
                                 AITreeType AISetting = (AITreeType)currentTreeActual.GetValue(__instance);
 
                                 AISetting.m_TypeName = AITreeType.AITypes.Escort.ToString();
 
                                 currentTreeActual.SetValue(__instance, AISetting);
-                                tAI.JustUnanchored = false;
                             }
-                            else
-                                tAI.JustUnanchored = false;
                         }
                         else
                         {
@@ -275,12 +300,13 @@ namespace TAC_AI
                             AISetting.m_TypeName = AITreeType.AITypes.Escort.ToString();
 
                             currentTreeActual.SetValue(__instance, AISetting);
-                            tAI.JustUnanchored = false;
                         }
+                        */
                     }
                 }
             }
         }
+
         internal static class ObjectSpawnerPatches
         {
             internal static Type target = typeof(ObjectSpawner);
@@ -292,7 +318,17 @@ namespace TAC_AI
                 {
                     if (objectSpawnParams is ManSpawn.TechSpawnParams TSP)
                     {
-                        SpecialAISpawner.OverrideSpawning(TSP, freeSpaceParams.m_CenterPos);
+                        try
+                        {
+                            DebugTAC_AI.Log("Spawning ");
+                            SpecialAISpawner.OverrideSpawning(TSP, freeSpaceParams.m_CenterPos);
+                            objectSpawnParams = TSP;
+                        }
+                        catch (Exception e)
+                        {
+                            DebugTAC_AI.FatalError("A serious crash occurred whilist Advanced AI was spawning a Tech!");
+                            throw e;
+                        }
                     }
                 }
             }

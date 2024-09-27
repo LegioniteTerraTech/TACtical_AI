@@ -21,6 +21,7 @@ namespace TAC_AI.Templates
         Prefabs,
         Local,
         DebugLog,
+        RawTechsFolders,
     }
     internal class DebugRawTechSpawner : MonoBehaviour
     {
@@ -53,12 +54,12 @@ namespace TAC_AI.Templates
         private static Vector3 PlayerLoc = Vector3.zero;
         private static Vector3 PlayerFow = Vector3.forward;
         private static bool UIIsCurrentlyOpen => GUIWindow.activeSelf;
-        internal static bool CanCommandOtherTeams => DevCheatCommandEnemies && CanOpenDebugSpawnMenu;
+        internal static bool CanCommandOtherTeams => AllowPlayerCommandEnemies && CanOpenDebugSpawnMenu;
         private static bool toggleDebugLock = false;
         private static bool InstantLoad = false;
-        internal static bool DevCheatNoAttackPlayer = false;
-        internal static bool DevCheatPlayerEnemyBaseTeam = false;
-        internal static bool DevCheatCommandEnemies = false;
+        internal static bool AINoAttackPlayer = false;
+        internal static bool AllowPlayerBuildEnemies = false;
+        internal static bool AllowPlayerCommandEnemies = false;
         private static bool ShowLocal = true;
 
         private static GameObject GUIWindow;
@@ -88,19 +89,14 @@ namespace TAC_AI.Templates
         public static void ShouldBeActive()
         {
             CanOpenDebugSpawnMenu = CheckValidMode();
-        }
-
-
-        public static bool IsOverMenu()
-        {
-            if (UIIsCurrentlyOpen && KickStart.CanUseMenu)
+            if (!CanOpenDebugSpawnMenu)
             {
-                Vector3 Mous = Input.mousePosition;
-                Mous.y = Display.main.renderingHeight - Mous.y;
-                return HotWindow.Contains(Mous);
+                AINoAttackPlayer = false;
+                AllowPlayerBuildEnemies = false;
+                AllowPlayerCommandEnemies = false;
             }
-            return false;
         }
+
 
         internal class GUIDisplayTechLoader : MonoBehaviour
         {
@@ -117,15 +113,19 @@ namespace TAC_AI.Templates
                     {
                         case DebugMenus.Prefabs:
                             HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPreset, 
-                                "DEBUG Prefab Spawns", CloseCallback);
+                                "RawTech Prefab Spawns", CloseCallback);
                             break;
                         case DebugMenus.Local:
-                            HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer, 
-                                "DEBUG Local Spawns", CloseCallback);
+                            HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerPlayer,
+                                "RawTech Local Spawns", CloseCallback);
+                            break;
+                        case DebugMenus.RawTechsFolders:
+                            HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerFolderSelect,
+                                "RawTech Folders", CloseCallback);
                             break;
                         default:
                             HotWindow = AltUI.Window(RawTechSpawnerID, HotWindow, GUIHandlerDebug, 
-                                "DEBUG Mod Info", CloseCallback);
+                                "Advanced AI Mod Info", CloseCallback);
                             break;
                     }
                 }
@@ -183,7 +183,7 @@ namespace TAC_AI.Templates
             AIEPathMapper.GUIManaged.GUIGetTotalManaged();
             GUILayout.EndVertical();
             GUILayout.BeginVertical();
-            ManPlayerRTS.GUIGetTotalManaged();
+            ManWorldRTS.GUIGetTotalManaged();
             ManEnemyWorld.GUIManaged.GUIGetTotalManaged();
             ManBaseTeams.GUIManaged.GUIGetTotalManaged();
             ManEnemySiege.GUIGetTotalManaged();
@@ -196,11 +196,11 @@ namespace TAC_AI.Templates
         {
             ResetMenuPlacer();
 
-            List<RawTechTemplate> listTemp;
+            List<RawTech> listTemp;
             if (ShowLocal)
-                listTemp = TempManager.ExternalEnemyTechsLocal;
+                listTemp = ModTechsDatabase.ExtPopTechsLocal;
             else
-                listTemp = TempManager.ExternalEnemyTechsMods;
+                listTemp = ModTechsDatabase.ExtPopTechsMods;
 
             scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width -20, HotWindow.height - 64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
@@ -216,13 +216,13 @@ namespace TAC_AI.Templates
                 {
                     if (ShowLocal)
                     {
-                        Organize(ref TempManager.ExternalEnemyTechsLocal);
-                        listTemp = TempManager.ExternalEnemyTechsLocal;
+                        Organize(ref ModTechsDatabase.ExtPopTechsLocal);
+                        listTemp = ModTechsDatabase.ExtPopTechsLocal;
                     }
                     else
                     {
-                        Organize(ref TempManager.ExternalEnemyTechsMods);
-                        listTemp = TempManager.ExternalEnemyTechsMods;
+                        Organize(ref ModTechsDatabase.ExtPopTechsMods);
+                        listTemp = ModTechsDatabase.ExtPopTechsMods;
                     }
                 }
                 catch { }
@@ -281,11 +281,11 @@ namespace TAC_AI.Templates
                     catch { }
                 }
                 StepMenuPlacer();
-                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * 2, 30), redStart + "Bundle Active Player Techs for Mod</b></color>"))
+                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle Player Techs</b></color>"))
                 {
                     try
                     {
-                        List<RawTechTemplate> temps = new List<RawTechTemplate>();
+                        List<RawTech> temps = new List<RawTech>();
                         HashSet<string> names = new HashSet<string>();
                         foreach (var item in ManTechs.inst.IteratePlayerTechs())
                         {
@@ -294,7 +294,7 @@ namespace TAC_AI.Templates
                                 names.Add(item.name);
                                 var TD = new TechData();
                                 TD.SaveTech(item, false, false);
-                                temps.Add(new RawTechTemplate(TD));
+                                temps.Add(new RawTech(TD));
                             }
                         }
                         OrganizeDeploy(ref temps);
@@ -307,7 +307,23 @@ namespace TAC_AI.Templates
                     }
                     catch { }
                 }
-                HoriPosOff += ButtonWidth;
+                if (Event.current.type == EventType.Repaint)
+                {
+                    var lastWindow = GUILayoutUtility.GetLastRect();
+                    if (lastWindow.Contains(Event.current.mousePosition))
+                    {
+                       AltUI.TooltipWorld("ALL active player Techs in the world for your Mod.  This might be laggy!", false);
+                    }
+                }
+                StepMenuPlacer();
+                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle Folder</b></color>"))
+                {
+                    InvokeHelper.Invoke(() =>
+                    {
+                        menu = DebugMenus.RawTechsFolders;
+                        UpdateFolders();
+                    }, 0);
+                }
                 StepMenuPlacer();
                 if (ActiveGameInterop.inst && ActiveGameInterop.IsReady && 
                     GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * 2, 30), redStart + "Push To Editor</b></color>"))
@@ -331,6 +347,18 @@ namespace TAC_AI.Templates
             StepMenuPlacer();
 
 #if DEBUG
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Remove Present</b></color>"))
+            {
+                foreach (var item in CommunityStorage.CommunityStored)
+                    listTemp.Remove(item.Value);
+                foreach (var item in TempStorage.techBasesPrefab)
+                    listTemp.Remove(item.Value);
+                ManHUD.inst.InitialiseHudElement(ManHUD.HUDElementType.TechLoader);
+                ManHUD.inst.ShowHudElement(ManHUD.HUDElementType.TechLoader);
+                InvokeHelper.InvokeSingle(ClearDupeTechs, 1);
+            }
+            StepMenuPlacer();
+
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "LOCAL TO COM</b></color>"))
             {
                 try
@@ -347,27 +375,32 @@ namespace TAC_AI.Templates
                     toWrite.Add("-----------------------------------------------------------");
                     toWrite.Add("");
 
-                    List<string> basetypeNames = new List<string>();
+                    HashSet<string> basetypeNames = new HashSet<string>();
+                    List<string> basetypeNamesOrdered = new List<string>();
                     StringBuilder SB = new StringBuilder();
-                    foreach (RawTechTemplate BT in listTemp)
+                    foreach (RawTech RT in listTemp.OrderBy(x => x.techName))
                     {
+                        RawTechTemplate BT = RT.ToTemplate();
                         string nameBaseType = BT.techName.Replace(" ", "");
-                        basetypeNames.Add(nameBaseType);
-                        toWrite.Add("{ SpawnBaseTypes." + nameBaseType + ", new BaseTemplate {");
-                        toWrite.Add("    techName = \"" + BT.techName + "\",");
-                        toWrite.Add("    faction = FactionSubTypes." + BT.faction.ToString() + ",");
-                        toWrite.Add("    IntendedGrade = " + BT.IntendedGrade + ",");
-                        toWrite.Add("    terrain = BaseTerrain." + BT.terrain.ToString() + ",");
-                        SB.Clear();
-                        foreach (BasePurpose BP in BT.purposes)
-                            SB.Append("BasePurpose." + BP.ToString() + ", ");
-                        toWrite.Add("    purposes = new HashSet<BasePurpose>{ " + SB.ToString() + "},");
-                        SB.Clear();
-                        toWrite.Add("    deployBoltsASAP = " + BT.purposes.Contains(BasePurpose.NotStationary).ToString().ToLower() + ",");
-                        toWrite.Add("    environ = " + (BT.faction == FactionTypesExt.GT).ToString().ToLower() + ",");
-                        toWrite.Add("    startingFunds = " + BT.startingFunds + ",");
-                        toWrite.Add("    savedTech = \"" + BT.savedTech.Replace("\"", "\\\"") + "\",");
-                        toWrite.Add("} },");
+                        if (!nameBaseType.Contains('#') && basetypeNames.Add(nameBaseType))
+                        {
+                            basetypeNamesOrdered.Add(nameBaseType);
+                            toWrite.Add("{ SpawnBaseTypes." + nameBaseType + ", new BaseTemplate {");
+                            toWrite.Add("    techName = \"" + BT.techName + "\",");
+                            toWrite.Add("    faction = FactionSubTypes." + BT.faction.ToString() + ",");
+                            toWrite.Add("    IntendedGrade = " + BT.IntendedGrade + ",");
+                            toWrite.Add("    terrain = BaseTerrain." + BT.terrain.ToString() + ",");
+                            SB.Clear();
+                            foreach (BasePurpose BP in BT.purposes)
+                                SB.Append("BasePurpose." + BP.ToString() + ", ");
+                            toWrite.Add("    purposes = new HashSet<BasePurpose>{ " + SB.ToString() + "},");
+                            SB.Clear();
+                            toWrite.Add("    deployBoltsASAP = " + BT.purposes.Contains(BasePurpose.NotStationary).ToString().ToLower() + ",");
+                            toWrite.Add("    environ = " + (BT.faction == FactionTypesExt.GT).ToString().ToLower() + ",");
+                            toWrite.Add("    startingFunds = " + BT.startingFunds + ",");
+                            toWrite.Add("    savedTech = \"" + BT.savedTech.Replace("\"", "\\\"") + "\",");
+                            toWrite.Add("} },");
+                        }
                     }
                     toWrite.Add("");
                     toWrite.Add("-----------------------------------------------------------");
@@ -376,15 +409,17 @@ namespace TAC_AI.Templates
                     File.AppendAllLines(Path.Combine(export, "Techs.json"), toWrite);
                     toWrite.Clear();
 
-                    foreach (string str in basetypeNames)
+                    foreach (string str in basetypeNamesOrdered)
                     {
                         toWrite.Add(str + ",");
                     }
+                    /*
 
                     toWrite.Add("");
                     toWrite.Add("-----------------------------------------------------------");
                     toWrite.Add("---------------- <<< END EXPORTING >>> --------------------");
                     toWrite.Add("-----------------------------------------------------------");
+                    */
                     File.WriteAllText(Path.Combine(export, "ESpawnBaseTypes.json"), ""); // CLEAR
                     File.AppendAllLines(Path.Combine(export, "ESpawnBaseTypes.json"), toWrite);
 
@@ -402,6 +437,23 @@ namespace TAC_AI.Templates
                 if (VertPosOff >= MaxWindowHeight)
                     MaxExtensionY = true;
             }
+            
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "REPLACE EDIT</b></color>"))
+            {
+                string import = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
+                if (Directory.Exists(import))
+                {
+                    string importJSON = Path.Combine(import, "batchNew.json");
+                    string EndJSON = Path.Combine(import, "batchEdit.json");
+                    if (File.Exists(importJSON))
+                    {
+                        File.Copy(importJSON, EndJSON, true);
+                    }
+                    else
+                        ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - Please press LOCAL TO COM first.");
+                }
+            }
+            StepMenuPlacer();
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM PULL EXISTING</b></color>"))
             {
@@ -410,14 +462,14 @@ namespace TAC_AI.Templates
                     string export = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
                     if (!Directory.Exists(export))
                         Directory.CreateDirectory(export);
-                    Dictionary<SpawnBaseTypes, RawTechTemplate> BTs = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, RawTechTemplate>>(CommunityCluster.FetchPublicFromFile());
+                    Dictionary<SpawnBaseTypes, RawTechTemplate> BTs = JsonConvert.DeserializeObject<Dictionary<SpawnBaseTypes, RawTechTemplate>>(CommunityCluster.FetchPublicTechs());
                     CommunityCluster.Organize(ref BTs);
                     Dictionary<int, RawTechTemplate> BTsInt = BTs.ToList().ToDictionary(x => (int)x.Key, x => x.Value);
-                    File.WriteAllText(Path.Combine(export, "batchEdit.json"), JsonConvert.SerializeObject(BTsInt, Formatting.Indented, RawTechExporter.JSONDEV));
+                    File.WriteAllText(Path.Combine(export, "batchEdit.json"), JsonConvert.SerializeObject(BTsInt, Formatting.Indented));//, RawTechExporter.JSONDEV));
                 }
                 catch (Exception e) {
-                    Debug.LogError(KickStart.ModID + ": ERROR - " + e);
-                    ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - " + e); 
+                    DebugTAC_AI.Log(KickStart.ModID + ": ERROR - " + e);
+                    ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!");
                 }
             }
 
@@ -442,13 +494,17 @@ namespace TAC_AI.Templates
                         if (File.Exists(importJSON))
                         {
                             CommunityCluster.DeployUncompressed(importJSON);
-                            TempManager.ValidateAndAddAllInternalTechs(false);
+                            ModTechsDatabase.ValidateAndAddAllInternalTechs(false);
                         }
                         else
                             ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - Please pull existing first.");
                     }
                 }
-                catch(Exception e) { ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - " + e); }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": ERROR - " + e);
+                    ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!");
+                }
             }
 
             HoriPosOff += ButtonWidth;
@@ -474,13 +530,24 @@ namespace TAC_AI.Templates
                         {
                             CommunityCluster.DeployUncompressed(importJSON);
                             CommunityCluster.PushDeployedToPublicFile();
-                            TempManager.ValidateAndAddAllInternalTechs();
+                            try
+                            {
+                                ModTechsDatabase.ValidateAndAddAllInternalTechs();
+                            }
+                            catch (Exception e)
+                            {
+                                DebugTAC_AI.Log(KickStart.ModID + ": Minor Error - " + e);
+                            }
                         }
                         else
                             ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - Please pull existing first.");
                     }
                 }
-                catch (Exception e) { ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - " + e); }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": ERROR - " + e);
+                    ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!"); 
+                }
             }
 
 
@@ -500,7 +567,7 @@ namespace TAC_AI.Templates
                 try
                 {
                     List<int> exists = new List<int>();
-                    foreach (RawTechTemplate bt in TempManager.techBases.Values)
+                    foreach (RawTech bt in ModTechsDatabase.InternalPopTechs.Values)
                     {
                         exists.Add(bt.techName.GetHashCode());
                     }
@@ -508,7 +575,7 @@ namespace TAC_AI.Templates
                     int count = listTemp.Count();
                     for (int step = 0; step < count; step++)
                     {
-                        RawTechTemplate BT = listTemp[step];
+                        RawTech BT = listTemp[step];
                         if (exists.Contains(BT.techName.GetHashCode()))
                         {
                             listTemp.Remove(BT);
@@ -542,7 +609,7 @@ namespace TAC_AI.Templates
                     int count = listTemp.Count();
                     for (int step = 0; step < count; step++)
                     {
-                        RawTechTemplate BT = listTemp[step];
+                        RawTech BT = listTemp[step];
                         if (BT.IsMissingBlocks())
                         {
                             listTemp.Remove(BT);
@@ -569,9 +636,9 @@ namespace TAC_AI.Templates
                     MaxExtensionY = true;
             }
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatNoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AINoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
             {
-                DevCheatNoAttackPlayer = !DevCheatNoAttackPlayer;
+                AINoAttackPlayer = !AINoAttackPlayer;
             }
             HoriPosOff += ButtonWidth;
             
@@ -616,7 +683,7 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    RawTechTemplate temp = listTemp[step];
+                    RawTech temp = listTemp[step];
                     if (HoriPosOff >= MaxWindowWidth)
                     {
                         HoriPosOff = 0;
@@ -685,6 +752,45 @@ namespace TAC_AI.Templates
 
             GUI.DragWindow();
         }
+        private static void ClearDupeTechs()
+        {
+            if (ManSnapshots.inst.m_QueryStatus.Value != ManSnapshots.QueryStatus.Done)
+            {
+                DebugTAC_AI.Log("ClearDupeTechs() Not ready yet, waiting...");
+                InvokeHelper.InvokeSingle(ClearDupeTechs, 1);
+            }
+            else
+            {
+                DebugTAC_AI.Log("ClearDupeTechs() Ready!");
+                try
+                {
+                    int count = 0;
+                    var ListTemp2 = TempStorage.techBasesPrefab.ToList();
+                    HashSet<string> basetypeNames = new HashSet<string>();
+                    for (int i = 0; i < ManSnapshots.inst.SnapshotCollection.Count; i++)
+                    {
+                        try
+                        {
+                            Snapshot snap = ManSnapshots.inst.SnapshotCollection.ElementAt(i).m_Snapshot;
+                            string name = snap.m_Name.Value;
+                            string nameBaseType = name.Replace(" ", "");
+                            if (nameBaseType.Contains('#') || !basetypeNames.Add(nameBaseType) || 
+                                (Enum.TryParse<SpawnBaseTypes>(nameBaseType, out var type) && type <= SpawnBaseTypes.GSOQuickBuck) ||
+                                CommunityStorage.CommunityStored.Exists(x => { return x.Value.techName == name; }) ||
+                                ListTemp2.Exists(x => { return x.Value.techName == name; }))
+                            {
+                                count++;
+                                DebugTAC_AI.Log("DELETED " + name);
+                                ManSnapshots.inst.ServiceDisk.DeleteSnapshot(snap);
+                            }
+                        }
+                        catch { }
+                    }
+                    DebugTAC_AI.Log("DELETED " + count + " snaps!");
+                }
+                catch { }
+            }
+        }
         private static void GUIHandlerPreset(int ID)
         {
             ResetMenuPlacer();
@@ -705,7 +811,7 @@ namespace TAC_AI.Templates
             {
                 ShowDebugFeedBack = !ShowDebugFeedBack;
             }
-            HoriPosOff += ButtonWidth;
+            HoriPosOff += ButtonWidth; 
 
 #if !DEBUG
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AIEPathMapper.ShowPathingGIZMO ? redStart + "Hide Pathing</b></color>" : redStart + "Show Pathing</b></color>"))
@@ -717,33 +823,69 @@ namespace TAC_AI.Templates
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Priced</b></color>"))
             {
-                RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), terrainType: BaseTerrain.Any, maxPrice: KickStart.EnemySpawnPriceMatching);
+                RawTechPopParams RTF = RawTechPopParams.Default;
+                RTF.Terrain = BaseTerrain.Any;
+                RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                var temp = RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), 
+                    AIGlobals.GetRandomBaseTeam(), RTF, true);
+                if (temp == null)
+                    AIGlobals.PopupEnemyInfo("Fallback Error", WorldPosition.FromScenePosition(GetPlayerPos()));
             }
             StepMenuPlacer();
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Founder</b></color>"))
             {
-                var temp = RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), terrainType: BaseTerrain.Any, maxPrice: KickStart.EnemySpawnPriceMatching);
+                RawTechPopParams RTF = RawTechPopParams.Default;
+                RTF.Terrain = BaseTerrain.Any;
+                RTF.Purpose = BasePurpose.Harvesting;
+                RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
+                var temp = RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), 
+                    AIGlobals.GetRandomBaseTeam(), RTF, true);
+                if (temp == null)
+                    AIGlobals.PopupEnemyInfo("Fallback Error", WorldPosition.FromScenePosition(GetPlayerPos()));
 
-                RawTechLoader.TryStartBase(temp, temp.GetHelperInsured(), BasePurpose.AnyNonHQ);
+                RawTechLoader.TryStartBase(temp, temp.GetHelperInsured(), BasePurpose.HarvestingNoHQ);
             }
             StepMenuPlacer();
 #if DEBUG
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatNoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30),  redStart + "Pop to Snaps</b></color>"))
             {
-                DevCheatNoAttackPlayer = !DevCheatNoAttackPlayer;
+                CommunityCluster.SaveCommunityPoolBackToDisk();
             }
-            HoriPosOff += ButtonWidth;
+            StepMenuPlacer();
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Local to Snaps</b></color>"))
+            {
+                SaveLocalPoolBackToDisk();
+            }
+            StepMenuPlacer();
+            /*
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Purge RawTechs</b></color>"))
+            {
+                RawTechExporter.PurgeAllRawTechs();
+            }
+            StepMenuPlacer();
+            */
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), DevCheatPlayerEnemyBaseTeam ? redStart + "ENEMY Team</b></color>" : redStart + "Player Team</b></color>"))
-            {
-                DevCheatPlayerEnemyBaseTeam = !DevCheatPlayerEnemyBaseTeam;
-            }
-            HoriPosOff += ButtonWidth;
 #endif
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AINoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+            {
+                AINoAttackPlayer = !AINoAttackPlayer;
+            }
+            StepMenuPlacer();
+
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AllowPlayerBuildEnemies ? redStart + "ALL Team</b></color>" : redStart + "Player Team</b></color>"))
+            {
+                AllowPlayerBuildEnemies = !AllowPlayerBuildEnemies;
+            }
+            StepMenuPlacer();
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AllowPlayerCommandEnemies ? redStart + "ALL Command</b></color>" : redStart + "Player Command</b></color>"))
+            {
+                AllowPlayerCommandEnemies = !AllowPlayerCommandEnemies;
+            }
+            StepMenuPlacer();
             FactionSubTypes currentFaction = (FactionSubTypes)(-1);
             string disp;
-            foreach (KeyValuePair<SpawnBaseTypes, RawTechTemplate> temp in TempManager.techBases)
+            foreach (KeyValuePair<SpawnBaseTypes, RawTech> temp in ModTechsDatabase.InternalPopTechs)
             {
                 if (HoriPosOff >= MaxWindowWidth)
                 {
@@ -840,26 +982,122 @@ namespace TAC_AI.Templates
             GUI.DragWindow();
         }
 
+        static DirectoryInfo pather = new DirectoryInfo(RawTechExporter.RawTechsDirectory);
+        static string selectedFolder = null;
+        static List<KeyValuePair<string, int>> folders = new List<KeyValuePair<string, int>>();
+        private static void UpdateFolders()
+        {
+            folders.Clear();
+            foreach (var item in Directory.EnumerateDirectories(pather.ToString()))
+            {
+                folders.Add(new KeyValuePair<string, int>(Path.GetFileNameWithoutExtension(item),
+                    Directory.EnumerateFiles(item, "*.json").Count() + 
+                    Directory.EnumerateFiles(item, "*.RAWTECH").Count()));
+            }
+        }
+        private static void GUIHandlerFolderSelect(int ID)
+        {
+            scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height - 64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+
+            if (!GUILayout.Button("Exit", AltUI.ButtonRed))
+            {
+                if (pather.ToString() != RawTechExporter.RawTechsDirectory)
+                {
+                    if (GUILayout.Button("Exit Folder " + pather.Name, AltUI.ButtonRed))
+                    {
+                        pather = pather.Parent;
+                        UpdateFolders();
+                    }
+                }
+                try
+                {
+                    foreach (var item in folders)
+                    {
+                        GUILayout.BeginHorizontal();
+                        if (item.Key == "Enemies")
+                        {
+                            if (GUILayout.Button(item.Key, AltUI.ButtonRed))
+                            {
+                                pather = new DirectoryInfo(Path.Combine(pather.ToString(), item.Key));
+                                UpdateFolders();
+                            }
+                        }
+                        else if (GUILayout.Button(item.Key))
+                        {
+                            pather = new DirectoryInfo(Path.Combine(pather.ToString(), item.Key));
+                            UpdateFolders();
+                        }
+                        if (GUILayout.Button("EXPORT", GUILayout.Width(80)))
+                        {
+                            ExportAllWithin(Path.Combine(pather.ToString(), item.Key));
+                            pather = new DirectoryInfo(RawTechExporter.RawTechsDirectory);
+                            InvokeHelper.Invoke(() => { menu = DebugMenus.DebugLog; }, 0);
+                        }
+                        GUILayout.Label(item.Value.ToString(), GUILayout.Width(60));
+                        GUILayout.EndHorizontal();
+                    }
+                }
+                catch (ExitGUIException e)
+                {
+                    throw e;
+                }
+                catch { }
+            }
+            else
+            {
+                InvokeHelper.Invoke(() => { menu = DebugMenus.DebugLog; }, 0);
+            }
+            GUI.EndScrollView();
+            GUI.DragWindow();
+        }
+        private static void ExportAllWithin(string path)
+        {
+            try
+            {
+                List<RawTech> temps = new List<RawTech>();
+                HashSet<string> names = new HashSet<string>();
+                OrganizeDeploy(ref temps);
+
+                foreach (var item in Directory.EnumerateFiles(path))
+                {
+                    string name = Path.GetFileNameWithoutExtension(item);
+                    var inst = ModTechsDatabase.ExtPopTechsLocal.Find(x => x.techName == name);
+                    if (inst != null)
+                        temps.Add(inst);
+                }
+                if (temps.Count > 0)
+                {
+                    string export = Path.Combine(path, "Bundled");
+                    Directory.CreateDirectory(export);
+
+                    RawTechExporter.MakeExternalRawTechListFile(Path.Combine(export, "RawTechs.RTList"), temps);
+                }
+            }
+            catch { }
+        }
 
         public static void RemoveTechLocal(int index)
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.CheckBox);
 
             if (ShowLocal)
-                TempManager.ExternalEnemyTechsLocal.RemoveAt(index);
+                ModTechsDatabase.ExtPopTechsLocal.RemoveAt(index);
             else
-               TempManager.ExternalEnemyTechsMods.RemoveAt(index);
+               ModTechsDatabase.ExtPopTechsMods.RemoveAt(index);
         }
-        public static void SpawnTechLocal(List<RawTechTemplate> temps, int index)
+        public static void SpawnTechLocal(List<RawTech> temps, int index)
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
 
-            RawTechTemplate val = temps[index];
+            RawTech val = temps[index];
             Tank tank = null;
 
+            RawTechPopParams RTF;
             if (val.purposes.Contains(BasePurpose.NotStationary))
             {
-                tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, pop: true);
+                RTF = RawTechPopParams.Default;
+                RTF.IsPopulation = true;
+                tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, RTF);
             }
             else
             {
@@ -939,12 +1177,16 @@ namespace TAC_AI.Templates
         {
             Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.Enter);
 
-            if (TempManager.techBases.TryGetValue(type, out RawTechTemplate val))
+            if (ModTechsDatabase.InternalPopTechs.TryGetValue(type, out RawTech val))
             {
                 Tank tank = null;
                 if (val.purposes.Contains(BasePurpose.NotStationary))
                 {
-                    tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, pop: true);
+                    RawTechPopParams RTF = RawTechPopParams.Default;
+                    RTF.IsPopulation = true;
+                    RTF.SpawnCharged = true;
+                    tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), 
+                        AIGlobals.GetRandomBaseTeam(), RawTechLoader.GetBaseTemplate(type), RTF);
                 }
                 else
                 {
@@ -1035,7 +1277,8 @@ namespace TAC_AI.Templates
             try
             {
                 foreach (var item in Singleton.Manager<ManTechs>.inst.IterateTechsWhere(x => x.visible.isActive &&
-                (AIGlobals.IsBaseTeam(x.Team) || x.IsPopulation) && x.name != "DPS Target"))
+                (AIGlobals.IsBaseTeamDynamic(x.Team) || x.IsPopulation || x.Team == ManSpawn.FirstEnemyTeam || 
+                x.Team == ManSpawn.NewEnemyTeam) && x.Team != ManPlayer.inst.PlayerTeam && x.name != "DPS Target"))
                 {
                     techCache.Add(item);
                 }
@@ -1074,7 +1317,7 @@ namespace TAC_AI.Templates
                             continue; // TECHS ARE LOADING AND IF WE REMOVE IT NOW IT WILL IGNORE TEAMS
                         }
 
-                        if (AIGlobals.IsBaseTeam(remove.TeamID) && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
+                        if (AIGlobals.IsBaseTeamDynamic(remove.TeamID) && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
                         {
                             DebugTAC_AI.Log(KickStart.ModID + ": RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | "
                                 + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | "
@@ -1115,7 +1358,7 @@ namespace TAC_AI.Templates
         {
             if (!UIIsCurrentlyOpen)
             {
-                RawTechExporter.ReloadExternal();
+                RawTechExporter.ReloadTechsNow();
                 DebugTAC_AI.Log(KickStart.ModID + ": Opened Raw Techs Debug menu!");
                 GUIWindow.SetActive(true);
             }
@@ -1199,95 +1442,92 @@ namespace TAC_AI.Templates
             }
         }
 
+        private static bool DoCullInvalidVisibles = false;
         internal static void DestroyAllInvalidVisibles()
         {
-            foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
+            if (DoCullInvalidVisibles)
             {
-                if (item == null)
-                    continue;
-                if (item.ObjectType == ObjectTypes.Vehicle)
+                foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
                 {
-                    if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
+                    if (item == null)
+                        continue;
+                    if (item.ObjectType == ObjectTypes.Vehicle)
                     {
-                        if (item.wasDestroyed || item.visible == null)
+                        if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
                         {
-                            if (AIGlobals.IsBaseTeam(item.TeamID))
+                            if (item.wasDestroyed || item.visible == null)
                             {
-                                DebugTAC_AI.Info("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                                ManVisible.inst.StopTrackingVisible(item.ID);
+                                if (AIGlobals.IsBaseTeam(item.TeamID))
+                                {
+                                    DebugTAC_AI.Info("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                    ManVisible.inst.StopTrackingVisible(item.ID);
+                                }
+                                else
+                                    DebugTAC_AI.Info("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                             }
                             else
-                                DebugTAC_AI.Info("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                DebugTAC_AI.Info("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                         }
                         else
-                            DebugTAC_AI.Info("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                            DebugTAC_AI.Info("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                     }
-                    else
-                        DebugTAC_AI.Info("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                 }
             }
         }
 
+        internal static void SaveLocalPoolBackToDisk()
+        {
+            SnapshotCollectionDisk SCD = null;
+            try
+            {
+                SCD = ManSnapshots.inst?.ServiceDisk?.GetSnapshotCollectionDisk();
+            }
+            catch { }
+            if (SCD == null)
+                throw new NullReferenceException("ManSnapshots.inst.ServiceDisk failed to load");
+            if (ModTechsDatabase.ExtPopTechsLocal == null)
+                throw new NullReferenceException("ModTechsDatabase.ExternalEnemyTechsLocal failed to load");
+            foreach (var item in ModTechsDatabase.ExtPopTechsLocal)
+            {
+                try
+                {
+                    if (item == null)
+                        continue;
+                    var snap = SCD.FindSnapshot(item.techName);
+                    if (snap == null)
+                        techsToSaveSnapshots.Enqueue(item);
+                }
+                catch { }
+            }
+            DoSaveLocalTechBackToDisk();
+        }
+        private static Queue<RawTech> techsToSaveSnapshots = new Queue<RawTech>();
+        private static void DoSaveLocalTechBackToDisk(bool success = true)
+        {
+            if (!techsToSaveSnapshots.Any() || !success)
+                return;
+            RawTech RT = techsToSaveSnapshots.Dequeue();
+            var techD = RawTechLoader.GetUnloadedTech(RT, ManPlayer.inst.PlayerTeam, true, out _);
+            ManScreenshot.inst.RenderTechImage(techD, ManSnapshots.inst.GetDiskSnapshotImageSize(),
+                true, (TechData techData, Texture2D techImage) =>
+                {
+                    Singleton.Manager<ManSnapshots>.inst.SaveSnapshotRender(techD, techImage,
+                        RT.techName, false, DoSaveLocalTechBackToDisk);
+                });
+        }
+
+
+
+
 
         // Utilities
 #if DEBUG
+        /*
         internal static bool ShowDebugFeedBack = true;
+        //*/ internal static bool ShowDebugFeedBack = false;
 #else
         internal static bool ShowDebugFeedBack = false;
 #endif
-        /// <summary>
-        /// endPosGlobal is GLOBAL ROTATION in relation to local tech.
-        /// </summary>
-        /// <param name="obj"></param>
-        /// <param name="num"></param>
-        /// <param name="endPosGlobal"></param>
-        /// <param name="color"></param>
-        internal static void DrawDirIndicator(GameObject obj, int num, Vector3 endPosGlobalSpaceOffset, Color color)
-        {
-            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
-                return;
-            DebugExtUtilities.DrawDirIndicator(obj, num, endPosGlobalSpaceOffset, color);
-        }
-        public static void DrawDirIndicator(Vector3 startPos, Vector3 endPos, Color color, float decayTime = 0)
-        {
-            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
-                return;
-            DebugExtUtilities.DrawDirIndicator(startPos, endPos, color, decayTime);
-            //DebugTAC_AI.Log("SPAWN DrawDirIndicator(World)");
-        }
-        private const int circleEdgeCount = 32;
-        public static void DrawDirIndicatorCircle(Vector3 center, Vector3 normal, Vector3 flat, float radius, Color color, float decayTime = 0)
-        {
-            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
-                return;
-            DebugExtUtilities.DrawDirIndicatorCircle(center, normal, flat, radius, color, decayTime);
-            //DebugTAC_AI.Log("SPAWN DrawDirIndicator(World)");
-        }
-        public static void DrawDirIndicatorSphere(Vector3 center, float radius, Color color, float decayTime = 0)
-        {
-            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
-                return;
-            DebugExtUtilities.DrawDirIndicatorSphere(center, radius, color, decayTime);
-        }
-        public static void DrawDirIndicatorRecPriz(Vector3 center, Vector3 size, Color color, float decayTime = 0)
-        {
-            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
-                return;
-            DebugExtUtilities.DrawDirIndicatorRecPriz(center, size, color, decayTime);
-        }
-        public static void DrawDirIndicatorRecPriz(Vector3 center, Quaternion rotation, Vector3 size, Color color, float decayTime = 0)
-        {
-            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
-                return;
-            DebugExtUtilities.DrawDirIndicatorRecPriz(center, rotation, size, color, decayTime);
-        }
-        public static void DrawDirIndicatorRecPrizExt(Vector3 center, Vector3 extents, Color color, float decayTime = 0)
-        {
-            if (!ShowDebugFeedBack || !CanOpenDebugSpawnMenu)
-                return;
-            DebugExtUtilities.DrawDirIndicatorRecPrizExt(center, extents, color, decayTime);
-        }
-
         private static bool CheckValidMode()
         {
 #if DEBUG
@@ -1325,19 +1565,31 @@ namespace TAC_AI.Templates
             }
         }
 
-        internal static void Organize(ref List<RawTechTemplate> list)
+        internal static void Organize(ref List<RawTech> list)
         {
-            list = list.OrderBy(x => x.terrain)
-                .ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary))
-                .ThenBy(x => x.purposes.Contains(BasePurpose.NANI))
-                .ThenBy(x => x.techName).ToList();
+            try
+            {
+                var listTemp = list.OrderBy(x => x.terrain)
+                    .ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary))
+                    .ThenBy(x => x.purposes.Contains(BasePurpose.NANI))
+                    .ThenBy(x => x.techName.NullOrEmpty() ? "<NULL>" : x.techName).ToList();
+                if (listTemp != null)
+                    list = listTemp;
+            }
+            catch { }
         }
-        internal static void OrganizeDeploy(ref List<RawTechTemplate> list)
+        internal static void OrganizeDeploy(ref List<RawTech> list)
         {
-            list = list.OrderBy(x => x.faction).ThenBy(x => x.terrain)
+            try
+            {
+                var listTemp = list.OrderBy(x => x.faction).ThenBy(x => x.terrain)
                 .ThenBy(x => x.purposes.Contains(BasePurpose.NotStationary))
                 .ThenBy(x => x.purposes.Contains(BasePurpose.NANI))
-                .ThenBy(x => x.techName).ToList();
+                    .ThenBy(x => x.techName.NullOrEmpty() ? "<NULL>" : x.techName).ToList();
+                if (listTemp != null)
+                    list = listTemp;
+            }
+            catch { }
         }
     }
 }

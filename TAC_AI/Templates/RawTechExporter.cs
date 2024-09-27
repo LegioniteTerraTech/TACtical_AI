@@ -100,8 +100,7 @@ namespace TAC_AI.Templates
         {
             ActiveGameInterop.OnRecieve.Add("RetreiveTechPop", (string x) =>
             {
-                ActiveGameInterop.TryTransmit("RetreiveTechPop", Path.Combine(RawTechsDirectory,
-                    "Bundled", "RawTechs.RTList"));
+                ActiveGameInterop.TryTransmit("RetreiveTechPop", Path.Combine(RawTechsDirectory, "RawTechs.RTList"));
             });
         }
         public static void Initiate()
@@ -230,12 +229,15 @@ namespace TAC_AI.Templates
         }
         public void Update()
         {
-            CheckKeyCombos();
+#if DEBUG
+            CheckKeyCombosDEV();
+#endif
 #if STEAM
             LateInitiate();
 #endif
+            ReloadCheck();
         }
-        public void CheckKeyCombos()
+        public void CheckKeyCombosDEV()
         {
             if (Input.GetKey(KeyCode.LeftShift) && Input.GetKey(KeyCode.LeftAlt))
             {
@@ -253,42 +255,29 @@ namespace TAC_AI.Templates
         }
         public void ReloadRawTechLoaderInsured()
         {
-            float timeDelay = Time.time;
             DebugTAC_AI.Log(KickStart.ModID + ": Rebuilding Raw Tech Loader!");
             BlockIndexer.ConstructBlockLookupList();
-            TempManager.ValidateAndAddAllExternalTechs(true);
-            timeDelay = Time.time - timeDelay;
-            DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
+            ModTechsDatabase.ValidateAndAddAllExternalTechs(true);
         }
         public void ReloadRawTechLoader()
         {
-            float timeDelay = Time.time;
             DebugTAC_AI.Log(KickStart.ModID + ": Rebuilding Raw Tech Loader!");
             BlockIndexer.ConstructBlockLookupList();
-            TempManager.ValidateAndAddAllExternalTechs(true);
-            timeDelay = Time.time - timeDelay;
-            DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
+            ModTechsDatabase.ValidateAndAddAllExternalTechs(true);
         }
-        public static void Reload()
+        public static void ReloadCheck()
         {
             if (pendingInGameReload)
             {
-                float timeDelay = Time.time;
-                DebugTAC_AI.Log(KickStart.ModID + ": Reloading All Raw Enemy Techs (Ingame)!");
-                TempManager.ValidateAndAddAllExternalTechs(true);
-                timeDelay = Time.time - timeDelay;
-                DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
-                pendingInGameReload = false;
+                DebugTAC_AI.Info(KickStart.ModID + ": Reloading All Raw Enemy Techs (Ingame)!");
+                ReloadTechsNow();
             }
         }
-        public static void ReloadExternal()
+        public static void ReloadTechsNow()
         {
-            float timeDelay = Time.time;
             DebugTAC_AI.Log(KickStart.ModID + ": Reloading All Raw Enemy Techs!");
-            TempManager.ValidateAndAddAllExternalTechs();
-            timeDelay = Time.time - timeDelay;
-            DebugTAC_AI.Log(KickStart.ModID + ": Done in " + timeDelay + " seconds");
             pendingInGameReload = false;
+            ModTechsDatabase.ValidateAndAddAllExternalTechs();
         }
         
 
@@ -304,7 +293,8 @@ namespace TAC_AI.Templates
         }
         private static void GUIHandler(int ID)
         {
-            bool snapsAvail = SnapsAvailable();
+            //bool snapsAvail = SnapsAvailable();
+            bool snapsAvail = true;
             GUI.tooltip = "Make your own techs spawn as enemies!";
             //"The techs are saved to your Raw Techs directory";
             /*
@@ -357,7 +347,7 @@ namespace TAC_AI.Templates
             }
         }
 
-
+        private static FileSystemWatcher watchDog;
         // Setup
         public static void SetupWorkingDirectories()
         {
@@ -367,12 +357,24 @@ namespace TAC_AI.Templates
             di = di.Parent; // out of the DLL folder
             di = di.Parent; // out of QMods
             BaseDirectory = di.ToString();
-            RawTechsDirectory = Path.Combine(di.ToString(), "Raw Techs");
 #if DEBUG
-            DebugTAC_AI.Log(KickStart.ModID + ": DLL folder is at: " + DLLDirectory);
-            DebugTAC_AI.Log(KickStart.ModID + ": Raw Techs is at: " + RawTechsDirectory);
+            DebugTAC_AI.Info(KickStart.ModID + ": DLL folder is at: " + DLLDirectory);
+            DebugTAC_AI.Info(KickStart.ModID + ": Raw Techs is at: " + RawTechsDirectory);
+            RawTechsDirectory = Path.Combine(di.ToString(), "Raw Techs Community");
+#else
+            RawTechsDirectory = Path.Combine(di.ToString(), "Raw Techs");
 #endif
             ValidateEnemyFolder();
+            watchDog = new FileSystemWatcher(RawTechsDirectory);
+            watchDog.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.DirectoryName;
+            watchDog.EnableRaisingEvents = true;
+            watchDog.Created += RefreshAll;
+            watchDog.Deleted += RefreshAll;
+            watchDog.Changed += RefreshAll;
+        }
+        public static void RefreshAll(object sender, FileSystemEventArgs e)
+        {
+            pendingInGameReload = true;
         }
         public static void SetupWorkingDirectoriesSteam()
         {
@@ -383,9 +385,20 @@ namespace TAC_AI.Templates
             DirectoryInfo Navi = new DirectoryInfo(Application.dataPath);
             Navi = Navi.Parent; // out of the GAME folder
             BaseDirectory = Navi.ToString();
+#if DEBUG
+            DebugTAC_AI.Info(KickStart.ModID + ": DLL folder is at: " + DLLDirectory);
+            DebugTAC_AI.Info(KickStart.ModID + ": Raw Techs is at: " + RawTechsDirectory);
+            RawTechsDirectory = Path.Combine(Navi.ToString(), "Raw Techs Community");
+#else
             RawTechsDirectory = Path.Combine(Navi.ToString(), "Raw Techs");
-
+#endif
             ValidateEnemyFolder();
+            watchDog = new FileSystemWatcher(RawTechsDirectory);
+            watchDog.NotifyFilter = NotifyFilters.CreationTime | NotifyFilters.DirectoryName;
+            watchDog.EnableRaisingEvents = true;
+            watchDog.Created += RefreshAll;
+            watchDog.Deleted += RefreshAll;
+            watchDog.Changed += RefreshAll;
         }
 
 
@@ -397,12 +410,12 @@ namespace TAC_AI.Templates
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
             DebugTAC_AI.LogDevOnly(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
+            string fileName = "RawTechs.RTList";
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
                 try
                 {
                     string GO;
-                    string fileName = "RawTechs.RTList";
                     GO = Path.Combine(directoryLoc, fileName);
                     if (File.Exists(GO))
                     {
@@ -419,9 +432,14 @@ namespace TAC_AI.Templates
 #endif
         }
 
-        internal static void MakeExternalRawTechListFile(string fileNameAndPath, List<RawTechTemplate> content)
+        internal static void MakeExternalRawTechListFile(string fileNameAndPath, List<RawTech> content)
         {
-            string toWrite = JsonConvert.SerializeObject(content, Formatting.None);
+            List<RawTechTemplate> templates = new List<RawTechTemplate>();
+            foreach (var item in content)
+            {
+                templates.Add(item.ToTemplate());
+            }
+            string toWrite = JsonConvert.SerializeObject(templates, Formatting.None);
             SaveExternalRawTechListFileToDisk(fileNameAndPath, toWrite);
         }
         internal static void SaveExternalRawTechListFileToDisk(string fileNameAndPath, string toWrite)
@@ -439,31 +457,25 @@ namespace TAC_AI.Templates
             }
         }
 
-        internal static string LoadCommunityDeployedTechs(string location)
+        internal static string LoadCommunityDeployedTechs(Stream streamData)
         {
             string toAdd = "";
             //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
             try
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - looked in " + GO);
-                if (File.Exists(location))
+                using (GZipStream GZS = new GZipStream(streamData, CompressionMode.Decompress))
                 {
-                    using (FileStream FS = File.Open(location, FileMode.Open, FileAccess.Read))
+                    using (StreamReader SR = new StreamReader(GZS))
                     {
-                        using (GZipStream GZS = new GZipStream(FS, CompressionMode.Decompress))
-                        {
-                            using (StreamReader SR = new StreamReader(GZS))
-                            {
-                                toAdd = SR.ReadToEnd();
-                            }
-                        }
+                        toAdd = SR.ReadToEnd();
                     }
                 }
             }
             catch (Exception e)
             { DebugTAC_AI.Log(KickStart.ModID + ": LoadCommunityDeployedTechs - ERROR " + e);}
             if (!toAdd.NullOrEmpty())
-                DebugTAC_AI.Log(KickStart.ModID + ": LoadCommunityDeployedTechs - Added Techs");
+                DebugTAC_AI.Log(KickStart.ModID + ": LoadCommunityDeployedTechs - Got Techs");
             else
                 DebugTAC_AI.Log(KickStart.ModID + ": LoadCommunityDeployedTechs - No bundled techs found");
             return toAdd;
@@ -476,11 +488,12 @@ namespace TAC_AI.Templates
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
             //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
+
+            string fileName = "RawTechs.RTList"; 
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
                 try
                 {
-                    string fileName = "RawTechs.RTList";
                     string GO = Path.Combine(directoryLoc, fileName);
                     //DebugTAC_AI.Log(KickStart.ModID + ": RegisterExternalCorpTechs - looked in " + GO);
                     if (File.Exists(GO))
@@ -719,21 +732,21 @@ namespace TAC_AI.Templates
         }
         public static void SaveEnemyTechsToRawBLK()
         {
-            List<SnapshotLiveData> Snaps = ManSnapshots.inst.m_Snapshots.ToList();
+            List<SnapshotDisk> Snaps = ManSnapshots.inst.ServiceDisk.GetSnapshotCollectionDisk().Snapshots.ToList();// ManSnapshots.inst.m_Snapshots.ToList();
             if (Snaps.Count == 0)
                 return;
-            foreach (SnapshotLiveData snap in Snaps)
+            foreach (SnapshotDisk snap in Snaps)
             {
                 try
                 {
-                    SaveEnemyTechToRawJSONBLK(snap.m_Snapshot.techData);
+                    SaveEnemyTechToRawJSONBLK(snap.techData);
                 }
                 catch
                 {
                     DebugTAC_AI.Log(KickStart.ModID + ": SaveEnemyTechsToRawBLK - Export Failure reported!");
                     try
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": Error tech name " + snap.m_Snapshot.techData.Name);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Error tech name " + snap.techData.Name);
                     }
                     catch
                     {
@@ -741,7 +754,7 @@ namespace TAC_AI.Templates
                     }
                 }
             }
-            ReloadExternal();
+            ReloadTechsNow();
         }
 
 
@@ -777,7 +790,7 @@ namespace TAC_AI.Templates
             };
             string builderJSON = JsonUtility.ToJson(builder, true);
             SaveEnemyTechToFile(tank.name, builderJSON);
-            ReloadExternal();
+            ReloadTechsNow();
         }
         public static void SaveEnemyTechToRawJSONBLK(TechData tank)
         {
@@ -810,6 +823,33 @@ namespace TAC_AI.Templates
             return JsonUtility.FromJson<RawTechTemplateFast>(loaded);
         }
 
+        public static void PurgeAllRawTechs()
+        {
+            ValidateEnemyFolder();
+            List<string> Dirs = GetALLDirectoriesInFolder(Path.Combine(RawTechsDirectory, "Enemies"));
+            List<string> names;
+            DebugTAC_AI.Info(KickStart.ModID + ": PurgeAllRawTechs - Total directories found in Enemies Folder: " + Dirs.Count());
+            foreach (string Dir in Dirs)
+            {
+                names = GetTechNameListDir(Dir);
+                DebugTAC_AI.Info(KickStart.ModID + ": PurgeAllRawTechs - Total RAW Techs found in " + GetNameDirectory(Dir) + ": " + names.Count());
+                foreach (string name in names)
+                {
+                    try
+                    {
+                        string nameActual = Path.GetFileName(name);
+                        if (nameActual.EndsWith(".json") || nameActual.EndsWith(".RAWTECH"))
+                        {
+                            File.Delete(Dir);
+                            DebugTAC_AI.Log("Deleted RawTech file at - " + Dir);
+                        }
+                    }
+                    catch { }
+                }
+            }
+            ModTechsDatabase.ExtPopTechsMods.Clear();
+            pendingInGameReload = true;
+        }
 
 
         // Loaders

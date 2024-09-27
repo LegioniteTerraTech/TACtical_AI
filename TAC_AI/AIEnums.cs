@@ -36,26 +36,25 @@ namespace TAC_AI.AI
         }
 
 
-        public void STOP(TankAIHelper thisInst)
+        public void STOP(TankAIHelper helper)
         {
             DriveDest = EDriveDest.None;
             DriveDir = EDriveFacing.Stop;
-            thisInst.ForceSetDrive = false;
-            thisInst.DriveVar = 0;
+            helper.DriveVar = 0;
         }
-        public void Forwards(TankAIHelper thisInst)
+        public void Forwards(TankAIHelper helper)
         {
             DriveDest = EDriveDest.Override;
             DriveDir = EDriveFacing.Forwards;
-            thisInst.ForceSetDrive = true;
-            thisInst.DriveVar = 1;
+            helper.ThrottleState = AIThrottleState.ForceSpeed;
+            helper.DriveVar = 1;
         }
-        public void Reverse(TankAIHelper thisInst)
+        public void Reverse(TankAIHelper helper)
         {
             DriveDest = EDriveDest.Override;
             DriveDir = EDriveFacing.Forwards;
-            thisInst.ForceSetDrive = true;
-            thisInst.DriveVar = -1;
+            helper.ThrottleState = AIThrottleState.ForceSpeed;
+            helper.DriveVar = -1;
         }
 
 
@@ -122,6 +121,7 @@ namespace TAC_AI.AI
                 _DriveDir = value;
             }
         }
+        /// <summary>The final destination, not the point we are driving to!</summary>
         public Vector3 lastDestination
         {
             get => lastDest;
@@ -310,7 +310,6 @@ namespace TAC_AI.AI
         IgnoreAll,
         OnlyImmedeate,
         Path,
-        PathInv,
         PrecisePathIgnoreScenery,
         PrecisePath,
     }

@@ -44,6 +44,7 @@ namespace TAC_AI.AI
 
         public Vector3 PathPoint => SceneStayPos.ScenePosition.SetY(HoldHeight);
         public Vector2 IdleFacingDirect = Vector2.up;
+        public float GetDrive => _AI.GetDrive;
 
         public void Initiate(Tank tank, TankAIHelper helper, EnemyMind mind = null)
         {
@@ -65,9 +66,6 @@ namespace TAC_AI.AI
             AICore = new StaticAICore();
             AICore.Initiate(tank, this);
 
-            helper.TryAnchor();
-            if (!tank.IsAnchored)
-                helper.TryReallyAnchor(true);
 
             DebugTAC_AI.LogAISetup(KickStart.ModID + ": Added static (anchored) AI for " + Tank.name);
         }
@@ -84,6 +82,7 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
+            Helper.TryInsureAnchor();
 
             if (Helper.AIAlign == AIAlignment.Player)// Allied
             {
@@ -109,6 +108,7 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
+            Helper.TryInsureAnchor();
 
             if (Helper.AIAlign == AIAlignment.Player)// Allied
             {
@@ -126,10 +126,9 @@ namespace TAC_AI.AI
             }
         }
 
-        public void DriveMaintainer(TankControl thisControl, ref EControlCoreSet core)
+        public void DriveMaintainer(ref EControlCoreSet core)
         {
-            thisControl.m_Movement.m_USE_AVOIDANCE = false;
-            AICore.DriveMaintainer(thisControl, Helper, Tank, ref core);
+            AICore.DriveMaintainer(Helper, Tank, ref core);
         }
 
         public void OnMoveWorldOrigin(IntVector3 move)

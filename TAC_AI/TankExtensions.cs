@@ -24,19 +24,19 @@ namespace TAC_AI
         }
         public static bool CommandTarget(this Tank tank, Tank grabbedTech)
         {
-            var help = tank.GetHelperInsured();
+            var helper = tank.GetHelperInsured();
             //DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectTargetTank.");
             bool success = false;
             if ((bool)grabbedTech)
             {
                 if (grabbedTech.IsEnemy(tank.Team))
                 {   // Attack Move
-                    help.RTSDestination = TankAIHelper.RTSDisabled;
-                    help.SetRTSState(true);
+                    helper.RTSDestination = TankAIHelper.RTSDisabled;
+                    helper.SetRTSState(true);
                     if (ManNetwork.IsNetworked)
-                        NetworkHandler.TryBroadcastRTSAttack(help.tank.netTech.netId.Value, grabbedTech.netTech.netId.Value);
-                    help.lastEnemy = grabbedTech.visible;
-                    ManPlayerRTS.inst.TechMovementQueue.Remove(help);
+                        NetworkHandler.TryBroadcastRTSAttack(helper.tank.netTech.netId.Value, grabbedTech.netTech.netId.Value);
+                    helper.lastEnemy = grabbedTech.visible;
+                    ManWorldRTS.inst.TechMovementQueue.Remove(helper);
                     success = true;
                 }
                 else if (grabbedTech.IsFriendly(tank.Team))
@@ -45,35 +45,35 @@ namespace TAC_AI
                     {
                         if (grabbedTech.IsAnchored)
                         {
-                            help.RTSDestination = TankAIHelper.RTSDisabled;
-                            help.SetRTSState(false);
+                            helper.RTSDestination = TankAIHelper.RTSDisabled;
+                            helper.SetRTSState(false);
                             if (!ManNetwork.IsNetworked)
                             {
-                                help.foundBase = false;
-                                help.CollectedTarget = false;
+                                helper.foundBase = false;
+                                helper.CollectedTarget = false;
                             }
-                            ManPlayerRTS.inst.TechMovementQueue.Remove(help);
+                            ManWorldRTS.inst.TechMovementQueue.Remove(helper);
                             success = true;
                         }
                         else
                         {
                             //bool LandAIAssigned = help.DediAI < AIType.MTTurret;
-                            help.RTSDestination = TankAIHelper.RTSDisabled;
-                            help.SetRTSState(false);
+                            helper.RTSDestination = TankAIHelper.RTSDisabled;
+                            helper.SetRTSState(false);
                             if (!ManNetwork.IsNetworked)
                             {
-                                help.lastCloseAlly = grabbedTech;
-                                help.theResource = grabbedTech.visible;
-                                help.CollectedTarget = false;
+                                helper.lastCloseAlly = grabbedTech;
+                                helper.theResource = grabbedTech.visible;
+                                helper.CollectedTarget = false;
                             }
-                            ManPlayerRTS.inst.TechMovementQueue.Remove(help);
+                            ManWorldRTS.inst.TechMovementQueue.Remove(helper);
                             success = true;
                         }
                     }
                     catch
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": Error on Protect/Defend - Tech");
-                        DebugTAC_AI.Log(KickStart.ModID + ": " + help.name);
+                        DebugTAC_AI.Log(KickStart.ModID + ": " + helper.name);
                     }
                 }
             }
@@ -83,21 +83,21 @@ namespace TAC_AI
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectScenery.");
 
-            var help = tank.GetHelperInsured();
+            var helper = tank.GetHelperInsured();
             bool success = false;
             if ((bool)node)
             {
                 if (!node.GetComponent<Damageable>().Invulnerable)
                 {   // Mine Move
-                    ManPlayerRTS.inst.SetOptionAuto(help, AIType.Prospector);
-                    help.RTSDestination = TankAIHelper.RTSDisabled;
-                    help.SetRTSState(false);
+                    ManWorldRTS.inst.SetOptionAuto(helper, AIType.Prospector);
+                    helper.RTSDestination = TankAIHelper.RTSDisabled;
+                    helper.SetRTSState(false);
                     if (!ManNetwork.IsNetworked)
                     {
-                        help.theResource = node.visible;
-                        help.CollectedTarget = false;
+                        helper.theResource = node.visible;
+                        helper.CollectedTarget = false;
                     }
-                    ManPlayerRTS.inst.TechMovementQueue.Remove(help);
+                    ManWorldRTS.inst.TechMovementQueue.Remove(helper);
                     success = true;
                 }
             }
@@ -106,21 +106,21 @@ namespace TAC_AI
         public static bool CommandCollect(this Tank tank, TankBlock block)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": HandleSelectBlock.");
-            var help = tank.GetHelperInsured();
+            var helper = tank.GetHelperInsured();
 
             bool success = false;
             if ((bool)block)
             {
-                ManPlayerRTS.inst.SetOptionAuto(help, AIType.Scrapper);
-                help.RTSDestination = TankAIHelper.RTSDisabled;
-                help.SetRTSState(false);
+                ManWorldRTS.inst.SetOptionAuto(helper, AIType.Scrapper);
+                helper.RTSDestination = TankAIHelper.RTSDisabled;
+                helper.SetRTSState(false);
                 if (!ManNetwork.IsNetworked)
                 {
-                    help.theResource = block.visible;
-                    help.CollectedTarget = false;
+                    helper.theResource = block.visible;
+                    helper.CollectedTarget = false;
                 }
                 success = true;
-                ManPlayerRTS.inst.TechMovementQueue.Remove(help);
+                ManWorldRTS.inst.TechMovementQueue.Remove(helper);
             }
             return success;
         }
@@ -131,11 +131,11 @@ namespace TAC_AI
             if (enqueue)
             {
                 helper.SetRTSState(true);
-                ManPlayerRTS.inst.QueueNextDestination(helper, pos);
+                ManWorldRTS.inst.QueueNextDestination(helper, pos);
             }
             else
             {
-                ManPlayerRTS.inst.TechMovementQueue.Remove(helper);
+                ManWorldRTS.inst.TechMovementQueue.Remove(helper);
                 helper.RTSDestination = pos;
                 helper.SetRTSState(true);
             }
@@ -194,12 +194,12 @@ namespace TAC_AI
         }
         public static TankAIHelper GetHelperInsured(this Tank tank)
         {
-            TankAIHelper help = tank.GetComponent<TankAIHelper>();
-            if (!help)
+            TankAIHelper helper = tank.GetComponent<TankAIHelper>();
+            if (!helper)
             {
-                help = tank.gameObject.AddComponent<TankAIHelper>().Subscribe();
+                helper = tank.gameObject.AddComponent<TankAIHelper>().Subscribe();
             }
-            return help;
+            return helper;
         }
         public static float GetCheapBounds(this Visible vis)
         {
@@ -210,12 +210,12 @@ namespace TAC_AI
             }
             if (!vis.tank)
                 return vis.Radius;
-            TankAIHelper help = vis.GetComponent<TankAIHelper>();
-            if (!help)
+            TankAIHelper helper = vis.GetComponent<TankAIHelper>();
+            if (!helper)
             {
-                help = vis.gameObject.AddComponent<TankAIHelper>().Subscribe();
+                helper = vis.gameObject.AddComponent<TankAIHelper>().Subscribe();
             }
-            return help.lastTechExtents;
+            return helper.lastTechExtents;
         }
         public static float GetCheapBounds(this Tank tank)
         {

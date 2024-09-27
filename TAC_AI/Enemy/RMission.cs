@@ -61,7 +61,7 @@ namespace TAC_AI.AI.Enemy
             }
         }
 
-        internal static bool SpecificNameCases(TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        internal static bool SpecificNameCases(TankAIHelper helper, Tank tank, EnemyMind mind)
         {   // Handle specific enemy names to tailor the AI into working order
             int name = tank.name.GetHashCode();
             bool DidFire = false;
@@ -130,7 +130,7 @@ namespace TAC_AI.AI.Enemy
             }
             else if (name == "DPS Target".GetHashCode())
             {   // R&D Target
-                mind.AIControl.Hibernate = true;
+                mind.AIControl.RunState = AIRunState.Default;
                 mind.StartedAnchored = true;
                 mind.EvilCommander = EnemyHandling.Stationary;
                 mind.CommanderAttack = EAttackMode.Safety;
@@ -157,11 +157,11 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        internal static bool SetupBaseOrMissionAI(TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        internal static bool SetupBaseOrMissionAI(TankAIHelper helper, Tank tank, EnemyMind mind)
         {
             string name = tank.name;
             // Don't worry the bases are sorted based on if they are valid or not
-            bool DidFire = RLoadedBases.SetupBaseAI(thisInst, tank, mind);
+            bool DidFire = RLoadedBases.SetupBaseAI(helper, tank, mind);
             if (!(bool)tank)
                 return true;
             tank.AI.TryGetCurrentAIType(out AITreeType.AITypes tree1);
@@ -179,7 +179,7 @@ namespace TAC_AI.AI.Enemy
                     mind.CommanderMind = EnemyAttitude.Boss;
                     DidFire = true;
                 }
-                else if (SpecificNameCases(thisInst, tank, mind))
+                else if (SpecificNameCases(helper, tank, mind))
                 {
                     DidFire = true;
                 }
@@ -225,7 +225,7 @@ namespace TAC_AI.AI.Enemy
                         }
                         else if (tree == AITreeType.AITypes.Specific || tree == AITreeType.AITypes.FacePlayer)
                         {   // setup for idk
-                            thisInst.Hibernate = true;
+                            helper.RunState = AIRunState.Default;
                             DidFire = true;
                         }
                     }
@@ -258,7 +258,7 @@ namespace TAC_AI.AI.Enemy
             return DidFire;
         }
 
-        public static void MissionHandler(TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static void MissionHandler(TankAIHelper helper, Tank tank, EnemyMind mind)
         {
             var AISettings = tank.GetComponent<AIBookmarker>();
             if (AISettings.IsNotNull())
@@ -272,7 +272,7 @@ namespace TAC_AI.AI.Enemy
             }
             return;
         }
-        public static bool ADVMissionHandler(TankAIHelper thisInst, Tank tank, EnemyMind mind)
+        public static bool ADVMissionHandler(TankAIHelper helper, Tank tank, EnemyMind mind)
         {
             return true;
         }
