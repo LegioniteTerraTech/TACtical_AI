@@ -11,13 +11,13 @@ namespace TAC_AI
     {
         internal static bool NotErrored = true;
 
-        internal static bool ShouldLog = false;
+        internal static bool ShouldLog = true;
         internal static bool DoLogInfos = false;
         internal static bool DoLogAISetup = false;
         internal static bool DoLogPathing = false;
         internal static bool DoLogSpawning = false;
         internal static bool DoLogLoading = false;
-        internal static bool DoLogTeams = false;
+        internal static bool DoLogTeams = true;
         private static bool DoLogNet = false;
 #if DEBUG
         private static bool LogDev = true;

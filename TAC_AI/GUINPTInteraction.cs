@@ -259,7 +259,7 @@ namespace TAC_AI.AI
                         }
                         else if (ManBaseTeams.IsSubNeutralBaseTeam(lastTeam))
                         {
-                            nextAllyState = "Friendly";
+                            nextAllyState = "Non-Hostile";
                         }
                         else if (ManBaseTeams.IsEnemyBaseTeam(lastTeam))
                         {

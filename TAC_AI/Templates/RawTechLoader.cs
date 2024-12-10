@@ -139,9 +139,8 @@ namespace TAC_AI.Templates
                 {
                     AIWiki.hintBaseInteract.Show();
                 }, 16);
-                switch (ManBaseTeams.GetRelations(ManPlayer.inst.PlayerTeam, tank.Team, TeamRelations.AlwaysAttack))
+                switch (ManBaseTeams.GetRelations(ManPlayer.inst.PlayerTeam, tank.Team, TeamRelations.Enemy))
                 {
-                    case TeamRelations.AlwaysAttack:
                     case TeamRelations.Enemy:
                         AIWiki.hintInvader.Show();
                         break;
@@ -185,9 +184,8 @@ namespace TAC_AI.Templates
                         {
                             WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
 
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
                             {
-                                case TeamRelations.AlwaysAttack:
                                 case TeamRelations.Enemy:
                                     AIGlobals.PopupEnemyInfo("Invader HQ!", pos2);
                                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Invader HQ!");
@@ -208,8 +206,6 @@ namespace TAC_AI.Templates
                                 case TeamRelations.AITeammate:
                                     AIGlobals.PopupPlayerInfo("Allied HQ!", pos2);
                                     break;
-                                case TeamRelations.MissionControl:
-                                    break;
                                 default:
                                     break;
                             }
@@ -229,9 +225,8 @@ namespace TAC_AI.Templates
                         {
                             WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
 
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
                             {
-                                case TeamRelations.AlwaysAttack:
                                 case TeamRelations.Enemy:
                                     AIGlobals.PopupEnemyInfo("Invader!", pos2);
 
@@ -258,8 +253,6 @@ namespace TAC_AI.Templates
                                     break;
                                 case TeamRelations.AITeammate:
                                     AIGlobals.PopupPlayerInfo("Automatic!", pos2);
-                                    break;
-                                case TeamRelations.MissionControl:
                                     break;
                                 default:
                                     break;
@@ -379,9 +372,8 @@ namespace TAC_AI.Templates
                         if (KickStart.DisplayEnemyEvents)
                         {
                             WorldPosition pos2 = WorldPosition.FromScenePosition(pos);
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
                             {
-                                case TeamRelations.AlwaysAttack:
                                 case TeamRelations.Enemy:
                                     AIGlobals.PopupEnemyInfo("Invader HQ!", pos2);
                                     Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Invader HQ!");
@@ -402,8 +394,6 @@ namespace TAC_AI.Templates
                                 case TeamRelations.AITeammate:
                                     AIGlobals.PopupPlayerInfo("Allied HQ!", pos2);
                                     break;
-                                case TeamRelations.MissionControl:
-                                    break;
                                 default:
                                     break;
                             }
@@ -423,9 +413,8 @@ namespace TAC_AI.Templates
                         {
                             WorldPosition pos2 = WorldPosition.FromScenePosition(pos);
 
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
                             {
-                                case TeamRelations.AlwaysAttack:
                                 case TeamRelations.Enemy:
                                     AIGlobals.PopupEnemyInfo("Invader!", pos2);
 
@@ -452,8 +441,6 @@ namespace TAC_AI.Templates
                                     break;
                                 case TeamRelations.AITeammate:
                                     AIGlobals.PopupPlayerInfo("Automatic!", pos2);
-                                    break;
-                                case TeamRelations.MissionControl:
                                     break;
                                 default:
                                     break;
@@ -684,8 +671,8 @@ namespace TAC_AI.Templates
         }
         internal static int SpawnBase(Vector3 pos, Vector3 facing, int Team, RawTech toSpawn, bool storeBB, int ExtraBB = 0)
         {
-            if (!AIGlobals.IsBaseTeam(Team))
-                DebugTAC_AI.Assert(KickStart.ModID + ": SpawnBase - Unexpected non-base team assigned to base spawn " + Team);
+            if (!AIGlobals.IsBaseTeamDynamic(Team))
+                DebugTAC_AI.Exception(KickStart.ModID + ": SpawnBase - Unexpected non-base team assigned to base spawn " + Team);
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             Vector3 position = pos;
             position.y = offset;

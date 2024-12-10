@@ -536,9 +536,8 @@ namespace TAC_AI
                 return NP_Types.Player;
             else if (IsBaseTeamAny(team))
             {
-                switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+                switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
                 {
-                    case TeamRelations.AlwaysAttack:
                     case TeamRelations.Enemy:
                         return NP_Types.Enemy;
                     case TeamRelations.SubNeutral:
@@ -656,9 +655,8 @@ namespace TAC_AI
 
         internal static bool PopupColored(string text, int team, WorldPosition pos)
         {
-            switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.AlwaysAttack))
+            switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
             {
-                case TeamRelations.AlwaysAttack:
                 case TeamRelations.Enemy:
                     PopupEnemyInfo(text, pos);
                     return true;
@@ -674,8 +672,6 @@ namespace TAC_AI
                 case TeamRelations.AITeammate:
                     PopupPlayerInfo(text, pos);
                     return true;
-                case TeamRelations.MissionControl:
-                    break;
                 default:
                     break;
             }

@@ -1457,7 +1457,7 @@ namespace TAC_AI.Templates
                         {
                             if (item.wasDestroyed || item.visible == null)
                             {
-                                if (AIGlobals.IsBaseTeam(item.TeamID))
+                                if (AIGlobals.IsBaseTeamDynamic(item.TeamID))
                                 {
                                     DebugTAC_AI.Info("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                                     ManVisible.inst.StopTrackingVisible(item.ID);

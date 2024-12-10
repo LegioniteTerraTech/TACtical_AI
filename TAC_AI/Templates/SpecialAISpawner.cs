@@ -809,7 +809,7 @@ namespace TAC_AI.Templates
                         airborneAI.SetSleeping(false);
                         DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Awakened " + airborneAI.name + " in AirPool as it froze.");
                     }
-                    else if (AIGlobals.IsBaseTeam(airborneAI.Team) && AIGlobals.SceneTechMaxNeedsRemoval(out int remove))
+                    else if (AIGlobals.IsBaseTeamDynamic(airborneAI.Team) && AIGlobals.SceneTechMaxNeedsRemoval(out int remove))
                     {
                         AirPool.RemoveAt(step);
                         DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as we have bypassed the max tech limit.");
@@ -1023,7 +1023,7 @@ namespace TAC_AI.Templates
                             {
                                 if (item.wasDestroyed || item.visible == null)
                                 {
-                                    if (AIGlobals.IsBaseTeam(item.TeamID))
+                                    if (AIGlobals.IsBaseTeamDynamic(item.TeamID))
                                     {
                                         DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                                         ManVisible.inst.StopTrackingVisible(item.ID);
@@ -1079,7 +1079,7 @@ namespace TAC_AI.Templates
                             {
                                 if (item.wasDestroyed || item.visible == null)
                                 {
-                                    if (AIGlobals.IsBaseTeam(item.TeamID))
+                                    if (AIGlobals.IsBaseTeamDynamic(item.TeamID))
                                     {
                                         DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                                         ManVisible.inst.StopTrackingVisible(item.ID);
@@ -1412,7 +1412,7 @@ namespace TAC_AI.Templates
                     {
                         activeCount++;
                         int team = air.tank.Team;
-                        types[AIGlobals.GetNPTTeamType(team)]++;
+                        types[AIGlobals.GetNPTTeamTypeForDebug(team)]++;
                     }
                 }
                 if (GUILayout.Button("  Total: " + AirPool.Count + " | Active: " + activeCount))
@@ -1431,7 +1431,7 @@ namespace TAC_AI.Templates
                         if (enabledTabs.Contains(item.Key))
                         {
                             foreach (var item2 in AirPool.FindAll(x => x.tank && 
-                            AIGlobals.GetNPTTeamType(x.tank.Team) == item.Key))
+                            AIGlobals.GetNPTTeamTypeForDebug(x.tank.Team) == item.Key))
                             {
                                 GUILayout.Label("      Tech: " + item2.tank.name);
                                 Vector3 pos = item2.tank.boundsCentreWorldNoCheck;
