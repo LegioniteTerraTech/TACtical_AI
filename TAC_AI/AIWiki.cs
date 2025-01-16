@@ -331,7 +331,7 @@ namespace TAC_AI
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(AltUI.TextfieldBordered);
-            GUILayout.Label("Capable:", AltUI.LabelWhiteTitle);
+            GUILayout.Label("Capable:", AltUI.LabelBlueTitle);
             foreach (var item2 in AllValidAIs)
             {
                 var prefab = ManSpawn.inst.GetBlockPrefab(item2)?.GetComponent<ModuleAIExtension>();
@@ -844,7 +844,7 @@ namespace TAC_AI
 
         internal static LoadingHintsExt.LoadingHint loadHint5 = new LoadingHintsExt.LoadingHint(KickStart.ModID, "ADVANCED AI HINT",
             "The "+ AltUI.EnemyString("Missile") + " knows where it is at all times.  It knows this because it  " + AltUI.ObjectiveString("knows where it isn't") + 
-            ".\n" + AltUI.EnemyString("Huge Enemy Missiles") + " very rarely appear distant late-game, and will always take the most direct arc to your Tech." +
+            ".\n" + AltUI.EnemyString("Huge Enemy Missiles") + " very rarely appear distant late-game, and will always take the most direct arc to their target." +
             "\nThe best means of defense is to stay mobile or small, because these rammers deal pain against " + AltUI.BlueString("Big Techs") + ".");
 
         internal static LoadingHintsExt.LoadingHint loadHint6 = new LoadingHintsExt.LoadingHint(KickStart.ModID, "CREATIVE MODE HINT",

@@ -25,7 +25,35 @@ namespace TAC_AI
         private static bool LogDev = false;
 #endif
 
+        private static Tank CalcTarget = null;
+        private static System.Diagnostics.Stopwatch AILoadTimer = new System.Diagnostics.Stopwatch();
+        internal static void BeginAICalculationTimer(Tank target)
+        {
+            CalcTarget = target;
+            AILoadTimer.Restart();
+            AILoadTimer.Start();
+        }
+        internal static void FinishAICalculationTimer(Tank target)
+        {
+            if (CalcTarget != target)
+                return;
+            AILoadTimer.Stop();
+            Log("Calculations for AI " + target.name + " finished in " + 
+                AILoadTimer.ElapsedMilliseconds.ToString() + " miliseconds");
+            CalcTarget = null;
+        }
 
+        private static System.Diagnostics.Stopwatch AIWorldTimer = new System.Diagnostics.Stopwatch();
+        internal static void BeginAIWorldTimer()
+        {
+            AILoadTimer.Restart();
+            AILoadTimer.Start();
+        }
+        internal static long FinishAIWorldTimer()
+        {
+            AILoadTimer.Stop();
+            return AILoadTimer.ElapsedMilliseconds;
+        }
 
         internal static void Info(string message)
         {

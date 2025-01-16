@@ -4,6 +4,7 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.World;
 using UnityEngine;
 using TerraTechETCUtil;
+using static HarmonyLib.Code;
 
 namespace TAC_AI.AI.Movement.AICores
 {
@@ -107,11 +108,13 @@ namespace TAC_AI.AI.Movement.AICores
         public bool DriveMaintainer(TankAIHelper helper, Tank tank, ref EControlCoreSet core)
         {
             // DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " normal drive was called");
-            if (tank.Anchors.Fixed)
+            /*
+            if (tank.Anchors.NumAnchored)
             {   // Static base
                 return true;
             }
-            else if (tank.IsSkyAnchored)
+            else // */
+            if (tank.IsSkyAnchored)
             {   //3D movement
                 SkyMaintainer(ref core);
             }
@@ -127,7 +130,7 @@ namespace TAC_AI.AI.Movement.AICores
                     VehicleUtils.Turner(helper, destDirect, 0, ref core);
                 }
                 if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
-                    DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, destDirect * helper.lastTechExtents, new Color(1, 0, 1));
+                    DebugExtUtilities.DrawDirIndicator(tank.gameObject, 1, destDirect * helper.lastTechExtents, new Color(1, 0, 1));
 
                 Vector3 InputLineVal = Vector3.zero;
                 if (!helper.techIsApproaching)
@@ -339,6 +342,8 @@ namespace TAC_AI.AI.Movement.AICores
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, driveVal * helper.lastTechExtents, new Color(0, 0, 1));
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 1, DriveVal * helper.lastTechExtents, new Color(1, 0, 0));
                 }
+                if (helper.FixControlReversal(DriveVal.z))
+                    TurnVal = TurnVal.SetY(-TurnVal.y);
                 helper.ProcessControl(DriveVal, TurnVal, Vector3.zero, false, false);
                 return;
             }
@@ -387,7 +392,7 @@ namespace TAC_AI.AI.Movement.AICores
                 }
             }
             if (helper.FixControlReversal(DriveVal.z))
-                TurnVal = TurnVal.SetY(-turnVal.y); 
+                TurnVal = TurnVal.SetY(-TurnVal.y); 
             helper.ProcessControl(DriveVal, TurnVal, Vector3.zero, false, false);
         }
 

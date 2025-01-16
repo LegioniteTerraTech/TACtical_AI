@@ -232,6 +232,7 @@ namespace TAC_AI.AI
     /// </summary>
     public enum EAttackMode
     {
+        AutoSet,
         /// <summary> Circle the enemy while shooting at them
         /// <para>Use for: Skirmishers, Mid-long-ranged units with fast turrets [GSO Gigaton, VEN Rapid Cannon, HE HG Cannon, BF Arc Missiles, RR Sonic Blaster TAC Terminator] </para>
         /// <para>!! Only active with TweakTech or WeaponAimMod (because no target leading) !! </para></summary>
@@ -250,7 +251,7 @@ namespace TAC_AI.AI
         Ranged,
         /// <summary> Avoid danger.  
         /// <para>Use for: Any Non-Combat Tech </para></summary>
-        Safety,
+        Safety
     }
 
     /// <summary>

@@ -233,6 +233,7 @@ namespace TAC_AI
             if (GUI.Button(new Rect(20, 200, 160, 60), new GUIContent(textBuild, "Build a Tech"), AltUI.ButtonBlueActive))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimGCFabricator);
+                Debug_TTExt.LogAll = true;
                 PlayerRTSUI.ShowTechPlacementUI(lastTank);
             }
         }

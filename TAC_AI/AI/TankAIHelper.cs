@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Remoting.Messaging;
 using TAC_AI.AI.AlliedOperations;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
@@ -312,8 +313,8 @@ namespace TAC_AI.AI
 
         //AutoCollection
         internal bool hasAI = false;    // Has an active AI module
-        internal bool dirtyAI = true;  // Update Player AI state if needed
-        internal bool dirtyDesign = true;    // The Tech has new blocks attached recently
+        internal bool dirtyAI = false;  // Update Player AI state if needed
+        internal bool dirtyDesign = false;    // The Tech has new blocks attached recently
 
         internal float EstTopSped = 0;
         internal float recentSpeed = 1;
@@ -640,6 +641,19 @@ namespace TAC_AI.AI
                     lastTechExtents = 1;
                 }
                 maxBlockCount = tank.blockman.blockCount;
+
+                if (DriverType == AIDriverType.AutoSet)
+                    ExecuteAutoSetNoCalibrate();
+                else
+                    SetDriverType(DriverType);
+                /*
+                if (tank.AI.TryGetCurrentAIType(out var aiGet) && aiGet != AITreeType.AITypes.Idle)
+                {
+                    ForceAllAIsToEscort(true, false);
+                    //ForceRebuildAlignment();
+                }*/
+                dirtyAI = true;
+                dirtyDesign = true;
             }
             catch (Exception e)
             {
@@ -695,13 +709,14 @@ namespace TAC_AI.AI
             DropBlock();
             AttackEnemy = false;
             lastSuppressedState = false;
-            SuppressFiring(true);
+            SuppressFiring(false);
             FinishedRepairEvent.EnsureNoSubscribers();
             maxBlockCount = 0;
             DamageThreshold = 0;
             PlayerAllowAutoAnchoring = false;
             isRTSControlled = false;
             DriverType = AIDriverType.AutoSet;
+            AttackMode = EAttackMode.AutoSet;
             MovementAIControllerDirty = true;
             DediAI = AIType.Escort;
             NextFindTargetTime = 0;
@@ -917,7 +932,8 @@ namespace TAC_AI.AI
 
             MovementAIControllerDirty = true;
 
-            AttackMode = EWeapSetup.GetAttackStrat(tank, this);
+            if (AttackMode == EAttackMode.AutoSet)
+                AttackMode = EWeapSetup.GetAttackStrat(tank, this);
         }
         /// <summary>
         /// Does not remove EnemyMind
@@ -982,8 +998,8 @@ namespace TAC_AI.AI
             maxBlockCount = tank.blockman.blockCount;
             AttackEnemy = false;
             lastSuppressedState = false;
-            SuppressFiring(true);
             lastAIType = AITreeType.AITypes.Idle;
+            AttackMode = EAttackMode.AutoSet;
             dirtyDesign = true;
             dirtyAI = true;
             PlayerAllowAutoAnchoring = !tank.IsAnchored;
@@ -997,6 +1013,7 @@ namespace TAC_AI.AI
             RunState = AIRunState.Advanced;
             AnchorState = AIAnchorState.None;
             AnchorStateAIInsure = false;
+            WeaponState = AIWeaponState.Normal;
             WeaponAimType = AIWeaponType.Unknown;
             BlockedLineOfSight = false;
             PendingDamageCheck = true;
@@ -1047,6 +1064,7 @@ namespace TAC_AI.AI
             ProcessControl(Vector3.zero, Vector3.zero, Vector3.zero, false, false);
             tank.control.SetBeamControlState(false);
             tank.control.FireControl = false;
+            SuppressFiring(false);
 
             //enabled = false; // why the heck did I put this here? this is WHY EVERYTHING WAS BROKEN
 
@@ -2291,21 +2309,13 @@ namespace TAC_AI.AI
         private void GetLowestPointOnTech()
         {
             float lowest = 0;
-            List<TankBlock> lowBlocks = tank.blockman.GetLowestBlocks();
-            Quaternion forward = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.up);
-            for (int step = 0; step < lowBlocks.Count; step++)
+            IEnumerable<IntVector3> lowCells = tank.blockman.GetLowestOccupiedCells();
+            Quaternion forwardGrid = tank.rootBlockTrans.localRotation;
+            foreach (IntVector3 intVector in lowCells)
             {
-                TankBlock block = lowBlocks[step];
-                IntVector3[] filledCells = block.filledCells;
-                foreach (IntVector3 intVector in filledCells)
-                {
-                    Vector3 Locvec = block.cachedLocalPosition + block.cachedLocalRotation * intVector;
-                    Vector3 cellPosLocal = (forward * Locvec) - tank.rootBlockTrans.InverseTransformPoint(tank.boundsCentreWorldNoCheck);
-                    if (cellPosLocal.y < lowest)
-                    {
-                        lowest = cellPosLocal.y;
-                    }
-                }
+                Vector3 cellPosLocal = forwardGrid * intVector;
+                if (cellPosLocal.y < lowest)
+                    lowest = cellPosLocal.y;
             }
             DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  lowest point set " + lowest);
             _LowestPointOnTech = lowest;
@@ -2355,6 +2365,8 @@ namespace TAC_AI.AI
                             UpdateTechControl(thisControl);
                             return true;
                         }
+                        else
+                            SuppressFiring(false);
                     }
                     else
                     {
@@ -2454,6 +2466,7 @@ namespace TAC_AI.AI
                     }
                 }
             }
+            SuppressFiring(false);
             return false;
         }
         private void UpdateTechControl(TankControl thisControl)
@@ -2543,7 +2556,7 @@ namespace TAC_AI.AI
                 {
                     Attempt3DNavi = false;
 #if DEBUG
-                        if (ManPlayerRTS.PlayerIsInRTS && ManPlayerRTS.DevCamLock == DebugCameraLock.LockTechToCam)
+                        if (ManWorldRTS.PlayerIsInRTS && ManWorldRTS.DevCamLock == DebugCameraLock.LockTechToCam)
                         {
                             if (tank.rbody)
                             {
@@ -3101,7 +3114,7 @@ namespace TAC_AI.AI
                 lastLockOnTarget = null;
                 AttackEnemy = false;
                 lastSuppressedState = false;
-                SuppressFiring(true);
+                SuppressFiring(false);
                 try
                 {
                     TankAIManager.UpdateTechTeam(tank);
@@ -3494,6 +3507,7 @@ namespace TAC_AI.AI
                     totalWeight += item.Value;
                     posCombined += item.Key * item.Value;
                 }
+                this.lastCloseAlly = lastCloseAlly;
                 return posCombined / totalWeight;
             }
             catch (Exception e)
@@ -3599,6 +3613,7 @@ namespace TAC_AI.AI
                     totalWeight += item.Value;
                     posCombined += item.Key * item.Value;
                 }
+                this.lastCloseAlly = lastCloseAlly;
                 return posCombined / totalWeight;
             }
             catch (Exception e)
@@ -3692,6 +3707,7 @@ namespace TAC_AI.AI
                     totalWeight += item.Value;
                     posCombined += item.Key * item.Value;
                 }
+                this.lastCloseAlly = lastCloseAlly;
                 return posCombined / totalWeight;
             }
             catch (Exception e)
@@ -3789,6 +3805,7 @@ namespace TAC_AI.AI
                     totalWeight += item.Value;
                     posCombined += item.Key * item.Value;
                 }
+                this.lastCloseAlly = lastCloseAlly;
                 return posCombined / totalWeight;
             }
             catch (Exception e)
@@ -3831,6 +3848,7 @@ namespace TAC_AI.AI
 
                 }
                 lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, DSO, out lastAllyDist, tank);
+                this.lastCloseAlly = lastCloseAlly;
                 if (lastCloseAlly == null)
                 {
                     // DebugTAC_AI.Log(KickStart.ModID + ": ALLY IS NULL");
@@ -4273,8 +4291,10 @@ namespace TAC_AI.AI
             {
                 float TargetRangeSqr = MaxCombatRange * MaxCombatRange;
                 Vector3 scanCenter = tank.boundsCentreWorldNoCheck;
-                if (target != null && (!target.isActive || !ManBaseTeams.IsEnemy(tank.Team, target.tank.Team) || 
-                    (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRangeSqr))
+                if (target != null && (!target.isActive ||
+                    !ManBaseTeams.IsEnemy(tank.Team, target.tank.Team)
+                    //tank.Team == target.tank.Team
+                    || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRangeSqr))
                 {
                     //DebugTAC_AI.Log("Target lost");
                     target = null;
@@ -4926,7 +4946,7 @@ namespace TAC_AI.AI
         private static Vector3 highMaxBoundsVelo = new Vector3(MaxBoundsVelo, MaxBoundsVelo, MaxBoundsVelo);
         public Vector3 RoughPredictTarget(Tank targetTank)
         {
-            if (targetTank.rbody.IsNotNull())
+            if (DriverType != AIDriverType.Stationary && targetTank.rbody.IsNotNull())
             {
                 var velo = targetTank.rbody.velocity;
                 if (!velo.IsNaN() && lastCombatRange <= AIGlobals.EnemyExtendActionRange && !float.IsInfinity(velo.x)
@@ -5110,7 +5130,7 @@ namespace TAC_AI.AI
         internal void AdjustAnchors()
         {
             bool prevAnchored = tank.IsAnchored;
-            DebugTAC_AI.Assert("AdjustAnchors()");
+            //DebugTAC_AI.Assert("AdjustAnchors()");
             DoUnAnchor();
             if (!tank.IsAnchored)
             {
@@ -5144,7 +5164,7 @@ namespace TAC_AI.AI
             if (!tank.IsAnchored && anchorAttempts <= AIGlobals.MaxAnchorAttempts)
             {
                 anchorAttempts++;
-                DebugTAC_AI.Assert(KickStart.ModID + ": AI " + tank.name + ":  TryReallyAnchor(" + forced + ")");
+                DebugTAC_AI.LogDevOnly(KickStart.ModID + ": AI " + tank.name + ":  TryReallyAnchor(" + forced + ")");
                 tank.Anchors.TryAnchorAll(true);
                 if (tank.Anchors.NumIsAnchored > 0)
                 {
@@ -5228,14 +5248,14 @@ namespace TAC_AI.AI
         }
         private void DoUnAnchor()
         {
-            DebugTAC_AI.Log("DoUnAnchor()");
+            //DebugTAC_AI.Log("DoUnAnchor()");
             if (tank.IsAnchored || tank.Anchors.NumIsAnchored > 0)
             {
-                DebugTAC_AI.Log("DoUnAnchor() - activated");
+                //DebugTAC_AI.Log("DoUnAnchor() - activated");
                 tank.Anchors.UnanchorAll(true);
                 if (!tank.IsAnchored && AIAlign == AIAlignment.Player)
                 {
-                    DebugTAC_AI.Log("DoUnAnchor() - success");
+                    //DebugTAC_AI.Log("DoUnAnchor() - success");
                     ForceAllAIsToEscort(true, false);
                 }
                 AnchorState = AIAnchorState.None;
@@ -5539,8 +5559,13 @@ namespace TAC_AI.AI
             if (maxBlockCount == 1)
             {
                 var root = tank.blockman.GetRootBlock();
-                DamageThreshold = (1f - (root.visible.damageable.Health / (float)root.damage.maxHealth)) * 100;
-                lastBlockCount = blockC;
+                if (root != null)
+                {
+                    DamageThreshold = (1f - (root.visible.damageable.Health / (float)root.damage.maxHealth)) * 100;
+                    lastBlockCount = blockC;
+                }
+                // Else we have NO ROOT and therefore no blocks(?!?),
+                //   do nothing because putting in zero will immedeately break things
             }
             else
             {

@@ -7,6 +7,7 @@ using UnityEngine;
 using TAC_AI.AI;
 using SafeSaves;
 using TerraTechETCUtil;
+using System.Runtime.Remoting.Messaging;
 
 public class ModuleAIExtension : TAC_AI.ModuleAIExtension { }
 namespace TAC_AI
@@ -21,6 +22,8 @@ namespace TAC_AI
         public AIDriverType SavedAIDriver;
         [SSaveField]
         public AIType SavedAI;
+        [SSaveField]
+        public EAttackMode AttackMode;
         [SSaveField]
         public int LastTargetVisibleID = -1;
         [SSaveField]
@@ -493,6 +496,7 @@ namespace TAC_AI
                         */
                         SavedAIDriver = Helper.DriverType;
                         SavedAI = Helper.DediAI;
+                        AttackMode = Helper.AttackMode;
                         WasMobileAnchor = Helper.PlayerAllowAutoAnchoring;
                         switch (Helper.DediAI)
                         {
@@ -567,6 +571,7 @@ namespace TAC_AI
                                 helper.SetDriverType(SavedAIDriver);
                                 helper.DediAI = SavedAI;
                                 helper.PlayerAllowAutoAnchoring = WasMobileAnchor;
+                                helper.AttackMode = AttackMode;
                                 if (LastTargetVisibleID != -1)
                                 {
                                     TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(LastTargetVisibleID);

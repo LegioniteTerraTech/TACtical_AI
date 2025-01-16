@@ -588,8 +588,7 @@ namespace TAC_AI
             if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
                 ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.Enemy, out var teamInst))
                 return teamInst.teamID;
-            teamInst = ManBaseTeams.GetNewBaseTeam();
-            teamInst.defaultRelations = TeamRelations.Enemy;
+            teamInst = ManBaseTeams.GetNewBaseTeam(TeamRelations.Enemy);
             return teamInst.teamID;
         }
         /// <summary>
@@ -600,8 +599,7 @@ namespace TAC_AI
             if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
                 ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.SubNeutral, out var teamInst))
                 return teamInst.teamID;
-            teamInst = ManBaseTeams.GetNewBaseTeam();
-            teamInst.defaultRelations = TeamRelations.SubNeutral;
+            teamInst = ManBaseTeams.GetNewBaseTeam(TeamRelations.SubNeutral);
             return teamInst.teamID;
         }
         /// <summary>
@@ -612,8 +610,7 @@ namespace TAC_AI
             if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
                 ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.Neutral, out var teamInst))
                 return teamInst.teamID;
-            teamInst = ManBaseTeams.GetNewBaseTeam();
-            teamInst.defaultRelations = TeamRelations.Neutral;
+            teamInst = ManBaseTeams.GetNewBaseTeam(TeamRelations.Neutral);
             return teamInst.teamID;
         }
         public static int GetRandomAllyBaseTeam(bool forceNew = true)
@@ -621,7 +618,7 @@ namespace TAC_AI
             if (!forceNew && ManBaseTeams.inst.teams.Any() && UnityEngine.Random.Range(0, 1f) <= ManBaseTeams.PercentChanceExisting &&
                 ManBaseTeams.TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations.Friendly, out var teamInst))
                 return teamInst.teamID;
-            teamInst = ManBaseTeams.GetNewBaseTeam();
+            teamInst = ManBaseTeams.GetNewBaseTeam(TeamRelations.Enemy);
             teamInst.SetFriendly(ManPlayer.inst.PlayerTeam);
             return teamInst.teamID;
         }

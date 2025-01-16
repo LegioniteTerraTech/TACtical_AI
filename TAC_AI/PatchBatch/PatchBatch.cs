@@ -118,7 +118,7 @@ namespace TAC_AI
         [HarmonyPatch("SetDanger", new Type[1] { typeof(ManMusic.DangerContext.Circumstance) })]
         private class AdvancedMenuMusiks
         {
-            private static bool Prefix(ManMusic __instance, ManMusic.DangerContext.Circumstance circumstance)
+            internal static bool Prefix(ManMusic __instance, ManMusic.DangerContext.Circumstance circumstance)
             {
                 if (circumstance == ManMusic.DangerContext.Circumstance.Generic)
                 {
@@ -145,7 +145,7 @@ namespace TAC_AI
         [HarmonyPatch("PlayMusicEvent")]
         private class AdvancedMenuMusiks2
         {
-            private static void Prefix(ManMusic __instance, ref ManMusic.MusicTypes musicType)
+            internal static void Prefix(ManMusic __instance, ref ManMusic.MusicTypes musicType)
             {
                 if (musicType == ManMusic.MusicTypes.Attract)
                 {
@@ -183,7 +183,7 @@ namespace TAC_AI
         [HarmonyPatch("Take", new Type[] { typeof(Visible), typeof(bool), typeof(int), typeof(bool) })]
         private class TakeDetect
         {
-            private static void Prefix(ModuleItemHolder __instance, ref Visible item)
+            internal static void Prefix(ModuleItemHolder __instance, ref Visible item)
             {
                 if (__instance.block?.tank && 
                     __instance.block.tank.Team == ManSpawn.NeutralTeam)
@@ -258,9 +258,9 @@ namespace TAC_AI
 #endif
         [HarmonyPatch(typeof(Tank))]
         [HarmonyPatch("IsEnemy", typeof(int), typeof(int))]//
-        internal static class TankTeamPatch
+        private static class TankTeamPatch
         {
-            private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
+            internal static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
                 if (ManBaseTeams.IsUnattackable(teamID1, teamID2))
                 {
@@ -272,9 +272,9 @@ namespace TAC_AI
         }
         [HarmonyPatch(typeof(Tank))]
         [HarmonyPatch("IsFriendly", typeof(int), typeof(int))]
-        internal static class TankTeamPatch2
+        private static class TankTeamPatch2
         {
-            private static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
+            internal static bool Prefix(ref bool __result, ref int teamID1, ref int teamID2)
             {
                 if (ManBaseTeams.IsTeammate(teamID1, teamID2))
                 {

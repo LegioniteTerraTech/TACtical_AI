@@ -775,9 +775,9 @@ namespace TAC_AI.AI
                     }
                     else
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Could not afford " + BlockType
+                        DebugTAC_AI.LogDevOnly(KickStart.ModID + ": AI " + tank.name + ": Could not afford " + BlockType
                             + " from the shop for " + priceIsRight + " because ");
-                       DebugTAC_AI.Log(" Funds are " + ManBaseTeams.GetTeamMoney(tank.Team) + ", but cost is " +
+                       DebugTAC_AI.LogDevOnly(" Funds are " + ManBaseTeams.GetTeamMoney(tank.Team) + ", but cost is " +
                                 priceIsRight);
                         return false;
                     }

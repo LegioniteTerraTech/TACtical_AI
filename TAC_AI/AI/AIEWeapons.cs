@@ -15,10 +15,18 @@ namespace TAC_AI.AI
                 {
                     if (helper.lastEnemyGet?.tank)
                     {
-                        if (helper.AttackEnemy && ManBaseTeams.IsEnemy(tank.Team, helper.lastEnemyGet.tank.Team))
-                        {
+                        if (helper.DriverType == AIDriverType.Stationary || ManBaseTeams.IsEnemy(tank.Team, helper.lastEnemyGet.tank.Team))
+                        {   // Stationary AI should NEVER lower guard - even against Sub-Neutrals
                             helper.WeaponState = AIWeaponState.Enemy;
                             helper.SuppressFiring(false);
+                        }
+                        else
+                        {
+                            helper.WeaponState = AIWeaponState.HoldFire;
+                            helper.SuppressFiring(true);
+                        }
+                        if (helper.AttackEnemy)
+                        {
                             if (tank.IsAnchored)
                             {
                                 Vector3 aimTo = (helper.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
@@ -29,11 +37,6 @@ namespace TAC_AI.AI
                                     FinalAim = Mathf.Abs(driveAngle / AIGlobals.AnchorAimDampening);
                                 thisControl.m_Movement.FaceDirection(tank, aimTo, FinalAim);//Face the music
                             }
-                        }
-                        else
-                        {
-                            helper.WeaponState = AIWeaponState.HoldFire;
-                            helper.SuppressFiring(true);
                         }
                     }
                     else if (helper.Obst.IsNotNull())
@@ -52,8 +55,12 @@ namespace TAC_AI.AI
                 }
                 else
                 {
+                    helper.WeaponState = AIWeaponState.Normal;
+                    helper.SuppressFiring(false);
+                    /*
                     helper.WeaponState = AIWeaponState.HoldFire;
                     helper.SuppressFiring(true);
+                    */
                 }
             }
             catch

@@ -138,7 +138,7 @@ namespace TAC_AI
         public static int ForceRemoveOverEnemyMaxCap = 4;
         public static bool ActiveSpawnFoundersOffScene = false;
         /// <summary> % Chance NPT Founders spawn when a tile is loaded for the first time </summary>
-        public static float SpawnFoundersPositional = 0.2f;
+        public static float SpawnFoundersPositional = 0.05f;//0.2f;
         internal static bool AllowEnemiesToStartBases { get { return MaxEnemyBaseLimit != 0; } }
         internal static bool AllowEnemyBaseExpand { get { return MaxBasesPerTeam != 0; } }
         public static int LandEnemyOverrideChance {
@@ -176,6 +176,14 @@ namespace TAC_AI
             new EnemyMaxDistLimit("Beyond 16 Tiles"),
             new EnemyMaxDistLimit("Beyond 32 Tiles"),
         };
+        public static List<BaseTeamsUpdateRate> limitAIBaseRate = new List<BaseTeamsUpdateRate>()
+        {
+            new BaseTeamsUpdateRate("Random 4"),
+            new BaseTeamsUpdateRate("Random 8"),
+            new BaseTeamsUpdateRate("Random 16"),
+            new BaseTeamsUpdateRate("Random 32"),
+            new BaseTeamsUpdateRate("ALL"),
+        };
         public static int CullFarEnemyBasesMode = 0;
         public static bool CullFarEnemyBases => CullFarEnemyBasesDistance == int.MaxValue;
         public static void UpdateCullDist()
@@ -199,6 +207,7 @@ namespace TAC_AI
             }
         }
         public static int CullFarEnemyBasesDistance = 8;// How far from the player should enemy bases be removed 
+        public static int EnemyBaseUpdateMode = 2;
         // from the world? IN TILES
         public static float EnemySellGainModifier = 1; // multiply enemy sell gains by this value
 

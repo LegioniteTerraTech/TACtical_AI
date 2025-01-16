@@ -25,6 +25,7 @@ namespace TAC_AI.AI.Enemy
         public static void GenerateEnemyAI(this TankAIHelper helper, Tank tank)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": offset " + tank.boundsCentreWorldNoCheck);
+            DebugTAC_AI.BeginAICalculationTimer(tank);
             var newMind = tank.gameObject.GetComponent<EnemyMind>();
             if (!newMind)
             {
@@ -267,15 +268,26 @@ namespace TAC_AI.AI.Enemy
                             booster.transform.GetComponentsInChildren(jetGetCache);
                             foreach (FanJet jet in jetGetCache)
                             {
+#if DEV
+                                if (jet == null)
+                                    throw new Exception("BlockDetails SAID there was a FanJet in this block but that was incorrect!" +
+                                        " Somehow GetComponentsInChildren returned a NULL entry.  We should not be checking for this!");
+#endif
                                 if ((float)RawTechBase.spinDat.GetValue(jet) <= 10)
                                 {
-                                    biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForward) * (float)RawTechBase.thrustRate.GetValue(jet);
+                                    biasDirection -= tank.rootBlockTrans.InverseTransformDirection(jet.EffectorForward) * 
+                                        (float)RawTechBase.thrustRate.GetValue(jet);
                                 }
                             }
                             jetGetCache.Clear();
                             booster.transform.GetComponentsInChildren(boosterGetCache);
                             foreach (BoosterJet boost in boosterGetCache)
                             {
+#if DEV
+                                if (boost == null)
+                                    throw new Exception("BlockDetails SAID there was a BoosterJet in this block but that was incorrect!" +
+                                        " Somehow GetComponentsInChildren returned a NULL entry.  We should not be checking for this!");
+#endif
                                 //We have to get the total thrust in here accounted for as well because the only way we CAN boost is ALL boosters firing!
                                 boostBiasDirection -= tank.rootBlockTrans.InverseTransformDirection(boost.transform.TransformDirection(boost.LocalThrustDirection));
                             }
@@ -309,6 +321,10 @@ namespace TAC_AI.AI.Enemy
                 if (ForceAllBubblesUp && BD.IsBubble)
                 {
                     var buubles = bloc.GetComponent<ModuleShieldGenerator>();
+#if DEV
+                    if (buubles == null)
+                        throw new Exception("BlockDetails SAID there was a ModuleShieldGenerator in this block but that was incorrect!  We should not be checking for this!");
+#endif
                     charge.SetValue(buubles, 0);
                     charge2.SetValue(buubles, 2);
                     BubbleShield shield = (BubbleShield)charge3.GetValue(buubles);
@@ -317,6 +333,10 @@ namespace TAC_AI.AI.Enemy
 
                 if (BD.IsGenerator)
                 {
+#if DEV
+                    if (bloc.GetComponent<ModuleEnergy>() == null)
+                        throw new Exception("BlockDetails SAID there was a ModuleEnergy in this block but that was incorrect!  We should not be checking for this!");
+#endif
                     ModuleEnergy.OutputConditionFlags flagG = (ModuleEnergy.OutputConditionFlags)generator.GetValue(bloc.GetComponent<ModuleEnergy>());
                     if (flagG.HasFlag(ModuleEnergy.OutputConditionFlags.Anchored) && flagG.HasFlag(ModuleEnergy.OutputConditionFlags.DayTime))
                         newMind.SolarsAvail = true;
@@ -767,8 +787,11 @@ namespace TAC_AI.AI.Enemy
             if (funds.IsValid())
             {
                 BGeneral.ResetValues(helper, ref direct);
-                BGeneral.StopByPosition(helper, tank, funds.WorldPos.ScenePosition, 
-                    funds.tank.visible.GetCheapBounds(), ref direct);
+                if (funds.tank?.visible != null)
+                    BGeneral.StopByPosition(helper, tank, funds.WorldPos.ScenePosition, 
+                        funds.tank.visible.GetCheapBounds(), ref direct);
+                else // It's not loaded, we space based on a fallback scale assumption
+                    BGeneral.StopByPosition(helper, tank, funds.WorldPos.ScenePosition, 32, ref direct);
                 return true;
             }
             else
@@ -1113,6 +1136,7 @@ namespace TAC_AI.AI.Enemy
                         helper.lastTechExtents)));
                 }
                 //helper.RecalibrateMovementAIController();
+                DebugTAC_AI.FinishAICalculationTimer(tank);
                 return;
             }
 
@@ -1221,6 +1245,7 @@ namespace TAC_AI.AI.Enemy
                 newMind.MinCombatRange = AIGlobals.MinCombatRangeDefault;
 
             //helper.RecalibrateMovementAIController();
+            DebugTAC_AI.FinishAICalculationTimer(tank);
         }
     }
 }

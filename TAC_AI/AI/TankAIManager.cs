@@ -421,7 +421,7 @@ namespace TAC_AI.AI
             try
             {
                 if (ManNetwork.IsHost)
-                    Singleton.Manager<ManNetworkLobby>.inst.LobbySystem.CurrentLobby.SendChat("[SERVER] " + chatMsg, -1, (uint)TTNetworkID.Invalid.m_NetworkID);
+                    Singleton.Manager<ManNetworkLobby>.inst.LobbySystem.CurrentLobby.SendChat("[SERVER] " + chatMsg, -1, (uint)TTNetworkID.Invalid.GetHashCode());
             }
             catch { }
             return chatMsg;

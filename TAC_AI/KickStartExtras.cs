@@ -78,6 +78,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStartConfigHelper>(null, "CullFarEnemyBases");
             thisModConfig.BindConfig<KickStart>(null, "CullFarEnemyBasesMode");
             thisModConfig.BindConfig<KickStart>(null, "ForceRemoveOverEnemyMaxCap");
+            thisModConfig.BindConfig<KickStart>(null, "EnemyBaseUpdateMode");
 
             // RTS
             thisModConfig.BindConfig<KickStart>(null, "AllowPlayerRTSHUD");
@@ -120,6 +121,15 @@ namespace TAC_AI
         }
     }
 
+    public struct BaseTeamsUpdateRate
+    {
+        public string name;
+        public BaseTeamsUpdateRate(string name)
+        {
+            this.name = name;
+        }
+        public override string ToString() => name;
+    }
     public class KickStartNativeOptions
     {
         // NativeOptions Parameters
@@ -169,6 +179,7 @@ namespace TAC_AI
         public static OptionToggle enemyBaseCulling;
 
         public static OptionToggle WarnEnemyLock;
+
 
         internal static void PushExtModOptionsHandling()
         {
@@ -266,6 +277,14 @@ namespace TAC_AI
             commandClassic.onValueSaved.AddListener(() => { KickStart.UseClassicRTSControls = commandClassic.SavedValue; });
             useKeypadForGroups = new OptionToggle("Enable Keypad for Grouping - Check Num Lock", TACAIRTS, KickStart.UseNumpadForGrouping);
             useKeypadForGroups.onValueSaved.AddListener(() => { KickStart.UseNumpadForGrouping = useKeypadForGroups.SavedValue; });
+
+            var enemyBaseTeamsUpdateLaziness = new OptionList<BaseTeamsUpdateRate>("Unloaded Base Update Rate", TACAIRTS,
+                KickStart.limitAIBaseRate, (int)KickStart.EnemyBaseUpdateMode);
+            enemyBaseTeamsUpdateLaziness.onValueSaved.AddListener(() =>
+            {
+                KickStart.EnemyBaseUpdateMode = enemyBaseTeamsUpdateLaziness.SavedValue;
+            });
+
 
             var TACAIEnemies = KickStart.ModID + " - Non-Player Techs (NPT) General";
             painfulEnemies = new OptionToggle("<b>Enable Advanced NPTs</b>", TACAIEnemies, KickStart.enablePainMode);
@@ -394,7 +413,7 @@ namespace TAC_AI
             {
                 KickStart.CullFarEnemyBasesMode = SpawnLimiterSettings.SavedValue;
                 KickStart.UpdateCullDist();
-            });
+            }); 
 
             if (!KickStart.isPopInjectorPresent)
             {

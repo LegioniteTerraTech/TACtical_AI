@@ -449,6 +449,7 @@ namespace TAC_AI.World
             }
         }
 
+        private static System.Random RAND = new System.Random();
 
         public static void OnBeforeTilesSpawn(List<IntVector2> tileRequestor)
         {
@@ -540,7 +541,7 @@ namespace TAC_AI.World
             Biome biome = ManWorld.inst.GetBiomeWeightsAtScenePosition(posBase).Biome(0);
             var Terra = RawTechLoader.GetTerrain(posBase);
             var corp = EvalCorpWeight(biome.BiomeType);
-            var team = ManBaseTeams.GetNewBaseTeam().teamID;
+            var team = AIGlobals.GetRandomEnemyBaseTeam();
 
             FactionLevel lvl;
             int grade;
@@ -1522,7 +1523,7 @@ namespace TAC_AI.World
         {
             inst.enabled = !state;
         }
-        private void Update()
+        private void FixedUpdate()//Update()
         {
             if (ManNetwork.IsHost)
             {
@@ -1532,7 +1533,6 @@ namespace TAC_AI.World
                 if (OperatorTicker <= Time.time)
                 {
                     OperatorTicker = Time.time + OperatorTickDelay;
-                    OperatorTick++;
                     UpdateOperators();
                 }
                 // The Strategic AI does movement every MaintainerTickDelay seconds
@@ -1560,13 +1560,35 @@ namespace TAC_AI.World
                 }
 
                 // Then we update the teams!
+                DebugTAC_AI.BeginAIWorldTimer();
                 EPScrambled.AddRange(NPTTeams.Values);
                 EPScrambled.Shuffle();
                 int Count = EPScrambled.Count;
+                int UpdateCount;
+                // Note: need to make this constant regardless of update rate
+                switch (KickStart.EnemyBaseUpdateMode)
+                {
+                    case 0:
+                        UpdateCount = 4;
+                        break;
+                    case 1:
+                        UpdateCount = 8;
+                        break;
+                    case 2:
+                        UpdateCount = 16;
+                        break;
+                    case 3:
+                        UpdateCount = 32;
+                        break;
+                    default:
+                        UpdateCount = int.MaxValue;
+                        break;
+                }
+                int step = 0;
                 if (KickStart.AllowStrategicAI)
                 {
                     DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update()[RTS] - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
-                    for (int step = 0; step < Count;)
+                    for (; step < Count && step < UpdateCount;)
                     {
                         NP_Presence EP = EPScrambled.ElementAt(step);
                         if (EP.RequiresExistingTechs && EP.GlobalMakerBaseCount() == 0)
@@ -1604,7 +1626,7 @@ namespace TAC_AI.World
                 else
                 {
                     DebugTAC_AI.Info(KickStart.ModID + ": ManEnemyWorld.Update() - There are " + ManTechs.inst.IterateTechs().Count() + " total Techs on scene.");
-                    for (int step = 0; step < Count;)
+                    for (; step < Count && step < UpdateCount;)
                     {
                         NP_Presence EP = EPScrambled.ElementAt(step);
                         if (EP.RequiresExistingTechs && EP.GlobalMakerBaseCount() == 0)
@@ -1634,6 +1656,8 @@ namespace TAC_AI.World
                     }
                 }
                 //DebugRawTechSpawner.RemoveOrphanTrackedVisibles();
+                DebugTAC_AI.LogDevOnly("Calculations for (" + step + ") World AI Operators finished in " +
+                    DebugTAC_AI.FinishAIWorldTimer().ToString() + " miliseconds");
             }
             finally
             {

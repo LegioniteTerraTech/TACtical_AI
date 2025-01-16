@@ -263,7 +263,7 @@ namespace TAC_AI.World
         internal void RemoveWarning()
         {
             ManSFX.inst.StopMiscLoopingSFX(ManSFX.MiscSfxType.PayloadIncoming);
-            warningBanner.Message = "";
+            warningBanner.Message1.UpdateText("");
         }
 
         public static Action<string, bool> BigF5broningWarning => UIHelpersExt.BigF5broningBanner;

@@ -11,6 +11,7 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using Newtonsoft.Json;
+using UnityEngine.Experimental.UIElements;
 
 namespace TAC_AI
 {
@@ -32,8 +33,14 @@ namespace TAC_AI
     {
         public static bool IsValid(this TeamBasePointer point) => point != null && point.valid;
     }
+    /// <summary>
+    ///  Can represent both a tech that is present and not present
+    /// </summary>
     public interface TeamBasePointer
     {
+        /// <summary>
+        ///  MAY NOT ALWAYS BE PRESENT
+        /// </summary>
         Tank tank { get; }
         int BuildBucks { get; }
         void AddBuildBucks(int value);
@@ -108,6 +115,9 @@ namespace TAC_AI
         private bool Infighting = false;
         public bool IsReadonly = false;
 
+        /// <summary>
+        /// Should NEVER be changed under ANY circumstances!
+        /// </summary>
         internal TeamRelations defaultRelations
         {
             get => (TeamRelations)relationInt;
@@ -132,22 +142,22 @@ namespace TAC_AI
 
         /// <summary> SERIALIZATION (or default attack-all teams) ONLY </summary>
         public EnemyTeamData() {}
-        public EnemyTeamData(int team, TeamRelations relations = TeamRelations.Enemy)
+        public EnemyTeamData(int team, TeamRelations defaultRelations = TeamRelations.Enemy)
         {
             teamID = team;
             teamName = TeamNamer.GetTeamName(teamID);
             DebugTAC_AI.LogTeams("New Team of name " + teamName + ", ID " + team + ", alignment(vs player) " +
                 Alignment_Internal(ManPlayer.inst.PlayerTeam));
-            relationInt = (int)relations;
+            relationInt = (int)defaultRelations;
             IsReadonly = false;
         }
-        public EnemyTeamData(bool setReadonly, int team, TeamRelations relations = TeamRelations.Enemy)
+        public EnemyTeamData(bool setReadonly, int team, TeamRelations defaultRelations = TeamRelations.Enemy)
         {
             teamID = team;
             teamName = TeamNamer.GetTeamName(teamID);
             DebugTAC_AI.LogTeams("New Team of name " + teamName + ", ID " + team + ", alignment(vs player) " +
                 Alignment_Internal(ManPlayer.inst.PlayerTeam));
-            relationInt = (int)relations;
+            relationInt = (int)defaultRelations;
             IsReadonly = setReadonly;
         }
         public TeamRelations GetRelations(int teamOther, TeamRelations fallback = TeamRelations.Enemy) => 
@@ -500,26 +510,35 @@ namespace TAC_AI
             TankAIManager.TeamDestroyedEvent.Subscribe(OnTeamDestroyedCheck);
             ManEnemyWorld.TeamDestroyedEvent.Subscribe(OnTeamDestroyedCheck);
             InsureNetHooks();
-            InitDefaultTeams();
+            InsureDefaultTeams(false);
         }
-        public static void CreateDefaultTeam(int team, TeamRelations relations, bool infighting = false)
+        private static void CreateDefaultTeam(int team, TeamRelations relations, bool fixup, bool infighting = false)
         {
-            if (!inst.teams.ContainsKey(team))
+            if (!inst.teams.TryGetValue(team, out var ETDG))
             {
                 EnemyTeamData ETD = new EnemyTeamData(true, team, relations);
                 ETD.SetInfighting(infighting);
                 inst.teams.Add(team, ETD);
             }
+            else if (fixup && ETDG.relationInt != (int)relations)
+            {
+                DebugTAC_AI.Assert("Somehow our default team " + ETDG.teamName + " was set to an ILLEGAL VALUE " + 
+                    (TeamRelations)ETDG.relationInt + " when it SHOULD be " + relations + "!");
+                inst.teams.Remove(team);
+                EnemyTeamData ETD = new EnemyTeamData(true, team, relations);
+                ETD.SetInfighting(infighting);
+                inst.teams.Add(team, ETD);
+            }
         }
-        public static void InitDefaultTeams()
+        public static void InsureDefaultTeams(bool fixup)
         {
             if (inst.teams == null)
                 inst.teams = new Dictionary<int, EnemyTeamData>();
-            CreateDefaultTeam(ManSpawn.DefaultPlayerTeam, TeamRelations.Enemy);
-            CreateDefaultTeam(ManSpawn.FirstEnemyTeam, TeamRelations.Enemy, true);
-            CreateDefaultTeam(ManSpawn.NewEnemyTeam, TeamRelations.Enemy, true);
-            CreateDefaultTeam(ManSpawn.NeutralTeam, TeamRelations.Neutral);
-            CreateDefaultTeam(SpecialAISpawner.trollTeam, TeamRelations.Enemy);
+            CreateDefaultTeam(ManSpawn.DefaultPlayerTeam, TeamRelations.Enemy, fixup);
+            CreateDefaultTeam(ManSpawn.FirstEnemyTeam, TeamRelations.Enemy, fixup, true);
+            CreateDefaultTeam(ManSpawn.NewEnemyTeam, TeamRelations.Enemy, fixup, true);
+            CreateDefaultTeam(ManSpawn.NeutralTeam, TeamRelations.Neutral, fixup);
+            CreateDefaultTeam(SpecialAISpawner.trollTeam, TeamRelations.Enemy, fixup);
         }
         public static void DeInit()
         {
@@ -546,7 +565,7 @@ namespace TAC_AI
         {
             try
             {
-                InitDefaultTeams();
+                InsureDefaultTeams(false);
                 CheckNeedNetworkHooks(mode);
             }
             catch { }
@@ -601,7 +620,7 @@ namespace TAC_AI
             }
             return cachedTeams;
         }
-        public static EnemyTeamData GetNewBaseTeam()
+        public static EnemyTeamData GetNewBaseTeam(TeamRelations defaultRelations)
         {
             checked
             {
@@ -611,7 +630,7 @@ namespace TAC_AI
                     {
                         inst.lowTeam--;
                     }
-                    var valNew = new EnemyTeamData(inst.lowTeam);
+                    var valNew = new EnemyTeamData(inst.lowTeam, defaultRelations);
                     inst.teams.Add(inst.lowTeam, valNew);
                     inst.lowTeam--;
                     return valNew;
@@ -977,7 +996,7 @@ namespace TAC_AI
                             {
                                 if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
                                 {
-                                    switch (GetNPTTeamType(tech.m_TeamID))
+                                    switch (GetLegacyNPTTeamType(tech.m_TeamID))
                                     {
                                         case NP_Types.Friendly:
                                             InsureBaseTeam(tech.m_TeamID).SetFriendly(playerTeam);
@@ -1011,7 +1030,7 @@ namespace TAC_AI
                             {
                                 if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
                                 {
-                                    switch (GetNPTTeamType(tech.m_TeamID))
+                                    switch (GetLegacyNPTTeamType(tech.m_TeamID))
                                     {
                                         case NP_Types.Friendly:
                                             InsureBaseTeam(tech.m_TeamID).SetFriendly(playerTeam);
@@ -1049,10 +1068,11 @@ namespace TAC_AI
             {
                 if (inst == null)
                     DebugTAC_AI.Log("ManBaseTeams - Save failed, saving instance null??");
+                /*
                 foreach (var item in inst.teams)
                 {
-                    DebugTAC_AI.Log("  Team " + item.Value.teamName + ", relation " + item.Value.Alignment_Internal(playerTeam));
-                }
+                    DebugTAC_AI.LogDevOnly("  Team " + item.Value.teamName + ", relation " + item.Value.Alignment_Internal(playerTeam));
+                }*/
                 DebugTAC_AI.Log("ManBaseTeams - Saved " + inst.teams.Count + " NPT base teams.");
             }
             catch { }
@@ -1079,16 +1099,19 @@ namespace TAC_AI
             {
                 if (inst.teams == null)
                 {
-                    InitDefaultTeams();
+                    InsureDefaultTeams(false);
                     inst.MigrateTeamsToNewSaveFormat();
                     if (inst.teams.Count > 0)
                         DebugTAC_AI.Log("ManBaseTeams.MigrateTeamsToNewSaveFormat - Migrating " + inst.teams.Count + " NPT base teams.");
                 }
                 else
                 {
+                    // Clean up any "corrupted" teams
+                    InsureDefaultTeams(true);
+                    // Continue with loading
                     foreach (var item in inst.teams)
                     {
-                        DebugTAC_AI.Log("  Team " + item.Value.teamName + ", relation " + item.Value.Alignment_Internal(playerTeam));
+                        //DebugTAC_AI.LogDevOnly("  Team " + item.Value.teamName + ", relation " + item.Value.Alignment_Internal(playerTeam));
                         TankAIManager.UpdateEntireTeam(item.Key);
                     }
                     DebugTAC_AI.Log("ManBaseTeams - Loaded " + inst.teams.Count + " NPT base teams.");
@@ -1369,11 +1392,11 @@ namespace TAC_AI
         //               LEGACY
         // ------------------------------------
 
-        public static bool IsLegacyBaseTeam(int team)
+        private static bool IsLegacyBaseTeam(int team)
         {
             return (team >= BaseTeamsStart && team <= BaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
         }
-        public static NP_Types GetNPTTeamType(int team)
+        private static NP_Types GetLegacyNPTTeamType(int team)
         {
             if (team == ManPlayer.inst.PlayerTeam)
                 return NP_Types.Player;
@@ -1394,38 +1417,38 @@ namespace TAC_AI
                 return NP_Types.NonNPT;
         }
 
-        public const int EnemyBaseTeamsStart = 256;
-        public const int EnemyBaseTeamsEnd = 356;
+        private const int EnemyBaseTeamsStart = 256;
+        private const int EnemyBaseTeamsEnd = 356;
 
-        public const int SubNeutralBaseTeamsStart = 357;
-        public const int SubNeutralBaseTeamsEnd = 406;
+        private const int SubNeutralBaseTeamsStart = 357;
+        private const int SubNeutralBaseTeamsEnd = 406;
 
-        public const int NeutralBaseTeamsStart = 407;
-        public const int NeutralBaseTeamsEnd = 456;
+        private const int NeutralBaseTeamsStart = 407;
+        private const int NeutralBaseTeamsEnd = 456;
 
-        public const int FriendlyBaseTeamsStart = 457;
-        public const int FriendlyBaseTeamsEnd = 506;
+        private const int FriendlyBaseTeamsStart = 457;
+        private const int FriendlyBaseTeamsEnd = 506;
 
-        public const int BaseTeamsStart = 256;
-        public const int BaseTeamsEnd = 506;
+        private const int BaseTeamsStart = 256;
+        private const int BaseTeamsEnd = 506;
 
-        public static bool IsLegacyEnemyBaseTeam(int team)
+        private static bool IsLegacyEnemyBaseTeam(int team)
         {
             return (team >= EnemyBaseTeamsStart && team <= EnemyBaseTeamsEnd) || team == SpecialAISpawner.trollTeam;
         }
-        public static bool IsLegacyNonAggressiveTeam(int team)
+        private static bool IsLegacyNonAggressiveTeam(int team)
         {
             return team >= SubNeutralBaseTeamsStart && team <= NeutralBaseTeamsEnd;
         }
-        public static bool IsLegacySubNeutralBaseTeam(int team)
+        private static bool IsLegacySubNeutralBaseTeam(int team)
         {
             return team >= SubNeutralBaseTeamsStart && team <= SubNeutralBaseTeamsEnd;
         }
-        public static bool IsLegacyNeutralBaseTeam(int team)
+        private static bool IsLegacyNeutralBaseTeam(int team)
         {
             return team >= NeutralBaseTeamsStart && team <= NeutralBaseTeamsEnd;
         }
-        public static bool IsLegacyFriendlyBaseTeam(int team)
+        private static bool IsLegacyFriendlyBaseTeam(int team)
         {
             return team >= FriendlyBaseTeamsStart && team <= FriendlyBaseTeamsEnd;
         }
