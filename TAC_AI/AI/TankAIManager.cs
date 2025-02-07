@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Remoting.Messaging;
 using TAC_AI.AI.AlliedOperations;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
@@ -10,6 +11,7 @@ using TAC_AI.World;
 using TerraTech.Network;
 using TerraTechETCUtil;
 using UnityEngine;
+using static WobblyLaser;
 
 namespace TAC_AI.AI
 {
@@ -80,6 +82,7 @@ namespace TAC_AI.AI
             Singleton.Manager<ManTechs>.inst.TankTeamChangedEvent.Subscribe(OnTankChange);
             Singleton.Manager<ManTechs>.inst.PlayerTankChangedEvent.Subscribe(OnPlayerTechChange);
             Singleton.Manager<ManVisible>.inst.OnStoppedTrackingVisible.Subscribe(OnVisibleNoLongerTracked);
+            Singleton.Manager<ManGameMode>.inst.ModeStartEvent.Subscribe(OnStartup);
             InvokeHelper.Invoke(GatherAllMissionTechs, 0.1f);
             //QueueUpdater.Subscribe(FetchAllAllies);
             DebugTAC_AI.Log(KickStart.ModID + ": Created AIECore Manager.");
@@ -134,6 +137,14 @@ namespace TAC_AI.AI
         }
 #endif
 
+        public static void OnStartup(Mode mode)
+        {
+            InvokeHelper.Invoke(InsureLoadedCorrectly, 1f);
+        }
+        private static void InsureLoadedCorrectly()
+        {
+            //ForceReloadAll();
+        }
         public static void RegisterMissionTechVisID(int vis)
         {
             MissionTechs.Add(vis);
@@ -170,7 +181,7 @@ namespace TAC_AI.AI
             //if (tankInfo.gameObject.GetComponent<TankAIHelper>().AIState != 0)
             //helper.ResetAll(tonk);
             //helper.OnTechTeamChange();
-            helper.dirtyDesign = true;
+            helper.dirtyExtents = true;
             helper.dirtyAI = true;
             helper.RunState = AIRunState.Advanced;
             helper.enabled = true;
@@ -186,32 +197,33 @@ namespace TAC_AI.AI
                 return;
             }
             var helper = tonk.GetHelperInsured();
-            //RemoveTech(tonk);
+            RemoveTech(tonk);
             //helper.ResetAll(tonk);
             helper.OnTechTeamChange();
             if (tonk.FirstUpdateAfterSpawn)
             {
-                helper.dirtyDesign = true;
+                helper.dirtyExtents = true;
                 helper.dirtyAI = true;
                 helper.RunState = AIRunState.Advanced;
                 helper.enabled = true;
                 DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Spawned!");
             }
-            //IndexTech(tonk, info.m_NewTeam);
-            DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Called OnTankChange");
+            IndexTech(tonk, info.m_NewTeam);
+            CheckDestroyedTeams();
+            //DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Called OnTankChange");
             //QueueUpdater.Send();
         }
-        private static void OnTankRecycled(Tank tonk)
+        private static void OnTankRecycled(Tank recycledTech)
         {
-            var helper = tonk.GetHelperInsured();
-            tonk.TankRecycledEvent.Unsubscribe(OnTankRecycled);
+            var helper = recycledTech.GetHelperInsured();
+            recycledTech.TankRecycledEvent.Unsubscribe(OnTankRecycled);
             TechRemovedEvent.Send(helper);
-            if (MissionTechs.Remove(tonk.visible.ID))
-                MissionTechRemovedEvent.Send(tonk.visible.ID);
+            if (MissionTechs.Remove(recycledTech.visible.ID))
+                MissionTechRemovedEvent.Send(recycledTech.visible.ID);
             helper.Recycled();
-            RemoveTech(tonk);
+            RemoveTech(recycledTech);
             CheckDestroyedTeams();
-            //DebugTAC_AI.Log(KickStart.ModID + ": Allied AI " + tonk.name + ":  Called OnTankRecycled");
+            DebugTAC_AI.LogDevOnly(KickStart.ModID + ": Allied AI " + recycledTech.name + ":  Called OnTankRecycled");
 
             if (helper.AIControlOverride != null)
             {
@@ -219,7 +231,7 @@ namespace TAC_AI.AI
                 helper.AIControlOverride = null;
             }
 
-            var mind = tonk.GetComponent<EnemyMind>();
+            var mind = recycledTech.GetComponent<EnemyMind>();
             if ((bool)mind)
             {
 #if !STEAM
@@ -247,23 +259,26 @@ namespace TAC_AI.AI
         }
         private static void OnPlayerTechChange(Tank tonk, bool yes)
         {
-            TankAIHelper helper;
             if (lastPlayerTech != tonk)
             {
+                TankAIHelper helper;
                 if (tonk != null)
                 {
                     helper = tonk.GetHelperInsured();
                     helper.OnTechTeamChange();
                 }
-                try
+                else
                 {
-                    if (lastPlayerTech)
+                    try
                     {
-                        helper = tonk.GetHelperInsured();
-                        helper.OnTechTeamChange();
+                        if (lastPlayerTech)
+                        {
+                            helper = lastPlayerTech.GetHelperInsured();
+                            helper.OnTechTeamChange();
+                        }
                     }
+                    catch { }
                 }
-                catch { }
                 lastPlayerTech = tonk;
             }
         }
@@ -271,7 +286,7 @@ namespace TAC_AI.AI
         /// <summary> DO NOT ALTER </summary>
         private static readonly HashSet<Tank> emptyHash = new HashSet<Tank>();
         /// <summary>  DO NOT EDIT OUTPUT </summary>
-        public static HashSet<Tank> GetTeamTanks(int Team)
+        public static IEnumerable<Tank> GetTeamTanks(int Team)
         {
             if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
             {
@@ -291,7 +306,7 @@ namespace TAC_AI.AI
             return emptyHash;
         }
         /// <summary>  DO NOT EDIT OUTPUT </summary>
-        public static HashSet<Tank> GetTargetTanks(int Team)
+        public static IEnumerable<Tank> GetTargetTanks(int Team)
         {
             if (teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
             {
@@ -312,20 +327,52 @@ namespace TAC_AI.AI
                 }
             }
         }
+        internal static void ForceReloadAll()
+        {
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item == null)
+                    continue;
+                RemoveTech(item);
+                IndexTech(item, item.Team);
+            }
+            CheckDestroyedTeams();
+        }
         internal static void UpdateTechTeam(Tank tonk)
         {
             RemoveTech(tonk);
             IndexTech(tonk, tonk.Team);
             CheckDestroyedTeams();
         }
+
+        private static List<Tank> TempReloaderCached = new List<Tank>();
         internal static void UpdateEntireTeam(int team)
         {
-            foreach (var item in new List<Tank>(GetTeamTanks(team)))
+            TempReloaderCached.AddRange(GetTeamTanks(team));
+            foreach (var item in TempReloaderCached)
             {
                 RemoveTech(item);
                 IndexTech(item, team);
             }
+            TempReloaderCached.Clear();
             CheckDestroyedTeams();
+        }
+        private static void CacheTeam(int Team)
+        {
+            TeamIndex TI = new TeamIndex();
+            foreach (var item in ManTechs.inst.IterateTechs())
+            {
+                if (item == null)
+                    continue;
+                if (ManBaseTeams.IsEnemy(item.Team, Team))
+                    TI.Targets.Add(item);
+                else
+                    TI.NonHostile.Add(item);
+            }
+            //RemoveAllInvalid(TI.Targets);
+            //RemoveAllInvalid(TI.NonHostile);
+            teamsIndexed.Add(Team, TI);
+            TeamCreatedEvent.Send(Team);
         }
         private static void IndexTech(Tank tonk, int Team)
         {
@@ -337,39 +384,15 @@ namespace TAC_AI.AI
             try
             {
                 if (!teamsIndexed.TryGetValue(Team, out TeamIndex TIndex))
-                {
-                    TeamIndex TI = new TeamIndex();
-                    foreach (var item in ManTechs.inst.IterateTechs())
-                    {
-                        if (item == null || item == tonk)
-                            continue;
-                        if (ManBaseTeams.IsEnemy(item.Team, Team))
-                            TI.Targets.Add(item);
-                        else
-                            TI.NonHostile.Add(item);
-                    }
-                    //RemoveAllInvalid(TI.Targets);
-                    //RemoveAllInvalid(TI.NonHostile);
-                    teamsIndexed.Add(Team, TI);
-                    TeamCreatedEvent.Send(Team);
-                }
+                    CacheTeam(Team);
                 foreach (KeyValuePair<int, TeamIndex> TI in teamsIndexed)
                 {
                     if (TI.Key == Team)
-                    {
                         TI.Value.Teammates.Add(tonk);
-                        //RemoveAllInvalid(TI.Value.Teammates);
-                    }
                     if (ManBaseTeams.IsEnemy(TI.Key, Team))
-                    {
                         TI.Value.Targets.Add(tonk);
-                        //RemoveAllInvalid(TI.Value.Targets);
-                    }
                     else
-                    {
                         TI.Value.NonHostile.Add(tonk);
-                        //RemoveAllInvalid(TI.Value.NonHostile);
-                    }
                 }
                 //DebugTAC_AI.Log("IndexTech added " + tonk.name + " of team " + Team);
             }
@@ -385,11 +408,8 @@ namespace TAC_AI.AI
             foreach (var TI in teamsIndexed)
             {
                 TI.Value.Teammates.Remove(tonk);
-                if (TI.Value.Teammates.Any())
-                {
-                    TI.Value.Targets.Remove(tonk);
-                    TI.Value.NonHostile.Remove(tonk);
-                }
+                TI.Value.Targets.Remove(tonk);
+                TI.Value.NonHostile.Remove(tonk);
             }
             //DebugTAC_AI.Log("RemoveTech " + tonk.name);
         }
@@ -400,7 +420,7 @@ namespace TAC_AI.AI
                 KeyValuePair<int, TeamIndex> TI = teamsIndexed.ElementAt(step);
                 if (!TI.Value.Teammates.Any())
                 {
-                    //DebugTAC_AI.Assert("OnTeamDestroyedCheck - removed team " + TI.Key + " due to no more teammates");
+                    //DebugTAC_AI.Assert("OnTeamDestroyedCheck - removed active team " + TI.Key + " due to no more teammates");
                     TeamDestroyedEvent.Send(TI.Key);
                     teamsIndexed.Remove(TI.Key);
                 }
@@ -412,6 +432,7 @@ namespace TAC_AI.AI
         {
             try
             {
+                //Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Warning: This server is using Advanced AI!  If you are new to the game, I would suggest you play safe. Enemies RTS Mode: " + KickStart.AllowStrategicAI + "");
                 SendChatServer("Warning: This server is using Advanced AI!  If you are new to the game, I would suggest you play safe. Enemies RTS Mode: " + KickStart.AllowStrategicAI + "");
             }
             catch { }
@@ -543,7 +564,7 @@ namespace TAC_AI.AI
             }
             LastRealTime = Time.realtimeSinceStartup;
         }
-        public static bool IsPlayerControlled(Tank tank) => PlayerControlledTanks.Contains(tank);
+        public static bool IsPlayerRTSControlled(Tank tank) => PlayerControlledTanks.Contains(tank);
         private static HashSet<Tank> PlayerControlledTanks = new HashSet<Tank>();
         private void Update()
         {

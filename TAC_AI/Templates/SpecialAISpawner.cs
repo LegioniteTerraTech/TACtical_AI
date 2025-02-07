@@ -682,11 +682,11 @@ namespace TAC_AI.Templates
                 if (AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
                 {
                     int team = AIGlobals.GetRandomEnemyBaseTeam();
-                    RawTechLoader.StartBaseAtPositionNoFounder(factionSelect, pos3, team,
+                    RawTechLoader.TrySpawnBaseAtPositionNoFounder(factionSelect, pos3, team,
                         BasePurpose.AnyNonHQ, licence);
                     if (AIEBases.TryFindExpansionLocationGrid(pos3, pos3 + new Vector3(0, 0, 64), out Vector3 pos4))
                     {
-                        RawTechLoader.StartBaseAtPositionNoFounder(factionSelect, pos3, team,
+                        RawTechLoader.TrySpawnBaseAtPositionNoFounder(factionSelect, pos3, team,
                             BasePurpose.NotStationary, licence);
                     }
                 }

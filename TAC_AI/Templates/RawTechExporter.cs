@@ -84,7 +84,6 @@ namespace TAC_AI.Templates
 
 
         // AI Icons
-        public static Sprite Escort;
         public static Dictionary<AIDriverType, Sprite> aiBackplates;
         public static Dictionary<AIType, Sprite> aiIcons;
         public static Dictionary<EnemySmarts, Sprite> aiIconsEnemy;

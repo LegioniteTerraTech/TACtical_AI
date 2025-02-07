@@ -81,6 +81,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         direct.SetLastDest(helper.lastEnemyGet.tank.boundsCentreWorldNoCheck);
                     else
                         RGeneral.Scurry(helper, tank, mind);
+                    helper.AttackEnemy = true;
                     if (dist < spacer + range)
                     {
                         if (!helper.IsTechMovingAbs(helper.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
@@ -89,7 +90,6 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             helper.SettleDown();
                             helper.FullBoost = true;
-                            helper.AttackEnemy = true;
                         }
                     }
                     else if (dist < spacer + (range * 2))
@@ -118,7 +118,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                     {   // Stop every now and then to allow some shots
                         if (helper.ActionPause > 120)
                         {
-                            if (!helper.IsTechMovingAbs(helper.EstTopSped / AIGlobals.EnemyAISpeedPanicDividend))
+                            if (!helper.IsTechMovingAbs(helper.EstTopSped / (AIGlobals.EnemyAISpeedPanicDividend * 2)))
                                 //|| 10 < helper.FrustrationMeter)
                                 helper.TryHandleObstruction(!AIECore.Feedback, dist, false, true, ref direct);
                             else

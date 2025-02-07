@@ -237,12 +237,13 @@ namespace TAC_AI.AI
             ToFetch = null;
             try
             {
-                foreach (var ally in AIEPathing.AllyList(helper.tank))
+                foreach (var ally in TankAIManager.GetTeamTanks(helper.tank.Team))
                 {
-                    if (ally.GetHelperInsured().CanCopyControls)
+                    if (ally != null && ally.visible.isActive && ally != helper.tank &&
+                        ally.GetHelperInsured().CanCopyControls)
                     {
                         float temp = (ally.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
-                        if (distanceSqr > temp && temp > 1)
+                        if (temp < distanceSqr)
                         {
                             distanceSqr = temp;
                             bestStep = ally;
@@ -252,14 +253,13 @@ namespace TAC_AI.AI
                 if (bestStep == null)
                     return false;
                 ToFetch = bestStep.visible;
-                //DebugTAC_AI.Log(KickStart.ModID + ":ClosestAllyProcess " + closestTank.name);
+                //DebugTAC_AI.Log(KickStart.ModID + ": FetchCopyableAlly " + bestStep.name);
                 return true;
             }
-            catch //(Exception e)
+            catch (Exception e)
             {
-                //DebugTAC_AI.Log(KickStart.ModID + ": Crash on ClosestAllyProcess " + e);
+                throw new NullReferenceException(KickStart.ModID + ": Crash on FetchCopyableAlly", e);
             }
-            return false;
         }
 
 

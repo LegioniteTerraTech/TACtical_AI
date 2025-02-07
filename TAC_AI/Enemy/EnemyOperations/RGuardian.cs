@@ -14,7 +14,6 @@ namespace TAC_AI.Enemy.EnemyOperations
         {
             //The Handler that tells the Tank (Defender) what to do movement-wise
             helper.foundGoal = false;
-
             helper.IsMultiTech = false;
             helper.Attempt3DNavi = mind.EvilCommander == EnemyHandling.Starship || mind.EvilCommander == EnemyHandling.Airplane || mind.EvilCommander == EnemyHandling.Chopper;
 

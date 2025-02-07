@@ -261,8 +261,8 @@ namespace TAC_AI.AI.Enemy
                 else
                     helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
             }
-            else
-                helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+            else  // Don't stalk cause that's rude
+                helper.lastEnemy = null;  // Stop following this far from base
             helper.AttackEnemy = false;
             if (helper.lastEnemyGet)
             {

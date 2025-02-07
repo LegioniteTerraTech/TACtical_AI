@@ -81,12 +81,12 @@ namespace TAC_AI.AI
                         helper.actionPause = 0;
                     if (helper.MTLockedToTechBeam && helper.IsMultiTech)
                     {   //Override and disable most driving abilities - We are going to follow the host tech!
-                        if (helper.lastCloseAlly != null)
+                        if ((bool)helper.theResource?.tank)
                         {
-                            if (helper.lastCloseAlly.beam.IsActive)
+                            if (helper.theResource.tank.beam.IsActive)
                             {
                                 //tank.beam.EnableBeam(true);
-                                var allyTrans = helper.lastCloseAlly.trans;
+                                var allyTrans = helper.theResource.tank.trans;
                                 tank.rbody.velocity = Vector3.zero;
                                 helper.tank.trans.rotation = Quaternion.LookRotation(allyTrans.TransformDirection(helper.MTOffsetRot), allyTrans.TransformDirection(helper.MTOffsetRotUp));
                                 helper.tank.trans.position = allyTrans.TransformPoint(helper.MTOffsetPos);

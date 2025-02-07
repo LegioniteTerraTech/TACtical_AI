@@ -284,7 +284,7 @@ namespace TAC_AI.World
         // Base Operations
         public static bool CanPurgeTeam(NP_Presence EP, NP_BaseUnit EBU)
         {
-            return KickStart.CullFarEnemyBases && ManBaseTeams.IsPlayerControlledAIBaseTeam(EP.Team) && 
+            return KickStart.CullFarEnemyBases && !ManBaseTeams.IsPlayerOwnedAIBaseTeam(EP.Team) && 
                 (EBU.tilePos - WorldPosition.FromScenePosition(Singleton.playerPos).TileCoord).WithinBox(
                     AIGlobals.IgnoreBaseCullingTilesFromOrigin);
         }

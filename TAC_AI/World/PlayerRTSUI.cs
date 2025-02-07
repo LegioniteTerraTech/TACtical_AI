@@ -639,7 +639,7 @@ namespace TAC_AI.World
 
 
             CommandButton("Stop", StopIcon, ManSFX.UISfxType.AIIdle,
-                "Stop all actions", true, "", "ERROR", false, !enemy && !moving, CommandStop);
+                "Stop current action", true, string.Empty, "ERROR", false, !enemy && !moving, CommandStop);
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             /*
@@ -650,7 +650,7 @@ namespace TAC_AI.World
             CommandsSelfDestruct();
             EmptyButton();
             CommandButton("Anchor", AnchorIcon, ManSFX.UISfxType.Select, "Anchor to ground", lastTank.tank.Anchors.NumPossibleAnchors > 0,
-                "No Anchors", "Enemy too close!", !lastTank.CanAnchorNow, lastTank.tank.IsAnchored, CommandAnchor);
+                "Need Anchors", "Enemy too close!", !lastTank.CanAnchorNow, lastTank.tank.IsAnchored, CommandAnchor);
             GUILayout.EndHorizontal();
         }
 

@@ -113,6 +113,8 @@ namespace TAC_AI
         [JsonIgnore]
         public float angerThreshold = 0;
         private bool Infighting = false;
+        internal bool IsInfighting => Infighting;
+        /// <summary>This means the team cannot be changed, or have it's relations changed with any other teams</summary>
         public bool IsReadonly = false;
 
         /// <summary>
@@ -132,10 +134,17 @@ namespace TAC_AI
 
         public bool HasAnyTechsLeftAlive()
         {
+            if (IsReadonly || ManSpawn.IsPlayerTeam(teamID))
+                return true;
             if (ManEnemyWorld.GetTeam(Team) != null)
                 return true;
             if (AllTechsIterator.Any())
                 return true;
+            foreach (var item in ManVisible.inst.AllTrackedVisibles)
+            {
+                if (item.ObjectType == ObjectTypes.Vehicle && item.TeamID == teamID)
+                    return true;
+            }
             return false;
         }
 
@@ -161,7 +170,7 @@ namespace TAC_AI
             IsReadonly = setReadonly;
         }
         public TeamRelations GetRelations(int teamOther, TeamRelations fallback = TeamRelations.Enemy) => 
-            ManBaseTeams.GetRelations(teamID, teamOther, fallback);
+            ManBaseTeams.GetRelationsWritablePriority(teamID, teamOther, fallback);
         /// <summary>
         /// DO NOT CALL THIS FROM ANYWHERE OTHER THAN ManBaseTeams
         /// </summary>
@@ -179,15 +188,11 @@ namespace TAC_AI
                 throw new NullReferenceException("EnemyTeamData align IS NULL");
             if (teamID == teamOther)
                 return Infighting ? TeamRelations.Enemy : TeamRelations.SameTeam;
-            else if (PlayerTeam != int.MinValue && ManBaseTeams.TryGetBaseTeamDynamicOnly(teamOther, out var other) &&
-                    other.align.TryGetValue(PlayerTeam, out var relate))
-            {   // For controllable allies of the team 
-                return relate;
-            }
             else
             {
                 /*
                 if (ManBaseTeams.TryGetBaseTeam(teamOther, out other))
+
                 {
                     if (other.align.TryGetValue(teamOther, out relate))
                     {
@@ -200,7 +205,7 @@ namespace TAC_AI
                 }
                 else 
                 */
-                if (align.TryGetValue(teamOther, out relate))
+                if (align.TryGetValue(teamOther, out var relate))
                     return relate;
             }
             return defaultRelations;
@@ -324,7 +329,7 @@ namespace TAC_AI
             if (damage != 0)
             {
                 angerThreshold += damage;
-                if (AIGlobals.AngerDropRelations > angerThreshold)
+                if (AIGlobals.DamageAngerDropRelations > angerThreshold)
                     return false;
             }
             TeamRelations TRN = (TeamRelations)Mathf.Clamp((int)TRP - 1, 0, Enum.GetValues(typeof(TeamRelations)).Length);
@@ -378,6 +383,7 @@ namespace TAC_AI
                 val.align[teamID] = relate;
             }
             ManBaseTeams.TeamAlignmentDeltaEvent.Send(teamID);
+            ManEnemyWorld.UpdateTeam(teamID);
         }
         public void SetNeutral(int team)
         {
@@ -512,11 +518,11 @@ namespace TAC_AI
             InsureNetHooks();
             InsureDefaultTeams(false);
         }
-        private static void CreateDefaultTeam(int team, TeamRelations relations, bool fixup, bool infighting = false)
+        private static void CreateDefaultTeam(int team, TeamRelations relations, bool lockedReadOnly, bool fixup, bool infighting = false)
         {
             if (!inst.teams.TryGetValue(team, out var ETDG))
             {
-                EnemyTeamData ETD = new EnemyTeamData(true, team, relations);
+                EnemyTeamData ETD = new EnemyTeamData(lockedReadOnly, team, relations);
                 ETD.SetInfighting(infighting);
                 inst.teams.Add(team, ETD);
             }
@@ -525,7 +531,7 @@ namespace TAC_AI
                 DebugTAC_AI.Assert("Somehow our default team " + ETDG.teamName + " was set to an ILLEGAL VALUE " + 
                     (TeamRelations)ETDG.relationInt + " when it SHOULD be " + relations + "!");
                 inst.teams.Remove(team);
-                EnemyTeamData ETD = new EnemyTeamData(true, team, relations);
+                EnemyTeamData ETD = new EnemyTeamData(lockedReadOnly, team, relations);
                 ETD.SetInfighting(infighting);
                 inst.teams.Add(team, ETD);
             }
@@ -534,11 +540,11 @@ namespace TAC_AI
         {
             if (inst.teams == null)
                 inst.teams = new Dictionary<int, EnemyTeamData>();
-            CreateDefaultTeam(ManSpawn.DefaultPlayerTeam, TeamRelations.Enemy, fixup);
-            CreateDefaultTeam(ManSpawn.FirstEnemyTeam, TeamRelations.Enemy, fixup, true);
-            CreateDefaultTeam(ManSpawn.NewEnemyTeam, TeamRelations.Enemy, fixup, true);
-            CreateDefaultTeam(ManSpawn.NeutralTeam, TeamRelations.Neutral, fixup);
-            CreateDefaultTeam(SpecialAISpawner.trollTeam, TeamRelations.Enemy, fixup);
+            CreateDefaultTeam(ManSpawn.DefaultPlayerTeam, TeamRelations.Enemy, false, false);
+            CreateDefaultTeam(ManSpawn.FirstEnemyTeam, TeamRelations.Enemy, true, fixup, true);
+            CreateDefaultTeam(ManSpawn.NewEnemyTeam, TeamRelations.Enemy, true, fixup, true);
+            CreateDefaultTeam(ManSpawn.NeutralTeam, TeamRelations.Neutral, true, fixup);
+            CreateDefaultTeam(SpecialAISpawner.trollTeam, TeamRelations.Enemy, true, fixup);
         }
         public static void DeInit()
         {
@@ -656,10 +662,21 @@ namespace TAC_AI
                         inst.lowTeam--;
                     }
                     var valNew = new EnemyTeamData(inst.lowTeam);
-                    valNew.Set(team, TeamRelations.AITeammate);
                     valNew.PlayerTeam = team;
                     inst.teams.Add(inst.lowTeam, valNew);
+                    SetRelations(valNew.teamID, team, TeamRelations.AITeammate);
                     inst.lowTeam--;
+                    DebugTAC_AI.Assert("Team " + valNew.teamName + " has spawned as a player auto team!");
+                    if (!IsPlayerOwnedAIBaseTeam(valNew.teamID))
+                        DebugTAC_AI.FatalError("Team " + valNew.teamName + " is player auto team but not properly marked as player's AI base team");
+                    if (GetRelationsWithWriteablePriority(valNew.teamID, playerTeam, out EnemyTeamData ETD))
+                    {
+                        TeamRelations TR = ETD.Alignment_Internal(ETD.teamID == playerTeam ? ETD.teamID : playerTeam);
+                        if (TR != TeamRelations.AITeammate)
+                            DebugTAC_AI.FatalError("Team " + valNew.teamName + " is player auto team but marked as " + TR);
+                    }
+                    else
+                        DebugTAC_AI.FatalError("Team " + valNew.teamName + " is player auto team but is NOT REGISTERED IN TEAMS");
                     return valNew;
                 }
                 catch (OverflowException)
@@ -751,6 +768,23 @@ namespace TAC_AI
 
 
         // Relations
+        private static bool GetRelationsOnlyWritable(int teamID1, int teamID2, out EnemyTeamData ETD)
+        {
+            if (teamID2 < teamID1)
+            {   // Lowest team gets searched first
+                int swapper = teamID1;
+                teamID1 = teamID2;
+                teamID2 = swapper;
+            }
+            // ALWAYS prioritize the non-immutable ones to get the correct alignment!
+            if (inst.teams.TryGetValue(teamID1, out ETD) && !ETD.IsReadonly)
+                return true;
+            if (inst.teams.TryGetValue(teamID2, out ETD))
+                return true;
+            if (inst.teams.TryGetValue(teamID1, out ETD))
+                return true;
+            return false;
+        }
         private static bool GetRelationsWithWriteablePriority(int teamID1, int teamID2, out EnemyTeamData ETD)
         {
             if (teamID2 < teamID1)
@@ -786,15 +820,29 @@ namespace TAC_AI
                 return true;
             return false;
         }
-        public static TeamRelations GetRelations(int teamID1, int teamID2, TeamRelations fallback)
+        public static TeamRelations GetRelationsWritablePriority(int teamID1, int teamID2, TeamRelations fallback)
         {
             if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
+            {
+                if (ETD.PlayerTeam != int.MinValue && inst.teams.TryGetValue(ETD.PlayerTeam, out var ETD2))
+                    ETD = ETD2;
                 return ETD.Alignment_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2);
+            }
+            return fallback;
+        }
+        public static TeamRelations GetRelationsReadonlyPriority(int teamID1, int teamID2, TeamRelations fallback)
+        {
+            if (GetRelationsWithReadonlyPriority(teamID1, teamID2, out var ETD))
+            {
+                if (ETD.PlayerTeam != int.MinValue && inst.teams.TryGetValue(ETD.PlayerTeam, out var ETD2))
+                    ETD = ETD2;
+                return ETD.Alignment_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2);
+            }
             return fallback;
         }
         public static bool CanAlterRelations(int teamID1, int teamID2)
         {
-            if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
+            if (GetRelationsWithReadonlyPriority(teamID1, teamID2, out var ETD))
                 return !ETD.IsReadonly;
             return false;
         }
@@ -802,6 +850,8 @@ namespace TAC_AI
         {
             if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
             {
+                if (!CanAlterRelations(teamID1, teamID2))
+                    DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
                 ETD.Set_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, set);
                 return true;
             }
@@ -811,6 +861,8 @@ namespace TAC_AI
         {
             if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
             {
+                if (!CanAlterRelations(teamID1, teamID2))
+                    DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
                 ETD.ImproveRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2);
                 return true;
             }
@@ -820,6 +872,8 @@ namespace TAC_AI
         {
             if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
             {
+                if (!CanAlterRelations(teamID1, teamID2))
+                    DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
                 ETD.DegradeRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, damage);
                 return true;
             }
@@ -827,14 +881,14 @@ namespace TAC_AI
         }
 
         public static bool RelationsMatch(int teamID1, int teamID2, TeamRelations relation) =>
-            GetRelations(teamID1, teamID2, (TeamRelations)(-1)) == relation;
+            GetRelationsWritablePriority(teamID1, teamID2, (TeamRelations)(-1)) == relation;
         public static bool RelationTeamGreaterOrEqual(int teamID1, int teamID2, TeamRelations relationsIn, TeamRelations fallback = TeamRelations.Enemy)
         {
-            return GetRelations(teamID1, teamID2, fallback) >= relationsIn;
+            return GetRelationsWritablePriority(teamID1, teamID2, fallback) >= relationsIn;
         }
         public static bool RelationTeamLessOrEqual(int teamID1, int teamID2, TeamRelations relationsIn, TeamRelations fallback = TeamRelations.AITeammate)
         {
-            return GetRelations(teamID1, teamID2, fallback) <= relationsIn;
+            return GetRelationsWritablePriority(teamID1, teamID2, fallback) <= relationsIn;
         }
         public static bool IsEnemy(int teamID1, int teamID2)
         {
@@ -888,33 +942,39 @@ namespace TAC_AI
         }
         public static bool IsNonAggressiveTeam(int team)
         {
-            return inst.teams.TryGetValue(team, out var val) && val.Alignment_Internal(playerTeam) >= TeamRelations.SubNeutral;
+            return RelationTeamGreaterOrEqual(team, playerTeam, TeamRelations.SubNeutral);
         }
 
         public static int playerTeam => ManPlayer.inst.PlayerTeam;
         public static bool IsEnemyBaseTeam(int team)
         {
-            return inst.teams.TryGetValue(team, out var val) && val.Alignment_Internal(playerTeam) == TeamRelations.Enemy;
+            return GetRelationsWithWriteablePriority(playerTeam, team, out var val) &&
+                val.Alignment_Internal(val.teamID == playerTeam ? team : playerTeam) == TeamRelations.Enemy;
         }
         public static bool IsSubNeutralBaseTeam(int team)
         {
-            return inst.teams.TryGetValue(team, out var val) && val.Alignment_Internal(playerTeam) == TeamRelations.SubNeutral;
+            return GetRelationsWithWriteablePriority(playerTeam, team, out var val) &&
+                val.Alignment_Internal(val.teamID == playerTeam ? team : playerTeam) == TeamRelations.SubNeutral;
         }
         public static bool IsNeutralBaseTeam(int team)
         {
-            return inst.teams.TryGetValue(team, out var val) && val.Alignment_Internal(playerTeam) == TeamRelations.Neutral;
+            return GetRelationsWithWriteablePriority(playerTeam, team, out var val) &&
+                val.Alignment_Internal(val.teamID == playerTeam ? team : playerTeam) == TeamRelations.Neutral;
         }
         public static bool IsFriendlyBaseTeam(int team)
         {
-            return inst.teams.TryGetValue(team, out var val) && val.Alignment_Internal(playerTeam) == TeamRelations.Friendly;
+            return GetRelationsWithWriteablePriority(playerTeam, team, out var val) &&
+                val.Alignment_Internal(val.teamID == playerTeam ? team : playerTeam) == TeamRelations.Friendly;
         }
         public static bool IsAlliedPlayerAIBaseTeam(int team)
         {
-            return inst.teams.TryGetValue(team, out var val) && val.Alignment_Internal(playerTeam) == TeamRelations.AITeammate;
+            return GetRelationsWithWriteablePriority(playerTeam, team, out var val) &&
+                val.Alignment_Internal(val.teamID == playerTeam ? team : playerTeam) == TeamRelations.AITeammate;
         }
-        public static bool IsPlayerControlledAIBaseTeam(int team)
+        public static bool IsPlayerOwnedAIBaseTeam(int team)
         {
-            return inst.teams.TryGetValue(team, out var val) && val.PlayerTeam != int.MinValue;
+            return GetRelationsWithWriteablePriority(playerTeam, team, out var val) && 
+                val.PlayerTeam != int.MinValue;
         }
 
         private static float LastTechBuildTime = AIGlobals.SLDBeforeBuilding;
@@ -933,7 +993,7 @@ namespace TAC_AI
                     continue;
                 int Team = item.Team;
                 if (item.angerThreshold > 0)
-                    item.angerThreshold = Mathf.Max(0, item.angerThreshold - AIGlobals.AngerCoolPerSec);
+                    item.angerThreshold = Mathf.Max(0, item.angerThreshold - AIGlobals.DamageAngerCoolPerSec);
                 if (AIECore.RetreatingTeams.Contains(Team))
                 {
                     float averageTechDMG = 0;
@@ -1160,6 +1220,11 @@ namespace TAC_AI
                             GUILayout.Label(item.Value.Alignment_Internal(playerTeam).ToString());
                             GUILayout.FlexibleSpace();
                             GUILayout.EndHorizontal();
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Label("Infighting: ");
+                            GUILayout.Label(item.Value.IsInfighting.ToString());
+                            GUILayout.FlexibleSpace();
+                            GUILayout.EndHorizontal();
                             foreach (var item2 in item.Value.align)
                             {
                                 GUILayout.BeginHorizontal();
@@ -1209,19 +1274,24 @@ namespace TAC_AI
         }
         public static void OnNetTeamBBChange(int team, int bbSet)
         {
-            if (ToSend.TryGetValue(team, out byte val))
+            if (ToSend.ContainsKey(team))
                 return;
-            ToSend[team] = 0;
+            ToSend.Add(team, 0);
         }
         public static void OnNetTeamAlignChange(int team)
         {
             if (ToSend.TryGetValue(team, out byte val) && val > 0)
                 return;
-            ToSend[team] = 1;
+            ToSend.Add(team, 1);
         }
         public static void OnNetTeamDestroyed(int team)
         {
-            ToSend[team] = 2;
+            if (ToSend.ContainsKey(team))
+            {
+                ToSend[team] = 2;
+                return;
+            }
+            ToSend.Add(team, 2);
         }
 
         public static void PushTeamDeltasToClients()
@@ -1241,7 +1311,7 @@ namespace TAC_AI
                 try
                 {
                     int count = ToSend.Count;
-                    if (count >= byte.MaxValue)
+                    if (count <= byte.MaxValue)
                     {
                         write.Write((byte)count);
                         foreach (var item in ToSend)
@@ -1349,6 +1419,7 @@ namespace TAC_AI
                     teamInst.SetBuildBucks = BB;
                     UnpackDictInfo(ref read, ref teamInst.align);
                 }
+                TankAIManager.UpdateEntireTeam(team);
             }
             private void PackDictInfo(ref NetworkWriter write, Dictionary<int,TeamRelations> input)
             {
@@ -1381,6 +1452,12 @@ namespace TAC_AI
         {
             netHook.Register();
         }
+        /// <summary>
+        /// Just permits it to carry on
+        /// </summary>
+        /// <param name="update"></param>
+        /// <param name="isServer"></param>
+        /// <returns></returns>
         internal static bool OnReceiveTeamUpdate(NetworkedAITeamUpdate update, bool isServer)
         {
             return true;

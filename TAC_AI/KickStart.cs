@@ -50,16 +50,24 @@ namespace TAC_AI
         public static bool UseClassicRTSControls = false;//
 #endif
         public static bool UseNumpadForGrouping = false;//
-        internal static KeyCode RetreatHotkey = KeyCode.I;// The key to press to retreat!
-        public static int RetreatHotkeySav = (int)RetreatHotkey;//
-        internal static KeyCode CommandHotkey = KeyCode.K;// The key to press to toggle RTS
-        public static int CommandHotkeySav = (int)CommandHotkey;//
-        internal static KeyCode CommandBoltsHotkey = KeyCode.X;// The key to press to toggle RTS
-        public static int CommandBoltsHotkeySav = (int)CommandBoltsHotkey;//
-        internal static KeyCode MultiSelect = KeyCode.LeftShift;// The key to hold to select multiple
-        public static int MultiSelectKeySav = (int)MultiSelect;//
-        internal static KeyCode ModeSelect = KeyCode.J;// The key to hold to select multiple
-        public static int ModeSelectKeySav = (int)ModeSelect;//
+        /// <summary> Toggles retreat state! </summary>
+        internal static KeyCode RetreatHotkey = KeyCode.I;
+        public static int RetreatHotkeySav = (int)RetreatHotkey;
+        /// <summary> Toggles RTS Mode </summary>
+        internal static KeyCode CommandHotkey = KeyCode.K;
+        public static int CommandHotkeySav = (int)CommandHotkey;
+        /// <summary> Fires bolts on selected Techs </summary>
+        internal static KeyCode CommandBoltsHotkey = KeyCode.X;
+        public static int CommandBoltsHotkeySav = (int)CommandBoltsHotkey;
+        /// <summary> Hold to select multiple </summary>
+        internal static KeyCode MultiSelect = KeyCode.LeftShift;
+        public static int MultiSelectKeySav = (int)MultiSelect;
+        /// <summary> Access the AI modal </summary>
+        internal static KeyCode ModeSelect = KeyCode.J;
+        public static int ModeSelectKeySav = (int)ModeSelect;
+        /// <summary> Interact with NPTss </summary>
+        internal static KeyCode NPTInteract = KeyCode.T;
+        public static int NPTInteractKeySav = (int)NPTInteract;
         //internal static bool testEnemyAI = true; // OBSOLETE
 
         public static float TerrainHeight = ManWorld.inst.TileSize;
@@ -1055,6 +1063,10 @@ namespace TAC_AI
         public static Vector3 Clamp01Box(this Vector3 vec)
         {
             return Vector3.Min(Vector3.Max(-Vector3.one, vec), Vector3.one);
+        }
+        public static float AbsMax(this Vector3 vec)
+        {
+            return Mathf.Max(Mathf.Abs(vec.x), Mathf.Abs(vec.y), Mathf.Abs(vec.z));
         }
     }
 }

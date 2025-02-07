@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using TAC_AI.AI.Enemy;
+using TAC_AI.Templates;
 
 namespace TAC_AI
 {
@@ -14,6 +15,8 @@ namespace TAC_AI
         private const string playerTeam = "Your Team";
         private const string mPlayerTeam = "MP Player Team";
         private const string neutralTeam = "Services Group";
+        private const string trollerTeam = "Trader Trolls United";
+
 
         private static StringBuilder build = new StringBuilder();
 
@@ -38,6 +41,11 @@ namespace TAC_AI
                 build.Append(mPlayerTeam);
                 return build.ToString();
             }
+            else if (Team == SpecialAISpawner.trollTeam)
+            {
+                build.Append(trollerTeam);
+                return build.ToString();
+            }
             else if (Team == ManSpawn.NeutralTeam)
             {
                 build.Append(neutralTeam);
@@ -58,7 +66,7 @@ namespace TAC_AI
                 build.Append(AdjectiveAlt.ElementAt(mod1));
                 build.Append(" ");
                 build.Append(NounAlt.ElementAt(mod2));
-               // DebugTAC_AI.Log("got val " + teamNameDetermine + " and name " + build.ToString() + " from mods [" + mod1 + ", " + mod2 + "]");
+                // DebugTAC_AI.Log("got val " + teamNameDetermine + " and name " + build.ToString() + " from mods [" + mod1 + ", " + mod2 + "]");
             }
 
             return build.ToString();

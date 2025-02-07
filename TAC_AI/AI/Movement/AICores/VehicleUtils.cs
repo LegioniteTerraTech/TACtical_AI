@@ -13,6 +13,7 @@ namespace TAC_AI.AI.Movement.AICores
     {
         internal static FieldInfo controlGet = typeof(TankControl).GetField("m_ControlState", BindingFlags.NonPublic | BindingFlags.Instance);
 
+        private const float maxSteeringStopDriveBelowAngle = 0.875f;
         private const float ignoreSteeringAboveAngle = 0.925f;
         private const float strictForwardsLowerSteeringAboveAngle = 0.775f;
         private const float forwardsLowerSteeringAboveAngle = 0.6f;
@@ -24,87 +25,112 @@ namespace TAC_AI.AI.Movement.AICores
         /// </summary>
         public static bool Turner(TankAIHelper helper, Vector3 destVec, float drive, ref EControlCoreSet core)
         {
-            float turnVal = 1;
+            float turnVal;
+            float driveVal;
             float forwards = Vector2.Dot(destVec.ToVector2XZ().normalized, helper.tank.rootBlockTrans.forward.ToVector2XZ().normalized);
-            if (core.StrictTurning)
+
+            switch (core.TurningStrictness)
             {
-                if (forwards > ignoreSteeringAboveAngle)
-                {
-                    return false;
-                }
-                else if (forwards > strictForwardsLowerSteeringAboveAngle)
-                {
-                    float strength = Mathf.Log10(1 + ((1 - forwards) * 9));
-                    turnVal = Mathf.Clamp(strength, 0, 1);
-                }
-                else
-                {
-                    /* float sped = helper.recentSpeed / Mathf.Max(helper.EstTopSped, 14);
-                    if (sped < 0.45f)
+                case ESteeringStrength.Strict:
+                    if (forwards > ignoreSteeringAboveAngle)
                     {
-                        if (thisControl.DriveControl.Approximately(0, 0.05f))
-                        thisControl.DriveControl = Mathf.Sign(thisControl.DriveControl) * 1;
                         return false;
                     }
-                    else if (sped < 0.75f)
-                        turnVal = sped;
-                    else
-                    {*/
-                    float strength = Mathf.Log10(1 + Mathf.Max(0, forwards * 9));
-                    helper.DriveControl = Mathf.Sign(drive) * Mathf.Clamp(Mathf.Max(Mathf.Abs(drive), strength), -1, 1);
-                    //}
-                }
-                if (turnVal < 0 || turnVal > 1 || float.IsNaN(turnVal))
-                    DebugTAC_AI.Exception("Invalid Turnval  NaN " + float.IsNaN(turnVal) + "  negative " + (turnVal < 0));
-                if (helper.FixControlReversal(drive))
-                    helper.SteerControl(new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
-                else
-                    helper.SteerControl(destVec, turnVal);
-                return true;
-            }
-            else
-            {
-                if (forwards > ignoreSteeringAboveAngle && drive >= MaxThrottleToTurnFull)
-                    return false;
-                else
-                {
-                    if (core.DriveDir == EDriveFacing.Perpendicular)
+                    else if (forwards > strictForwardsLowerSteeringAboveAngle)
                     {
-                        if (!(bool)helper.lastCloseAlly)
-                        {
-                            float strength = 1 - forwards;
-                            turnVal = Mathf.Clamp(strength, 0, 1);
-                        }
-                        else if (forwards > MinLookAngleToTurnFineSideways)
-                        {
-                            float strength = 1 - (forwards / 1.5f);
-                            turnVal = Mathf.Clamp(strength, 0, 1);
-                        }
+                        driveVal = Mathf.Log10(1 + ((1 - forwards) * 9));
+                        turnVal = Mathf.Clamp(driveVal, 0, 1);
                     }
                     else
                     {
-                        if (drive <= MaxThrottleToTurnAccurate)
+                        turnVal = 1;
+                        /* float sped = helper.recentSpeed / Mathf.Max(helper.EstTopSped, 14);
+                        if (sped < 0.45f)
                         {
-                            if (!(bool)helper.lastCloseAlly && forwards > forwardsLowerSteeringAboveAngle)
-                            {
-                                float strength = Mathf.Log10(4 + ((1 - forwards) * 6));
-                                turnVal = Mathf.Clamp(strength, 0, 1);
-                            }
+                            if (thisControl.DriveControl.Approximately(0, 0.05f))
+                            thisControl.DriveControl = Mathf.Sign(thisControl.DriveControl) * 1;
+                            return false;
                         }
-                        else if (!(bool)helper.lastCloseAlly && forwards > forwardsLowerSteeringAboveAngle)
-                        {
-                            float strength = 1 - forwards;
-                            turnVal = Mathf.Clamp(strength, 0, 1);
-                        }
+                        else if (sped < 0.75f)
+                            turnVal = sped;
+                        else
+                        {*/
+                        driveVal = Mathf.Log10(1 + Mathf.Max(0, forwards * 9));
+                        helper.DriveControl = Mathf.Sign(drive) * Mathf.Clamp(Mathf.Max(Mathf.Abs(drive), driveVal), -1, 1);
+                        //}
                     }
                     if (turnVal < 0 || turnVal > 1 || float.IsNaN(turnVal))
                         DebugTAC_AI.Exception("Invalid Turnval  NaN " + float.IsNaN(turnVal) + "  negative " + (turnVal < 0));
-                }
-                if (helper.FixControlReversal(drive))
-                    helper.SteerControl(new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
-                else
-                    helper.SteerControl(destVec, turnVal);
-                return true;
+                    if (helper.FixControlReversal(drive))
+                        helper.SteerControl(new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                    else
+                        helper.SteerControl(destVec, turnVal);
+                    return true;
+                case ESteeringStrength.MaxSteering:
+                    turnVal = 1;
+                    if (maxSteeringStopDriveBelowAngle > forwards)
+                    {
+                        helper.DriveControl = 0;
+                    }
+                    else
+                    {
+                        driveVal = Mathf.Log10(1 + Mathf.Max(0, forwards * 9));
+                        helper.DriveControl = Mathf.Lerp(0, Mathf.Sign(drive) * Mathf.Clamp(Mathf.Max(Mathf.Abs(drive), driveVal), -1, 1),
+                            (forwards - maxSteeringStopDriveBelowAngle) * (1f / (1f - maxSteeringStopDriveBelowAngle)));
+                    }
+                    if (helper.FixControlReversal(drive))
+                        helper.SteerControl(new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                    else
+                        helper.SteerControl(destVec, turnVal);
+                    return true;
+                default:
+                    if (forwards > ignoreSteeringAboveAngle && drive >= MaxThrottleToTurnFull)
+                        return false;
+                    else
+                    {
+                        if (core.DriveDir == EDriveFacing.Perpendicular)
+                        {
+                            if (!(bool)helper.lastCloseAlly)
+                            {
+                                float strength = 1 - forwards;
+                                turnVal = Mathf.Clamp(strength, 0, 1);
+                            }
+                            else if (forwards > MinLookAngleToTurnFineSideways)
+                            {
+                                float strength = 1 - (forwards / 1.5f);
+                                turnVal = Mathf.Clamp(strength, 0, 1);
+                            }
+                            else
+                                turnVal = 1;
+                        }
+                        else
+                        {
+                            if (drive <= MaxThrottleToTurnAccurate)
+                            {
+                                if (!(bool)helper.lastCloseAlly && forwards > forwardsLowerSteeringAboveAngle)
+                                {
+                                    float strength = Mathf.Log10(4 + ((1 - forwards) * 6));
+                                    turnVal = Mathf.Clamp(strength, 0, 1);
+                                }
+                                else
+                                    turnVal = 1;
+                            }
+                            else if (!(bool)helper.lastCloseAlly && forwards > forwardsLowerSteeringAboveAngle)
+                            {
+                                float strength = 1 - forwards;
+                                turnVal = Mathf.Clamp(strength, 0, 1);
+                            }
+                            else
+                                turnVal = 1;
+                        }
+                        if (turnVal < 0 || turnVal > 1 || float.IsNaN(turnVal))
+                            DebugTAC_AI.Exception("Invalid Turnval  NaN " + float.IsNaN(turnVal) + "  negative " + (turnVal < 0));
+                    }
+                    if (helper.FixControlReversal(drive))
+                        helper.SteerControl(new Vector3(-destVec.x, destVec.y, -destVec.z), turnVal);
+                    else
+                        helper.SteerControl(destVec, turnVal);
+                    return true;
             }
         }
 
@@ -222,7 +248,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 helper.ThrottleState = AIThrottleState.ForceSpeed;
                                 helper.DriveVar = 1;
                                 core.DrivePathing = EDrivePathing.PrecisePath;
-                                core.StrictTurning = true;
+                                core.TurningStrictness = ESteeringStrength.Strict;
 
                                 if (!helper.IsGoingToRTSDest)
                                     pos = tank.boundsCentreWorldNoCheck;
@@ -241,7 +267,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 else
                                 {
                                     core.DrivePathing = EDrivePathing.PrecisePath;
-                                    core.StrictTurning = true;
+                                    core.TurningStrictness = ESteeringStrength.Strict;
 
                                     if (!helper.IsGoingToRTSDest)
                                         pos = tank.boundsCentreWorldNoCheck;
@@ -253,7 +279,7 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             core.DrivePathing = EDrivePathing.PrecisePath;
-                            core.StrictTurning = true;
+                            core.TurningStrictness = ESteeringStrength.Strict;
                             if (!helper.IsGoingToRTSDest)
                             {
                                 pos = tank.boundsCentreWorldNoCheck;
@@ -323,7 +349,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 helper.ThrottleState = AIThrottleState.ForceSpeed;
                                 helper.DriveVar = 1;
                                 core.DrivePathing = EDrivePathing.PrecisePath;
-                                core.StrictTurning = true;
+                                core.TurningStrictness = ESteeringStrength.Strict;
 
                                 if (!helper.IsGoingToRTSDest)
                                     pos = tank.boundsCentreWorldNoCheck;
@@ -342,7 +368,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 else
                                 {
                                     core.DrivePathing = EDrivePathing.PrecisePath;
-                                    core.StrictTurning = true;
+                                    core.TurningStrictness = ESteeringStrength.Strict;
 
                                     if (!helper.IsGoingToRTSDest)
                                         return GetPathingTargetEnemy(controller, out pos, ref core);
@@ -354,7 +380,7 @@ namespace TAC_AI.AI.Movement.AICores
                         else
                         {
                             core.DrivePathing = EDrivePathing.PrecisePath;
-                            core.StrictTurning = true;
+                            core.TurningStrictness = ESteeringStrength.Strict;
                             if (!helper.IsGoingToRTSDest)
                                 return GetPathingTargetEnemy(controller, out pos, ref core);
                             else
@@ -415,7 +441,7 @@ namespace TAC_AI.AI.Movement.AICores
                         if (helper.ThrottleState == AIThrottleState.PivotOnly)
                         {
                             helper.AutoSpacing = 0;
-                            core.StrictTurning = true;
+                            core.TurningStrictness = ESteeringStrength.Strict;
                         }
                         else
                         {
@@ -444,7 +470,7 @@ namespace TAC_AI.AI.Movement.AICores
                             if (helper.ThrottleState == AIThrottleState.PivotOnly)
                             {
                                 core.DrivePathing = EDrivePathing.IgnoreAll;
-                                core.StrictTurning = true;
+                                core.TurningStrictness = ESteeringStrength.Strict;
                                 helper.AutoSpacing = 0;
                             }
                             else
@@ -460,7 +486,7 @@ namespace TAC_AI.AI.Movement.AICores
                                     helper.AutoSpacing = helper.lastTechExtents + 2;
                                 }
                                 if (helper.ThrottleState == AIThrottleState.Yield)
-                                    core.StrictTurning = true;
+                                    core.TurningStrictness = ESteeringStrength.Strict;
                             }
                             pos = helper.theResource.tank.boundsCentreWorldNoCheck;
                         }
@@ -502,8 +528,8 @@ namespace TAC_AI.AI.Movement.AICores
                         core.DrivePathing = EDrivePathing.IgnoreAll;
                     else
                         core.DrivePathing = EDrivePathing.Path;
-                    helper.theResource = AIEPathing.ClosestUnanchoredAlly(AIEPathing.AllyList(controller.Tank),
-                        controller.Tank.boundsCentreWorldNoCheck, Mathf.Pow(helper.MaxCombatRange * 2, 2), out float bestval, tank)?.visible;
+                    helper.theResource = AIEPathing.ClosestUnanchoredAllyAegis(TankAIManager.GetTeamTanks(controller.Tank.Team),
+                        controller.Tank.boundsCentreWorldNoCheck, Mathf.Pow(helper.MaxCombatRange * 2, 2), out float bestval, helper)?.visible;
                     if (helper.lastOperatorRange > helper.MaxCombatRange || !controller.AICore.TryAdjustForCombat(true, ref pos, ref core))
                     {
                         if (helper.theResource.IsNotNull())
@@ -571,7 +597,7 @@ namespace TAC_AI.AI.Movement.AICores
 
                                 pos = helper.lastPlayer.tank.boundsCentreWorldNoCheck;
                                 if (helper.ThrottleState == AIThrottleState.Yield)
-                                    core.StrictTurning = true;
+                                    core.TurningStrictness = ESteeringStrength.Strict;
                             }
                             else
                             {
@@ -643,7 +669,7 @@ namespace TAC_AI.AI.Movement.AICores
 
                         pos = helper.lastBasePos.position;
                         if (helper.ThrottleState == AIThrottleState.Yield)
-                            core.StrictTurning = true;
+                            core.TurningStrictness = ESteeringStrength.Strict;
                     }
                     else
                         core.Stop();
@@ -691,9 +717,9 @@ namespace TAC_AI.AI.Movement.AICores
                         core.DrivePathing = EDrivePathing.IgnoreAll;
                     else
                         core.DrivePathing = EDrivePathing.Path;
-                    helper.theResource = AIEPathing.ClosestUnanchoredAlly(AIEPathing.AllyList(controller.Tank),
+                    helper.theResource = AIEPathing.ClosestUnanchoredAllyAegis(TankAIManager.GetTeamTanks(controller.Tank.Team),
                         controller.Tank.boundsCentreWorldNoCheck, Mathf.Pow(helper.MaxCombatRange * 2, 2),
-                        out float bestval, helper.tank)?.visible;
+                        out float bestval, helper)?.visible;
                     if (helper.lastOperatorRange > helper.MaxCombatRange || !controller.AICore.TryAdjustForCombat(true, ref pos, ref core))
                     {
                         if (helper.theResource.IsNotNull())
@@ -772,7 +798,7 @@ namespace TAC_AI.AI.Movement.AICores
 
                             pos = helper.lastDestinationCore;
                             if (helper.ThrottleState == AIThrottleState.Yield)
-                                core.StrictTurning = true;
+                                core.TurningStrictness = ESteeringStrength.Strict;
                         }
                     }
                 }

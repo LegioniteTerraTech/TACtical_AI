@@ -10,9 +10,9 @@ namespace TAC_AI
     public interface AISettings
     {
         /// <summary>Range to stop before enemy</summary>
-        float CombatRange { get; }
+        float CombatSpacing { get; }
         /// <summary>Range to pursue enemies</summary>
-        float ChaseRange { get; }
+        float CombatChase { get; }
         /// <summary>Maximum Range to stray from objective</summary>
         float ObjectiveRange { get; }
         bool shouldChase { get; }
@@ -38,14 +38,14 @@ namespace TAC_AI
         private TankAIHelper helper;
 
         /// <summary>Range to stop before enemy</summary>
-        public float CombatRange { get => combatRange; }
+        public float CombatSpacing { get => combatRange; }
         private float combatRange;
         /// <summary>Range to pursue enemies</summary>
-        public float ChaseRange { get => chaseRange; }
+        public float CombatChase { get => chaseRange; }
         private float chaseRange;
         /// <summary>Maximum Range to stray from objective</summary>
         public float ObjectiveRange { get => AIGlobals.DefaultMaxObjectiveRange; }
-        public bool shouldChase => ChaseRange > 0;
+        public bool shouldChase => CombatChase > 0;
 
 
         /// <summary>Should the AI take combat calculations and retreat if nesseary?</summary>
@@ -122,19 +122,19 @@ namespace TAC_AI
 
     public struct AISettingsSet : AISettings
     {
-        /// <summary>Range to stop before enemy</summary>
-        public float CombatRange { get => combatRange; set => combatRange = value; }
-        private float combatRange;
-        /// <summary>Range to pursue enemies</summary>
-        public float ChaseRange { get => chaseRange; set => chaseRange = value; }
-        private float chaseRange;
+        /// <summary>Spacing: Range to stop before enemy</summary>
+        public float CombatSpacing { get => combatSpacing; set => combatSpacing = value; }
+        private float combatSpacing;
+        /// <summary>Chase: Range to pursue enemies</summary>
+        public float CombatChase { get => combatChase; set => combatChase = value; }
+        private float combatChase;
         /// <summary>Maximum Range to stray from objective</summary>
         public float ObjectiveRange { get => objectiveRange; set => objectiveRange = value; }
         private float objectiveRange;
         /// <summary>Maximum Range to search for job articles</summary>
         public float ScanRange { get => scanRange; set => scanRange = value; }
         private float scanRange;
-        public bool shouldChase => ChaseRange > 0;
+        public bool shouldChase => CombatChase > 0;
 
 
         /// <summary>Should the AI take combat calculations and retreat if nesseary?</summary>
@@ -167,9 +167,9 @@ namespace TAC_AI
 
         public AISettingsSet(float combatR, float searchR, float chaseR, float jobR, bool toggleDefault)
         {
-            combatRange = combatR;
+            combatSpacing = combatR;
             objectiveRange = searchR;
-            chaseRange = chaseR;
+            combatChase = chaseR;
             scanRange = jobR;
 
             advancedAI = toggleDefault;
@@ -186,9 +186,9 @@ namespace TAC_AI
         /// <param name="blockSpec"></param>
         public AISettingsSet(TankPreset.BlockSpec blockSpec)
         {
-            SetIfPossible(blockSpec, "CombatR", out combatRange);
+            SetIfPossible(blockSpec, "CombatR", out combatSpacing);
             SetIfPossible(blockSpec, "SearchR", out objectiveRange);
-            SetIfPossible(blockSpec, "ChaseR", out chaseRange);
+            SetIfPossible(blockSpec, "ChaseR", out combatChase);
             SetIfPossible(blockSpec, "JobR", out scanRange);
 
             SetIfPossible(blockSpec, "Melee", out fullMelee, true);
@@ -201,9 +201,9 @@ namespace TAC_AI
 
         public AISettingsSet(AISettings refr)
         {
-            combatRange = refr.CombatRange;
+            combatSpacing = refr.CombatSpacing;
             objectiveRange = refr.ObjectiveRange;
-            chaseRange = refr.ChaseRange;
+            combatChase = refr.CombatChase;
             scanRange = AIGlobals.DefaultMaxObjectiveRange;
 
             advancedAI = refr.AdvancedAI;
@@ -225,9 +225,9 @@ namespace TAC_AI
         // Utilities
         public void ClampMaxFloats(AISettingsSet settings)
         {
-            CombatRange = Mathf.Min(CombatRange, settings.CombatRange);
+            CombatSpacing = Mathf.Min(CombatSpacing, settings.CombatSpacing);
             ObjectiveRange = Mathf.Min(ObjectiveRange, settings.ObjectiveRange);
-            ChaseRange = Mathf.Min(ChaseRange, settings.ChaseRange);
+            CombatChase = Mathf.Min(CombatChase, settings.CombatChase);
         }
         public float GetJobRange(Tank tank)
         {
@@ -240,8 +240,8 @@ namespace TAC_AI
         {
             if (help.Allied)
             {
-                CombatRange = Mathf.Min(CombatRange, limiter.CombatRange);
-                ChaseRange = Mathf.Min(ChaseRange, limiter.ChaseRange);
+                CombatSpacing = Mathf.Min(CombatSpacing, limiter.CombatSpacing);
+                CombatChase = Mathf.Min(CombatChase, limiter.CombatChase);
                 ObjectiveRange = Mathf.Min(ObjectiveRange, limiter.ObjectiveRange);
 
                 AdvancedAI = AdvancedAI && limiter.AdvancedAI;
@@ -256,18 +256,18 @@ namespace TAC_AI
 
         internal void GUIDisplay(AISettings lim, ref bool delta)
         {
-            GUIAIManager.StatusLabelButtonToggle(new Rect(20, 145, 80, 30), "Ram", lim.FullMelee, ref fullMelee,
-                "Melee with target", "Need GC AI", ref delta);
+            GUIAIManager.StatusLabelButtonToggle(new Rect(20, 145, 80, 30), "RAM+", lim.FullMelee, ref fullMelee,
+                "Smart Melee with target", "Need GeoCorp A.I.", ref delta);
             GUIAIManager.StatusLabelButtonToggle(new Rect(100, 145, 80, 30), "Side", lim.SideToThreat, ref sideToThreat,
-                "Side to Target", "Need VEN AI", ref delta);
+                "Attacks broadside to target", "Need Venture A.I.", ref delta);
             GUIAIManager.StatusLabelButtonToggle(new Rect(20, 175, 80, 30), "CPU+", lim.AdvancedAI, ref advancedAI,
-                "Smarter Logic", "Need HE or VEN AI", ref delta);
+                "Smarter overall Logic", "Need Hawkeye or Venture A.I.", ref delta);
             GUIAIManager.StatusLabelButtonToggle(new Rect(100, 175, 80, 30), "Multi+", lim.AllMT, ref allMT,
-                "MT Responds to non-player", "Need GC AI", ref delta);
+                "Multi-Tech works with other A.I.", "Need GeoCorp A.I.", ref delta);
             GUIAIManager.StatusLabelButtonToggle(new Rect(20, 205, 80, 30), "Repair", lim.AutoRepair, ref autoRepair,
-                "Replace missing blocks", "Need GC or BF AI", ref delta);
+                "Replace missing blocks", "Need GeoCorp or Better Future A.I.", ref delta);
             GUIAIManager.StatusLabelButtonToggle(new Rect(100, 205, 80, 30), "SCU", lim.UseInventory, ref useInventory,
-                "Use inventory items", "Need BF AI", ref delta);
+                "Repair using inventory blocks", "Need Better Future A.I.", ref delta);
         }
 
 
@@ -329,9 +329,9 @@ namespace TAC_AI
 
         internal void SaveFromAI(TankPreset.BlockSpec blockSpec)
         {
-            SaveIfPossible(blockSpec, "CombatR", CombatRange);
+            SaveIfPossible(blockSpec, "CombatR", CombatSpacing);
             SaveIfPossible(blockSpec, "SearchR", ObjectiveRange);
-            SaveIfPossible(blockSpec, "ChaseR", ChaseRange);
+            SaveIfPossible(blockSpec, "ChaseR", CombatChase);
             SaveIfPossible(blockSpec, "JobR", ScanRange);
 
             SaveIfPossible(blockSpec, "Melee", FullMelee);

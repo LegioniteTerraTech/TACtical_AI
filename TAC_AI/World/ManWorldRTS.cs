@@ -1622,7 +1622,22 @@ namespace TAC_AI.World
         }
 
         private static float lastClickTime = 0;
-        private void Update()
+        internal void FixedUpdate()
+        {
+            try
+            {
+                if (!ManPauseGame.inst.IsPaused && ManGameMode.inst.GetIsInPlayableMode())
+                {
+                    if (PlayerIsInRTS || PlayerRTSOverlay)
+                        UpdateCameraOverride();
+                }
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.LogWarnPlayerOnce("Critical Error in ManPlayerRTS.FixedUpdate()", e);
+            }
+        }
+        internal void Update()
         {
             try
             {
@@ -1651,7 +1666,7 @@ namespace TAC_AI.World
                     {
                         bool notOverMenus = !ManModGUI.IsMouseOverModGUI || BoxSelecting;
 
-                        UpdateCameraOverride();
+                        //UpdateCameraOverride();
                         UpdateCursor();
 
 
@@ -1732,7 +1747,7 @@ namespace TAC_AI.World
         {
             if (DevCamLock == DebugCameraLock.LockCamToTech && Singleton.playerTank != null)
             {
-                DebugTAC_AI.Assert("UpdateCameraOverride");
+                //DebugTAC_AI.Assert("UpdateCameraOverride");
                 var instH = Singleton.playerTank.GetHelperInsured();
                 Vector3 tankPos = Singleton.playerTank.boundsCentreWorldNoCheck + new Vector3(0, instH.lastTechExtents * 0.75f, 0);
                 Vector3 lookPos = Singleton.cameraTrans.position;

@@ -15,7 +15,7 @@ namespace TAC_AI
         [DevCommand(Name = KickStart.ModCommandID + ".ForceSpawnBase", Access = Access.Public, Users = User.Host)]
         public static CommandReturn ForceEnemyBaseSpawn()
         {
-            RawTechLoader.StartBaseAtPositionNoFounder(FactionSubTypes.NULL, ManPointer.inst.targetPosition, -9001, BasePurpose.AnyNonHQ);
+            RawTechLoader.FORCESpawnBaseAtPositionNoFounder(FactionSubTypes.NULL, ManPointer.inst.targetPosition, -9001, BasePurpose.AnyNonHQ);
             return new CommandReturn
             {
                 message = "Spawned new Tech",

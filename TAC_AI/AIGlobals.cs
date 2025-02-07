@@ -8,17 +8,18 @@ using UnityEngine.UI;
 using TAC_AI.AI;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
+using TAC_AI.World;
 
 namespace TAC_AI
 {
     public static class AIGlobalsExt
     {
-        public static bool TechIsPlayerControlled(this Tank tank)
+        public static bool TechIsActivePlayer(this Tank tank)
         {
             try
             {
                 if (ManNetwork.IsNetworked)
-                    return TankAIManager.IsPlayerControlled(tank);
+                    return ManNetwork.inst.IsPlayerTechID(tank.visible.ID);
                 else
                     return tank.PlayerFocused;
             }
@@ -153,6 +154,7 @@ namespace TAC_AI
         public const int MaxBlockLimitAttract = 128;
 
         // BASES
+        public static bool CancelOnErrorTech = true;
         public const int NaturalBaseSpacingFromOriginTiles = 2;
         public const int NaturalBaseSpacingTiles = 2;
         public const int NaturalBaseCostBase = 250000;
@@ -257,6 +259,8 @@ namespace TAC_AI
         public static IntVector3 RTSDisabled => IntVector3.invalid;
         // General 
         public const float YieldSpeed = 10;
+        public static bool AllowWeaponsDisarm = true;
+        public const bool BaseSubNeutralsCuriousFollow = true;
 
         // Elevation
         public const float GroundOffsetGeneralAir = 10;
@@ -273,10 +277,12 @@ namespace TAC_AI
         public const short MaxAnchorAttempts = 3;//12;
 
         // Unjamming
+        public const int UnjamUpdateFire = 25;
         public const int UnjamUpdateStart = 120;
         public const int UnjamUpdateTicks = 120;
         public const int UnjamUpdateEndDelay = 20;
 
+        public const int UrgencyOverloadReconsideration = 180;//80
         public const int UnjamUpdateDrop = UnjamUpdateStart + UnjamUpdateTicks;
         public const int UnjamUpdateEnd = UnjamUpdateDrop + UnjamUpdateEndDelay;
 
@@ -362,6 +368,8 @@ namespace TAC_AI
         public const float minimumChargeFractionToConsider = 0.75f;
 
         // Combat Parameters
+        public const float TargetValidationDelay = 0.6f;//1.5f;
+        public const bool UseVanillaTargetFetching = false;
         public const int DefaultMaxTargetingRange = 150;
         public const float MaxRangeFireAll = 125;   // WEAPON AIMING RANGE
 
@@ -375,8 +383,9 @@ namespace TAC_AI
 
         // ENEMY AI PARAMETERS
         // Active Enemy AI Techs
-        public const float AngerDropRelations = 2500;
-        public const float AngerCoolPerSec = 250 * 1.1f;
+        public const float EnemyTeamAwarenessUpdateDelay = 6;
+        public const float DamageAngerDropRelations = 2500;//2500
+        public const float DamageAngerCoolPerSec = 25 * EnemyTeamAwarenessUpdateDelay;
         public const int DefaultEnemyScanRange = 150;
         public const int TileFringeDist = 96;
         public const float BatteryRetreatPercent = 0.25f;
@@ -427,6 +436,7 @@ namespace TAC_AI
 
         // Colors
         internal static Color PlayerColor = new Color(0.5f, 0.75f, 0.95f, 1);
+        internal static Color PlayerAutoColor = new Color(0.35f, 0.85f, 0.475f, 1);
         // ENEMY BASE TEAMS
         internal static Color EnemyColor = new Color(0.95f, 0.1f, 0.1f, 1);
 
@@ -536,7 +546,7 @@ namespace TAC_AI
                 return NP_Types.Player;
             else if (IsBaseTeamAny(team))
             {
-                switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
+                switch (ManBaseTeams.GetRelationsWritablePriority(team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
                 {
                     case TeamRelations.Enemy:
                         return NP_Types.Enemy;
@@ -652,7 +662,7 @@ namespace TAC_AI
 
         internal static bool PopupColored(string text, int team, WorldPosition pos)
         {
-            switch (ManBaseTeams.GetRelations(team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
+            switch (ManBaseTeams.GetRelationsWritablePriority(team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
             {
                 case TeamRelations.Enemy:
                     PopupEnemyInfo(text, pos);

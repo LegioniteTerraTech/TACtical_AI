@@ -143,11 +143,12 @@ namespace TAC_AI
             if (block.IsAttached)
                 OnAttach();
         }
+        /*
         public void DelayedSub()
         {
             if (block.IsAttached)
                 LoadToTech();
-        }
+        }*/
 
         private static ExtUsageHint.UsageHint hintGSOa = new ExtUsageHint.UsageHint(KickStart.ModID, "ModuleAIExtension.hintGSOa",
             AltUI.ObjectiveString("GSO's") + " anchored A.I. has extended range and base capabilities.");
@@ -185,6 +186,7 @@ namespace TAC_AI
 
         public override void OnGrabbed()
         {
+            AIWiki.hintUpgrades.Show();
             switch (ManSpawn.inst.GetCorporation(block.BlockType))
             {
                 case FactionSubTypes.GSO:
@@ -211,6 +213,9 @@ namespace TAC_AI
                     break;
                 case FactionSubTypes.BF:
                     hintBFm.Show();
+                    break;
+                case FactionSubTypes.SJ:
+                    hintSJm.Show();
                     break;
                 default:
                     break;
@@ -255,136 +260,128 @@ namespace TAC_AI
         {
             try
             {
-                var name = gameObject.name;
+                BlockTypes BT = (BlockTypes)GetComponent<Visible>().m_ItemType.ItemType;
                 //DebugTAC_AI.Log(KickStart.ModID + ": Init new AI for " + name);
-                if (name == "GSO_AI_Module_Guard_111")
+                switch (BT)
                 {
-                    Aegis = true;
-                    Prospector = true;
-                    Buccaneer = true;
-                    Builder = true;
-                    AidAI = true;
-                    AdvAvoidence = true;
-                    //SelfRepairAI = true; // testing
+                    case BlockTypes.GSOAIController_111:
+                    case BlockTypes.GSOAIGuardController_111:
+                        Aegis = true;
+                        Prospector = true;
+                        Buccaneer = true;
+                        Builder = true;
+                        AidAI = true;
+                        AdvAvoidence = true;
+                        //SelfRepairAI = true; // testing
+                        break;
+                    case BlockTypes.GSOAnchorAI_121:
+                        Aegis = true;
+                        Prospector = true;
+                        Buccaneer = true;
+                        Builder = true;
+                        AidAI = true;
+                        MaxCombatRange = 150;
+                        break;
+                    case BlockTypes.GCAIModuleGuard_222:
+                        Prospector = true;
+                        Energizer = true;
+                        Scrapper = true;
+                        AutoAnchor = true;
+                        //SelfRepairAI = true; // EXTREMELY POWERFUL
+                        MTForAll = true;
+                        MeleePreferred = true;
+                        AdvAvoidence = true;
+                        break;
+                    case BlockTypes.VENAIGuardModule_111:
+                        Aviator = true;
+                        Buccaneer = true;
+                        SidePreferred = true;
+                        AdvAvoidence = true;
+                        MaxCombatRange = 300;
+                        break;
+                    case BlockTypes.HE_AIModule_Guard_112:
+                        Assault = true;
+                        Aviator = true;
+                        Astrotech = true;
+                        AdvancedAI = true;
+                        AdvAvoidence = true;
+                        MinCombatRange = 50;
+                        MaxCombatRange = 200;
+                        break;
+                    case BlockTypes.HE_AITurret_112:
+                        Assault = true;
+                        Aviator = true;
+                        Astrotech = true;
+                        AdvancedAI = true;
+                        Builder = true;
+                        MinCombatRange = 50;
+                        MaxCombatRange = 225;
+                        break;
+                    case BlockTypes.BF_AIModule_Guard_212:
+                        Astrotech = true;
+                        SelfRepairAI = true; // EXTREMELY POWERFUL
+                        InventoryUser = true;
+                        AdvAvoidence = true;
+                        MinCombatRange = 60;
+                        MaxCombatRange = 250;
+                        break;
+                    case BlockTypes.SJ_Cab_AI_122:
+                        Assault = true;
+                        Prospector = true;
+                        Scrapper = true;
+                        Buccaneer = true;
+                        AutoAnchor = true;
+                        MinCombatRange = 30;
+                        MaxCombatRange = 125;
+                        AdvAvoidence = true;
+                        break;
+                        /*
+                    case BlockTypes.EXP_ai:
+                        Energizer = true;
+                        AdvAvoidence = true;
+                        MinCombatRange = 160;
+                        MaxCombatRange = 220;
+                        break;
+                    case BlockTypes.TSN_AI:
+                        AutoAnchor = true;
+                        Buccaneer = true;
+                        AdvAvoidence = true;
+                        MinCombatRange = 150;
+                        MaxCombatRange = 250;
+                        break;
+                    case BlockTypes.LEG_AI:
+                        AutoAnchor = true;
+                        Assault = true;
+                        Aegis = true;
+                        Prospector = true;
+                        Scrapper = true;
+                        Energizer = true;
+                        Assault = true;
+                        Aviator = true;
+                        Buccaneer = true;
+                        Astrotech = true;
+                        AidAI = true;
+                        AdvancedAI = true;
+                        Builder = true;
+                        AdvAvoidence = true;
+                        SidePreferred = true;
+                        MeleePreferred = true;
+                        MaxCombatRange = 200;
+                        break;
+                    case BlockTypes.TAC_AI_PLEX:
+                        AutoAnchor = true;
+                        Aviator = true;
+                        Buccaneer = true;
+                        Astrotech = true;
+                        AidAI = true;
+                        AnimeAI = true;
+                        AdvancedAI = true;
+                        AdvAvoidence = true;
+                        MinCombatRange = 100;
+                        MaxCombatRange = 400;
+                        break;
+                        */
                 }
-                else if (name == "GSO_AIAnchor_121")
-                {
-                    Aegis = true;
-                    Prospector = true;
-                    Buccaneer = true;
-                    Builder = true;
-                    AidAI = true;
-                    MaxCombatRange = 150;
-                }
-                else if (name == "GC_AI_Module_Guard_222")
-                {
-                    Prospector = true;
-                    Energizer = true;
-                    Scrapper = true; 
-                    AutoAnchor = true;
-                    //SelfRepairAI = true; // EXTREMELY POWERFUL
-                    MTForAll = true;
-                    MeleePreferred = true;
-                    AdvAvoidence = true;
-                }
-                else if (name == "VEN_AI_Module_Guard_111")
-                {
-                    Aviator = true;
-                    Buccaneer = true;
-                    SidePreferred = true;
-                    AdvAvoidence = true;
-                    MaxCombatRange = 300;
-                }
-                else if (name == "HE_AI_Module_Guard_112")
-                {
-                    Assault = true;
-                    Aviator = true;
-                    Astrotech = true;
-                    AdvancedAI = true;
-                    AdvAvoidence = true;
-                    MinCombatRange = 50;
-                    MaxCombatRange = 200;
-                }
-                else if (name == "HE_AI_Turret_111")
-                {
-                    Assault = true;
-                    Aviator = true;
-                    Astrotech = true;
-                    AdvancedAI = true;
-                    Builder = true;
-                    MinCombatRange = 50;
-                    MaxCombatRange = 225;
-                }
-                else if (name == "BF_AI_Module_Guard_212")
-                {
-                    Astrotech = true;
-                    SelfRepairAI = true; // EXTREMELY POWERFUL
-                    InventoryUser = true;
-                    AdvAvoidence = true;
-                    MinCombatRange = 60;
-                    MaxCombatRange = 250;
-                }
-                else if (name == "SJ_AI_Module_Guard_122")
-                {
-                    Assault = true;
-                    Prospector = true;
-                    Scrapper = true;
-                    Buccaneer = true;
-                    AutoAnchor = true;
-                    MinCombatRange = 30;
-                    MaxCombatRange = 125;
-                    AdvAvoidence = true;
-                }
-                /*
-                else if (name == "RR_AI_Module_Guard_212")
-                {
-                    Energizer = true;
-                    AdvAvoidence = true;
-                    MinCombatRange = 160;
-                    MaxCombatRange = 220;
-                }
-                else if (name == "TSN_AI_Module_Guard_312")
-                {
-                    AutoAnchor = true;
-                    Buccaneer = true;
-                    AdvAvoidence = true;
-                    MinCombatRange = 150;
-                    MaxCombatRange = 250;
-                }
-                else if (name == "LEG_AI_Module_Guard_112")
-                {   //Incase Legion happens and the AI needs help lol
-                    AutoAnchor = true;
-                    Assault = true;
-                    Aegis = true;
-                    Prospector = true;
-                    Scrapper = true;
-                    Energizer = true;
-                    Assault = true;
-                    Aviator = true;
-                    Buccaneer = true;
-                    Astrotech = true;
-                    AidAI = true;
-                    AdvancedAI = true;
-                    Builder = true;
-                    AdvAvoidence = true;
-                    SidePreferred = true;
-                    MeleePreferred = true;
-                    MaxCombatRange = 200;
-                }
-                else if (name == "TAC_AI_Module_Plex_323")
-                {
-                    AutoAnchor = true;
-                    Aviator = true;
-                    Buccaneer = true;
-                    Astrotech = true;
-                    AidAI = true;
-                    AnimeAI = true;
-                    AdvancedAI = true;
-                    AdvAvoidence = true;
-                    MinCombatRange = 100;
-                    MaxCombatRange = 400;
-                }
-                */
                 if (tank.Team == ManPlayer.inst.PlayerTeam)
                     OnGrabbed();
             }

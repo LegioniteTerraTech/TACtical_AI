@@ -138,6 +138,7 @@ namespace TAC_AI
         public static OptionKey commandBoltsHotKey;
         public static OptionKey groupSelectKey;
         public static OptionKey modeSelectKey;
+        public static OptionKey nptInteractKey;
         public static OptionToggle commandClassic;
         public static OptionToggle betterAI;
         public static OptionToggle aiSelfRepair;
@@ -179,6 +180,7 @@ namespace TAC_AI
         public static OptionToggle enemyBaseCulling;
 
         public static OptionToggle WarnEnemyLock;
+        public static OptionToggle HoldFireOnNeutral;
 
 
         internal static void PushExtModOptionsHandling()
@@ -217,6 +219,8 @@ namespace TAC_AI
             aiPathing.onValueSaved.AddListener(() => {
                 AIEPathMapper.PathRequestsToCalcPerFrame = (int)aiPathing.SavedValue;
             });
+            HoldFireOnNeutral = new OptionToggle("Don't auto-attack neutrals", TACAI, AIGlobals.AllowWeaponsDisarm);
+            HoldFireOnNeutral.onValueSaved.AddListener(() => { AIGlobals.AllowWeaponsDisarm = HoldFireOnNeutral.SavedValue; });
 
             var TACAISP = KickStart.ModID + " - A.I. Single Player";
             aiUpkeepRefresh = SuperNativeOptions.OptionRangeAutoDisplay("A.I. Awareness Update Laziness",
@@ -272,6 +276,12 @@ namespace TAC_AI
             {
                 KickStart.ModeSelect = modeSelectKey.SavedValue;
                 KickStart.ModeSelectKeySav = (int)KickStart.ModeSelect;
+            });
+            nptInteractKey = new OptionKey("NPT Interact Hotkey", TACAIRTS, KickStart.NPTInteract);
+            nptInteractKey.onValueSaved.AddListener(() =>
+            {
+                KickStart.NPTInteract = nptInteractKey.SavedValue;
+                KickStart.NPTInteractKeySav = (int)KickStart.NPTInteract;
             });
             commandClassic = new OptionToggle("Classic RTS Controls", TACAIRTS, KickStart.UseClassicRTSControls);
             commandClassic.onValueSaved.AddListener(() => { KickStart.UseClassicRTSControls = commandClassic.SavedValue; });

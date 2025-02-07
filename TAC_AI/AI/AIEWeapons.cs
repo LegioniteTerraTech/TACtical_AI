@@ -15,16 +15,22 @@ namespace TAC_AI.AI
                 {
                     if (helper.lastEnemyGet?.tank)
                     {
-                        if (helper.DriverType == AIDriverType.Stationary || ManBaseTeams.IsEnemy(tank.Team, helper.lastEnemyGet.tank.Team))
-                        {   // Stationary AI should NEVER lower guard - even against Sub-Neutrals
-                            helper.WeaponState = AIWeaponState.Enemy;
-                            helper.SuppressFiring(false);
+                        if (AIGlobals.AllowWeaponsDisarm)
+                        {
+                            if (helper.DriverType == AIDriverType.Stationary || ManBaseTeams.IsEnemy(tank.Team, helper.lastEnemyGet.tank.Team))
+                            {   // Stationary AI should NEVER lower guard - even against Sub-Neutrals
+                                helper.WeaponState = AIWeaponState.Enemy;
+                                helper.SuppressFiring(false);
+                            }
+                            else
+                            {
+                                helper.WeaponState = AIWeaponState.HoldFire;
+                                helper.SuppressFiring(true);
+                            }
                         }
                         else
-                        {
-                            helper.WeaponState = AIWeaponState.HoldFire;
-                            helper.SuppressFiring(true);
-                        }
+                            helper.WeaponState = AIWeaponState.Enemy;
+                        /*
                         if (helper.AttackEnemy)
                         {
                             if (tank.IsAnchored)
@@ -38,6 +44,7 @@ namespace TAC_AI.AI
                                 thisControl.m_Movement.FaceDirection(tank, aimTo, FinalAim);//Face the music
                             }
                         }
+                        */
                     }
                     else if (helper.Obst.IsNotNull())
                     {
@@ -46,10 +53,15 @@ namespace TAC_AI.AI
                     }
                     else
                     {
-                        if (tank.TechIsPlayerControlled())
-                            helper.WeaponState = AIWeaponState.Normal;
+                        if (AIGlobals.AllowWeaponsDisarm)
+                        {
+                            if (tank.TechIsActivePlayer())
+                                helper.WeaponState = AIWeaponState.Normal;
+                            else
+                                helper.WeaponState = AIWeaponState.HoldFire;
+                        }
                         else
-                            helper.WeaponState = AIWeaponState.HoldFire;
+                            helper.WeaponState = AIWeaponState.Normal;
                         helper.SuppressFiring(false);
                     }
                 }
@@ -81,20 +93,25 @@ namespace TAC_AI.AI
 
                 if (helper.IsMultiTech)
                 {   // sync to host tech
-                    if (helper.lastCloseAlly.IsNotNull())
+                    Tank closeAlly;
+                    if ((bool)helper.theResource?.tank)
+                        closeAlly = helper.theResource.tank;
+                    else
+                        closeAlly = helper.lastCloseAlly;
+                    if (closeAlly)
                     {
                         if (helper.lastEnemyGet.IsNotNull())
                         {
                             helper.ActiveAimState = AIWeaponState.Mimic;
                             var targetTank = helper.lastEnemyGet.tank;
                             if (targetTank)
-                                helper.AimWeapons(targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
+                                helper.AimAndFireWeapons(targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
                             else
-                                helper.AimWeapons(helper.lastEnemyGet.centrePosition, helper.lastEnemyGet.GetCheapBounds() + 1);
+                                helper.AimAndFireWeapons(helper.lastEnemyGet.centrePosition, helper.lastEnemyGet.GetCheapBounds() + 1);
                             if (helper.FIRE_ALL)
                                 helper.FireAllWeapons();
                         }
-                        else if (helper.lastCloseAlly.control.FireControl)
+                        else if (closeAlly.control.FireControl)
                         {
                             helper.FireAllWeapons();
                         }
@@ -110,9 +127,9 @@ namespace TAC_AI.AI
                                 var targetTank = helper.lastEnemyGet.tank;
                                 helper.ActiveAimState = AIWeaponState.Enemy;
                                 if (targetTank)
-                                    helper.AimWeapons(targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
+                                    helper.AimAndFireWeapons(targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
                                 else
-                                    helper.AimWeapons(helper.lastEnemyGet.centrePosition, helper.lastEnemyGet.GetCheapBounds() + 1);
+                                    helper.AimAndFireWeapons(helper.lastEnemyGet.centrePosition, helper.lastEnemyGet.GetCheapBounds() + 1);
                                 if (helper.FIRE_ALL)
                                     helper.FireAllWeapons();
                             }
@@ -127,7 +144,7 @@ namespace TAC_AI.AI
                                     target = targetTank.boundsCentreWorldNoCheck;
                                 else
                                     target = helper.lastEnemyGet.centrePosition;
-                                helper.AimWeapons(target + (Vector3.down * 0.5f * (target - tank.boundsCentreWorldNoCheck).magnitude), 0);
+                                helper.AimAndFireWeapons(target + (Vector3.down * 0.5f * (target - tank.boundsCentreWorldNoCheck).magnitude), 0);
                             }
                             break;
                         case AIWeaponState.Obsticle:
@@ -137,7 +154,7 @@ namespace TAC_AI.AI
                                 {
                                     //DebugTAC_AI.Log(KickStart.ModID + ":Trying to shoot at " + helper.Obst.name);
                                     helper.ActiveAimState = AIWeaponState.Obsticle;
-                                    helper.AimWeapons(helper.Obst.position + Vector3.up, 3f);
+                                    helper.AimAndFireWeapons(helper.Obst.position + Vector3.up, 3f);
                                     if (helper.FIRE_ALL)
                                         helper.FireAllWeapons();
                                 }

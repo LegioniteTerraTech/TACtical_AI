@@ -10,6 +10,7 @@ using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy;
 using TAC_AI.World;
 using TerraTechETCUtil;
+using System.Runtime.Remoting.Messaging;
 
 namespace TAC_AI.Templates
 {
@@ -83,14 +84,17 @@ namespace TAC_AI.Templates
 
 
         // Main initiation function
-        internal static void TryStartBase(Tank tank, TankAIHelper helper, BasePurpose purpose = BasePurpose.Harvesting)
+        /// <summary>
+        /// Returns 0 if failed, otherwise the BB cost of the spawned Tech
+        /// </summary>
+        internal static bool TryStartBase(Tank tank, TankAIHelper helper, BasePurpose purpose = BasePurpose.Harvesting)
         {
             try
             {
                 if (!KickStart.enablePainMode || !KickStart.AllowEnemiesToStartBases)
-                    return;
+                    return false;
                 if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && !Singleton.Manager<ManNetwork>.inst.IsServer)
-                    return; // no want each client to have enemies spawn in new bases - stacked base incident!
+                    return false; // no want each client to have enemies spawn in new bases - stacked base incident!
 
                 MakeSureCanExistWithBase(tank);
 
@@ -98,14 +102,14 @@ namespace TAC_AI.Templates
                 {
                     int teamswatch = ReassignToExistingEnemyBaseTeam();
                     if (teamswatch == -1)
-                        return;
+                        return false;
                     tank.SetTeam(teamswatch);
                     TryRemoveFromPop(tank);
-                    return;
+                    return false;
                 }
 
                 if (GetEnemyBaseCountForTeam(tank.Team) > 0)
-                    return; // want no base spam on world load
+                    return false; // want no base spam on world load
 
                 Vector3 pos = (tank.rootBlockTrans.forward * (helper.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
 
@@ -114,7 +118,7 @@ namespace TAC_AI.Templates
                     pos = (-tank.rootBlockTrans.forward * (helper.lastTechExtents + 8)) + tank.boundsCentreWorldNoCheck;
 
                     if (!IsRadiusClearOfTechObst(pos, helper.lastTechExtents))
-                        return;
+                        return false;
                 }
 
                 int GradeLim = 0;
@@ -130,7 +134,7 @@ namespace TAC_AI.Templates
 
                 // We validated?  
                 //   Alright let's spawn the base!
-                int startingMoney = StartBaseAtPosition(tank, pos, tank.Team, purpose, GradeLim);
+                int startingMoney = DoSpawnBaseAtPosition(tank, pos, tank.Team, purpose, GradeLim);
                 if (ManBaseTeams.TryInsureBaseTeam(tank.Team, out var teamInst))
                     teamInst.AddBuildBucks(startingMoney);
 
@@ -139,407 +143,86 @@ namespace TAC_AI.Templates
                 {
                     AIWiki.hintBaseInteract.Show();
                 }, 16);
-                switch (ManBaseTeams.GetRelations(ManPlayer.inst.PlayerTeam, tank.Team, TeamRelations.Enemy))
+                switch (ManBaseTeams.GetRelationsWritablePriority(ManPlayer.inst.PlayerTeam, tank.Team, TeamRelations.Enemy))
                 {
                     case TeamRelations.Enemy:
                         AIWiki.hintInvader.Show();
                         break;
-                    case TeamRelations.SubNeutral:
-                    case TeamRelations.Neutral:
-                        AIWiki.hintRival.Show();
-                        break;
-                    case TeamRelations.Friendly:
-                        AIWiki.hintAllied.Show();
+                    case TeamRelations.SameTeam:
+                        AIWiki.hintInvader.Show();
                         break;
                 }
+                return true;
             }
             catch (Exception e)
             {
                 DebugTAC_AI.ErrorReport("Epic Error on AI Base Spawning:\n" + e);
                 DebugTAC_AI.Log("Epic Error on AI Base Spawning:\n" + e);
             }
+            return false;
         }
+        internal static bool TrySpawnBaseAtPositionNoFounder(FactionSubTypes FTE, Vector3 pos, int Team, BasePurpose purpose, int grade = 99)
+        {
+            try
+            {
+                if (!KickStart.enablePainMode || !KickStart.AllowEnemiesToStartBases)
+                    return false;
+                if (Singleton.Manager<ManNetwork>.inst.IsMultiplayer() && !Singleton.Manager<ManNetwork>.inst.IsServer)
+                    return false; // no want each client to have enemies spawn in new bases - stacked base incident!
 
+                if (GetEnemyBaseCountSearchRadius(pos, AIGlobals.StartBaseMinSpacing) >= KickStart.MaxEnemyBaseLimit)
+                {
+                    return false;
+                }
 
+                if (GetEnemyBaseCountForTeam(Team) > 0)
+                    return false; // want no base spam on world load
+
+                int GradeLim = 0;
+                try
+                {
+                    if (ManLicenses.inst.GetLicense(FTE).IsDiscovered)
+                        GradeLim = ManLicenses.inst.GetLicense(FTE).CurrentLevel;
+                }
+                catch
+                {
+                    GradeLim = 99; // - creative or something else
+                }
+
+                // We validated?  
+                //   Alright let's spawn the base!
+                int startingMoney = DoSpawnBaseAtPositionNoFounder(FTE, pos, Team, purpose, GradeLim);
+                if (ManBaseTeams.TryInsureBaseTeam(Team, out var teamInst))
+                    teamInst.AddBuildBucks(startingMoney);
+
+                AIWiki.hintBase.Show();
+                InvokeHelper.Invoke(() =>
+                {
+                    AIWiki.hintBaseInteract.Show();
+                }, 16);
+                switch (ManBaseTeams.GetRelationsWritablePriority(ManPlayer.inst.PlayerTeam, Team, TeamRelations.Enemy))
+                {
+                    case TeamRelations.Enemy:
+                        AIWiki.hintInvader.Show();
+                        break;
+                    case TeamRelations.SameTeam:
+                        AIWiki.hintInvader.Show();
+                        break;
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.ErrorReport("Epic Error on AI Base Spawning:\n" + e);
+                DebugTAC_AI.Log("Epic Error on AI Base Spawning:\n" + e);
+            }
+            return false;
+        }
+        internal static int FORCESpawnBaseAtPositionNoFounder(FactionSubTypes FTE, Vector3 pos, int Team, BasePurpose purpose, int grade = 99) =>
+            DoSpawnBaseAtPositionNoFounder(FTE, pos, Team, purpose, grade);
         /// <summary>
-        /// Spawns a LOYAL enemy base 
-        /// - this means this shouldn't be called for capture base missions.
+        /// Tries to spawn a base expansion.  Returns false if we failed to spawn
         /// </summary>
-        /// <param name="pos"></param>
-        /// <param name="Team"></param>
-        /// <param name="toSpawn"></param>
-        internal static int StartBaseAtPosition(Tank spawnerTank, Vector3 pos, int Team, BasePurpose purpose, int grade = 99)
-        {
-            TryClearAreaForBase(pos);
-
-            // this shouldn't be able to happen without being the server or being in single player
-            bool haveBB;
-            switch (purpose)
-            {
-                case BasePurpose.Headquarters:
-                    haveBB = true;
-                    try
-                    {
-                        if (KickStart.DisplayEnemyEvents)
-                        {
-                            WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
-
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
-                            {
-                                case TeamRelations.Enemy:
-                                    AIGlobals.PopupEnemyInfo("Invader HQ!", pos2);
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Invader HQ!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
-                                    break;
-                                case TeamRelations.SubNeutral:
-                                    AIGlobals.PopupSubNeutralInfo("Rival HQ!", pos2);
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival HQ!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Careful around them!");
-                                    break;
-                                case TeamRelations.Neutral:
-                                    AIGlobals.PopupNeutralInfo("Neutral HQ!", pos2);
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Neutral HQ!");
-                                    break;
-                                case TeamRelations.Friendly:
-                                    AIGlobals.PopupAllyInfo("Friendly HQ!", pos2);
-                                    break;
-                                case TeamRelations.AITeammate:
-                                    AIGlobals.PopupPlayerInfo("Allied HQ!", pos2);
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                    }
-                    catch { }
-                    break;
-                case BasePurpose.HarvestingNoHQ:
-                case BasePurpose.Harvesting:
-                case BasePurpose.TechProduction:
-                case BasePurpose.AnyNonHQ:
-                    haveBB = true;
-
-                    try
-                    {
-                        if (KickStart.DisplayEnemyEvents)
-                        {
-                            WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
-
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
-                            {
-                                case TeamRelations.Enemy:
-                                    AIGlobals.PopupEnemyInfo("Invader!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Invading Prospector Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
-                                    break;
-                                case TeamRelations.SubNeutral:
-                                    AIGlobals.PopupSubNeutralInfo("Rival!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("They came here for your resources!");
-                                    break;
-                                case TeamRelations.Neutral:
-                                    AIGlobals.PopupNeutralInfo("Miner!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Miner Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("They cannot be attacked without declaring war first. Watch your ores!");
-                                    break;
-                                case TeamRelations.Friendly:
-                                    AIGlobals.PopupAllyInfo("Ally!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Allied Prospector Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("They will help, but they will also use resources nearby. Watch your ores!");
-                                    break;
-                                case TeamRelations.AITeammate:
-                                    AIGlobals.PopupPlayerInfo("Automatic!", pos2);
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                    }
-                    catch { }
-            break;
-                default:
-                    haveBB = false;
-                    break;
-            }
-
-            int extraBB; // Extras for new bases
-            if (TankExtentions.GetMainCorp(spawnerTank) == FactionSubTypes.GSO)
-            {
-                switch (grade)
-                {
-                    case 0: // Really early game
-                        extraBB = 500;
-                        break;
-                    case 1:
-                        extraBB = 25000;
-                        break;
-                    case 2: // Tech builders active
-                        extraBB = 50000;
-                        break;
-                    case 3:
-                        extraBB = 75000;
-                        break;
-                    default:
-                        extraBB = 100000;
-                        break;
-                }
-            }
-            else
-            {
-                switch (grade)
-                {
-                    case 0:
-                        extraBB = 10000;
-                        break;
-                    case 1: // Tech builders active
-                        extraBB = 50000;
-                        break;
-                    default:
-                        extraBB = 75000;
-                        break;
-                }
-            }
-            FactionLevel lvl = TryGetPlayerLicenceLevel();
-            try
-            {
-                float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel;
-                extraBB = (int)(extraBB / divider);
-            }
-            catch { }
-
-
-
-            // Are we a defended HQ?
-            if (purpose == BasePurpose.Headquarters)
-            {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
-                extraBB += StartBaseAtPosition(spawnerTank, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
-                extraBB += StartBaseAtPosition(spawnerTank, pos - (Vector3.forward * 64), Team, BasePurpose.Defense);
-                extraBB += StartBaseAtPosition(spawnerTank, pos + (Vector3.right * 64), Team, BasePurpose.Defense);
-                extraBB += StartBaseAtPosition(spawnerTank, pos - (Vector3.right * 64), Team, BasePurpose.Defense);
-                Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
-            }
-
-            // Now spawn teh main host
-            FactionSubTypes FTE = TankExtentions.GetMainCorp(spawnerTank);
-            BaseTerrain BT = BaseTerrain.Land;
-            if (spawnerTank.GetComponent<AIControllerAir>())
-            {
-                BT = BaseTerrain.Air;
-            }
-            else if (KickStart.isWaterModPresent)
-            {
-                if (AIEPathing.AboveTheSea(pos))
-                {
-                    BT = BaseTerrain.Sea;
-                }
-            }
-
-            RawTech BTemp;
-            RawTechPopParams RTF = RawTechPopParams.Default;
-            RTF.Faction = FTE;
-            RTF.Terrain = BT;
-            RTF.Purpose = purpose;
-            RTF.Progression = lvl;
-            RTF.MaxGrade = grade;
-            BTemp = FilteredSelectFromAll(RTF, true, true);
-
-            switch (BT)
-            {
-                case BaseTerrain.Air: 
-                    return SpawnAirBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
-                case BaseTerrain.Sea: 
-                    return SpawnSeaBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
-                default:
-                    return SpawnLandBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
-            }
-        }
-        internal static int StartBaseAtPositionNoFounder(FactionSubTypes FTE, Vector3 pos, int Team, BasePurpose purpose, int grade = 99)
-        {
-            TryClearAreaForBase(pos);
-
-            // this shouldn't be able to happen without being the server or being in single player
-            bool haveBB;
-            switch (purpose)
-            {
-                case BasePurpose.Headquarters:
-                    haveBB = true;
-                    try
-                    {
-                        if (KickStart.DisplayEnemyEvents)
-                        {
-                            WorldPosition pos2 = WorldPosition.FromScenePosition(pos);
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
-                            {
-                                case TeamRelations.Enemy:
-                                    AIGlobals.PopupEnemyInfo("Invader HQ!", pos2);
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Invader HQ!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
-                                    break;
-                                case TeamRelations.SubNeutral:
-                                    AIGlobals.PopupSubNeutralInfo("Rival HQ!", pos2);
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival HQ!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Careful around them!");
-                                    break;
-                                case TeamRelations.Neutral:
-                                    AIGlobals.PopupNeutralInfo("Neutral HQ!", pos2);
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Neutral HQ!");
-                                    break;
-                                case TeamRelations.Friendly:
-                                    AIGlobals.PopupAllyInfo("Friendly HQ!", pos2);
-                                    break;
-                                case TeamRelations.AITeammate:
-                                    AIGlobals.PopupPlayerInfo("Allied HQ!", pos2);
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                    }
-                    catch { }
-                    break;
-                case BasePurpose.HarvestingNoHQ:
-                case BasePurpose.Harvesting:
-                case BasePurpose.TechProduction:
-                case BasePurpose.AnyNonHQ:
-                    haveBB = true;
-
-                    try
-                    {
-                        if (KickStart.DisplayEnemyEvents)
-                        {
-                            WorldPosition pos2 = WorldPosition.FromScenePosition(pos);
-
-                            switch (ManBaseTeams.GetRelations(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
-                            {
-                                case TeamRelations.Enemy:
-                                    AIGlobals.PopupEnemyInfo("Invader!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Invading Prospector Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Protect your terra prospectors!!");
-                                    break;
-                                case TeamRelations.SubNeutral:
-                                    AIGlobals.PopupSubNeutralInfo("Rival!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Rival Prospector Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("They came here for your resources!");
-                                    break;
-                                case TeamRelations.Neutral:
-                                    AIGlobals.PopupNeutralInfo("Miner!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Miner Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("They cannot be attacked without declaring war first. Watch your ores!");
-                                    break;
-                                case TeamRelations.Friendly:
-                                    AIGlobals.PopupAllyInfo("Ally!", pos2);
-
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("Allied Prospector Spotted!");
-                                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("They will help, but they will also use resources nearby. Watch your ores!");
-                                    break;
-                                case TeamRelations.AITeammate:
-                                    AIGlobals.PopupPlayerInfo("Automatic!", pos2);
-                                    break;
-                                default:
-                                    break;
-                            }
-                        }
-                    }
-                    catch { }
-                    break;
-                default:
-                    haveBB = false;
-                    break;
-            }
-
-            int extraBB; // Extras for new bases
-            if (FTE == FactionSubTypes.GSO)
-            {
-                switch (grade)
-                {
-                    case 0: // Really early game
-                        extraBB = 500;
-                        break;
-                    case 1:
-                        extraBB = 25000;
-                        break;
-                    case 2: // Tech builders active
-                        extraBB = 50000;
-                        break;
-                    case 3:
-                        extraBB = 75000;
-                        break;
-                    default:
-                        extraBB = 100000;
-                        break;
-                }
-            }
-            else
-            {
-                switch (grade)
-                {
-                    case 0:
-                        extraBB = 10000;
-                        break;
-                    case 1: // Tech builders active
-                        extraBB = 50000;
-                        break;
-                    default:
-                        extraBB = 75000;
-                        break;
-                }
-            }
-            FactionLevel lvl = TryGetPlayerLicenceLevel();
-            try
-            {
-                float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel;
-                extraBB = (int)(extraBB / divider);
-            }
-            catch { }
-
-
-
-            // Are we a defended HQ?
-            if (purpose == BasePurpose.Headquarters)
-            {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
-                extraBB += StartBaseAtPositionNoFounder(FTE, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
-                extraBB += StartBaseAtPositionNoFounder(FTE, pos - (Vector3.forward * 64), Team, BasePurpose.Defense);
-                extraBB += StartBaseAtPositionNoFounder(FTE, pos + (Vector3.right * 64), Team, BasePurpose.Defense);
-                extraBB += StartBaseAtPositionNoFounder(FTE, pos - (Vector3.right * 64), Team, BasePurpose.Defense);
-                Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
-            }
-
-            // Now spawn teh main host
-            BaseTerrain BT = BaseTerrain.Land;
-            if (KickStart.isWaterModPresent)
-            {
-                if (AIEPathing.AboveTheSea(pos))
-                {
-                    BT = BaseTerrain.Sea;
-                }
-            }
-
-            RawTech BTemp = null;
-            RawTechPopParams RTF = RawTechPopParams.Default;
-            RTF.Faction = FTE;
-            RTF.Terrain = BT;
-            RTF.Purpose = purpose;
-            RTF.Progression = lvl;
-            RTF.MaxGrade = grade;
-            BTemp = FilteredSelectFromAll(RTF, true, false);
-
-            switch (BT)
-            {
-                case BaseTerrain.Air:
-                    return SpawnAirBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
-                case BaseTerrain.Sea:
-                    return SpawnSeaBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
-                default:
-                    return SpawnLandBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
-            }
-        }
         internal static bool SpawnBaseExpansion(Tank spawnerTank, Vector3 pos, int Team, RawTech type)
         {   // All bases are off-set rotated right to prevent the base from being built diagonally
             TryClearAreaForBase(pos);
@@ -599,6 +282,432 @@ namespace TAC_AI.Templates
             }
             else
                 return SpawnTechFragment(pos, Team, toSpawn);
+        }
+
+
+
+        /// <summary>
+        /// Spawns a LOYAL enemy base 
+        /// - this means this shouldn't be called for capture base missions.
+        /// </summary>
+        /// <param name="pos"></param>
+        /// <param name="Team"></param>
+        /// <param name="toSpawn"></param>
+        private static int DoSpawnBaseAtPosition(Tank spawnerTank, Vector3 pos, int Team, BasePurpose purpose, int grade = 99)
+        {
+            TryClearAreaForBase(pos);
+
+            // this shouldn't be able to happen without being the server or being in single player
+            bool haveBB;
+            switch (purpose)
+            {
+                case BasePurpose.Headquarters:
+                    haveBB = true;
+                    break;
+                case BasePurpose.HarvestingNoHQ:
+                case BasePurpose.Harvesting:
+                case BasePurpose.TechProduction:
+                case BasePurpose.AnyNonHQ:
+                    haveBB = true;
+                    break;
+                default:
+                    haveBB = false;
+                    break;
+            }
+
+            int extraBB; // Extras for new bases
+            if (TankExtentions.GetMainCorp(spawnerTank) == FactionSubTypes.GSO)
+            {
+                switch (grade)
+                {
+                    case 0: // Really early game
+                        extraBB = 500;
+                        break;
+                    case 1:
+                        extraBB = 25000;
+                        break;
+                    case 2: // Tech builders active
+                        extraBB = 50000;
+                        break;
+                    case 3:
+                        extraBB = 75000;
+                        break;
+                    default:
+                        extraBB = 100000;
+                        break;
+                }
+            }
+            else
+            {
+                switch (grade)
+                {
+                    case 0:
+                        extraBB = 10000;
+                        break;
+                    case 1: // Tech builders active
+                        extraBB = 50000;
+                        break;
+                    default:
+                        extraBB = 75000;
+                        break;
+                }
+            }
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
+            try
+            {
+                float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel;
+                extraBB = (int)(extraBB / divider);
+            }
+            catch { }
+
+
+
+            // Are we a defended HQ?
+            if (purpose == BasePurpose.Headquarters)
+            {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
+                extraBB += DoSpawnBaseAtPosition(spawnerTank, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
+                extraBB += DoSpawnBaseAtPosition(spawnerTank, pos - (Vector3.forward * 64), Team, BasePurpose.Defense);
+                extraBB += DoSpawnBaseAtPosition(spawnerTank, pos + (Vector3.right * 64), Team, BasePurpose.Defense);
+                extraBB += DoSpawnBaseAtPosition(spawnerTank, pos - (Vector3.right * 64), Team, BasePurpose.Defense);
+                Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+            }
+
+            // Now spawn teh main host
+            FactionSubTypes FTE = TankExtentions.GetMainCorp(spawnerTank);
+            BaseTerrain BT = BaseTerrain.Land;
+            if (spawnerTank.GetComponent<AIControllerAir>())
+            {
+                BT = BaseTerrain.Air;
+            }
+            else if (KickStart.isWaterModPresent)
+            {
+                if (AIEPathing.AboveTheSea(pos))
+                {
+                    BT = BaseTerrain.Sea;
+                }
+            }
+
+            RawTech BTemp;
+            RawTechPopParams RTF = RawTechPopParams.Default;
+            RTF.Faction = FTE;
+            RTF.Terrain = BT;
+            RTF.Purpose = purpose;
+            RTF.Progression = lvl;
+            RTF.MaxGrade = grade;
+            BTemp = FilteredSelectFromAll(RTF, true, AIGlobals.CancelOnErrorTech);
+            if (BTemp == null)
+                return 0;
+
+            int finalBBCost = 0;
+            switch (BT)
+            {
+                case BaseTerrain.Air:
+                    finalBBCost = SpawnAirBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
+                    break;
+                case BaseTerrain.Sea:
+                    finalBBCost = SpawnSeaBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
+                    break;
+                default:
+                    finalBBCost = SpawnLandBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
+                    break;
+            }
+            if (finalBBCost > 0)
+            {
+                switch (purpose)
+                {
+                    case BasePurpose.Headquarters:
+                        try
+                        {
+                            if (KickStart.DisplayEnemyEvents)
+                            {
+                                WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
+
+                                switch (ManBaseTeams.GetRelationsWritablePriority(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
+                                {
+                                    case TeamRelations.Enemy:
+                                        AIGlobals.PopupEnemyInfo("Invader HQ!", pos2);
+                                        TankAIManager.SendChatServer("Invader HQ!");
+                                        TankAIManager.SendChatServer("Protect your terra prospectors!!");
+                                        break;
+                                    case TeamRelations.SubNeutral:
+                                        AIGlobals.PopupSubNeutralInfo("Rival HQ!", pos2);
+                                        TankAIManager.SendChatServer("Rival HQ!");
+                                        TankAIManager.SendChatServer("Careful around them!");
+                                        break;
+                                    case TeamRelations.Neutral:
+                                        AIGlobals.PopupNeutralInfo("Neutral HQ!", pos2);
+                                        TankAIManager.SendChatServer("Neutral HQ!");
+                                        break;
+                                    case TeamRelations.Friendly:
+                                        AIGlobals.PopupAllyInfo("Friendly HQ!", pos2);
+                                        break;
+                                    case TeamRelations.AITeammate:
+                                        AIGlobals.PopupPlayerInfo("Allied HQ!", pos2);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                        catch { }
+                        break;
+                    case BasePurpose.HarvestingNoHQ:
+                    case BasePurpose.Harvesting:
+                    case BasePurpose.TechProduction:
+                    case BasePurpose.AnyNonHQ:
+
+                        try
+                        {
+                            if (KickStart.DisplayEnemyEvents)
+                            {
+                                WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(spawnerTank.visible);
+
+                                switch (ManBaseTeams.GetRelationsWritablePriority(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
+                                {
+                                    case TeamRelations.Enemy:
+                                        AIGlobals.PopupEnemyInfo("Invader!", pos2);
+
+                                        TankAIManager.SendChatServer("Invading Prospector Spotted!");
+                                        TankAIManager.SendChatServer("Protect your terra prospectors!!");
+                                        break;
+                                    case TeamRelations.SubNeutral:
+                                        AIGlobals.PopupSubNeutralInfo("Rival!", pos2);
+
+                                        TankAIManager.SendChatServer("Rival Prospector Spotted!");
+                                        TankAIManager.SendChatServer("They came here for your resources!");
+                                        break;
+                                    case TeamRelations.Neutral:
+                                        AIGlobals.PopupNeutralInfo("Miner!", pos2);
+
+                                        TankAIManager.SendChatServer("Miner Spotted!");
+                                        TankAIManager.SendChatServer("They cannot be attacked without declaring war first. Watch your ores!");
+                                        break;
+                                    case TeamRelations.Friendly:
+                                        AIGlobals.PopupAllyInfo("Ally!", pos2);
+
+                                        TankAIManager.SendChatServer("Allied Prospector Spotted!");
+                                        TankAIManager.SendChatServer("They will help, but they will also use resources nearby. Watch your ores!");
+                                        break;
+                                    case TeamRelations.AITeammate:
+                                        AIGlobals.PopupPlayerInfo("Automatic!", pos2);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                        catch { }
+                        break;
+                }
+            }
+            return finalBBCost;
+        }
+
+        private static int DoSpawnBaseAtPositionNoFounder(FactionSubTypes FTE, Vector3 pos, int Team, BasePurpose purpose, int grade = 99)
+        {
+            TryClearAreaForBase(pos);
+
+            // this shouldn't be able to happen without being the server or being in single player
+            bool haveBB;
+            switch (purpose)
+            {
+                case BasePurpose.Headquarters:
+                    haveBB = true;
+                    break;
+                case BasePurpose.HarvestingNoHQ:
+                case BasePurpose.Harvesting:
+                case BasePurpose.TechProduction:
+                case BasePurpose.AnyNonHQ:
+                    haveBB = true;
+                    break;
+                default:
+                    haveBB = false;
+                    break;
+            }
+
+            int extraBB; // Extras for new bases
+            if (FTE == FactionSubTypes.GSO)
+            {
+                switch (grade)
+                {
+                    case 0: // Really early game
+                        extraBB = 500;
+                        break;
+                    case 1:
+                        extraBB = 25000;
+                        break;
+                    case 2: // Tech builders active
+                        extraBB = 50000;
+                        break;
+                    case 3:
+                        extraBB = 75000;
+                        break;
+                    default:
+                        extraBB = 100000;
+                        break;
+                }
+            }
+            else
+            {
+                switch (grade)
+                {
+                    case 0:
+                        extraBB = 10000;
+                        break;
+                    case 1: // Tech builders active
+                        extraBB = 50000;
+                        break;
+                    default:
+                        extraBB = 75000;
+                        break;
+                }
+            }
+            FactionLevel lvl = TryGetPlayerLicenceLevel();
+            try
+            {
+                float divider = 5 / Singleton.Manager<ManLicenses>.inst.GetLicense(FactionSubTypes.GSO).CurrentLevel;
+                extraBB = (int)(extraBB / divider);
+            }
+            catch { }
+
+
+
+            // Are we a defended HQ?
+            if (purpose == BasePurpose.Headquarters)
+            {   // Summon additional defenses - DO NOT LET THIS RECURSIVELY TRIGGER!!!
+                extraBB += DoSpawnBaseAtPositionNoFounder(FTE, pos + (Vector3.forward * 64), Team, BasePurpose.Defense);
+                extraBB += DoSpawnBaseAtPositionNoFounder(FTE, pos - (Vector3.forward * 64), Team, BasePurpose.Defense);
+                extraBB += DoSpawnBaseAtPositionNoFounder(FTE, pos + (Vector3.right * 64), Team, BasePurpose.Defense);
+                extraBB += DoSpawnBaseAtPositionNoFounder(FTE, pos - (Vector3.right * 64), Team, BasePurpose.Defense);
+                Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
+            }
+
+            // Now spawn teh main host
+            BaseTerrain BT = BaseTerrain.Land;
+            if (KickStart.isWaterModPresent)
+            {
+                if (AIEPathing.AboveTheSea(pos))
+                {
+                    BT = BaseTerrain.Sea;
+                }
+            }
+
+            RawTech BTemp = null;
+            RawTechPopParams RTF = RawTechPopParams.Default;
+            RTF.Faction = FTE;
+            RTF.Terrain = BT;
+            RTF.Purpose = purpose;
+            RTF.Progression = lvl;
+            RTF.MaxGrade = grade;
+            BTemp = FilteredSelectFromAll(RTF, true, AIGlobals.CancelOnErrorTech);
+            if (BTemp == null)
+                return 0;
+
+            int finalBBCost = 0;
+            switch (BT)
+            {
+                case BaseTerrain.Air:
+                    finalBBCost = SpawnAirBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
+                    break;
+                case BaseTerrain.Sea:
+                    finalBBCost = SpawnSeaBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
+                    break;
+                default:
+                    finalBBCost = SpawnLandBase(Vector3.forward, pos, Team, BTemp, haveBB, true, BTemp.startingFunds + extraBB);
+                    break;
+            }
+            if (finalBBCost > 0)
+            {
+                switch (purpose)
+                {
+                    case BasePurpose.Headquarters:
+                        try
+                        {
+                            if (KickStart.DisplayEnemyEvents)
+                            {
+                                WorldPosition pos2 = WorldPosition.FromScenePosition(pos);
+                                switch (ManBaseTeams.GetRelationsWritablePriority(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
+                                {
+                                    case TeamRelations.Enemy:
+                                        AIGlobals.PopupEnemyInfo("Invader HQ!", pos2);
+                                        TankAIManager.SendChatServer("Invader HQ!");
+                                        TankAIManager.SendChatServer("Protect your terra prospectors!!");
+                                        break;
+                                    case TeamRelations.SubNeutral:
+                                        AIGlobals.PopupSubNeutralInfo("Rival HQ!", pos2);
+                                        TankAIManager.SendChatServer("Rival HQ!");
+                                        TankAIManager.SendChatServer("Careful around them!");
+                                        break;
+                                    case TeamRelations.Neutral:
+                                        AIGlobals.PopupNeutralInfo("Neutral HQ!", pos2);
+                                        TankAIManager.SendChatServer("Neutral HQ!");
+                                        break;
+                                    case TeamRelations.Friendly:
+                                        AIGlobals.PopupAllyInfo("Friendly HQ!", pos2);
+                                        break;
+                                    case TeamRelations.AITeammate:
+                                        AIGlobals.PopupPlayerInfo("Allied HQ!", pos2);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        }
+                        catch { }
+                        break;
+                    case BasePurpose.HarvestingNoHQ:
+                    case BasePurpose.Harvesting:
+                    case BasePurpose.TechProduction:
+                    case BasePurpose.AnyNonHQ:
+                        try
+                        {
+                            if (KickStart.DisplayEnemyEvents)
+                            {
+                                WorldPosition pos2 = WorldPosition.FromScenePosition(pos);
+
+                                switch (ManBaseTeams.GetRelationsWritablePriority(Team, ManBaseTeams.playerTeam, TeamRelations.Enemy))
+                                {
+                                    case TeamRelations.Enemy:
+                                        AIGlobals.PopupEnemyInfo("Invader!", pos2);
+
+                                        TankAIManager.SendChatServer("Invading Prospector Spotted!");
+                                        TankAIManager.SendChatServer("Protect your terra prospectors!!");
+                                        break;
+                                    case TeamRelations.SubNeutral:
+                                        AIGlobals.PopupSubNeutralInfo("Rival!", pos2);
+
+                                        TankAIManager.SendChatServer("Rival Prospector Spotted!");
+                                        TankAIManager.SendChatServer("They came here for your resources!");
+                                        break;
+                                    case TeamRelations.Neutral:
+                                        AIGlobals.PopupNeutralInfo("Miner!", pos2);
+
+                                        TankAIManager.SendChatServer("Miner Spotted!");
+                                        TankAIManager.SendChatServer("They cannot be attacked without declaring war first. Watch your ores!");
+                                        break;
+                                    case TeamRelations.Friendly:
+                                        AIGlobals.PopupAllyInfo("Ally!", pos2);
+
+                                        TankAIManager.SendChatServer("Allied Prospector Spotted!");
+                                        TankAIManager.SendChatServer("They will help, but they will also use resources nearby. Watch your ores!");
+                                        break;
+                                    case TeamRelations.AITeammate:
+                                        AIGlobals.PopupPlayerInfo("Automatic!", pos2);
+                                        break;
+                                    default:
+                                        break;
+                                }// finish realloc
+                            }
+                        }
+                        catch { }
+                        break;
+                    default:
+                        haveBB = false;
+                        break;
+                }
+
+            }
+            return finalBBCost;
         }
 
 
@@ -1089,7 +1198,8 @@ namespace TAC_AI.Templates
             return theTech;
         }
         
-        internal static bool SpawnAttractTech(Vector3 pos, Vector3 forwards, int Team, BaseTerrain terrainType = BaseTerrain.Land, FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotStationary)
+        internal static bool SpawnAttractTech(Vector3 pos, Vector3 forwards, int Team, BaseTerrain terrainType = BaseTerrain.Land,
+            FactionSubTypes faction = FactionSubTypes.NULL, BasePurpose purpose = BasePurpose.NotStationary)
         {
             RawTech baseTemplate;
             FactionLevel lvl = TryGetPlayerLicenceLevel();
@@ -1117,7 +1227,8 @@ namespace TAC_AI.Templates
 
         }
         
-        internal static Tank SpawnTechAutoDetermine(Vector3 pos, Vector3 forwards, int Team, RawTech Blueprint, bool subNeutral = false, bool snapTerrain = true, bool forceInstant = false, bool pop = false, int extraBB = 0)
+        internal static Tank SpawnTechAutoDetermine(Vector3 pos, Vector3 forwards, int Team, RawTech Blueprint, 
+            bool subNeutral = false, bool snapTerrain = true, bool forceInstant = false, bool pop = false, int extraBB = 0)
         {
             List<RawBlockMem> baseBlueprint = Blueprint.savedTech;
 
@@ -1217,7 +1328,7 @@ namespace TAC_AI.Templates
         
         internal static bool TrySpawnSpecificTech(Vector3 pos, Vector3 forwards, int Team, RawTechPopParams filter)
         {
-            RawTech baseTemplate = FilteredSelectFromAll(filter,false, true);
+            RawTech baseTemplate = FilteredSelectFromAll(filter, false, true);
             if (baseTemplate == null)
                 return false;
             bool MustBeAnchored = !baseTemplate.purposes.Contains(BasePurpose.NotStationary);
@@ -2111,12 +2222,10 @@ namespace TAC_AI.Templates
                 {
                     uint[] BS = new uint[dataPrefabber.m_BlockSpecs.Count];
                     for (int step = 0; step < dataPrefabber.m_BlockSpecs.Count; step++)
-                    {
                         BS[step] = Singleton.Manager<ManNetwork>.inst.GetNextHostBlockPoolID();
-                    }
-                    TrackedVisible TV = ManNetwork.inst.SpawnNetworkedNonPlayerTech(dataPrefabber, BS,
+                    TrackedVisible TV = ManSpawn.inst.SpawnNetworkedTechRef(dataPrefabber, BS, Team,
                         WorldPosition.FromScenePosition(pos).ScenePosition, Quaternion.LookRotation(forward, Vector3.up),
-                        false);
+                        null, false, false);
                     if (TV == null)
                     {
                         DebugTAC_AI.FatalError(KickStart.ModID + ": InstantTech(TrackedVisible)[MP] - error on SpawnTank");
@@ -2127,6 +2236,7 @@ namespace TAC_AI.Templates
                         DebugTAC_AI.FatalError(KickStart.ModID + ": InstantTech(Visible)[MP] - error on SpawnTank");
                         return null;
                     }
+                    ManLooseBlocks.inst.RegisterBlockPoolIDsFromTank(TV.visible.tank);
                     theTech = TV.visible.tank;
                 }
                 else
@@ -2155,6 +2265,7 @@ namespace TAC_AI.Templates
 
                 ForceAllBubblesUp(theTech);
                 ReconstructConveyorSequencing(theTech);
+                AIWiki.ShowTeamInfoFirstTime(Team);
 
                 DebugTAC_AI.LogAISetup(KickStart.ModID + ": InstantTech - Built " + name);
 
@@ -2241,12 +2352,10 @@ namespace TAC_AI.Templates
                 {
                     uint[] BS = new uint[dataPrefabber.m_BlockSpecs.Count];
                     for (int step = 0; step < dataPrefabber.m_BlockSpecs.Count; step++)
-                    {
                         BS[step] = Singleton.Manager<ManNetwork>.inst.GetNextHostBlockPoolID();
-                    }
-                    TrackedVisible TV = ManNetwork.inst.SpawnNetworkedNonPlayerTech(dataPrefabber, BS,
+                    TrackedVisible TV = ManSpawn.inst.SpawnNetworkedTechRef(dataPrefabber, BS, Team,
                         WorldPosition.FromScenePosition(pos).ScenePosition, Quaternion.LookRotation(forward, Vector3.up), 
-                        filter.Offset == RawTechOffset.RaycastTerrainAndScenery);
+                        null, filter.Offset == RawTechOffset.RaycastTerrainAndScenery, filter.IsPopulation);
                     if (TV == null)
                     {
                         DebugTAC_AI.FatalError(KickStart.ModID + ": InstantTech(TrackedVisible)[MP] - error on SpawnTank");
@@ -2257,6 +2366,7 @@ namespace TAC_AI.Templates
                         DebugTAC_AI.FatalError(KickStart.ModID + ": InstantTech(Visible)[MP] - error on SpawnTank");
                         return null;
                     }
+                    ManLooseBlocks.inst.RegisterBlockPoolIDsFromTank(TV.visible.tank);
                     theTech = TV.visible.tank;
                 }
                 else

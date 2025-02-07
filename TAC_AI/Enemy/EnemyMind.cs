@@ -9,6 +9,7 @@ using TAC_AI.AI.Movement.AICores;
 using TAC_AI.AI.Enemy.EnemyOperations;
 using TAC_AI.World;
 using TAC_AI.Templates;
+using Rewired.UI.ControlMapper;
 
 
 namespace TAC_AI.AI.Enemy
@@ -95,12 +96,12 @@ namespace TAC_AI.AI.Enemy
         public float MaxCombatRange// Aggro range
         {
             get => AIControl.MaxCombatRange;
-            set => AIControl.AISetSettings.ChaseRange = value;
+            set => AIControl.AISetSettings.CombatChase = value;
         }
         public float MinCombatRange
         {
             get => AIControl.MinCombatRange;
-            set => AIControl.AISetSettings.CombatRange = value;
+            set => AIControl.AISetSettings.CombatSpacing = value;
         }
         internal Vector3 sceneStationaryPos = Vector3.zero;  // For stationary techs like Wingnut who must hold ground
 
@@ -127,8 +128,7 @@ namespace TAC_AI.AI.Enemy
             Tank.AttachEvent.Subscribe(OnBlockAdd);
             Tank.DetachEvent.Subscribe(OnBlockLoss);
 
-            AIControl.AILimitSettings.Recalibrate();
-            AIControl.AISetSettings = new AISettingsSet(AIControl.AILimitSettings); 
+            AIControl.ResetAISettings();
         }
         public void Refresh()
         {
@@ -204,9 +204,9 @@ namespace TAC_AI.AI.Enemy
                     int teamAttacker = dingus.SourceTank.Team;
                     if (teamAttacker == ManPlayer.inst.PlayerTeam)
                         ManBaseTeams.AttackComplainPlayer(Tank.boundsCentreWorldNoCheck, Tank.Team);
-                    if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Tank.Team, out var ETD) && ETD.DegradeRelations(teamAttacker, dingus.Damage))
+                    if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Tank.Team, out var ETD))
                     {
-                        ManEnemyWorld.UpdateTeam(Tank.Team);
+                        ETD.DegradeRelations(teamAttacker, dingus.Damage);
                         return;
                     }
                     /*

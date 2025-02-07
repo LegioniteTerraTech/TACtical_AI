@@ -136,7 +136,7 @@ namespace TAC_AI.AI
         private EDriveDest _DriveDest;
         private EDriveFacing _DriveDir;
         public EDrivePathing DrivePathing;
-        public bool StrictTurning { get; set; }
+        public ESteeringStrength TurningStrictness { get; set; }
         //public StringBuilder DriveDestBacktrace;
         //public StringBuilder DriveDirBacktrace;
 
@@ -148,7 +148,7 @@ namespace TAC_AI.AI
             _DriveDir = direct.DriveDir;
             DrivePathing = EDrivePathing.OnlyImmedeate;
             lastDest = direct.lastDestination;
-            StrictTurning = false;
+            TurningStrictness = ESteeringStrength.Lazy;
             //DriveDestBacktrace = new StringBuilder();
             //DriveDirBacktrace = new StringBuilder();
         }
@@ -158,7 +158,7 @@ namespace TAC_AI.AI
             _DriveDir = facing;
             DrivePathing = EDrivePathing.OnlyImmedeate;
             lastDest = Vector3.zero;
-            StrictTurning = false;
+            TurningStrictness = ESteeringStrength.Lazy;
             //DriveDestBacktrace = new StringBuilder();
             //DriveDirBacktrace = new StringBuilder();
         }
@@ -295,6 +295,12 @@ namespace TAC_AI.AI
         Override
     }
 
+    public enum ESteeringStrength
+    {   //Control the AI drive steering
+        Lazy,
+        Strict,
+        MaxSteering
+    }
     /// <summary>
     /// Facing towards destination, regardless of drive direction
     /// </summary>

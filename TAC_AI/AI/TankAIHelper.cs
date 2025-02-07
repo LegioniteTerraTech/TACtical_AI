@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
+using Rewired.UI.ControlMapper;
 using TAC_AI.AI.AlliedOperations;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
@@ -93,7 +94,7 @@ namespace TAC_AI.AI
                 {
                     if (RTSControlled)
                         return true;
-                    return !tank.TechIsPlayerControlled();
+                    return !tank.TechIsActivePlayer();
                 }
                 else
                     return false;
@@ -118,7 +119,8 @@ namespace TAC_AI.AI
         public bool UsingPathfinding => ControlCore.DrivePathing >= EDrivePathing.Path;
 
         // Settables in ModuleAIExtension - "turns on" functionality on the host Tech, none of these force it off
-        /// <summary> Should the other AIs ignore collision with this Tech? </summary>
+        /// <summary> Should the other mimic AIs ignore controls from this Tech? 
+        /// Additionally when anchored, ignore collision with this Tech? </summary>
         public bool IsMultiTech = false;
         /// <summary> Should the AI chase the enemy? </summary>
         public bool ChaseThreat = true;
@@ -152,10 +154,10 @@ namespace TAC_AI.AI
         // Distance operations - Automatically accounts for tech sizes
         public AISettingsSet AISetSettings = AISettingsSet.DefaultSettable;
         public AISettingsLimit AILimitSettings = default;
-        /// <summary> The range the AI will linger from the enemy while attacking if PursueThreat is true </summary>
-        public float MinCombatRange => AISetSettings.CombatRange;
-        /// <summary>  How far should we pursue the enemy? </summary>
-        public float MaxCombatRange => AISetSettings.ChaseRange;
+        /// <summary> Spacing: The range the AI will linger from the enemy while attacking if PursueThreat is true </summary>
+        public float MinCombatRange => AISetSettings.CombatSpacing;
+        /// <summary> Chase: How far should we pursue the enemy? </summary>
+        public float MaxCombatRange => AISetSettings.CombatChase;
         /// <summary> The range the AI will linger from the target objective in general </summary>
         public float MaxObjectiveRange => AISetSettings.ObjectiveRange;
         internal float JobSearchRange
@@ -253,6 +255,12 @@ namespace TAC_AI.AI
         /// </summary>
         public AIWeaponState ActiveAimState = AIWeaponState.Normal;
         public AIWeaponType WeaponAimType = AIWeaponType.Unknown;
+        public void ResetToNormalAimState()
+        {
+            SuppressFiring(false);
+            WeaponState = AIWeaponState.Normal;
+            ActiveAimState = AIWeaponState.Normal;
+        }
         public bool NeedsLineOfSight => WeaponAimType == AIWeaponType.Direct;
         public bool BlockedLineOfSight = false;
 
@@ -314,7 +322,7 @@ namespace TAC_AI.AI
         //AutoCollection
         internal bool hasAI = false;    // Has an active AI module
         internal bool dirtyAI = false;  // Update Player AI state if needed
-        internal bool dirtyDesign = false;    // The Tech has new blocks attached recently
+        internal bool dirtyExtents = false;    // The Tech has new blocks attached recently
 
         internal float EstTopSped = 0;
         internal float recentSpeed = 1;
@@ -345,6 +353,7 @@ namespace TAC_AI.AI
         internal bool foundGoal = false;
 
         // MultiTech AI Handling
+        internal HashSet<Tank> MultiTechsAffiliated = new HashSet<Tank>();
         internal bool MTMimicHostAvail = false;
         internal bool MTLockedToTechBeam = false;
         internal Vector3 MTOffsetPos = Vector3.zero;
@@ -627,6 +636,7 @@ namespace TAC_AI.AI
             SetupDefaultMovementAIController();
             MovementAIControllerDirty = true;
             AIECore.AddHelper(this);
+            ResetAISettings();
             Invoke("DelayedSubscribe", 0.1f);
             return this;
         }
@@ -653,7 +663,7 @@ namespace TAC_AI.AI
                     //ForceRebuildAlignment();
                 }*/
                 dirtyAI = true;
-                dirtyDesign = true;
+                dirtyExtents = true;
             }
             catch (Exception e)
             {
@@ -661,13 +671,18 @@ namespace TAC_AI.AI
             }
         }
 
+        public void ResetAISettings()
+        {
+            AILimitSettings.Recalibrate();
+            AISetSettings = new AISettingsSet(AILimitSettings);
+        }
         private void OnBlockAttached(TankBlock newBlock, Tank tank)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": On Attach " + tank.name);
             EstTopSped = 1;
             //LastBuildClock = 0;
             PendingHeightCheck = true;
-            dirtyDesign = true;
+            dirtyExtents = true;
             dirtyAI = true;
             if (AIAlign == AIAlignment.Player)
             {
@@ -693,7 +708,7 @@ namespace TAC_AI.AI
             recentSpeed = 1;
             PendingHeightCheck = true;
             PendingDamageCheck = true;
-            dirtyDesign = true;
+            dirtyExtents = true;
             if (AIAlign == AIAlignment.Player)
             {
                 try
@@ -709,7 +724,7 @@ namespace TAC_AI.AI
             DropBlock();
             AttackEnemy = false;
             lastSuppressedState = false;
-            SuppressFiring(false);
+            ResetToNormalAimState();
             FinishedRepairEvent.EnsureNoSubscribers();
             maxBlockCount = 0;
             DamageThreshold = 0;
@@ -726,7 +741,8 @@ namespace TAC_AI.AI
                 TechMemor.Remove();
                 TechMemor = null;
             }
-            ResetAll(null);
+            ResetOnSwitchAlignments(null);
+            ResetAISettings();
             enabled = false;
         }
 
@@ -943,6 +959,7 @@ namespace TAC_AI.AI
             AvoidStuff = true;
             UsingAirControls = false;
             RunState = AIRunState.Advanced;
+            MultiTechsAffiliated.Clear();
 
             ReValidateAI();
 
@@ -991,7 +1008,7 @@ namespace TAC_AI.AI
         /// <summary>
         /// ONLY CALL when we are actually switching alignments or recycling
         /// </summary>
-        public void ResetAll(Tank unused)
+        public void ResetOnSwitchAlignments(Tank unused)
         {
             DebugTAC_AI.Assert(MovementController == null, "MovementController is null.  How is this possible?!");
             //DebugTAC_AI.Log(KickStart.ModID + ": Resetting all for " + tank.name);
@@ -1000,7 +1017,7 @@ namespace TAC_AI.AI
             lastSuppressedState = false;
             lastAIType = AITreeType.AITypes.Idle;
             AttackMode = EAttackMode.AutoSet;
-            dirtyDesign = true;
+            dirtyExtents = true;
             dirtyAI = true;
             PlayerAllowAutoAnchoring = !tank.IsAnchored;
             ExpectAITampering = false;
@@ -1008,12 +1025,12 @@ namespace TAC_AI.AI
             Provoked = 0;
             ActionPause = 0;
             KeepEnemyFocus = false;
+            MultiTechsAffiliated.Clear();
 
             AIAlign = AIAlignment.Static;
             RunState = AIRunState.Advanced;
             AnchorState = AIAnchorState.None;
             AnchorStateAIInsure = false;
-            WeaponState = AIWeaponState.Normal;
             WeaponAimType = AIWeaponType.Unknown;
             BlockedLineOfSight = false;
             PendingDamageCheck = true;
@@ -1064,7 +1081,8 @@ namespace TAC_AI.AI
             ProcessControl(Vector3.zero, Vector3.zero, Vector3.zero, false, false);
             tank.control.SetBeamControlState(false);
             tank.control.FireControl = false;
-            SuppressFiring(false);
+
+            ResetToNormalAimState();
 
             //enabled = false; // why the heck did I put this here? this is WHY EVERYTHING WAS BROKEN
 
@@ -1387,7 +1405,7 @@ namespace TAC_AI.AI
                         return "Idle (Off)";
                 }
             }
-            if (Retreat)
+            if (Retreat && !IsMultiTech)
             {
                 if (tank.IsAnchored)
                     return "Holding the line!";
@@ -1803,7 +1821,7 @@ namespace TAC_AI.AI
                 case AIType.MTMimic:
                     if (!AllMT)
                     {
-                        if ((bool)lastCloseAlly)
+                        if ((bool)theResource?.tank)
                             output = "Copying Player";
                         else
                         {
@@ -1813,8 +1831,8 @@ namespace TAC_AI.AI
                     }
                     else
                     {
-                        if ((bool)lastCloseAlly)
-                            output = "Copying " + (lastCloseAlly.name.NullOrEmpty() ? "unknown" : lastCloseAlly.name);
+                        if ((bool)theResource?.tank)
+                            output = "Copying " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
                         else
                         {
                             cantDo = true;
@@ -2358,7 +2376,7 @@ namespace TAC_AI.AI
             {
                 if (ManNetwork.IsHost)
                 {
-                    if (tank.TechIsPlayerControlled())
+                    if (tank.TechIsActivePlayer())
                     {
                         if (Singleton.playerTank == tank && RTSControlled)
                         {
@@ -2598,9 +2616,9 @@ namespace TAC_AI.AI
 
                 DetermineCombat();
 
-                if (RTSControlled)
+                if (RTSControlled && !IsMultiTech)
                 {   //Overrides the Allied Operations for RTS Use
-                    RunRTSNavi();
+                    RunRTSNavi(); // need to put a flagger FOR multitech ai - DID
                 }
                 else
                     OpsController.Execute();
@@ -2768,6 +2786,17 @@ namespace TAC_AI.AI
                 RTSControlled = false;
                 return;
             }*/
+            switch (DediAI)
+            {
+                case AIType.MTTurret:
+                case AIType.MTStatic:
+                case AIType.MTMimic:
+                    IsMultiTech = true;
+                    break;
+                default:
+                    IsMultiTech = false;
+                    break;
+            }
 
             EControlOperatorSet direct = GetDirectedControl();
             BGeneral.ResetValues(this, ref direct);
@@ -2907,15 +2936,31 @@ namespace TAC_AI.AI
             RunPostOps();
             ShowCollisionAvoidenceDebugThisFrame();
         }
+        private static List<Tank> TempMultiTechRecalibrate = new List<Tank>();
         private void UpdateLastTechExtentsIfNeeded()
         {//Handler for the improved AI, gets the job done.
             try
             {
-                if (dirtyDesign)
+                if (dirtyExtents)
                 {
-                    dirtyDesign = false;
+                    dirtyExtents = false;
                     tank.blockman.CheckRecalcBlockBounds();
                     lastTechExtents = (tank.blockBounds.size.magnitude / 2) + 2;
+                    // Insure we are STILL the tracking target!
+                    TempMultiTechRecalibrate.AddRange(MultiTechsAffiliated);
+                    MultiTechsAffiliated.Clear();
+                    foreach (var item in TempMultiTechRecalibrate)
+                    {
+                        if (item == null || !item.visible.isActive)
+                            continue;
+                        var otherHelp = item.GetHelperInsured();
+                        MultiTechsAffiliated.Add(item);
+                        float extendedExts = (item.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).AbsMax() + otherHelp.lastTechExtents;
+
+                        if (extendedExts > lastTechExtents)
+                            lastTechExtents = extendedExts;
+                    }
+                    TempMultiTechRecalibrate.Clear();
                     if (lastTechExtents < 1)
                     {
                         Debug.LogError("lastTechExtents is below 1: " + lastTechExtents);
@@ -2980,6 +3025,17 @@ namespace TAC_AI.AI
                     CheckEnemyAndAiming();
                     if (!AIControlOverride(this, ExtControlStatus.Operators))
                         return;
+                }
+                switch (DediAI)
+                {
+                    case AIType.MTTurret:
+                    case AIType.MTStatic:
+                    case AIType.MTMimic:
+                        IsMultiTech = true;
+                        break;
+                    default:
+                        IsMultiTech = false;
+                        break;
                 }
                 switch (AIAlign)
                 {
@@ -3096,6 +3152,7 @@ namespace TAC_AI.AI
         {
             dirtyAI = true;
             PlayerAllowAutoAnchoring = !tank.IsAnchored;
+            ResetToNormalAimState();
         }
         internal void ForceRebuildAlignment()
         {
@@ -3129,7 +3186,7 @@ namespace TAC_AI.AI
                                     //Player-Allied AI
                                     if (AIAlign != AIAlignment.Player)
                                     {
-                                        ResetAll(tank);
+                                        ResetOnSwitchAlignments(tank);
                                         RemoveEnemyMatters();
                                         AIAlign = AIAlignment.Player;
                                         RefreshAI();
@@ -3142,7 +3199,7 @@ namespace TAC_AI.AI
                                     if (AIAlign != AIAlignment.PlayerNoAI)
                                     {   // Reset and ready for static tech
                                         DebugTAC_AI.Log(KickStart.ModID + ": PlayerNoAI Tech " + tank.name + ": reset (NonHostClient)");
-                                        ResetAll(tank);
+                                        ResetOnSwitchAlignments(tank);
                                         RemoveEnemyMatters();
                                         AIAlign = AIAlignment.PlayerNoAI;
                                     }
@@ -3153,7 +3210,7 @@ namespace TAC_AI.AI
                                 //Enemy AI
                                 if (AIAlign != AIAlignment.NonPlayer)
                                 {
-                                    ResetAll(tank);
+                                    ResetOnSwitchAlignments(tank);
                                     AIAlign = AIAlignment.NonPlayer;
                                     DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + " of Team " + tank.Team + ":  Ready to kick some Tech! (NonHostClient)");
                                     RCore.GenerateEnemyAI(this, tank);
@@ -3165,16 +3222,16 @@ namespace TAC_AI.AI
                                 if (AIAlign != AIAlignment.Static)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log(KickStart.ModID + ": Static Tech " + tank.name + ": reset (NonHostClient)");
-                                    ResetAll(tank);
+                                    ResetOnSwitchAlignments(tank);
                                     RemoveEnemyMatters();
                                     AIAlign = AIAlignment.Static;
                                 }
                             }
                             return;
                         }
-                        else if (dirtyDesign)
+                        else if (dirtyExtents)
                         {
-                            dirtyDesign = false;
+                            dirtyExtents = false;
                             tank.netTech.SaveTechData();
                         }
                         if (ManSpawn.IsPlayerTeam(tank.Team))
@@ -3184,7 +3241,7 @@ namespace TAC_AI.AI
                                 //Player-Allied AI
                                 if (AIAlign != AIAlignment.Player)
                                 {
-                                    ResetAll(tank);
+                                    ResetOnSwitchAlignments(tank);
                                     RemoveEnemyMatters();
                                     AIAlign = AIAlignment.Player;
                                     RefreshAI();
@@ -3199,7 +3256,7 @@ namespace TAC_AI.AI
                                 if (AIAlign != AIAlignment.PlayerNoAI)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log(KickStart.ModID + ": PlayerNoAI Tech " + tank.name + ": reset");
-                                    ResetAll(tank);
+                                    ResetOnSwitchAlignments(tank);
                                     RemoveEnemyMatters();
                                     AIEBases.SetupBookmarkBuilder(this);
                                     AIAlign = AIAlignment.PlayerNoAI;
@@ -3211,7 +3268,7 @@ namespace TAC_AI.AI
                             //Enemy AI
                             if (AIAlign != AIAlignment.NonPlayer)
                             {
-                                ResetAll(tank);
+                                ResetOnSwitchAlignments(tank);
                                 AIAlign = AIAlignment.NonPlayer;
                                 Enemy.RCore.GenerateEnemyAI(this, tank);
                                 DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + " of Team " + tank.Team + ":  Ready to kick some Tech!");
@@ -3223,7 +3280,7 @@ namespace TAC_AI.AI
                             if (AIAlign != AIAlignment.Static)
                             {   // Reset and ready for static tech
                                 DebugTAC_AI.Log(KickStart.ModID + ": Static Tech " + tank.name + ": reset");
-                                ResetAll(tank);
+                                ResetOnSwitchAlignments(tank);
                                 RemoveEnemyMatters();
                                 AIEBases.SetupBookmarkBuilder(this);
                                 AIAlign = AIAlignment.Static;
@@ -3239,7 +3296,7 @@ namespace TAC_AI.AI
                                 //Player-Allied AI
                                 if (AIAlign != AIAlignment.Player)
                                 {
-                                    ResetAll(tank);
+                                    ResetOnSwitchAlignments(tank);
                                     RemoveEnemyMatters();
                                     AIAlign = AIAlignment.Player;
                                     RefreshAI();
@@ -3254,7 +3311,7 @@ namespace TAC_AI.AI
                                 if (AIAlign != AIAlignment.PlayerNoAI)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log(KickStart.ModID + ": PlayerNoAI Tech " + tank.name + ": reset");
-                                    ResetAll(tank);
+                                    ResetOnSwitchAlignments(tank);
                                     RemoveEnemyMatters();
                                     AIEBases.SetupBookmarkBuilder(this);
                                     AIAlign = AIAlignment.PlayerNoAI;
@@ -3266,7 +3323,7 @@ namespace TAC_AI.AI
                             //Enemy AI
                             if (AIAlign != AIAlignment.NonPlayer)
                             {
-                                ResetAll(tank);
+                                ResetOnSwitchAlignments(tank);
                                 DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + " of Team " + tank.Team + ":  Ready to kick some Tech!");
                                 AIAlign = AIAlignment.NonPlayer;
                                 Enemy.RCore.GenerateEnemyAI(this, tank);
@@ -3278,7 +3335,7 @@ namespace TAC_AI.AI
                             if (AIAlign != AIAlignment.Static)
                             {   // Reset and ready for static tech
                                 DebugTAC_AI.Log(KickStart.ModID + ": Static Tech " + tank.name + ": reset");
-                                ResetAll(tank);
+                                ResetOnSwitchAlignments(tank);
                                 RemoveEnemyMatters();
                                 AIEBases.SetupBookmarkBuilder(this);
                                 AIAlign = AIAlignment.Static;
@@ -3440,7 +3497,8 @@ namespace TAC_AI.AI
                 posWeights.Clear();
                 if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                 {
-                    lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                    lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, 
+                        out lastAllyDist, out float lastAuxVal, this);
                     if (lastCloseAlly && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                     {
                         if (lastCloseAlly2 && lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
@@ -3475,7 +3533,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
+                    lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, this);
                     //DebugTAC_AI.Log(KickStart.ModID + ": Ally is " + lastAllyDist + " dist away");
                     //DebugTAC_AI.Log(KickStart.ModID + ": Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
                     //if (lastCloseAlly == null)
@@ -3545,7 +3603,8 @@ namespace TAC_AI.AI
                 posWeights.Clear();
                 if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                 {
-                    lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                    lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2,
+                        out lastAllyDist, out float lastAuxVal, this);
                     if (lastCloseAlly && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                     {
                         if (lastCloseAlly2 && lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
@@ -3581,7 +3640,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
+                    lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, this);
                     //DebugTAC_AI.Log(KickStart.ModID + ": Ally is " + lastAllyDist + " dist away");
                     //DebugTAC_AI.Log(KickStart.ModID + ": Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
                     //if (lastCloseAlly == null)
@@ -3643,7 +3702,8 @@ namespace TAC_AI.AI
                 posWeights.Clear();
                 if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                 {
-                    lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                    lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, tank.boundsCentreWorldNoCheck, out Tank lastCloseAlly2, 
+                        out lastAllyDist, out float lastAuxVal, this);
                     if (lastCloseAlly && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                     {
                         if (lastCloseAlly2 && lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
@@ -3676,7 +3736,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, tank);
+                    lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, tank.boundsCentreWorldNoCheck, out lastAllyDist, this);
                     //DebugTAC_AI.Log(KickStart.ModID + ": Ally is " + lastAllyDist + " dist away");
                     //DebugTAC_AI.Log(KickStart.ModID + ": Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
                     //if (lastCloseAlly == null)
@@ -3738,7 +3798,8 @@ namespace TAC_AI.AI
                 posWeights.Clear();
                 if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                 {
-                    lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, posOffset, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                    lastCloseAlly = AIEPathing.SecondClosestAlly(AlliesAlt, posOffset, out Tank lastCloseAlly2,
+                        out lastAllyDist, out float lastAuxVal, this);
                     if (lastCloseAlly && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
                     {
                         if (lastCloseAlly2 && lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace)
@@ -3773,7 +3834,7 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, posOffset, out lastAllyDist, tank);
+                    lastCloseAlly = AIEPathing.ClosestAlly(AlliesAlt, posOffset, out lastAllyDist, this);
                     //DebugTAC_AI.Log(KickStart.ModID + ": Ally is " + lastAllyDist + " dist away");
                     //DebugTAC_AI.Log(KickStart.ModID + ": Trigger threshold is " + (lastTechExtents + Extremes(lastCloseAlly.blockBounds.extents) + 4) + " dist away");
                     //if (lastCloseAlly == null)
@@ -3832,7 +3893,8 @@ namespace TAC_AI.AI
                 HashSet<Tank> AlliesAlt = AIEPathing.AllyList(tank);
                 if (SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                 {
-                    lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, DSO, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                    lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, DSO, out Tank lastCloseAlly2,
+                        out lastAllyDist, out float lastAuxVal, this);
                     if (lastCloseAlly && lastAllyDist < lastTechExtents + lastCloseAlly.GetCheapBounds() + AIGlobals.PathfindingExtraSpace + moveSpace)
                     {
                         if (lastCloseAlly2 && lastAuxVal < lastTechExtents + lastCloseAlly2.GetCheapBounds() + AIGlobals.PathfindingExtraSpace + moveSpace)
@@ -3847,7 +3909,7 @@ namespace TAC_AI.AI
                     }
 
                 }
-                lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, DSO, out lastAllyDist, tank);
+                lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, DSO, out lastAllyDist, this);
                 this.lastCloseAlly = lastCloseAlly;
                 if (lastCloseAlly == null)
                 {
@@ -4002,10 +4064,9 @@ namespace TAC_AI.AI
                 ThrottleState = AIThrottleState.ForceSpeed;
                 DriveVar = -1;
 
-                UrgencyOverload += KickStart.AIClockPeriod / 2f;
                 if (Urgency >= 0)
                     Urgency += KickStart.AIClockPeriod / 5f;
-                if (UrgencyOverload > 80)
+                if (UrgencyOverload > AIGlobals.UrgencyOverloadReconsideration)
                 {
                     //Are we just randomly angry for too long? let's fix that
                     AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
@@ -4051,6 +4112,7 @@ namespace TAC_AI.AI
                 else if (45 < FrustrationMeter)
                 {   //Shoot the freaking tree
                     FrustrationMeter += KickStart.AIClockPeriod;
+                    UrgencyOverload += KickStart.AIClockPeriod;
                     if (useGun)
                         RemoveObstruction();
                     ThrottleState = AIThrottleState.ForceSpeed;
@@ -4059,6 +4121,7 @@ namespace TAC_AI.AI
                 else
                 {   // Gun the throttle
                     FrustrationMeter += KickStart.AIClockPeriod;
+                    UrgencyOverload += KickStart.AIClockPeriod;
                     ThrottleState = AIThrottleState.ForceSpeed;
                     DriveVar = -1f;
                 }
@@ -4068,10 +4131,9 @@ namespace TAC_AI.AI
                 ThrottleState = AIThrottleState.ForceSpeed;
                 DriveVar = 1;
 
-                UrgencyOverload += KickStart.AIClockPeriod / 2f;
                 if (Urgency >= 0)
                     Urgency += KickStart.AIClockPeriod / 5f;
-                if (UrgencyOverload > 80)
+                if (UrgencyOverload > AIGlobals.UrgencyOverloadReconsideration)
                 {
                     //Are we just randomly angry for too long? let's fix that
                     AIECore.AIMessage(tech: tank, ref hasMessaged, tank.name + ": Overloaded urgency!  ReCalcing top speed!");
@@ -4114,10 +4176,11 @@ namespace TAC_AI.AI
                         ForceSetBeam = true;
                     }
                 }
-                else if (25 < FrustrationMeter)
+                else if (AIGlobals.UnjamUpdateFire < FrustrationMeter)
                 {
                     //Shoot the freaking tree
                     FrustrationMeter += KickStart.AIClockPeriod;
+                    UrgencyOverload += KickStart.AIClockPeriod;
                     if (useGun)
                         RemoveObstruction();
                     ThrottleState = AIThrottleState.ForceSpeed;
@@ -4126,6 +4189,7 @@ namespace TAC_AI.AI
                 else
                 {   // Gun the throttle
                     FrustrationMeter += KickStart.AIClockPeriod;
+                    UrgencyOverload += KickStart.AIClockPeriod;
                     ThrottleState = AIThrottleState.ForceSpeed;
                     DriveVar = 1f;
                 }
@@ -4181,7 +4245,7 @@ namespace TAC_AI.AI
 
 
         // ----------------------------  General Targeting  ----------------------------
-        internal void AimWeapons(Vector3 aimWorld, float aimRadius)
+        internal void AimAndFireWeapons(Vector3 aimWorld, float aimRadius)
         {
             tank.control.TargetPositionWorld = aimWorld;
             tank.control.TargetRadiusWorld = aimRadius;
@@ -4194,7 +4258,7 @@ namespace TAC_AI.AI
             Globals.inst.layerSceneryFader.mask | Globals.inst.layerTerrain.mask | Globals.inst.layerLandmark.mask;
         private float LastWeapCheck = 0;
         /// <summary> Do ONLY ONCE </summary>
-        private void CheckCanHitTarget()
+        private void SyncLineOfSight()
         {
             try
             {
@@ -4225,22 +4289,6 @@ namespace TAC_AI.AI
                     else
                         WeaponAimType = AIWeaponType.Direct;
                 }
-
-                if (LastWeapCheck < Time.time)
-                {
-                    LastWeapCheck = Time.time + 1.5f;
-                    BlockedLineOfSight = false;
-                    if (NeedsLineOfSight && lastEnemy)
-                    {
-                        Vector3 pos = tank.boundsCentreWorld + Vector3.up;
-                        Vector3 vec = lastEnemy.tank.boundsCentreWorld - pos;
-                        if (Physics.Raycast(pos, vec.normalized, out RaycastHit hit,
-                            MaxCombatRange, TargetMask, QueryTriggerInteraction.Ignore) && hit.distance < vec.magnitude)
-                        {
-                            BlockedLineOfSight = true;
-                        }
-                    }
-                }
             }
             catch (Exception e)
             {
@@ -4269,18 +4317,37 @@ namespace TAC_AI.AI
         }
         private void CheckEnemyAndAiming()
         {
-            if (lastEnemyGet?.tank)
+            if (LastWeapCheck < Time.time)
             {
-                if (!lastEnemyGet.isActive || lastEnemyGet.tank.blockman.blockCount == 0 ||
-                    !Tank.IsEnemy(tank.Team, lastEnemyGet.tank.Team))
+                LastWeapCheck = Time.time + AIGlobals.TargetValidationDelay;
+                SyncLineOfSight();
+                BlockedLineOfSight = false;
+                if (lastEnemyGet)
                 {
-                    lastEnemy = null;
-                    //Debug.Assert(true, KickStart.ModID + ": Tech " + tank.name + " has valid, live target but it has no blocks.  How is this possible?!"); 
+                    if (!lastEnemyGet.isActive || lastEnemyGet.tank.blockman.blockCount == 0 ||
+                        !Tank.IsEnemy(tank.Team, lastEnemyGet.tank.Team))
+                    {
+                        lastEnemy = null;
+                        //Debug.Assert(true, KickStart.ModID + ": Tech " + tank.name + " has valid, live target but it has no blocks.  How is this possible?!"); 
+                    }
+                    else
+                    {
+                        Vector3 pos = tank.boundsCentreWorld + Vector3.up;
+                        Vector3 vec = lastEnemy.tank.boundsCentreWorld - pos;
+                        float targetDistance = vec.magnitude;
+                        if (NeedsLineOfSight)
+                        {
+                            if (Physics.Raycast(pos, vec.normalized, out RaycastHit hit,
+                                MaxCombatRange, TargetMask, QueryTriggerInteraction.Ignore) && hit.distance < targetDistance)
+                            {
+                                BlockedLineOfSight = true;
+                            }
+                        }
+                        if (targetDistance > MaxCombatRange)
+                            lastEnemy = null;
+                    }
                 }
             }
-            else
-                lastEnemy = null;
-            CheckCanHitTarget();
         }
         internal Visible GetEnemyAllied()
         {
@@ -4465,10 +4532,9 @@ namespace TAC_AI.AI
 #endif
         }
 
-        private static bool UseVanillaTargetFetching = false;
         private float lastTargetGatherTime = 0;
         private List<Tank> targetCache = new List<Tank>();
-        private List<Tank> GatherTechsInRange(float gatherRangeSqr)
+        private List<Tank> GatherTargetTechsInRange(float gatherRangeSqr)
         {
             if (lastTargetGatherTime > Time.time)
             {
@@ -4480,6 +4546,19 @@ namespace TAC_AI.AI
             {
                 if (cTank != tank && cTank.visible.isActive)
                 {
+                    if (cTank.Team == tank.Team && ManBaseTeams.TryGetBaseTeamDynamicOnly(tank.Team, out var teamI) &&
+                        !teamI.IsInfighting)
+                    {
+                        TankAIManager.ForceReloadAll();
+                        if (cTank.Team == tank.Team && ManBaseTeams.TryGetBaseTeamDynamicOnly(tank.Team, out teamI) &&
+                        !teamI.IsInfighting)
+                            throw new InvalidOperationException("Infighting in team " + teamI.teamName + " when they were not set to be! " +
+                                "FORCE reloading TankAIManager did not CHANGE ANYTHING");
+                        else
+                            throw new InvalidOperationException("Infighting in team " + teamI.teamName + " when they were not set to be!  " +
+                                "FORCE reloading TankAIManager fixed it?");
+                    }
+
                     float dist = (cTank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude;
                     if (dist < gatherRangeSqr)
                     {
@@ -4525,7 +4604,7 @@ namespace TAC_AI.AI
 
             if (AttackMode == EAttackMode.Random)
             {
-                List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                List<Tank> techs = GatherTargetTechsInRange(TargetRangeSqr);
                 int max = techs.Count();
                 int launchCount = UnityEngine.Random.Range(0, max);
                 for (int step = 0; step < launchCount; step++)
@@ -4544,7 +4623,7 @@ namespace TAC_AI.AI
             }
             else if (AttackMode == EAttackMode.Strong)
             {
-                List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                List<Tank> techs = GatherTargetTechsInRange(TargetRangeSqr);
                 int launchCount = techs.Count();
                 if (InvertBullyPriority)
                 {
@@ -4590,7 +4669,7 @@ namespace TAC_AI.AI
                     if (target.isActive)
                         return target;
                 }
-                if (pos == 1 && UseVanillaTargetFetching)
+                if (pos == 1 && AIGlobals.UseVanillaTargetFetching)
                     return tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
 
                 float TargRange2 = TargetRangeSqr;
@@ -4599,7 +4678,7 @@ namespace TAC_AI.AI
                 Visible target2 = null;
                 Visible target3 = null;
 
-                List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                List<Tank> techs = GatherTargetTechsInRange(TargetRangeSqr);
                 int launchCount = techs.Count();
 
                 Tank cTank;
@@ -4735,7 +4814,7 @@ namespace TAC_AI.AI
 
             if (AttackMode == EAttackMode.Random)
             {
-                List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                List<Tank> techs = GatherTargetTechsInRange(TargetRangeSqr);
                 scanCenter = DodgeSphereCenter;
                 int launchCount = techs.Count();
                 for (int step = 0; step < launchCount; step++)
@@ -4764,7 +4843,7 @@ namespace TAC_AI.AI
             }
             else if (AttackMode == EAttackMode.Strong)
             {
-                List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                List<Tank> techs = GatherTargetTechsInRange(TargetRangeSqr);
                 int launchCount = techs.Count();
                 if (InvertBullyPriority)
                 {
@@ -4835,7 +4914,7 @@ namespace TAC_AI.AI
                 Visible target2 = null;
                 Visible target3 = null;
 
-                List<Tank> techs = GatherTechsInRange(TargetRangeSqr);
+                List<Tank> techs = GatherTargetTechsInRange(TargetRangeSqr);
                 int launchCount = techs.Count();
                 Tank cTank;
                 float dist;

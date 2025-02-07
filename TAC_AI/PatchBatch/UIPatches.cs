@@ -113,7 +113,7 @@ namespace TAC_AI
                 icon = typeof(LocatorPanel).GetField("m_FactionIcon", BindingFlags.NonPublic | BindingFlags.Instance),
                 lowerName = typeof(LocatorPanel).GetField("m_BottomName", BindingFlags.NonPublic | BindingFlags.Instance);
             //SendUpdateAIDisp - Change the Icon to something more appropreate
-            private static void RefreshMarker_Postfix(TankDescriptionOverlay __instance)
+            internal static void RefreshMarker_Postfix(TankDescriptionOverlay __instance)
             {
                 if (KickStart.EnableBetterAI)
                 {
@@ -150,7 +150,17 @@ namespace TAC_AI
                                 int Team = lastTech.tank.Team;
 
                                 Panel.BottomName = TeamNamer.GetTeamName(Team).ToString();
-                                if (ManBaseTeams.IsFriendlyBaseTeam(Team))
+                                if (Team == ManSpawn.NeutralTeam)
+                                {
+                                }
+                                else if (ManBaseTeams.IsAlliedPlayerAIBaseTeam(Team))
+                                {
+                                    cache.color = AIGlobals.PlayerAutoColor;
+                                    cacheB.color = AIGlobals.PlayerAutoColor;
+                                    back.SetValue(Panel, cacheB);
+                                    //DebugTAC_AI.Log("Panel colored IsNeutralBaseTeam");
+                                }
+                                else if (ManBaseTeams.IsFriendlyBaseTeam(Team))
                                 {
                                     cache.color = AIGlobals.FriendlyColor;
                                     cacheB.color = AIGlobals.FriendlyColor;

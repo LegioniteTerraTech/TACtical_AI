@@ -820,6 +820,20 @@ namespace TAC_AI
         }
 
 
+        internal static void ShowTeamInfoFirstTime(int Team)
+        {
+            switch (ManBaseTeams.GetRelationsWritablePriority(ManPlayer.inst.PlayerTeam, Team, TeamRelations.Enemy))
+            {
+                case TeamRelations.SubNeutral:
+                case TeamRelations.Neutral:
+                    hintRival.Show();
+                    break;
+                case TeamRelations.Friendly:
+                    hintAllied.Show();
+                    break;
+            }
+        }
+
 
 
         internal static LoadingHintsExt.LoadingHint loadHint1 = new LoadingHintsExt.LoadingHint(KickStart.ModID, "ADVANCED AI HINT",
@@ -863,9 +877,22 @@ namespace TAC_AI
 
         internal static LoadingHintsExt.LoadingHint loadHint9 = new LoadingHintsExt.LoadingHint(KickStart.ModID, "ADVANCED AI HINT",
             "Your " + AltUI.HighlightString("Airborne A.I.") + " can harvest resources and pickup blocks!");
+        internal static LoadingHintsExt.LoadingHint loadHint10 = new LoadingHintsExt.LoadingHint(KickStart.ModID, "ADVANCED AI HINT",
+            "You can control fleets of AI with " + AltUI.HighlightString(KickStart.CommandHotkey.ToString()) + 
+            " or through Camera mode, just drag a box around them!");
+        internal static LoadingHintsExt.LoadingHint loadHint11 = new LoadingHintsExt.LoadingHint(KickStart.ModID, "ADVANCED AI HINT",
+            "When the fight gets dicey you can order your minions to your side by pressing " + 
+            AltUI.HighlightString(KickStart.RetreatHotkey.ToString()));
+        internal static LoadingHintsExt.LoadingHint loadHint12 = new LoadingHintsExt.LoadingHint(KickStart.ModID, "ADVANCED AI HINT",
+            "You can also open the AI Controls by pressing " +
+            AltUI.HighlightString(KickStart.ModeSelect.ToString()));
 
 
         // Others
+        internal static ExtUsageHint.UsageHint hintUpgrades = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintUpgrades",
+            "You A.I. can also be mouse-controlled through " + AltUI.ObjectiveString("RTS Mode") + " by toggling key " + 
+            AltUI.HighlightString(KickStart.CommandHotkey.ToString()) + " or through Camera Mode.  To command, press " +
+             AltUI.HighlightString(KickStart.ModeSelect.ToString()), 14);
         internal static ExtUsageHint.UsageHint hintADV = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintADV",
             AltUI.HighlightString("Other Prospectors") + " have done their research, and are much more " +
             AltUI.EnemyString("scary") + " this time.  Be careful as they may also " + AltUI.ObjectiveString("gang up") + 
@@ -914,11 +941,14 @@ namespace TAC_AI
             "They will attack YOUR turf for resources if they need to!  " + AltUI.HintString("Send them packing!"), 12);
         internal static ExtUsageHint.UsageHint hintRival = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintSubNeutral",
             "<color=purple>Neutral Prospectors</color> have <color=purple>Purple</color> icons above them.  " +
-            "They will neither help you or your enemies.  They will watch over passerby, but " +
+            "They will neither attack you or your enemies.  They will watch over passerby, but " +
             AltUI.HintString("feel free to guard your lands from them."), 10);
         internal static ExtUsageHint.UsageHint hintAllied = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintAllied",
             "<color=green>Allied Prospectors</color> have <color=green>Green</color> icons above them.  " +
             "They will help you " + AltUI.HighlightString("defend your turf") + " and will make no fuss.", 10);
+        internal static ExtUsageHint.UsageHint hintSameTeam = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintSameTeam",
+            AltUI.HighlightString("Automated AI") + " on your team will automatically harvest and manage their resources.  " +
+            "You can control them by hovering and selecting them with key " + AltUI.HighlightString(KickStart.NPTInteract.ToString()) + "", 12);
 
         internal static ExtUsageHint.UsageHint hintNPTSiege = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintNPTSiege",
              AltUI.HighlightString("Sieges") + " happen when " + AltUI.EnemyString("Rival Prospectors") +

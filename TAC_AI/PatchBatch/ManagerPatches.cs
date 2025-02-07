@@ -66,7 +66,7 @@ namespace TAC_AI
                             if (attached)
                             {
                                 Singleton.Manager<ManNetwork>.inst.ServerNetBlockAttachedToTech.Send(tank, netBlock, canidate);
-                                tank.GetHelperInsured().dirtyDesign = true;
+                                tank.GetHelperInsured().dirtyExtents = true;
 
                                 Singleton.Manager<ManNetwork>.inst.SendToAllExceptHost(TTMsgType.BlockAttach, BAM);
                                 if (netBlock.block != null)

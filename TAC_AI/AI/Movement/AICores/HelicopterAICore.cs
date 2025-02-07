@@ -368,13 +368,14 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else if (Helper.DediAI == AIType.Aegis)
             {
-                Helper.theResource = AIEPathing.ClosestUnanchoredAlly(AIEPathing.AllyList(pilot.Tank),
-                    pilot.Tank.boundsCentreWorldNoCheck, Helper.MaxCombatRange * Helper.MaxCombatRange, out _, pilot.Tank).visible;
+                Helper.theResource = AIEPathing.ClosestUnanchoredAllyAegis(TankAIManager.GetTeamTanks(pilot.Tank.Team),
+                    pilot.Tank.boundsCentreWorldNoCheck, Helper.MaxCombatRange * Helper.MaxCombatRange, out _, pilot.Helper).visible;
                 TryAdjustForCombat(true, ref pilot.PathPointSet, ref core);
                 if (Helper.lastCombatRange > Helper.MaxCombatRange)
                 {
                     if (Helper.theResource.IsNotNull())
                     {
+                        Helper.theResource.tank.GetHelperInsured().MultiTechsAffiliated.Add(Helper.tank);
                         if (Helper.DriveDestDirected == EDriveDest.FromLastDestination)
                         {
                             core.DriveDir = EDriveFacing.Forwards;
@@ -565,7 +566,8 @@ namespace TAC_AI.AI.Movement.AICores
                 HashSet<Tank> AlliesAlt = AIEPathing.AllyList(tank);
                 if (helper.SecondAvoidence && AlliesAlt.Count > 1)// MORE processing power
                 {
-                    lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, predictionOffset, out Tank lastCloseAlly2, out lastAllyDist, out float lastAuxVal, tank);
+                    lastCloseAlly = AIEPathing.SecondClosestAllyPrecision(AlliesAlt, predictionOffset, out Tank lastCloseAlly2, 
+                        out lastAllyDist, out float lastAuxVal, helper);
                     float predictOffset = (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude;
                     if (lastCloseAlly && lastAllyDist < helper.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + predictOffset)
                     {
@@ -579,7 +581,7 @@ namespace TAC_AI.AI.Movement.AICores
                     }
 
                 }
-                lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, predictionOffset, out lastAllyDist, tank);
+                lastCloseAlly = AIEPathing.ClosestAllyPrecision(AlliesAlt, predictionOffset, out lastAllyDist, pilot.Helper);
                 if (lastCloseAlly == null)
                     DebugTAC_AI.Log(KickStart.ModID + ": ALLY IS NULL");
                 if (lastAllyDist < helper.lastTechExtents + lastCloseAlly.GetCheapBounds() + 12 + (predictionOffset - tank.boundsCentreWorldNoCheck).magnitude)

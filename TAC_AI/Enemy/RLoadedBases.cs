@@ -358,7 +358,6 @@ namespace TAC_AI.AI.Enemy
             internal static Dictionary<int, TargetingRequest> targetingRequestsNPT = new Dictionary<int, TargetingRequest>();
             private static readonly Dictionary<int, EnemyBaseFunder> TeamsUpdatedMainBase = new Dictionary<int, EnemyBaseFunder>();
             private float NextDelayedUpdateTime = 0;
-            private const float delayedUpdateDelay = 6;
             internal static void Initiate()
             {
                 if (inst)
@@ -380,7 +379,7 @@ namespace TAC_AI.AI.Enemy
             {
                 enabled = !state;
             }
-            private void Update()
+            private void FixedUpdate()
             {
                 if (AIGlobals.TurboAICheat && NextDelayedUpdateTime > Time.time + 1.1f)
                 {
@@ -389,7 +388,7 @@ namespace TAC_AI.AI.Enemy
                 if (NextDelayedUpdateTime <= Time.time)
                 {
                     DelayedUpdate();
-                    NextDelayedUpdateTime = Time.time + delayedUpdateDelay;
+                    NextDelayedUpdateTime = Time.time + AIGlobals.EnemyTeamAwarenessUpdateDelay;
                 }
                 RunBuildRequests();
                 RunFocusFireRequests();
@@ -956,7 +955,7 @@ namespace TAC_AI.AI.Enemy
                                     var helper = tank.GetHelperInsured();
                                     if (helper)
                                     {
-                                        helper.ResetAll(tank);
+                                        helper.ResetOnSwitchAlignments(tank);
                                         helper.GenerateEnemyAI(tank);
                                     }
 
@@ -1272,7 +1271,10 @@ namespace TAC_AI.AI.Enemy
                 throw new Exception("UpdateBaseOperations FAILED ~ ", e);
             }
         }
-        public static void ImTakingThatExpansion(EnemyMind mind, EnemyBaseFunder funds)
+        /// <summary>
+        /// Will attempt to expand.  Returns false if we failed to spawn anything
+        /// </summary>
+        public static bool ImTakingThatExpansion(EnemyMind mind, EnemyBaseFunder funds)
         {   // Expand the base!
             WorldPosition pos2 = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(mind.AIControl.tank.visible);
 
@@ -1281,19 +1283,19 @@ namespace TAC_AI.AI.Enemy
                 if (DebugRawTechSpawner.ShowDebugFeedBack)
                     AIGlobals.PopupColored("Cleanup", mind.Tank.Team, pos2);
                 RemoveAllBases(mind, funds);
-                return;
+                return false;
             }
             try
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Call for " + mind.name);
                 if (AIGlobals.IsAttract)
-                    return; // no branching
+                    return false; // no branching
 
                 if (AIGlobals.TurboAICheat && funds.BuildBucks < AIGlobals.MinimumBBToTryExpand * 25)
                     funds.AddBuildBucks(AIGlobals.MinimumBBToTryExpand);
 
                 if (funds.BuildBucks < AIGlobals.MinimumBBToTryExpand)
-                    return; // Reduce expansion lag
+                    return false; // Reduce expansion lag
 
                 Tank tech = mind.AIControl.tank;
 
@@ -1315,25 +1317,27 @@ namespace TAC_AI.AI.Enemy
                         if (DebugRawTechSpawner.ShowDebugFeedBack)
                             AIGlobals.PopupColored("Build Unit", tech.Team, pos2);
                         BaseConstructTech(mind, tech, lvl, funds, grade, Cost);
+                        return true;
                     }
                     else if (AIGlobals.NoBuildWhileInCombat)
                     {
                         if (DebugRawTechSpawner.ShowDebugFeedBack)
                             AIGlobals.PopupColored("Upgrades", tech.Team, pos2);
                         BaseUpgradeTechs(mind, tech, lvl, funds, IterateTeamBaseFunders(tech.Team), grade, Cost);
+                        return true;
                     }
                     else if (DebugRawTechSpawner.ShowDebugFeedBack)
                         AIGlobals.PopupColored("Freeing Cap", tech.Team, pos2);
-                    return;
+                    return false;
                 }
 
                 Visible lastEnemySet = mind.AIControl.lastEnemyGet;
                 if (!lastEnemySet)
                 {
-                    ExpandBasePeaceful(mind, lvl, funds, grade, Cost);
+                    bool worked = ExpandBasePeaceful(mind, lvl, funds, grade, Cost);
                     if (DebugRawTechSpawner.ShowDebugFeedBack)
                         AIGlobals.PopupColored("Safe Expand", tech.Team, pos2);
-                    return;
+                    return worked;
                 }
 
                 if (AIEBases.FindNewExpansionBase(tech, lastEnemySet.tank.boundsCentreWorld, out Vector3 pos))
@@ -1358,14 +1362,14 @@ namespace TAC_AI.AI.Enemy
                         RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, BTemp);
                         if (DebugRawTechSpawner.ShowDebugFeedBack)
                             AIGlobals.PopupColored("Combat Expand2", tech.Team, pos2);
-                        return;
+                        return true;
                     }
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                     if (RawTechLoader.IsFallback(type))
                     {
                         if (DebugRawTechSpawner.ShowDebugFeedBack)
                             AIGlobals.PopupColored("Expand Fail2", tech.Team, pos2);
-                        return;
+                        return false;
                     }
 
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, RawTechLoader.GetBaseTemplate(type)))
@@ -1373,12 +1377,14 @@ namespace TAC_AI.AI.Enemy
                         DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Expanded");
                         if (DebugRawTechSpawner.ShowDebugFeedBack)
                             AIGlobals.PopupColored("Combat Expand", tech.Team, pos2);
+                        return true;
                     }
                     else
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                         if (DebugRawTechSpawner.ShowDebugFeedBack)
                             AIGlobals.PopupColored("Expand Fail3", tech.Team, pos2);
+                        return false;
                     }
                 }
                 else
@@ -1398,6 +1404,7 @@ namespace TAC_AI.AI.Enemy
                             BaseUpgradeTechs(mind, tech, lvl, funds, IterateTeamBaseFunders(tech.Team), grade, Cost);
                         }
                     }
+                    return true;
                 }
             }
             catch
@@ -1405,9 +1412,13 @@ namespace TAC_AI.AI.Enemy
                 DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - game is being stubborn");
                 if (DebugRawTechSpawner.ShowDebugFeedBack)
                     AIGlobals.PopupColored("ERROR", mind.Tank.Team, pos2);
+                return false;
             }
         }
-        public static void ExpandBasePeaceful(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds, int grade, int Cost)
+        /// <summary>
+        /// Will attempt to expand.  Returns false if we failed to spawn anything
+        /// </summary>
+        public static bool ExpandBasePeaceful(EnemyMind mind, FactionLevel lvl, EnemyBaseFunder funds, int grade, int Cost)
         {   // Expand the base!
             try
             {
@@ -1437,19 +1448,22 @@ namespace TAC_AI.AI.Enemy
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
                         RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
-                        RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, BTemp);
-                        return;
+                        return RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, BTemp);
                     }
                     DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                     if (RawTechLoader.IsFallback(type))
-                        return;
+                        return false;
                     if (RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, RawTechLoader.GetBaseTemplate(type)))
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Expanded");
+                        return true;
                     }
                     else
+                    {
                         DebugTAC_AI.Log(KickStart.ModID + ": SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
+                        return false;
+                    }
                 }
                 else
                 {   // Get new base location to expand
@@ -1462,11 +1476,13 @@ namespace TAC_AI.AI.Enemy
                         else
                             BaseUpgradeTechs(mind, tech, lvl, funds, funders, grade, Cost);
                     }
+                    return true;
                 }
             }
             catch (Exception e)
             {
                 DebugTAC_AI.Log(KickStart.ModID + ": ExpandBasePeaceful - game is being stubborn " + e);
+                return false;
             }
         }
 

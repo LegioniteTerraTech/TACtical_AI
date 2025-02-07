@@ -345,11 +345,25 @@ namespace TAC_AI.AI.Movement
 
 
         // ALLY COLLISION AVOIDENCE
-        private static bool InvalidTank(Tank tank)
+        private static bool AvoidInvalidOrIgnoreable(Tank tank)
         {
-            return tank == null || !tank.visible.isActive;
+            if (tank != null && tank.visible.isActive)
+            {
+                TankAIHelper help = tank.GetHelperInsured();
+                return (help.IsMultiTech && tank.IsAnchored) || help.DediAI == AIType.Aegis;
+            }
+            return true;
         }
-        public static Tank ClosestAlly(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out float bestValue, Tank thisTank)
+        private static bool FollowInvalidOrIgnoreable(Tank tank)
+        {
+            if (tank != null && tank.visible.isActive)
+            {
+                TankAIHelper help = tank.GetHelperInsured();
+                return help.IsMultiTech || help.DediAI == AIType.Aegis;
+            }
+            return true;
+        }
+        public static Tank ClosestAlly(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out float bestValue, TankAIHelper thisTank)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             bestValue = 500;
@@ -358,7 +372,8 @@ namespace TAC_AI.AI.Movement
             {
                 foreach (Tank otherTech in AlliesAlt)
                 {
-                    if (InvalidTank(otherTech) || thisTank == otherTech)
+                    if (AvoidInvalidOrIgnoreable(otherTech) || thisTank.tank == otherTech || 
+                        thisTank.MultiTechsAffiliated.Contains(otherTech))
                         continue;
                     float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                     if (bestValue > temp)
@@ -377,7 +392,7 @@ namespace TAC_AI.AI.Movement
             }
             return closestTank;
         }
-        public static Tank ClosestAllyPrecision(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out float bestValue, Tank thisTank)
+        public static Tank ClosestAllyPrecision(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out float bestValue, TankAIHelper thisTank)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             //  For when the size matters of the object to dodge
@@ -388,7 +403,8 @@ namespace TAC_AI.AI.Movement
             {
                 foreach (Tank otherTech in AlliesAlt)
                 {
-                    if (InvalidTank(otherTech) || thisTank == otherTech)
+                    if (AvoidInvalidOrIgnoreable(otherTech) || thisTank.tank == otherTech || 
+                        thisTank.MultiTechsAffiliated.Contains(otherTech))
                         continue;
                     float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude - otherTech.GetCheapBounds();
                     if (bestValue > temp)
@@ -408,7 +424,7 @@ namespace TAC_AI.AI.Movement
             return closestTank;
         }
 
-        public static Tank SecondClosestAlly(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue, Tank thisTank)
+        public static Tank SecondClosestAlly(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue, TankAIHelper thisTank)
         {
             // Finds the two closest allies and outputs their respective distances as well as their beings
             bestValue = 500;
@@ -419,7 +435,8 @@ namespace TAC_AI.AI.Movement
             {
                 foreach (Tank otherTech in AlliesAlt)
                 {
-                    if (InvalidTank(otherTech) || thisTank == otherTech)
+                    if (AvoidInvalidOrIgnoreable(otherTech) || thisTank.tank == otherTech || 
+                        thisTank.MultiTechsAffiliated.Contains(otherTech))
                         continue;
                     float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                     if (bestValue > temp)
@@ -450,7 +467,7 @@ namespace TAC_AI.AI.Movement
             secondTank = null;
             return null;
         }
-        public static Tank SecondClosestAllyPrecision(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue, Tank thisTank)
+        public static Tank SecondClosestAllyPrecision(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, out Tank secondTank, out float bestValue, out float auxBestValue, TankAIHelper thisTank)
         {
             // Finds the two closest allies and outputs their respective distances as well as their beings
             //  For when the size matters of the object to dodge
@@ -463,7 +480,8 @@ namespace TAC_AI.AI.Movement
             {
                 foreach (Tank otherTech in AlliesAlt)
                 {
-                    if (InvalidTank(otherTech) || thisTank == otherTech)
+                    if (AvoidInvalidOrIgnoreable(otherTech) || thisTank.tank == otherTech || 
+                        thisTank.MultiTechsAffiliated.Contains(otherTech))
                         continue;
                     float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude - otherTech.GetCheapBounds();
                     if (bestValue > temp)
@@ -495,7 +513,7 @@ namespace TAC_AI.AI.Movement
             return null;
         }
         
-        public static Tank ClosestUnanchoredAlly(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, float rangeSqr, out float bestValue, Tank thisTank)
+        public static Tank ClosestUnanchoredAllyAegis(IEnumerable<Tank> AlliesAlt, Vector3 tankPos, float rangeSqr, out float bestValue, TankAIHelper thisTank)
         {
             // Finds the closest ally and outputs their respective distance as well as their being
             bestValue = rangeSqr;
@@ -504,7 +522,7 @@ namespace TAC_AI.AI.Movement
             {
                 foreach (Tank otherTech in AlliesAlt)
                 {
-                    if (InvalidTank(otherTech) || thisTank == otherTech || otherTech.IsAnchored)
+                    if (FollowInvalidOrIgnoreable(otherTech) || thisTank.tank == otherTech || otherTech.IsAnchored)
                         continue;
                     float temp = (otherTech.boundsCentreWorldNoCheck - tankPos).sqrMagnitude;
                     if (bestValue > temp)

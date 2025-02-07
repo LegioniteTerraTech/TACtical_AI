@@ -77,7 +77,10 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         return;
                     }
                     errorCode = 6;
-                    BGeneral.GetBase(helper, tank, true, ref dist, ref hasMessaged, ref direct);
+                    if (!BGeneral.GetBase(helper, tank, true, ref dist, ref hasMessaged, ref direct))
+                    {   // No base!!!
+                        return;
+                    }
 
                     errorCode = 8;
                     if (helper.MovementController is AIControllerAir)

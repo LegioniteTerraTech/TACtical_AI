@@ -11,6 +11,7 @@ namespace TAC_AI.AI.AlliedOperations
 {
     internal static class BMultiTech
     {
+        // Check MultiTechUtils for the Director
         public static void MTStatic(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
         {   // stay still
             helper.lastPlayer = helper.GetPlayerTech();
@@ -34,8 +35,43 @@ namespace TAC_AI.AI.AlliedOperations
             BGeneral.ResetValues(helper, ref direct);
             try
             {
-                float range = helper.MinCombatRange;
-                if (!helper.AllMT)
+                float range = helper.MaxObjectiveRange;
+                if (helper.AllMT)
+                {
+                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, helper, out float distSqr, out var vis))
+                    {
+                        hostTech = vis.tank;
+                        var otherHelper = hostTech.GetHelperInsured();
+                        if (otherHelper.MultiTechsAffiliated.Add(tank))
+                            otherHelper.dirtyExtents = true;
+                        //DebugTAC_AI.Log("Found " + hostTech.name);
+                    }
+                    else
+                        hostTech = null;//helper.GetPlayerTech().tank;
+
+                    //hostTech = AIEPathing.ClosestAllyPrecision(AIEPathing.AllyList(tank), tank.boundsCentreWorldNoCheck, out dist, tank);
+                    //float distSqr = 0;
+                    //if ((bool)helper.theResource?.tank)
+
+                    if ((bool)hostTech)
+                    {
+                        //hostTech = helper.theResource.tank;
+                        distSqr = (hostTech.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude;
+                    }
+                    else
+                        hostTech = null;
+
+                    if (hostTech == null || distSqr > range * range)
+                    {
+                        helper.MTLockedToTechBeam = false;
+                        helper.MTMimicHostAvail = false;
+                        return;
+                    }
+                    helper.theResource = hostTech.visible;
+                    copyTargVis = hostTech;
+                    dist = Mathf.Sqrt(distSqr);
+                }
+                else
                 {
                     hostTech = helper.GetPlayerTech().tank;
                     if (hostTech == null)
@@ -59,25 +95,6 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                     helper.theResource = hostTech.visible;
                     copyTargVis = hostTech;
-                }
-                else
-                {
-                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, helper, out float distSqr, out var vis))
-                        hostTech = vis.tank;
-                    else
-                        hostTech = null;
-                    //hostTech = AIEPathing.ClosestAllyPrecision(AIEPathing.AllyList(tank), tank.boundsCentreWorldNoCheck, out dist, tank);
-                    if (hostTech == null)
-                        hostTech = helper.GetPlayerTech().tank;
-                    if (hostTech == null || distSqr > range * range)
-                    {
-                        helper.MTLockedToTechBeam = false;
-                        helper.MTMimicHostAvail = false;
-                        return;
-                    }
-                    helper.theResource = hostTech.visible;
-                    copyTargVis = hostTech;
-                    dist = Mathf.Sqrt(distSqr);
                 }
 
                 //float range = helper.lastTechExtents + vis.GetCheapBounds();
@@ -125,7 +142,23 @@ namespace TAC_AI.AI.AlliedOperations
             Tank vis;
             try
             {
-                if (!helper.AllMT)
+                if (helper.AllMT)
+                {
+                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, helper, out float distSqr, out var vis2))
+                        hostTech = vis2.tank;
+                    else
+                        hostTech = null;
+                    //hostTech = AIEPathing.ClosestAllyPrecision(AIEPathing.AllyList(tank), tank.boundsCentreWorldNoCheck, out dist, tank);
+                    if (hostTech == null)
+                    {
+                        helper.MTLockedToTechBeam = false;
+                        return;
+                    }
+                    helper.theResource = hostTech.visible;
+                    vis = hostTech;
+                    dist = Mathf.Sqrt(distSqr);
+                }
+                else
                 {
                     hostTech = helper.GetPlayerTech().tank;
                     if (hostTech == null)
@@ -141,22 +174,6 @@ namespace TAC_AI.AI.AlliedOperations
                     helper.theResource = hostTech.visible;
                     vis = hostTech;
                     dist = (tank.boundsCentreWorldNoCheck - hostTech.boundsCentreWorldNoCheck).magnitude;
-                }
-                else
-                {
-                    if (AIECore.FetchCopyableAlly(tank.boundsCentreWorldNoCheck, helper, out float distSqr, out var vis2))
-                        hostTech = vis2.tank;
-                    else
-                        hostTech = null;
-                    //hostTech = AIEPathing.ClosestAllyPrecision(AIEPathing.AllyList(tank), tank.boundsCentreWorldNoCheck, out dist, tank);
-                    if (hostTech == null)
-                    {
-                        helper.MTLockedToTechBeam = false;
-                        return;
-                    }
-                    helper.theResource = hostTech.visible;
-                    vis = hostTech;
-                    dist = Mathf.Sqrt(distSqr);
                 }
 
                 float range = helper.lastTechExtents + vis.GetCheapBounds();

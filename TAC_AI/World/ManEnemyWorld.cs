@@ -1267,7 +1267,7 @@ namespace TAC_AI.World
                 {
                     var mind = item.GetComponent<EnemyMind>();
                     if (item.Team == Team && mind)
-                        mind.AIControl.ResetAll(null);
+                        mind.AIControl.ResetOnSwitchAlignments(null);
                 }
             }
             TankAIManager.UpdateEntireTeam(Team);

@@ -101,7 +101,10 @@ namespace TAC_AI.AI.AlliedOperations
                     helper.actionPause -= KickStart.AIClockPeriod / 5;
                     return;
                 }
-                BGeneral.GetBase(helper, tank,helper.AdvancedAI, ref dist, ref hasMessaged, ref direct);
+                if (!BGeneral.GetBase(helper, tank, helper.AdvancedAI, ref dist, ref hasMessaged, ref direct))
+                {   // No base!!!
+                    return;
+                }
 
                 if (tank.blockman.IterateBlockComponents<ModuleItemHolder>().Count() == 0)
                 {

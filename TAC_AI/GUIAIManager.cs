@@ -741,15 +741,15 @@ namespace TAC_AI
             var set = lastTank.AISetSettings;
             
             StatusLabel(new Rect(20, 30, 160, 30), "Range: " + lastTank.MaxCombatRange, "Maximum combat range");
-            set.ChaseRange = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 30, 150, 30), lastTank.MaxCombatRange,
-                0, lim.ChaseRange, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
-            if (!lastTank.MinCombatRange.Approximately(set.ChaseRange))
+            set.CombatChase = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 30, 150, 30), lastTank.MaxCombatRange,
+                0, lim.CombatChase, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
+            if (!lastTank.MinCombatRange.Approximately(set.CombatChase))
                 delta = true;
 
             StatusLabel(new Rect(20, 60, 160, 30), "Spacing: " + lastTank.MinCombatRange, "Spacing from target");
-            set.CombatRange = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 60, 150, 30), lastTank.MinCombatRange,
-               0, lim.CombatRange, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
-            if (!lastTank.MinCombatRange.Approximately(set.CombatRange))
+            set.CombatSpacing = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 60, 150, 30), lastTank.MinCombatRange,
+               0, lim.CombatSpacing, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
+            if (!lastTank.MinCombatRange.Approximately(set.CombatSpacing))
                 delta = true;
 
 
@@ -917,7 +917,7 @@ namespace TAC_AI
                     return;
                 if (!lastTank.tank)
                     return;
-                SetOptionDriverCase(lastTank, driver);
+                SetOptionDriverCase(lastTank, driver, ManWorldRTS.inst.LocalPlayerTechsControlled.Count == 1);
                 inst.TrySetOptionDriverRTS(driver);
                 if (playSFX)
                 {
@@ -961,7 +961,7 @@ namespace TAC_AI
                     if ((bool)helper && helper != lastTank)
                     {
                         select++;
-                        SetOptionDriverCase(helper, driver);
+                        SetOptionDriverCase(helper, driver, false);
                     }
                 }
                 DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionRTS - Set " + amount + " Techs to drive " + driver);
@@ -969,9 +969,11 @@ namespace TAC_AI
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionDriverCase(TankAIHelper helper, AIDriverType driver)
+        private static void SetOptionDriverCase(TankAIHelper helper, AIDriverType driver, bool allowSetMultiTech)
         {
             if (helper.IsNull())
+                return;
+            if (helper.IsMultiTech && !allowSetMultiTech)
                 return;
             bool guess = driver == AIDriverType.AutoSet;
             if (guess)
