@@ -1523,7 +1523,7 @@ namespace TAC_AI.World
         {
             inst.enabled = !state;
         }
-        private void FixedUpdate()//Update()
+        internal void FixedUpdate()//Update()
         {
             if (ManNetwork.IsHost)
             {

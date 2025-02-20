@@ -10,6 +10,7 @@ using TerraTechETCUtil;
 using Ionic.Zlib;
 using Snapshots;
 using HarmonyLib;
+using System.ComponentModel.Composition.Primitives;
 
 namespace TAC_AI.Templates
 {
@@ -143,7 +144,10 @@ namespace TAC_AI.Templates
                     needsToAddToSpawnBaseTypes = true;
             }
             if (needsToAddToSpawnBaseTypes)
+            {
                 ManUI.inst.ShowErrorPopup(KickStart.ModID + ": Please update the SpawnBaseTypes with the new additions, which can be found in MassExport in your TerraTech Directory by the name of \"ESpawnBaseTypes.json\"");
+                DebugRawTechSpawner.OpenInExplorer(location);
+            }
             Organize(ref dictSorted);
             ClusterF = dictSorted;
         }
@@ -180,6 +184,39 @@ namespace TAC_AI.Templates
                     Singleton.Manager<ManSnapshots>.inst.SaveSnapshotRender(techData, techImage,
                         RT.techName, false, DoSaveCommunityTechBackToDisk);
                 });
+        }
+
+        internal static string ExportSnapsToCommunityPool()
+        {
+            HashSet<string> basetypeNames = new HashSet<string>();
+            List<string> basetypeNamesOrdered = new List<string>();
+            Dictionary<string, RawTechTemplate> ClusterOut = new Dictionary<string, RawTechTemplate>();
+            int SBTCounter = (int)SpawnBaseTypes.GSOQuickBuck;
+            var disk = ManSnapshots.inst.ServiceDisk.GetSnapshotCollectionDisk();
+            if (disk == null)
+                throw new NullReferenceException("ManSnapshots.inst.ServiceDisk failed to load");
+            foreach (var item in disk.Snapshots)
+            {
+                Snapshot inst = item;
+                if (inst != null)
+                {
+                    string nameBaseType = DebugRawTechSpawner.GetBaseTypeGenerated(item.m_Name.Value);
+                    if (basetypeNames.Add(nameBaseType))
+                    {
+                        SBTCounter++;
+                        ClusterOut.Add(SBTCounter.ToString(), new RawTechTemplate(inst.techData, false));
+                    }
+                }
+            }
+            string export = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
+            File.WriteAllText(Path.Combine(export, "ESpawnBaseTypes.json"), ""); // CLEAR
+            List<string> toWrite = new List<string>();
+            foreach (string str in basetypeNamesOrdered)
+            {
+                toWrite.Add(str + ",");
+            }
+            File.AppendAllLines(Path.Combine(export, "ESpawnBaseTypes.json"), toWrite);
+            return JsonConvert.SerializeObject(ClusterOut, Formatting.Indented);//, RawTechExporter.JSONDEV);
         }
 
 

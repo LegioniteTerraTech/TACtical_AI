@@ -3101,8 +3101,9 @@ namespace TAC_AI.AI
             {
                 if (!updateErrored)
                 {
-                    DebugTAC_AI.LogWarnPlayerOnce("OnUpdateHostAIOperations() Critical error", e);
+                    //DebugTAC_AI.LogWarnPlayerOnce("OnUpdateHostAIOperations() Critical error", e);
                     updateErrored = true;
+                    throw new Exception("OnUpdateHostAIOperations() Critical error", e);
                 }
             }
         }
@@ -5153,7 +5154,7 @@ namespace TAC_AI.AI
         // ----------------------------  Anchor Management  ---------------------------- 
 
         private static MethodInfo MI = typeof(TechAnchors).GetMethod("ConfigureJoint", BindingFlags.NonPublic | BindingFlags.Instance);
-        internal void TryInsureAnchor()
+        public void TryInsureAnchor()
         {
             if (!tank.IsAnchored && CanAnchorNow)
             {
@@ -5199,14 +5200,14 @@ namespace TAC_AI.AI
         /// <summary>
         /// IGNORES CHECKS
         /// </summary>
-        internal void AnchorIgnoreChecks(bool forced = false)
+        public void AnchorIgnoreChecks(bool forced = false)
         {
             if (forced)
                 AnchorState = AIAnchorState.ForceAnchor;
             else
                 AnchorState = AIAnchorState.Anchor;
         }
-        internal void AdjustAnchors()
+        public void AdjustAnchors()
         {
             bool prevAnchored = tank.IsAnchored;
             //DebugTAC_AI.Assert("AdjustAnchors()");
@@ -5217,17 +5218,17 @@ namespace TAC_AI.AI
             }
         }
 
-        internal void Unanchor()
+        public void Unanchor()
         {
-            DebugTAC_AI.Assert("Unanchor()");
+            //DebugTAC_AI.Assert("Unanchor()");
             //DoUnAnchor();
             AnchorState = AIAnchorState.Unanchor;
             AnchorStateAIInsure = true;
         }
 
-        internal void AnchorStatic()
+        public void AnchorStatic()
         {
-            DebugTAC_AI.Assert("AnchorStatic()");
+            //DebugTAC_AI.Assert("AnchorStatic()");
             AnchorState = AIAnchorState.AnchorStaticAI;
         }
 

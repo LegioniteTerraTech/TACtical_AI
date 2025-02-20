@@ -1102,7 +1102,7 @@ namespace TAC_AI.Templates
         /// <param name="maxGrade">Max allowed grade to filter.  leave at 99 to allow any</param>
         /// <param name="maxPrice">Max allowed price to filter.  leave at 0 to allow any</param>
         /// <returns>A new Tech that's (hopefully) spawned in the world.  Will return null if it fails.</returns>
-        internal static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 forwards, int Team, RawTechPopParams filter, bool nullOnErrorTech)
+        public static Tank SpawnRandomTechAtPosHead(Vector3 pos, Vector3 forwards, int Team, RawTechPopParams filter, bool nullOnErrorTech)
         {   // This will try to spawn player-made enemy techs as well
             if (filter.Disarmed)
                 Team = AIGlobals.GetRandomSubNeutralBaseTeam();
@@ -1127,7 +1127,7 @@ namespace TAC_AI.Templates
         /// <param name="maxGrade">Max allowed grade to filter.  leave at 99 to allow any</param>
         /// <param name="maxPrice">Max allowed price to filter.  leave at 0 to allow any</param>
         /// <returns>True if outTank is valid.</returns>
-        internal static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 forwards, int Team, out Tank outTank, RawTechPopParams filter)
+        public static bool SpawnRandomTechAtPosHead(Vector3 pos, Vector3 forwards, int Team, out Tank outTank, RawTechPopParams filter)
         {   // This will try to spawn player-made enemy techs as well
 
             if (filter.Disarmed)
@@ -1412,6 +1412,9 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Log(KickStart.ModID + ": SpawnSpecificTypeTech - Spawned " + baseTemplate.techName);
             return true;
         }
+        /// <summary>
+        /// Spawns tech with a one update delay to prevent overlapping spawns 
+        /// </summary>
         internal static bool TrySpawnSpecificTechSafe(Vector3 pos, Vector3 forwards, int Team, RawTechPopParams filter, Action<Tank> fallbackOp = null)
         {
             RawTech baseTemplate = FilteredSelectFromAll(filter, false, true);
@@ -2178,6 +2181,9 @@ namespace TAC_AI.Templates
                 TryForceIntoPop(theTech);
             return theTech;
         }
+        /// <summary>
+        /// Spawns tech with a one update delay to prevent overlapping spawns 
+        /// </summary>
         internal static void InstantTechSafe(Vector3 pos, Vector3 forward, int Team, string name, List<RawBlockMem> blueprint, RawTechPopParams filter, Action<Tank> fallbackOp = null)
         {
             QueueInstantTech queue = new QueueInstantTech(fallbackOp, pos, forward, Team, name, blueprint, filter);
@@ -2685,7 +2691,7 @@ namespace TAC_AI.Templates
         }
         internal static void TryForceIntoPop(Tank tank)
         {
-            if (tank.Team == -1) // the wild tech pop number
+            if (tank.Team == AIGlobals.LonerEnemyTeam) // the wild tech pop number
             {
                 List<TrackedVisible> visT = (List<TrackedVisible>)forceInsert.GetValue(ManPop.inst);
                 visT.Add(TrackTank(tank, tank.IsAnchored));
@@ -3261,7 +3267,7 @@ namespace TAC_AI.Templates
 
         private static void MakeSureCanExistWithBase(Tank tank)
         {
-            if (tank.IsPopulation || !tank.IsFriendly(tank.Team) || tank.Team == ManSpawn.FirstEnemyTeam || tank.Team == ManSpawn.NewEnemyTeam)
+            if (tank.IsPopulation || !tank.IsFriendly(tank.Team) || tank.Team == AIGlobals.LonerEnemyTeam || tank.Team == AIGlobals.DefaultEnemyTeam)
             {
                 int set = AIGlobals.GetRandomBaseTeam(true);
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");

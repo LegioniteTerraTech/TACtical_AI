@@ -191,6 +191,7 @@ namespace TAC_AI.AI.Enemy
         //private static List<ModuleBooster> engineGetCache = new List<ModuleBooster>();
         private static List<FanJet> jetGetCache = new List<FanJet>();
         private static List<BoosterJet> boosterGetCache = new List<BoosterJet>();
+        private static FieldInfo spinDat = typeof(FanJet).GetField("spinDelta", BindingFlags.Instance | BindingFlags.NonPublic);
         internal static void BlockSetEnemyHandling(Tank tank, EnemyMind newMind, bool ForceAllBubblesUp = false)
         {
             RawTech RTT = RawTechLoader.GetEnemyBaseTypeFromNameFull(tank.name);
@@ -306,8 +307,10 @@ namespace TAC_AI.AI.Enemy
                         }
                     }
 
-                    if (BD.HasHovers)
+                    if (BD.HasHovers || BD.HasFloaters)
                         modHoverCount++;
+                    if (BD.HasFloaters)
+                        isFlying = true;
                     if (BD.IsGyro)
                         modGyroCount++;
                     if (BD.HasWheels)
@@ -335,12 +338,16 @@ namespace TAC_AI.AI.Enemy
                 if (BD.IsGenerator)
                 {
 #if DEV
-                    if (bloc.GetComponent<ModuleEnergy>() == null)
-                        throw new Exception("BlockDetails SAID there was a ModuleEnergy in this block but that was incorrect!  We should not be checking for this!");
+                    //if (bloc.GetComponent<ModuleEnergy>() == null)
+                    //    throw new Exception("BlockDetails SAID there was a ModuleEnergy in this block but that was incorrect!  We should not be checking for this!");
 #endif
-                    ModuleEnergy.OutputConditionFlags flagG = (ModuleEnergy.OutputConditionFlags)generator.GetValue(bloc.GetComponent<ModuleEnergy>());
-                    if (flagG.HasFlag(ModuleEnergy.OutputConditionFlags.Anchored) && flagG.HasFlag(ModuleEnergy.OutputConditionFlags.DayTime))
-                        newMind.SolarsAvail = true;
+                    var modE = bloc.GetComponent<ModuleEnergy>();
+                    if (modE)
+                    {
+                        ModuleEnergy.OutputConditionFlags flagG = (ModuleEnergy.OutputConditionFlags)generator.GetValue(bloc.GetComponent<ModuleEnergy>());
+                        if (flagG.HasFlag(ModuleEnergy.OutputConditionFlags.Anchored) && flagG.HasFlag(ModuleEnergy.OutputConditionFlags.DayTime))
+                            newMind.SolarsAvail = true;
+                    }
                 }
 
                 if (bloc.GetComponent<ModulePacemaker>())
@@ -593,6 +600,15 @@ namespace TAC_AI.AI.Enemy
             if (Mind.IsNull())
             {
                 Mind = tank.GetComponent<EnemyMind>();
+                if (Mind == null)
+                {
+                    DebugTAC_AI.Assert(KickStart.ModID + ": Somehow, we called BeEvil() on " + tank.name + 
+                        " with NO EnemyMind instance attached!! We will try to make one NOW");
+                    GenerateEnemyAI(helper, tank);
+                    Mind = tank.GetComponent<EnemyMind>();
+                    if (Mind == null)
+                        throw new NullReferenceException("We TRIED to make an EnemyMind for " + tank.name + " but FAILED AGAIN!");
+                }
                 DebugTAC_AI.Log(KickStart.ModID + ": Updating MovementController for " + tank.name);
                 helper.MovementController.UpdateEnemyMind(Mind);
                 //RandomizeBrain(helper, tank);
@@ -643,16 +659,16 @@ namespace TAC_AI.AI.Enemy
             switch (mind.CommanderAlignment)
             {
                 case EnemyStanding.Enemy:
-                    BeHostile(helper, tank);
+                    BeHostile(mind, helper, tank);
                     break;
                 case EnemyStanding.SubNeutral:
-                    BeSubNeutral(helper, tank);
+                    BeSubNeutral(mind, helper, tank);
                     break;
                 case EnemyStanding.Neutral:
-                    BeNeutral(helper, tank);
+                    BeNeutral(mind, helper, tank);
                     break;
                 case EnemyStanding.Friendly:
-                    BeFriendly(helper, tank);
+                    BeFriendly(mind, helper, tank);
                     break;
             }
         }
@@ -675,9 +691,9 @@ namespace TAC_AI.AI.Enemy
 
             RBolts.ManageBolts(helper, tank, mind);
             TestShouldCommitDie(tank, mind);
-            if (Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck))
+            if (ManWorld.inst.CheckIsTileAtPositionLoaded(tank.boundsCentreWorldNoCheck))
             {
-                if ((mind.AllowRepairsOnFly || mind.StartedAnchored || mind.BuildAssist) && helper.TechMemor)
+                if ((mind.AllowRepairsOnFly || mind.StartedAnchored || mind.BuildAssist) && helper.TechMemor != null)
                 {
                     bool venPower = false;
                     if (mind.MainFaction == FactionSubTypes.VEN) venPower = true;
@@ -705,16 +721,16 @@ namespace TAC_AI.AI.Enemy
             switch (mind.CommanderAlignment)
             {
                 case EnemyStanding.Enemy:
-                    BeHostile(helper, tank);
+                    BeHostile(mind, helper, tank);
                     break;
                 case EnemyStanding.SubNeutral:
-                    BeSubNeutral(helper, tank);
+                    BeSubNeutral(mind, helper, tank);
                     break;
                 case EnemyStanding.Neutral:
-                    BeNeutral(helper, tank);
+                    BeNeutral(mind, helper, tank);
                     break;
                 case EnemyStanding.Friendly:
-                    BeFriendly(helper, tank);
+                    BeFriendly(mind, helper, tank);
                     break;
             }
 
@@ -746,6 +762,8 @@ namespace TAC_AI.AI.Enemy
         }
         private static void CombatChecking(TankAIHelper helper, Tank tank, EnemyMind mind)
         {
+            if (mind == null)
+                throw new NullReferenceException("RCore.CombatChecking() was called with null EnemyMind.  HOW!?!");
             switch (mind.EvilCommander)
             {
                 case EnemyHandling.Airplane:
@@ -828,23 +846,20 @@ namespace TAC_AI.AI.Enemy
             return false;
         }
 
-        private static void BeHostile(TankAIHelper helper, Tank tank)
+        private static void BeHostile(EnemyMind mind, TankAIHelper helper, Tank tank)
         {
-            var Mind = helper.MovementController.EnemyMind;
-            CombatChecking(helper, tank, Mind);
+            CombatChecking(helper, tank, mind);
         }
-        private static void BeSubNeutral(TankAIHelper helper, Tank tank)
+        private static void BeSubNeutral(EnemyMind mind, TankAIHelper helper, Tank tank)
         {
-            var Mind = helper.MovementController.EnemyMind;
             if (helper.Provoked > 0)
-                CombatChecking(helper, tank, Mind);
+                CombatChecking(helper, tank, mind);
             else if (AIGlobals.BaseSubNeutralsCuriousFollow)
-                RGeneral.Monitor(helper, tank, Mind);
+                RGeneral.Monitor(helper, tank, mind);
         }
-        private static void BeNeutral(TankAIHelper helper, Tank tank)
+        private static void BeNeutral(EnemyMind mind, TankAIHelper helper, Tank tank)
         {
-            var Mind = helper.MovementController.EnemyMind;
-            if (Mind.Hurt && helper.PendingDamageCheck && Mind.AIControl.Provoked > 0)
+            if (mind.Hurt && helper.PendingDamageCheck && mind.AIControl.Provoked > 0)
             {   // If we were hit & lost blocks, then we fight back the attacker
                 if (helper.lastEnemyGet?.tank)
                 {
@@ -877,11 +892,10 @@ namespace TAC_AI.AI.Enemy
             //helper.lastEnemy = null;
             //helper.AttackEnemy = false;
         }
-        private static void BeFriendly(TankAIHelper helper, Tank tank)
+        private static void BeFriendly(EnemyMind mind, TankAIHelper helper, Tank tank)
         {
-            var Mind = helper.MovementController.EnemyMind;
             // Can't really damage an ally
-            CombatChecking(helper, tank, Mind);
+            CombatChecking(helper, tank, mind);
         }
 
 
@@ -915,6 +929,8 @@ namespace TAC_AI.AI.Enemy
                         lastBlock.damage.SelfDestruct(2f);
                 }
             }
+            // We don't need this anymore.  As of Water Mod + Lava, Techs with wheels can paddle through the watter slowly!
+            /*
             if (KickStart.isWaterModPresent && minion && mind.EvilCommander == EnemyHandling.Wheeled)
             {
                 if (!tank.grounded && RLoadedBases.TeamActiveMakerBaseCount(tank.Team) > 0 && AIEPathing.AboveTheSea(mind.AIControl))
@@ -923,6 +939,7 @@ namespace TAC_AI.AI.Enemy
                     RLoadedBases.RecycleTechToTeam(tank);
                 }
             }
+            */
         }
         private static void CheckAndHandleControlBlocks(EnemyMind mind, TankBlock block)
         {

@@ -136,7 +136,7 @@ namespace TAC_AI
             internal static Type target = typeof(ModuleRemoteCharger);
 
             //MarkChargers
-            private static void OnAttached_Postfix(ModuleRemoteCharger __instance)
+            internal static void OnAttached_Postfix(ModuleRemoteCharger __instance)
             {
                 var ModuleAdd = __instance.gameObject.GetComponent<ModuleChargerTracker>();
                 if (!ModuleAdd)
@@ -154,7 +154,7 @@ namespace TAC_AI
             static readonly FieldInfo sellStolen = typeof(ModuleItemConsume).GetField("m_OperateItemInterceptedBy", BindingFlags.NonPublic | BindingFlags.Instance);
             private static Dictionary<ModuleItemConsume, int> ReservedSell = new Dictionary<ModuleItemConsume, int>();
             //LetNPCsSellStuff
-            private static bool InitRecipeOutput_Prefix(ModuleItemConsume __instance)
+            internal static bool InitRecipeOutput_Prefix(ModuleItemConsume __instance)
             {
                 int team = 0;
                 if (ReservedSell.TryGetValue(__instance, out int TeamOwner))
@@ -180,7 +180,7 @@ namespace TAC_AI
                 }
                 return true;
             }
-            private static void DestroyItem_Prefix(ModuleItemConsume __instance, ref Visible item)
+            internal static void DestroyItem_Prefix(ModuleItemConsume __instance, ref Visible item)
             {
                 if (__instance.block?.tank)
                 {
@@ -200,7 +200,7 @@ namespace TAC_AI
 
             static readonly FieldInfo PNR = typeof(ModuleHeart).GetField("m_EventHorizonRadius", BindingFlags.NonPublic | BindingFlags.Instance);
             //LetNPCsSCUStuff
-            private static void UpdatePickupTargets_Prefix(ModuleHeart __instance)
+            internal static void UpdatePickupTargets_Prefix(ModuleHeart __instance)
             {
                 var valid = __instance.GetComponent<ModuleItemHolder>();
                 if (ManNetwork.IsHost && valid)
@@ -232,7 +232,7 @@ namespace TAC_AI
             }
 
             //SpawnTraderTroll
-            private static void OnAttached_Postfix(ModuleHeart __instance)
+            internal static void OnAttached_Postfix(ModuleHeart __instance)
             {
                 if (__instance.block.tank.IsNull())
                     return;
@@ -255,7 +255,7 @@ namespace TAC_AI
 
             // Where it all happens
             //PatchControlSystem
-            private static bool ExecuteControl_Prefix(ModuleTechController __instance, ref bool __result)
+            internal static bool ExecuteControl_Prefix(ModuleTechController __instance, ref bool __result)
             {
                 if (KickStart.EnableBetterAI)
                 {

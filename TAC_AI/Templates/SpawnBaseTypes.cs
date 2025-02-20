@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace TAC_AI.Templates
 {
+    /// <summary>
+    /// LEGACY - Most spawns are now merged!
+    /// </summary>
     public enum SpawnBaseTypes
     {
         // STATIONARY TECHS
@@ -111,7 +114,7 @@ namespace TAC_AI.Templates
 
         // Hybridz - will spawn if player is at every max grade corp and they are PAIN
         AttractServo,
-        // TAC lol (WILL BECOME OBSOLETE)
+        // TAC lol (OBSOLETE)
         TACInvaderAttract,
         TACInvaderAttract2,
         TACOutpostMissions,
@@ -119,29 +122,37 @@ namespace TAC_AI.Templates
 
         // World Gen (emergency)
         // Aircraft - from slow to fast sorted by corp
-        GSOLiftOff,         // Unarmed, early
+        GSOLiftOff,         //> Unarmed, early
         GSOEpicTony,        // lotta lasers
-        GSOAirdropSquad,    // GSO Dropship
-        GSOHammer,   // GSO Missile aircraft
+        GSOAirdropSquad,    //> GSO Dropship
+        GSOHammer,          //> GSO Missile aircraft
         GSOFightOrFlight,   // Heavy GSO does-all
 
-        VENLiftOff,         // Unarmed, early
-        VENPuffPlane,       // Small Venture interceptor
-        VENDraftPlane,      // Medum Venture interceptor
-        VENZephrPlane,      // Heavy interceptor [missiles]
-        VENHotWings,        // Racer dropship
-        VENMachinator,      // gg toofast, tons of missiles
+        GCFuryFlier,        // Heavy GC assault plane
 
-        HEPeanutJet,        // Intro cutscene enemy, has cruise missiles very early
-        HEProx,             // Little fighter
-        HEVengence,         // Railgun fighter
+        VENLiftOff,         //> Unarmed, early
+        VENPuffPlane,       //> Small Venture interceptor
+        VENDraftPlane,      // Medium Venture interceptor
+        VENZephrPlane,      // Medium interceptor [mortars]
+        VENTornadoPlane,    // Heavy interceptor [missiles]
+        VENHotWings,        // Racer dropship
+        VENMachinator,      //> gg toofast, tons of missiles
+
+        HEPeanutJet,        //> Intro cutscene enemy, has cruise missiles very early
+        HEProx,             //> Little fighter
+        HEVengence,         //> Railgun fighter
         HEDropship,         // Wheeled Tank Dropship (Alien ref)
-        HEBombsAway,        // Anti-base bomber
+        HEBombsAway,        //> Anti-base bomber
         HECyclone,          // Very fast and dangerous HE aircraft armed to the bone
 
         BFEchoAir,          // Small laser interceptor
         BFColossus,         // Large BF hover dropship
+        BFFrizbee,          // lotta lasors
         BFOblivion,         // lotta beam lasors
+
+        RRDragonFlop,       // Omnicraft with lasors
+
+        SJBayonase,         // Medium mortar bomber
 
         // Choppers
         GSOQuadGale,
@@ -157,6 +168,8 @@ namespace TAC_AI.Templates
         HESmashApache,
         BFeClipse,
 
+        SJWindbag,          // annoying air bag airship
+
         // Naval
         GSOShallowWaterGuard,
         GCPlasmaDredge,
@@ -165,7 +178,7 @@ namespace TAC_AI.Templates
         VENNautilus,
         HESwaddleBoat,
         HEDreadnaught,
-        HEBattleSwivels,
+        HEBattleSwivels,    // HEDreadnaught but with swivels
         BFLuxYacht,
 
         //Player-helping naval crafts
@@ -221,11 +234,13 @@ namespace TAC_AI.Templates
         // Bases
         GSO0GExtractor,
         GSOPowerStation,
+        /// <summary> Last of the prefab techs </summary>
         GSOQuickBuck,
 
         //---------
         // CLUSTER
         //---------
+        // OBSOLETE - The values below do not represent their respective entries anymore
         // Note: Need to label contributions
         // Vertu and (LOOK IT UP) contributed huge batches to this
         TINYTANKS,

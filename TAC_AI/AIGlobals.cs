@@ -258,6 +258,8 @@ namespace TAC_AI
 
         public static IntVector3 RTSDisabled => IntVector3.invalid;
         // General 
+        public const int LonerEnemyTeam = ManSpawn.NewEnemyTeam;
+        public const int DefaultEnemyTeam = ManSpawn.FirstEnemyTeam;
         public const float YieldSpeed = 10;
         public static bool AllowWeaponsDisarm = true;
         public const bool BaseSubNeutralsCuriousFollow = true;
@@ -322,7 +324,7 @@ namespace TAC_AI
         public const float AircraftPreCrashDetection = 1.6f;
         public const float AircraftDestSuccessRadius = 32;
         public const float AerofoilSluggishnessBaseValue = 30;
-        public const float AircraftMaxDive = 0.6f;
+        public const float AircraftMaxDive = 0.65f;//0.6f;
         public const float AircraftDangerDive = 0.7f;
         public const float AircraftChillFactorMulti = 4.5f;         // More accuraccy, less responsiveness
         public const float LargeAircraftChillFactorMulti = 1.25f;   // More responsiveness, less accuraccy
@@ -463,7 +465,7 @@ namespace TAC_AI
 
         internal static bool TurboAICheat
         {
-            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.RightControl) && Input.GetKey(KeyCode.Slash); }
+            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.KeypadPlus); }
         }
 
 
@@ -576,7 +578,7 @@ namespace TAC_AI
                 if (ctrl)
                 {
                     if (shift)
-                        return ManSpawn.FirstEnemyTeam;
+                        return AIGlobals.DefaultEnemyTeam;
                     else
                         return GetRandomAllyBaseTeam();
                 }

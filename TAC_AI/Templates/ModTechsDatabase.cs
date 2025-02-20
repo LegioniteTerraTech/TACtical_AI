@@ -439,9 +439,9 @@ namespace TAC_AI.Templates
                 }
                 return valid;
             }
-            catch
+            catch (Exception e)
             {
-                DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech was corrupted via unexpected mod changes!");
+                DebugTAC_AI.Log(KickStart.ModID + ": ValidateBlocksInTech - Tech was corrupted via unexpected mod changes! - " + e);
                 return false; 
             }
         }

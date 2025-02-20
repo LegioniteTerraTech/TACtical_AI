@@ -64,7 +64,7 @@ namespace TAC_AI.Templates
 
         private static Tank playerTank => Singleton.playerTank;
         internal const int trollTeam = -9001;
-        internal static int EnemyTeam => ManSpawn.NewEnemyTeam;
+        internal static int EnemyTeam => AIGlobals.LonerEnemyTeam;
         public static float AirborneSpawnChance => 301 - (KickStart.difficulty + 50);
 
         public static float SpaceSpawnChance => KickStart.CommitDeathMode ? 0.1f : SpaceshipChance;
@@ -197,7 +197,7 @@ namespace TAC_AI.Templates
                 factionsAvail.Add(FactionSubTypes.HE);
             if (Licences.GetLicense(FactionSubTypes.BF).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
                 factionsAvail.Add(FactionSubTypes.BF);
-            if (Licences.GetLicense(FactionSubTypes.SJ).IsDiscovered && Licences.GetLicense(FactionSubTypes.BF).CurrentLevel >= 0)
+            if (Licences.GetLicense(FactionSubTypes.SJ).IsDiscovered && Licences.GetLicense(FactionSubTypes.SJ).CurrentLevel >= 0)
                 factionsAvail.Add(FactionSubTypes.SJ);
         }
         public static void UpdateFactionsAvailLand()

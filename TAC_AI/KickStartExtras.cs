@@ -181,6 +181,7 @@ namespace TAC_AI
 
         public static OptionToggle WarnEnemyLock;
         public static OptionToggle HoldFireOnNeutral;
+        public static bool ShownRebootWarning = false;
 
 
         internal static void PushExtModOptionsHandling()
@@ -190,8 +191,9 @@ namespace TAC_AI
             betterAI = new OptionToggle("<b>Enable Mod</b>", TACAI, KickStart.EnableBetterAI);
             betterAI.onValueSaved.AddListener(() => { KickStart.EnableBetterAI = betterAI.SavedValue; });
 #endif
-            WarnEnemyLock = new OptionToggle("Flying Enemy Warnings", TACAI, KickStart.WarnOnEnemyLock);
-            WarnEnemyLock.onValueSaved.AddListener(() => { KickStart.WarnOnEnemyLock = WarnEnemyLock.SavedValue; });
+            OptionToggle togTest = new OptionToggle("Flying Enemy Warnings", TACAI, KickStart.WarnOnEnemyLock);
+            togTest.onValueSaved.AddListener(() => { KickStart.WarnOnEnemyLock = togTest.SavedValue; });
+            WarnEnemyLock = togTest;
             muteNonPlayerBuildRacket = new OptionToggle("Mute Non-Player Build Racket", TACAI, KickStart.MuteNonPlayerRacket);
             muteNonPlayerBuildRacket.onValueSaved.AddListener(() => { KickStart.MuteNonPlayerRacket = muteNonPlayerBuildRacket.SavedValue; });
             exportReadableRAW = new OptionToggle("Export .JSON instead of .RAWTECH", TACAI, RawTechExporter.ExportJSONInsteadOfRAWTECH);
@@ -240,17 +242,31 @@ namespace TAC_AI
 
             var TACAIRTS = KickStart.ModID + " - Real-Time Strategy [RTS] Mode";
             playerStrategic = new OptionToggle("Enable Player RTS HUD", TACAIRTS, KickStart.AllowPlayerRTSHUD);//\nRandomAdditions and TweakTech highly advised for best experience
-            playerStrategic.onValueSaved.AddListener(() => { KickStart.AllowPlayerRTSHUD = playerStrategic.SavedValue; });
+            playerStrategic.onValueSaved.AddListener(() => { 
+                KickStart.AllowPlayerRTSHUD = playerStrategic.SavedValue;
+                if (KickStart.AllowPlayerRTSHUD)
+                {
+                    ManWorldRTS.Initiate();
+                    //ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManWorldRTS.DelayedInitiate, KickStart.DeInitALL); // tf is this here for?
+                }
+                else
+                {
+                    ManWorldRTS.DeInit();
+                    // ManUI.inst.ShowErrorPopup("A game restart is required to let the changes take effect"); // causes settings fail
+                }
+            });
             enemyStrategic = new OptionToggle("Enemy RTS A.I.", TACAIRTS, KickStart.AllowStrategicAI);//\nRandomAdditions and TweakTech highly advised for best experience
             enemyStrategic.onValueSaved.AddListener(() => {
                 KickStart.AllowStrategicAI = enemyStrategic.SavedValue;
                 if (KickStart.AllowStrategicAI)
                 {
-                    ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManWorldRTS.DelayedInitiate, KickStart.DeInitALL);
+                    ManEnemyWorld.Initiate();
+                    //ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManWorldRTS.DelayedInitiate, KickStart.DeInitALL); // tf is this here for?
                 }
                 else
                 {
-                    ManUI.inst.ShowErrorPopup("A game restart is required to let the changes take effect");
+                    ManEnemyWorld.DeInit();
+                    // ManUI.inst.ShowErrorPopup("A game restart is required to let the changes take effect"); // causes settings fail
                 }
             });
             commandHotKey = new OptionKey("Enable RTS Overlay Hotkey", TACAIRTS, KickStart.CommandHotkey);

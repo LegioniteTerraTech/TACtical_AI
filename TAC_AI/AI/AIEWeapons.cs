@@ -100,14 +100,17 @@ namespace TAC_AI.AI
                         closeAlly = helper.lastCloseAlly;
                     if (closeAlly)
                     {
-                        if (helper.lastEnemyGet.IsNotNull())
+                        Visible targetEnemy = closeAlly.GetHelperInsured().lastEnemyGet;
+                        if (targetEnemy == null)
+                            targetEnemy = helper.lastEnemyGet;
+                        if (targetEnemy.IsNotNull())
                         {
                             helper.ActiveAimState = AIWeaponState.Mimic;
-                            var targetTank = helper.lastEnemyGet.tank;
-                            if (targetTank)
-                                helper.AimAndFireWeapons(targetTank.boundsCentreWorldNoCheck, targetTank.GetCheapBounds());
+                            Tank targTank = targetEnemy.tank;
+                            if (targTank != null)
+                                helper.AimAndFireWeapons(targTank.boundsCentreWorldNoCheck, targTank.GetCheapBounds());
                             else
-                                helper.AimAndFireWeapons(helper.lastEnemyGet.centrePosition, helper.lastEnemyGet.GetCheapBounds() + 1);
+                                helper.AimAndFireWeapons(targetEnemy.centrePosition, targetEnemy.GetCheapBounds() + 1);
                             if (helper.FIRE_ALL)
                                 helper.FireAllWeapons();
                         }

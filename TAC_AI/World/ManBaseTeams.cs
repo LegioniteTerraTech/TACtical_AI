@@ -12,6 +12,7 @@ using TAC_AI.Templates;
 using TAC_AI.World;
 using Newtonsoft.Json;
 using UnityEngine.Experimental.UIElements;
+using static WaterMod.SurfacePool;
 
 namespace TAC_AI
 {
@@ -105,14 +106,15 @@ namespace TAC_AI
         /// <summary>
         /// The fallback relation for any unknown relations
         /// </summary>
-        public int relationInt = (int)TeamRelations.SubNeutral;
+        public int relationInt = (int)TeamRelations.Enemy;
 
         /// <summary>
         /// This rises each time the team is attacked by other teams it isn't an Enemy, if it gets too high, relations shall drop
         /// </summary>
         [JsonIgnore]
         public float angerThreshold = 0;
-        private bool Infighting = false;
+        /// <summary> DO NOT SET - PUBLIC FOR SERIALIZATION </summary>
+        public bool Infighting = false;
         internal bool IsInfighting => Infighting;
         /// <summary>This means the team cannot be changed, or have it's relations changed with any other teams</summary>
         public bool IsReadonly = false;
@@ -151,22 +153,24 @@ namespace TAC_AI
 
         /// <summary> SERIALIZATION (or default attack-all teams) ONLY </summary>
         public EnemyTeamData() {}
-        public EnemyTeamData(int team, TeamRelations defaultRelations = TeamRelations.Enemy)
+        public EnemyTeamData(int team, bool infighting, TeamRelations defaultRelations = TeamRelations.Enemy)
         {
             teamID = team;
             teamName = TeamNamer.GetTeamName(teamID);
             DebugTAC_AI.LogTeams("New Team of name " + teamName + ", ID " + team + ", alignment(vs player) " +
                 Alignment_Internal(ManPlayer.inst.PlayerTeam));
             relationInt = (int)defaultRelations;
+            Infighting = infighting;
             IsReadonly = false;
         }
-        public EnemyTeamData(bool setReadonly, int team, TeamRelations defaultRelations = TeamRelations.Enemy)
+        public EnemyTeamData(bool setReadonly, int team, bool infighting, TeamRelations defaultRelations = TeamRelations.Enemy)
         {
             teamID = team;
             teamName = TeamNamer.GetTeamName(teamID);
             DebugTAC_AI.LogTeams("New Team of name " + teamName + ", ID " + team + ", alignment(vs player) " +
                 Alignment_Internal(ManPlayer.inst.PlayerTeam));
             relationInt = (int)defaultRelations;
+            Infighting = infighting;
             IsReadonly = setReadonly;
         }
         public TeamRelations GetRelations(int teamOther, TeamRelations fallback = TeamRelations.Enemy) => 
@@ -178,9 +182,10 @@ namespace TAC_AI
         {
             switch (teamOther)
             {
-                case ManSpawn.FirstEnemyTeam:
-                case ManSpawn.NewEnemyTeam:
-                    return TeamRelations.Enemy;
+                /*
+                case AIGlobals.DefaultEnemyTeam:
+                case AIGlobals.LonerEnemyTeam:
+                    return TeamRelations.Enemy;*/
                 case ManSpawn.NeutralTeam:
                     return TeamRelations.Neutral;
             }
@@ -368,8 +373,8 @@ namespace TAC_AI
 
         public void SetInfighting(bool state)
         {
-            if (IsReadonly)
-            Infighting = state;
+            if (!IsReadonly)
+                Infighting = state;
         }
         public void Set(int team, TeamRelations relate) => ManBaseTeams.SetRelations(teamID, team, relate);
         internal void Set_Internal(int team, TeamRelations relate)
@@ -518,33 +523,108 @@ namespace TAC_AI
             InsureNetHooks();
             InsureDefaultTeams(false);
         }
-        private static void CreateDefaultTeam(int team, TeamRelations relations, bool lockedReadOnly, bool fixup, bool infighting = false)
+        private static void CreateDefaultTeam(int team, TeamRelations defaultRelations, bool infighting, bool lockedReadOnly, bool fixup)
         {
             if (!inst.teams.TryGetValue(team, out var ETDG))
             {
-                EnemyTeamData ETD = new EnemyTeamData(lockedReadOnly, team, relations);
+                EnemyTeamData ETD = new EnemyTeamData(lockedReadOnly, team, infighting, defaultRelations);
                 ETD.SetInfighting(infighting);
                 inst.teams.Add(team, ETD);
             }
-            else if (fixup && ETDG.relationInt != (int)relations)
+            else if (fixup)
             {
-                DebugTAC_AI.Assert("Somehow our default team " + ETDG.teamName + " was set to an ILLEGAL VALUE " + 
-                    (TeamRelations)ETDG.relationInt + " when it SHOULD be " + relations + "!");
-                inst.teams.Remove(team);
-                EnemyTeamData ETD = new EnemyTeamData(lockedReadOnly, team, relations);
-                ETD.SetInfighting(infighting);
-                inst.teams.Add(team, ETD);
+                bool doFixup = false;
+                if (ETDG.relationInt != (int)defaultRelations)
+                {
+                    DebugTAC_AI.Assert("Somehow our default team " + ETDG.teamName + " was set to an ILLEGAL VALUE " +
+                        (TeamRelations)ETDG.relationInt + " when it SHOULD be " + defaultRelations + "!");
+                    doFixup = true;
+                }
+                else if (ETDG.IsInfighting != infighting)
+                {
+                    DebugTAC_AI.Assert("Somehow our default team " + ETDG.teamName + " was set to INFIGHTING " +
+                        ETDG.IsInfighting + " when it SHOULD be " + infighting + "!");
+                    doFixup = true;
+                }
+
+                if (doFixup)
+                {
+                    if (lockedReadOnly)
+                    {
+                        inst.teams.Remove(team);
+                        EnemyTeamData ETD = new EnemyTeamData(lockedReadOnly, team, infighting, defaultRelations);
+                        ETD.SetInfighting(infighting);
+                        inst.teams.Add(team, ETD);
+                        //TankAIManager.UpdateEntireTeam(team); 
+                    }
+                    else
+                    {
+                        ETDG.SetInfighting(infighting);
+                        ETDG.defaultRelations = defaultRelations;
+                    }
+                }
+            }
+        }
+        private static void SanityCheckTeam(int team)
+        {
+            if (TryGetBaseTeamAny(team, out var teamInst))
+            {
+                bool didClean = false;
+                if (teamInst.align.Remove(AIGlobals.DefaultEnemyTeam))
+                {
+                    TankAIManager.UpdateEntireTeam(AIGlobals.DefaultEnemyTeam);
+                    didClean = true;
+                }
+                if (teamInst.align.Remove(AIGlobals.LonerEnemyTeam))
+                {
+                    TankAIManager.UpdateEntireTeam(AIGlobals.LonerEnemyTeam);
+                    didClean = true;
+                }
+                if (teamInst.align.Remove(ManSpawn.NeutralTeam))
+                {
+                    TankAIManager.UpdateEntireTeam(ManSpawn.NeutralTeam);
+                    didClean = true;
+                }
+                if (teamInst.align.Remove(SpecialAISpawner.trollTeam))
+                {
+                    TankAIManager.UpdateEntireTeam(SpecialAISpawner.trollTeam);
+                    didClean = true;
+                }
+                if (didClean)
+                    TankAIManager.UpdateEntireTeam(team);
             }
         }
         public static void InsureDefaultTeams(bool fixup)
         {
             if (inst.teams == null)
                 inst.teams = new Dictionary<int, EnemyTeamData>();
-            CreateDefaultTeam(ManSpawn.DefaultPlayerTeam, TeamRelations.Enemy, false, false);
-            CreateDefaultTeam(ManSpawn.FirstEnemyTeam, TeamRelations.Enemy, true, fixup, true);
-            CreateDefaultTeam(ManSpawn.NewEnemyTeam, TeamRelations.Enemy, true, fixup, true);
-            CreateDefaultTeam(ManSpawn.NeutralTeam, TeamRelations.Neutral, true, fixup);
-            CreateDefaultTeam(SpecialAISpawner.trollTeam, TeamRelations.Enemy, true, fixup);
+            CreateDefaultTeam(ManSpawn.DefaultPlayerTeam, TeamRelations.Enemy, false, false, fixup);
+            CreateDefaultTeam(AIGlobals.DefaultEnemyTeam, TeamRelations.Enemy, false, true, fixup);
+            CreateDefaultTeam(AIGlobals.LonerEnemyTeam, TeamRelations.Enemy, true, true, fixup);
+            CreateDefaultTeam(ManSpawn.NeutralTeam, TeamRelations.Neutral, false, true, fixup);
+            CreateDefaultTeam(SpecialAISpawner.trollTeam, TeamRelations.Enemy, false, true, fixup);
+
+            // MP
+            if (ManNetwork.IsNetworked)
+            {
+                CreateDefaultTeam(1073741824, TeamRelations.Enemy, false, false, fixup);
+                CreateDefaultTeam(1073741825, TeamRelations.Enemy, false, false, fixup);
+                CreateDefaultTeam(1073741826, TeamRelations.Enemy, false, false, fixup);
+                CreateDefaultTeam(1073741827, TeamRelations.Enemy, false, false, fixup);
+                CreateDefaultTeam(ModeCoOpCreative.NeutralTeam, TeamRelations.Neutral, false, false, fixup);
+            }
+            if (fixup)
+            {
+                SanityCheckTeam(ManSpawn.DefaultPlayerTeam);
+                if (ManNetwork.IsNetworked)
+                {
+                    SanityCheckTeam(1073741824);
+                    SanityCheckTeam(1073741825);
+                    SanityCheckTeam(1073741826);
+                    SanityCheckTeam(1073741827);
+                    SanityCheckTeam(ModeCoOpCreative.NeutralTeam);
+                }
+            }
         }
         public static void DeInit()
         {
@@ -636,7 +716,7 @@ namespace TAC_AI
                     {
                         inst.lowTeam--;
                     }
-                    var valNew = new EnemyTeamData(inst.lowTeam, defaultRelations);
+                    var valNew = new EnemyTeamData(inst.lowTeam, false, defaultRelations);
                     inst.teams.Add(inst.lowTeam, valNew);
                     inst.lowTeam--;
                     return valNew;
@@ -661,7 +741,7 @@ namespace TAC_AI
                     {
                         inst.lowTeam--;
                     }
-                    var valNew = new EnemyTeamData(inst.lowTeam);
+                    var valNew = new EnemyTeamData(inst.lowTeam, false);
                     valNew.PlayerTeam = team;
                     inst.teams.Add(inst.lowTeam, valNew);
                     SetRelations(valNew.teamID, team, TeamRelations.AITeammate);
@@ -696,7 +776,7 @@ namespace TAC_AI
                     throw new InvalidOperationException("Player team cannot be assigned as a BaseTeam");
                 if (ManSpawn.NeutralTeam == team)
                     throw new InvalidOperationException("Neutral team cannot be assigned as a BaseTeam");
-                var valNew = new EnemyTeamData(team);
+                var valNew = new EnemyTeamData(team, false);
                 inst.teams.Add(team, valNew);
                 return valNew;
             }
@@ -895,9 +975,6 @@ namespace TAC_AI
             if (DebugRawTechSpawner.AINoAttackPlayer &&
                 (teamID1 == ManPlayer.inst.PlayerTeam || teamID2 == ManPlayer.inst.PlayerTeam))
                 return false;
-            if (teamID1 == ManSpawn.FirstEnemyTeam || teamID1 == ManSpawn.NewEnemyTeam ||
-                teamID2 == ManSpawn.FirstEnemyTeam || teamID2 == ManSpawn.NewEnemyTeam)
-                return true;
             return RelationTeamLessOrEqual(teamID1, teamID2, TeamRelations.Enemy, TeamRelations.Enemy);
         }
         public static bool IsFriendly(int teamID1, int teamID2)
@@ -905,9 +982,6 @@ namespace TAC_AI
             if (DebugRawTechSpawner.AINoAttackPlayer &&
                 (teamID1 == ManPlayer.inst.PlayerTeam || teamID2 == ManPlayer.inst.PlayerTeam))
                 return true;
-            if (teamID1 == ManSpawn.FirstEnemyTeam || teamID1 == ManSpawn.NewEnemyTeam ||
-                teamID2 == ManSpawn.FirstEnemyTeam || teamID2 == ManSpawn.NewEnemyTeam)
-                return false;
             return RelationTeamGreaterOrEqual(teamID1, teamID2, TeamRelations.Friendly);
         }
         public static bool ShouldNotAttack(int teamID1, int teamID2)
@@ -915,9 +989,6 @@ namespace TAC_AI
             if (DebugRawTechSpawner.AINoAttackPlayer &&
                 (teamID1 == ManPlayer.inst.PlayerTeam || teamID2 == ManPlayer.inst.PlayerTeam))
                 return true;
-            if (teamID1 == ManSpawn.FirstEnemyTeam || teamID1 == ManSpawn.NewEnemyTeam ||
-                teamID2 == ManSpawn.FirstEnemyTeam || teamID2 == ManSpawn.NewEnemyTeam)
-                return false;
             return RelationTeamGreaterOrEqual(teamID1, teamID2, TeamRelations.SubNeutral);
         }
         public static bool IsUnattackable(int teamID1, int teamID2)
@@ -925,9 +996,6 @@ namespace TAC_AI
             if (DebugRawTechSpawner.AINoAttackPlayer &&
                 (teamID1 == ManPlayer.inst.PlayerTeam || teamID2 == ManPlayer.inst.PlayerTeam))
                 return true;
-            if (teamID1 == ManSpawn.FirstEnemyTeam || teamID1 == ManSpawn.NewEnemyTeam ||
-                teamID2 == ManSpawn.FirstEnemyTeam || teamID2 == ManSpawn.NewEnemyTeam)
-                return false;
             return RelationTeamGreaterOrEqual(teamID1, teamID2, TeamRelations.Neutral);
         }
         public static bool IsTeammate(int teamID1, int teamID2)
@@ -935,9 +1003,6 @@ namespace TAC_AI
             if (DebugRawTechSpawner.AllowPlayerBuildEnemies &&
                 (teamID1 == ManPlayer.inst.PlayerTeam || teamID2 == ManPlayer.inst.PlayerTeam))
                 return true;
-            if (teamID1 == ManSpawn.FirstEnemyTeam || teamID1 == ManSpawn.NewEnemyTeam ||
-                teamID2 == ManSpawn.FirstEnemyTeam || teamID2 == ManSpawn.NewEnemyTeam)
-                return false;
             return RelationTeamGreaterOrEqual(teamID1, teamID2, TeamRelations.AITeammate);
         }
         public static bool IsNonAggressiveTeam(int team)

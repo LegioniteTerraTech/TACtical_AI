@@ -176,7 +176,10 @@ namespace TAC_AI.World
             }
             return AnyLeftStanding;
         }
-
+        /// <summary>
+        /// Returns false if our team no longer exists
+        /// </summary>
+        /// <returns></returns>
         public virtual bool UpdateOperator()
         {
             PresenceDebug(KickStart.ModID + ": UpdateGrandCommand - Turn for Team " + Team);

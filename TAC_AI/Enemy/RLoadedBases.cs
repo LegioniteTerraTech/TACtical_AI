@@ -157,7 +157,7 @@ namespace TAC_AI.AI.Enemy
                 return;
             }
             WorldPosition worPos = ManOverlay.inst.WorldPositionForFloatingText(tank.visible);
-            int tankCost = RawTechTemplate.GetBBCost(tank);
+            int tankCost = RawTechBase.GetBBCost(tank);
             string compressed = CompressIfNeeded(tankCost, out int smaller);
             AIGlobals.PopupColored(Localisation.inst.GetMoneyStringWithSymbol(smaller) + compressed, tank.Team, worPos);
             ETD.AddBuildBucks(tankCost);

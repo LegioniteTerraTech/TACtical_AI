@@ -298,7 +298,7 @@ namespace TAC_AI.World
         }
         public static void DelayedInitiate()
         {
-            KickStart.MainOfficialInit();
+            //KickStart.MainOfficialInit(); // why tf is this here?
             if (!KickStart.AllowPlayerRTSHUD)
                 return;
             if (SelectHalo.SelectCirclePrefab == null)

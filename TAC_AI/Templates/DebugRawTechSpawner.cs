@@ -12,6 +12,8 @@ using TAC_AI.World;
 using System.IO;
 using Newtonsoft.Json;
 using TerraTechETCUtil;
+using System.Diagnostics;
+using System.ComponentModel.Composition.Primitives;
 
 
 namespace TAC_AI.Templates
@@ -192,6 +194,25 @@ namespace TAC_AI.Templates
             GUILayout.EndScrollView();
             GUI.DragWindow();
         }
+        internal static void OpenInExplorer(string directory)
+        {
+            switch (SystemInfo.operatingSystemFamily)
+            {
+                case OperatingSystemFamily.MacOSX:
+                    Process.Start(new ProcessStartInfo("file://" + directory));
+                    break;
+                case OperatingSystemFamily.Linux:
+                case OperatingSystemFamily.Windows:
+                    Process.Start(new ProcessStartInfo("explorer.exe", directory));
+                    break;
+                default:
+                    throw new Exception("This operating system is UNSUPPORTED by RandomAdditions");
+            }
+        }
+        internal static string GetBaseTypeGenerated(string name)
+        {
+            return name.Replace(" ", "");
+        }
         private static void GUIHandlerPlayer(int ID)
         {
             ResetMenuPlacer();
@@ -276,9 +297,18 @@ namespace TAC_AI.Templates
                         string export = Path.Combine(RawTechExporter.RawTechsDirectory, "Bundled");
                         Directory.CreateDirectory(export);
 
-                        RawTechExporter.MakeExternalRawTechListFile(Path.Combine(export, "RawTechs.RTList"), listTemp);
+                        string rtListDir = Path.Combine(export, "RawTechs.RTList");
+                        RawTechExporter.MakeExternalRawTechListFile(rtListDir, listTemp);
+
+                        OpenInExplorer(rtListDir);
                     }
                     catch { }
+                }
+                if (Event.current.type == EventType.Repaint)
+                {
+                    var lastWindow = GUILayoutUtility.GetLastRect();
+                    if (lastWindow.Contains(Event.current.mousePosition))
+                        AltUI.TooltipWorld("Exports it as a RawTechs.RTList file to attach to your mod as a batch of spawnable Techs.", false);
                 }
                 StepMenuPlacer();
                 if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle Player Techs</b></color>"))
@@ -303,7 +333,9 @@ namespace TAC_AI.Templates
                         string export = Path.Combine(RawTechExporter.RawTechsDirectory, "Bundled");
                         Directory.CreateDirectory(export);
 
-                        RawTechExporter.MakeExternalRawTechListFile(Path.Combine(export, "RawTechs.RTList"), listTemp);
+                        string rtListDir = Path.Combine(export, "RawTechs.RTList");
+                        RawTechExporter.MakeExternalRawTechListFile(rtListDir, listTemp);
+                        OpenInExplorer(rtListDir);
                     }
                     catch { }
                 }
@@ -312,7 +344,8 @@ namespace TAC_AI.Templates
                     var lastWindow = GUILayoutUtility.GetLastRect();
                     if (lastWindow.Contains(Event.current.mousePosition))
                     {
-                       AltUI.TooltipWorld("ALL active player Techs in the world for your Mod.  This might be laggy!", false);
+                       AltUI.TooltipWorld("ALL active player Techs in the world for your Mod.  This might be laggy!" +
+                           "  Exports it as a RawTechs.RTList file to attach to your mod as a batch of spawnable Techs.", false);
                     }
                 }
                 StepMenuPlacer();
@@ -381,7 +414,7 @@ namespace TAC_AI.Templates
                     foreach (RawTech RT in listTemp.OrderBy(x => x.techName))
                     {
                         RawTechTemplate BT = RT.ToTemplate();
-                        string nameBaseType = BT.techName.Replace(" ", "");
+                        string nameBaseType = GetBaseTypeGenerated(BT.techName);
                         if (!nameBaseType.Contains('#') && basetypeNames.Add(nameBaseType))
                         {
                             basetypeNamesOrdered.Add(nameBaseType);
@@ -424,8 +457,15 @@ namespace TAC_AI.Templates
                     File.AppendAllLines(Path.Combine(export, "ESpawnBaseTypes.json"), toWrite);
 
                     File.WriteAllText(Path.Combine(export, "batchNew.json"), CommunityCluster.GetLocalToPublic());
+                    OpenInExplorer(Path.Combine(export, "batchNew.json"));
                 }
                 catch { }
+            }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("1-Setup: Exports your LOCAL RawTechs as a batchNew.json", false);
             }
 
             HoriPosOff += ButtonWidth;
@@ -453,6 +493,12 @@ namespace TAC_AI.Templates
                         ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - Please press LOCAL TO COM first.");
                 }
             }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("2-Prepare: Copies batchNew.json onto batchEdit.json.", false);
+            }
             StepMenuPlacer();
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM PULL EXISTING</b></color>"))
@@ -466,11 +512,18 @@ namespace TAC_AI.Templates
                     CommunityCluster.Organize(ref BTs);
                     Dictionary<int, RawTechTemplate> BTsInt = BTs.ToList().ToDictionary(x => (int)x.Key, x => x.Value);
                     File.WriteAllText(Path.Combine(export, "batchEdit.json"), JsonConvert.SerializeObject(BTsInt, Formatting.Indented));//, RawTechExporter.JSONDEV));
+                    OpenInExplorer(Path.Combine(export, "batchEdit.json"));
                 }
                 catch (Exception e) {
                     DebugTAC_AI.Log(KickStart.ModID + ": ERROR - " + e);
                     ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!");
                 }
+            }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("2-Unpack: Takes currently loaded population and pushes it to batchEdit.json", false);
             }
 
             HoriPosOff += ButtonWidth;
@@ -506,6 +559,12 @@ namespace TAC_AI.Templates
                     ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!");
                 }
             }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("3-Test: Imports batchEdit.json to replace the currently loaded population", false);
+            }
 
             HoriPosOff += ButtonWidth;
             if (HoriPosOff >= MaxWindowWidth)
@@ -533,6 +592,8 @@ namespace TAC_AI.Templates
                             try
                             {
                                 ModTechsDatabase.ValidateAndAddAllInternalTechs();
+                                string clusterHold2 = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport", "commBatch.RTList");
+                                OpenInExplorer(clusterHold2);
                             }
                             catch (Exception e)
                             {
@@ -548,6 +609,13 @@ namespace TAC_AI.Templates
                     DebugTAC_AI.Log(KickStart.ModID + ": ERROR - " + e);
                     ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!"); 
                 }
+            }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("4-Finalize: Exports batchEdit.json to the commBatch.RTList file, maing it public." +
+                        "  You still have to drag it into UnityEditor though", false);
             }
 
 
@@ -852,10 +920,36 @@ namespace TAC_AI.Templates
             {
                 CommunityCluster.SaveCommunityPoolBackToDisk();
             }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("POP CONTROL: Exports the current community pool to the snaps.", false);
+            }
             StepMenuPlacer();
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Local to Snaps</b></color>"))
             {
                 SaveLocalPoolBackToDisk();
+            }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("POP CONTROL: Exports the current local pool to the snaps.", false);
+            }
+            StepMenuPlacer();
+            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Snaps to Pop</b></color>"))
+            {
+                string export = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
+                File.WriteAllText(Path.Combine(export, "commBatch.RTList"), CommunityCluster.ExportSnapsToCommunityPool());
+                OpenInExplorer(Path.Combine(export, "commBatch.RTList"));
+            }
+            if (Event.current.type == EventType.Repaint)
+            {
+                var lastWindow = GUILayoutUtility.GetLastRect();
+                if (lastWindow.Contains(Event.current.mousePosition))
+                    AltUI.TooltipWorld("POP CONTROL: Exports ALL snaps to the community pool.  " +
+                        "You still have to move it to UnityEditor", false);
             }
             StepMenuPlacer();
             /*
@@ -1277,8 +1371,8 @@ namespace TAC_AI.Templates
             try
             {
                 foreach (var item in Singleton.Manager<ManTechs>.inst.IterateTechsWhere(x => x.visible.isActive &&
-                (AIGlobals.IsBaseTeamDynamic(x.Team) || x.IsPopulation || x.Team == ManSpawn.FirstEnemyTeam || 
-                x.Team == ManSpawn.NewEnemyTeam) && x.Team != ManPlayer.inst.PlayerTeam && x.name != "DPS Target"))
+                (AIGlobals.IsBaseTeamDynamic(x.Team) || x.IsPopulation || x.Team == AIGlobals.DefaultEnemyTeam || 
+                x.Team == AIGlobals.LonerEnemyTeam) && x.Team != ManPlayer.inst.PlayerTeam && x.name != "DPS Target"))
                 {
                     techCache.Add(item);
                 }

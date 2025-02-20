@@ -5,6 +5,7 @@ using System.Text;
 using UnityEngine;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
+using static WobblyLaser;
 
 namespace TAC_AI
 {
@@ -12,6 +13,7 @@ namespace TAC_AI
     {
 
         private const string lonely = "Lone Prospector";
+        private const string teamer = "The Enemy";
         private const string playerTeam = "Your Team";
         private const string mPlayerTeam = "MP Player Team";
         private const string neutralTeam = "Services Group";
@@ -26,12 +28,17 @@ namespace TAC_AI
             //    return AnimeAI.Dialect.ManDialogDetail.TeamName(Team);
             build.Clear();
             int teamNameDetermine = Mathf.Abs(Team) % 10000;
-            if (Team == ManSpawn.FirstEnemyTeam || Team == ManSpawn.NewEnemyTeam)
+            if (Team == AIGlobals.LonerEnemyTeam)
             {
                 build.Append(lonely);
                 return build.ToString();
             }
-            else if (Team == ManPlayer.inst.PlayerTeam)
+            else if (Team == AIGlobals.DefaultEnemyTeam)
+            {
+                build.Append(teamer);
+                return build.ToString();
+            }
+            else if(Team == ManPlayer.inst.PlayerTeam)
             {
                 build.Append(playerTeam);
                 return build.ToString();
@@ -77,9 +84,14 @@ namespace TAC_AI
             {
                 //if (KickStart.isAnimeAIPresent)
                 //    return AnimeAI.Dialect.ManDialogDetail.EnemyTeamName(mind);
-                if (mind.AIControl.tank.Team == -1)
+                if (mind.AIControl.tank.Team == AIGlobals.LonerEnemyTeam)
                 {
                     build.Append(lonely);
+                    return build.ToString();
+                }
+                else if (mind.AIControl.tank.Team == AIGlobals.DefaultEnemyTeam)
+                {
+                    build.Append(teamer);
                     return build.ToString();
                 }
                 else
