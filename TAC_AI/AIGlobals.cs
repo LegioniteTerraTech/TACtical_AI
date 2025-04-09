@@ -32,6 +32,7 @@ namespace TAC_AI
     /// </summary>
     public class AIGlobals
     {
+        // Note improve AI navigation around water - they keep driving into the water and get stuck
         public static bool AIAttract => ManGameMode.inst.GetCurrentGameType() != ManGameMode.GameType.Attract;
 
         private static FieldInfo getCamTank = typeof(TankCamera).GetField("m_hideHud", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -261,7 +262,7 @@ namespace TAC_AI
         public const int LonerEnemyTeam = ManSpawn.NewEnemyTeam;
         public const int DefaultEnemyTeam = ManSpawn.FirstEnemyTeam;
         public const float YieldSpeed = 10;
-        public static bool AllowWeaponsDisarm = true;
+        public static bool AllowWeaponsDisarm = false;
         public const bool BaseSubNeutralsCuriousFollow = true;
 
         // Elevation
@@ -469,13 +470,27 @@ namespace TAC_AI
         }
 
 
+
         // Utilities
+        public static Quaternion LookRot(Vector3 forward) => LookRot(forward, Vector3.up);
+        public static Quaternion LookRot(Vector3 forward, Vector3 up)
+        {
+            if (forward.ApproxZero())
+                return Quaternion.identity;
+            return Quaternion.LookRotation(forward, up);
+        }
         public static bool TechIsSafelyRemoveable(Tank tech)
         {
             if (!tech)
                 return false;
             int team = tech.Team;
             return !IsPlayerTeam(team) && ManSpawn.NeutralTeam != team && !TankAIManager.MissionTechs.Contains(tech.visible.ID);
+        }
+        public static bool PlayerCanDetectTile(IntVector2 tileCoord)
+        {
+            if (KickStart.DisableEnemyFogOfWar)
+                return true;
+            return false;
         }
         private static bool techSpawned = false;
         public static bool CanSplitTech(float delay = TechSplitDelay)

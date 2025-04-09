@@ -724,7 +724,7 @@ namespace TAC_AI.Templates
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             Vector3 position = pos;
             position.y = offset;
-            Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            Quaternion quat = AIGlobals.LookRot(Vector3.forward, Vector3.up);
 
             BlockTypes bType = toSpawn.GetFirstBlock();
             TankBlock block = SpawnBlockS(bType, pos, quat, out bool worked);
@@ -785,7 +785,7 @@ namespace TAC_AI.Templates
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             Vector3 position = pos;
             position.y = offset;
-            Quaternion quat = Quaternion.LookRotation(facing, Vector3.up);
+            Quaternion quat = AIGlobals.LookRot(facing, Vector3.up);
 
             BlockTypes bType = toSpawn.GetFirstBlock();
             TankBlock block = SpawnBlockS(bType, pos, quat, out bool worked);
@@ -844,7 +844,7 @@ namespace TAC_AI.Templates
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             Vector3 position = pos;
             position.y = offset;
-            Quaternion quat = Quaternion.LookRotation(facing, Vector3.up);
+            Quaternion quat = AIGlobals.LookRot(facing, Vector3.up);
 
             BlockTypes bType = toSpawn.GetFirstBlock();
             TankBlock block = SpawnBlockS(bType, pos, quat, out bool worked);
@@ -936,7 +936,7 @@ namespace TAC_AI.Templates
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             Vector3 position = pos;
             position.y = offset;
-            Quaternion quat = Quaternion.LookRotation(spawnerForwards, Vector3.up);
+            Quaternion quat = AIGlobals.LookRot(spawnerForwards, Vector3.up);
 
             BlockTypes bType = toSpawn.GetFirstBlock();
             TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
@@ -979,7 +979,7 @@ namespace TAC_AI.Templates
             /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
-            Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            Quaternion quat = AIGlobals.LookRot(Vector3.forward, Vector3.up);
 
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
@@ -1014,7 +1014,7 @@ namespace TAC_AI.Templates
             /*
             Vector3 position = AIEPathing.ForceOffsetToSea(pos);
             string baseBlueprint = GetBlueprint(toSpawn);
-            Quaternion quat = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+            Quaternion quat = AIGlobals.LookRot(Vector3.forward, Vector3.up);
 
             TankBlock block = SpawnBlockS(AIERepair.JSONToFirstBlock(baseBlueprint), position, quat, out bool worked);
             if (!worked)
@@ -1165,7 +1165,7 @@ namespace TAC_AI.Templates
                     Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
                     position.y = offset;
                 }
-                Quaternion quat = Quaternion.LookRotation(forwards, Vector3.up);
+                Quaternion quat = AIGlobals.LookRot(forwards, Vector3.up);
 
                 BlockTypes bType = toSpawn.GetFirstBlock();
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
@@ -1191,7 +1191,7 @@ namespace TAC_AI.Templates
             }
             */
             if (theTech && filter.IsPopulation)
-                TryForceIntoPop(theTech);
+                TryForceIntoPop(theTech, false);
 
             theTech.FixupAnchors(true);
 
@@ -1279,7 +1279,7 @@ namespace TAC_AI.Templates
                     position.y = offset;
                 }
 
-                Quaternion quat = Quaternion.LookRotation(forwards, Vector3.up);
+                Quaternion quat = AIGlobals.LookRot(forwards, Vector3.up);
 
                 BlockTypes bType = Blueprint.GetFirstBlock();
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
@@ -1367,7 +1367,7 @@ namespace TAC_AI.Templates
             {   // Generate via the failsafe method
                 DebugTAC_AI.Assert(true, KickStart.ModID + ": SpawnSpecificTypeTech - Generation failed, falling back to slower, reliable Tech building method");
                 Vector3 position = pos;
-                Quaternion quat = Quaternion.LookRotation(forwards, Vector3.up);
+                Quaternion quat = AIGlobals.LookRot(forwards, Vector3.up);
 
                 BlockTypes bType = baseTemplate.GetFirstBlock();
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
@@ -1934,7 +1934,7 @@ namespace TAC_AI.Templates
                     Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
                     position.y = offset;
                 }
-                Quaternion quat = Quaternion.LookRotation(forwards, Vector3.up);
+                Quaternion quat = AIGlobals.LookRot(forwards, Vector3.up);
 
                 BlockTypes bType = RawTechTemplate.JSONToFirstBlock(baseBlueprint);
                 TankBlock block = SpawnBlockS(bType, position, quat, out bool worked); 
@@ -2169,16 +2169,16 @@ namespace TAC_AI.Templates
             if (ManNetwork.IsNetworked)
             {
                 theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, name);
-                TrackTank(theTech);
+                TrackTank(theTech, false, false);
                 return theTech;
             }
             else
             {
                 theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, name);
-                TrackTank(theTech);
+                TrackTank(theTech, false, false);
             }
             if ((bool)theTech)
-                TryForceIntoPop(theTech);
+                TryForceIntoPop(theTech, false);
             return theTech;
         }
         /// <summary>
@@ -2230,7 +2230,7 @@ namespace TAC_AI.Templates
                     for (int step = 0; step < dataPrefabber.m_BlockSpecs.Count; step++)
                         BS[step] = Singleton.Manager<ManNetwork>.inst.GetNextHostBlockPoolID();
                     TrackedVisible TV = ManSpawn.inst.SpawnNetworkedTechRef(dataPrefabber, BS, Team,
-                        WorldPosition.FromScenePosition(pos).ScenePosition, Quaternion.LookRotation(forward, Vector3.up),
+                        WorldPosition.FromScenePosition(pos).ScenePosition, AIGlobals.LookRot(forward, Vector3.up),
                         null, false, false);
                     if (TV == null)
                     {
@@ -2253,7 +2253,7 @@ namespace TAC_AI.Templates
                         blockIDs = null,
                         teamID = Team,
                         position = pos,
-                        rotation = Quaternion.LookRotation(forward, Vector3.up),//Singleton.cameraTrans.position - pos
+                        rotation = AIGlobals.LookRot(forward, Vector3.up),//Singleton.cameraTrans.position - pos
                         ignoreSceneryOnSpawnProjection = true,
                         forceSpawn = true,
                         isPopulation = false,
@@ -2267,7 +2267,7 @@ namespace TAC_AI.Templates
                     return null;
                 }
                 else
-                    TryForceIntoPop(theTech);
+                    TryForceIntoPop(theTech, false);
 
                 ForceAllBubblesUp(theTech);
                 ReconstructConveyorSequencing(theTech);
@@ -2360,7 +2360,7 @@ namespace TAC_AI.Templates
                     for (int step = 0; step < dataPrefabber.m_BlockSpecs.Count; step++)
                         BS[step] = Singleton.Manager<ManNetwork>.inst.GetNextHostBlockPoolID();
                     TrackedVisible TV = ManSpawn.inst.SpawnNetworkedTechRef(dataPrefabber, BS, Team,
-                        WorldPosition.FromScenePosition(pos).ScenePosition, Quaternion.LookRotation(forward, Vector3.up), 
+                        WorldPosition.FromScenePosition(pos).ScenePosition, AIGlobals.LookRot(forward, Vector3.up), 
                         null, filter.Offset == RawTechOffset.RaycastTerrainAndScenery, filter.IsPopulation);
                     if (TV == null)
                     {
@@ -2383,7 +2383,7 @@ namespace TAC_AI.Templates
                         blockIDs = null,
                         teamID = Team,
                         position = pos,
-                        rotation = Quaternion.LookRotation(forward, Vector3.up),//Singleton.cameraTrans.position - pos
+                        rotation = AIGlobals.LookRot(forward, Vector3.up),//Singleton.cameraTrans.position - pos
                         ignoreSceneryOnSpawnProjection = filter.Offset != RawTechOffset.OnGround,
                         forceSpawn = true,
                         isPopulation = filter.IsPopulation
@@ -2400,7 +2400,7 @@ namespace TAC_AI.Templates
                     return null;
                 }
                 else
-                    TryForceIntoPop(theTech);
+                    TryForceIntoPop(theTech, false);
 
                 ForceAllBubblesUp(theTech);
                 ReconstructConveyorSequencing(theTech);
@@ -2429,7 +2429,7 @@ namespace TAC_AI.Templates
                 Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
                 position.y = offset;
             }
-            Quaternion quat = Quaternion.LookRotation(forward, Vector3.up);
+            Quaternion quat = AIGlobals.LookRot(forward, Vector3.up);
 
             BlockTypes bType = BT.GetFirstBlock();
             TankBlock block = SpawnBlockS(bType, position, quat, out bool worked);
@@ -2646,7 +2646,7 @@ namespace TAC_AI.Templates
                 return WorldPosition.FromScenePosition(tank.GetBackwardsCompatiblePosition());
             return tank.m_WorldPosition;
         }
-        internal static TrackedVisible TrackTank(ManSaveGame.StoredTech tank, int ID, bool anchored = false)
+        internal static TrackedVisible TrackTank(ManSaveGame.StoredTech tank, int ID, bool hide, bool anchored)
         {
             if (ManNetwork.IsNetworked)
             {
@@ -2658,6 +2658,8 @@ namespace TAC_AI.Templates
                 tracked.RadarType = anchored ? RadarTypes.Base : RadarTypes.Vehicle;
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Updating Tracked " + tank.m_TechData.Name);
                 tracked.SetPos(GetWorldPos(tank));
+                if (hide)
+                    ManBaseTeams.inst.HiddenVisibles.Add(ID);
                 return tracked;
             }
 
@@ -2665,36 +2667,43 @@ namespace TAC_AI.Templates
             tracked.SetPos(GetWorldPos(tank));
             tracked.TeamID = tank.m_TeamID;
             ManVisible.inst.TrackVisible(tracked);
+            if (hide)
+                ManBaseTeams.inst.HiddenVisibles.Add(ID);
             //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.m_TechData.Name + " ID " + ID);
             return tracked;
         }
-        internal static TrackedVisible TrackTank(Tank tank, bool anchored = false)
+        internal static TrackedVisible TrackTank(Tank tank, bool hide, bool anchored)
         {
             if (ManNetwork.IsNetworked)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader(MP) - No such tracking function is finished yet - " + tank.name);
             }
-            TrackedVisible tracked = AIGlobals.GetTrackedVisible(tank.visible.ID);
+            int ID = tank.visible.ID;
+            TrackedVisible tracked = AIGlobals.GetTrackedVisible(ID);
             if (tracked != null)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Updating Tracked " + tank.name);
                 tracked.SetPos(tank.boundsCentreWorldNoCheck);
+                if (hide)
+                    ManBaseTeams.inst.HiddenVisibles.Add(ID);
                 return tracked;
             }
 
-            tracked = new TrackedVisible(tank.visible.ID, tank.visible, ObjectTypes.Vehicle, anchored ? RadarTypes.Base : RadarTypes.Vehicle);
+            tracked = new TrackedVisible(ID, tank.visible, ObjectTypes.Vehicle, anchored ? RadarTypes.Base : RadarTypes.Vehicle);
             tracked.SetPos(tank.boundsCentreWorldNoCheck);
             tracked.TeamID = tank.Team;
             ManVisible.inst.TrackVisible(tracked);
+            if (hide)
+                ManBaseTeams.inst.HiddenVisibles.Add(ID);
             //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.name);
             return tracked;
         }
-        internal static void TryForceIntoPop(Tank tank)
+        internal static void TryForceIntoPop(Tank tank, bool hide)
         {
             if (tank.Team == AIGlobals.LonerEnemyTeam) // the wild tech pop number
             {
                 List<TrackedVisible> visT = (List<TrackedVisible>)forceInsert.GetValue(ManPop.inst);
-                visT.Add(TrackTank(tank, tank.IsAnchored));
+                visT.Add(TrackTank(tank, hide, tank.IsAnchored));
                 forceInsert.SetValue(ManPop.inst, visT);
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Forced " + tank.name + " into population");
             }

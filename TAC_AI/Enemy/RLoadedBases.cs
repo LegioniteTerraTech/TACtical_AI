@@ -973,7 +973,7 @@ namespace TAC_AI.AI.Enemy
                                     if (!Singleton.Manager<ManVisible>.inst.AllTrackedVisibles.Any(delegate (TrackedVisible cand) { return cand.visible == tank.visible; }))
                                     {
                                         DebugTAC_AI.Assert(true, KickStart.ModID + ": ASSERT - " + tank.name + " was not properly inserted into the TrackedVisibles list and will not function properly!");
-                                        RawTechLoader.TrackTank(tank);
+                                        RawTechLoader.TrackTank(tank, false, false);
                                     }
                                 }
                             }

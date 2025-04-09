@@ -431,7 +431,7 @@ namespace TAC_AI
                         helper.SetDriverType(SavedAIDriver);
                         helper.DediAI = SavedAI;
                         DebugTAC_AI.Info("AI State was saved as " + SavedAIDriver + " | " + SavedAI);
-                        helper.dirtyAI = true;
+                        helper.dirtyAI = TankAIHelper.AIDirtyState.Dirty;
                         if (WasMobileAnchor)
                         { 
                         }

@@ -203,7 +203,7 @@ namespace TAC_AI.World
         }
         internal class GUIRTSDisplay : MonoBehaviour
         {
-            private void OnGUI()
+            internal void OnGUI()
             {
                 if (!ManPauseGame.inst.IsPaused && !ManWorldRTS.BoxSelecting)
                 {

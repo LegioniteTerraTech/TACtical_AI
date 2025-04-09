@@ -115,7 +115,7 @@ namespace TAC_AI
             {
                 KickStart.retryForBote++;
                 Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
-                Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
+                Singleton.cameraTrans.rotation = AIGlobals.LookRot(Vector3.forward);
                 Vector3 offset = Vector3.zero;
                 offset.x = -50.0f;
                 offset.z = 100.0f;
@@ -123,13 +123,13 @@ namespace TAC_AI
                 //offset.z = 442.0f;
                 BiomeMap edited = __instance.spawns[0].biomeMap;
                 Singleton.Manager<ManWorld>.inst.SeedString = "68unRTyXMrX93DH";
-                Singleton.Manager<ManGameMode>.inst.RegenerateWorld(edited, __instance.spawns[1].cameraSpawn.forward, Quaternion.LookRotation(__instance.spawns[1].cameraSpawn.forward, Vector3.up));
+                Singleton.Manager<ManGameMode>.inst.RegenerateWorld(edited, __instance.spawns[1].cameraSpawn.forward, AIGlobals.LookRot(__instance.spawns[1].cameraSpawn.forward, Vector3.up));
                 Singleton.Manager<ManTimeOfDay>.inst.EnableSkyDome(enable: true);
                 Singleton.Manager<ManTimeOfDay>.inst.EnableTimeProgression(enable: false);
                 Singleton.Manager<ManTimeOfDay>.inst.SetTimeOfDay(UnityEngine.Random.Range(8, 18), 0, 0);
                 KickStart.SpecialAttractPos = offset;
                 Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
-                Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
+                Singleton.cameraTrans.rotation = AIGlobals.LookRot(Vector3.forward);
 
                 return false;
             }
@@ -171,9 +171,9 @@ namespace TAC_AI
                         RawTechLoader.SpawnAttractTech(position, forward, AIGlobals.GetRandomEnemyBaseTeam(), BaseTerrain.Space);
                 }
                 //DebugTAC_AI.Log(KickStart.ModID + ": cam is at " + Singleton.Manager<CameraManager>.inst.ca);
-                Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, Quaternion.LookRotation(Vector3.forward));
+                Singleton.Manager<CameraManager>.inst.ResetCamera(KickStart.SpecialAttractPos, AIGlobals.LookRot(Vector3.forward));
                 Singleton.cameraTrans.position = KickStart.SpecialAttractPos;
-                Singleton.cameraTrans.rotation = Quaternion.LookRotation(Vector3.forward);
+                Singleton.cameraTrans.rotation = AIGlobals.LookRot(Vector3.forward);
                 rTime.SetValue(__instance, Time.time + __instance.resetTime);
                 spawnIndex = (spawnIndex + 1) % __instance.spawns.Length;
                 return false;

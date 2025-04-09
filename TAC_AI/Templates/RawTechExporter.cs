@@ -282,7 +282,7 @@ namespace TAC_AI.Templates
 
         internal class GUIRawDisplay : MonoBehaviour
         {
-            private void OnGUI()
+            internal void OnGUI()
             {
                 if (isOpen)
                 {

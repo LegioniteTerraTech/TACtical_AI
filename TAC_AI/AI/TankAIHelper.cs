@@ -321,7 +321,13 @@ namespace TAC_AI.AI
 
         //AutoCollection
         internal bool hasAI = false;    // Has an active AI module
-        internal bool dirtyAI = false;  // Update Player AI state if needed
+        internal AIDirtyState dirtyAI = AIDirtyState.Not;  // Update Player AI state if needed
+        public enum AIDirtyState
+        {
+            Not,
+            Dirty,
+            DirtyAndReboot,
+        }
         internal bool dirtyExtents = false;    // The Tech has new blocks attached recently
 
         internal float EstTopSped = 0;
@@ -662,7 +668,7 @@ namespace TAC_AI.AI
                     ForceAllAIsToEscort(true, false);
                     //ForceRebuildAlignment();
                 }*/
-                dirtyAI = true;
+                dirtyAI = AIDirtyState.Dirty;
                 dirtyExtents = true;
             }
             catch (Exception e)
@@ -683,7 +689,7 @@ namespace TAC_AI.AI
             //LastBuildClock = 0;
             PendingHeightCheck = true;
             dirtyExtents = true;
-            dirtyAI = true;
+            dirtyAI = AIDirtyState.Dirty;
             if (AIAlign == AIAlignment.Player)
             {
                 try
@@ -716,7 +722,7 @@ namespace TAC_AI.AI
                     removedBlock.visible.EnableOutlineGlow(false, cakeslice.Outline.OutlineEnableReason.ScriptHighlight);
                 }
                 catch { }
-                dirtyAI = true;
+                dirtyAI = AIDirtyState.Dirty;
             }
         }
         internal void Recycled()
@@ -1018,7 +1024,7 @@ namespace TAC_AI.AI
             lastAIType = AITreeType.AITypes.Idle;
             AttackMode = EAttackMode.AutoSet;
             dirtyExtents = true;
-            dirtyAI = true;
+            dirtyAI = AIDirtyState.Dirty;
             PlayerAllowAutoAnchoring = !tank.IsAnchored;
             ExpectAITampering = false;
             GroundOffsetHeight = AIGlobals.GroundOffsetGeneralAir;
@@ -1376,7 +1382,7 @@ namespace TAC_AI.AI
                 if (!RebuildAlignmentDelayed)
                     ForceRebuildAlignment();
                 else
-                    dirtyAI = true;
+                    dirtyAI = AIDirtyState.Dirty;
                 MovementAIControllerDirty = true;
             }
             catch (Exception e)
@@ -2344,7 +2350,7 @@ namespace TAC_AI.AI
             bool isTrue = false;
             if (block == null)
                 return false;
-            Quaternion forward = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.up);
+            Quaternion forward = AIGlobals.LookRot(tank.rootBlockTrans.forward, tank.rootBlockTrans.up);
             IntVector3[] filledCells = block.filledCells;
             foreach (IntVector3 intVector in filledCells)
             {
@@ -2416,8 +2422,8 @@ namespace TAC_AI.AI
                                     return true;
                                 }
                             }
-                            else if (KickStart.enablePainMode && AIAlign == AIAlignment.NonPlayer)
-                            {
+                            else if (AIAlign == AIAlignment.NonPlayer)// && KickStart.enablePainMode)
+                            {   // This should turn off ONLY for land enemy AI!
                                 UpdateTechControl(thisControl);
                                 return true;
                             }
@@ -2476,8 +2482,8 @@ namespace TAC_AI.AI
                                 return true;
                             }
                         }
-                        else if (KickStart.enablePainMode && AIAlign == AIAlignment.NonPlayer)
-                        {
+                        else if (AIAlign == AIAlignment.NonPlayer)//KickStart.enablePainMode 
+                        {   // This should turn off ONLY for land enemy AI!
                             UpdateTechControl(thisControl);
                             return true;
                         }
@@ -3149,23 +3155,26 @@ namespace TAC_AI.AI
         /// <summary>
         /// CALL when we change ANYTHING in the tech's AI.
         /// </summary>
-        internal void OnTechTeamChange()
+        internal void OnTechTeamChange(bool rebootSameAIAlign = false)
         {
-            dirtyAI = true;
+            dirtyAI = rebootSameAIAlign ? AIDirtyState.DirtyAndReboot : AIDirtyState.Dirty;
             PlayerAllowAutoAnchoring = !tank.IsAnchored;
             ResetToNormalAimState();
         }
-        internal void ForceRebuildAlignment()
+        internal void ForceRebuildAlignment(bool rebootSameAIAlign = false)
         {
-            dirtyAI = true;
+            dirtyAI = rebootSameAIAlign ? AIDirtyState.DirtyAndReboot : AIDirtyState.Dirty;
             CheckRebuildAlignment();
         }
         private void CheckRebuildAlignment()
         {
-            if (dirtyAI)
+            if (tank.blockman.blockCount == 0)
+                return; // IT'S NOT READY YET
+            if (dirtyAI != AIDirtyState.Not)
             {
+                bool rebootSameAIAlign = dirtyAI == AIDirtyState.DirtyAndReboot;
                 //DebugTAC_AI.Assert(KickStart.ModID + ": CheckRebuildAlignment() for " + tank.name);
-                dirtyAI = false;
+                dirtyAI = AIDirtyState.Not;
                 var aI = tank.AI;
                 hasAI = aI.CheckAIAvailable();
 
@@ -3185,7 +3194,7 @@ namespace TAC_AI.AI
                                 if (hasAI || (ManWorldRTS.PlayerIsInRTS && tank.PlayerFocused))
                                 {
                                     //Player-Allied AI
-                                    if (AIAlign != AIAlignment.Player)
+                                    if (AIAlign != AIAlignment.Player || rebootSameAIAlign)
                                     {
                                         ResetOnSwitchAlignments(tank);
                                         RemoveEnemyMatters();
@@ -3197,7 +3206,7 @@ namespace TAC_AI.AI
                                 else
                                 {   // Static tech
                                     DriveVar = 0;
-                                    if (AIAlign != AIAlignment.PlayerNoAI)
+                                    if (AIAlign != AIAlignment.PlayerNoAI || rebootSameAIAlign)
                                     {   // Reset and ready for static tech
                                         DebugTAC_AI.Log(KickStart.ModID + ": PlayerNoAI Tech " + tank.name + ": reset (NonHostClient)");
                                         ResetOnSwitchAlignments(tank);
@@ -3209,7 +3218,7 @@ namespace TAC_AI.AI
                             else if (!tank.IsNeutral())
                             {
                                 //Enemy AI
-                                if (AIAlign != AIAlignment.NonPlayer)
+                                if (AIAlign != AIAlignment.NonPlayer || rebootSameAIAlign)
                                 {
                                     ResetOnSwitchAlignments(tank);
                                     AIAlign = AIAlignment.NonPlayer;
@@ -3220,7 +3229,7 @@ namespace TAC_AI.AI
                             else
                             {   // Static tech
                                 DriveVar = 0;
-                                if (AIAlign != AIAlignment.Static)
+                                if (AIAlign != AIAlignment.Static || rebootSameAIAlign)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log(KickStart.ModID + ": Static Tech " + tank.name + ": reset (NonHostClient)");
                                     ResetOnSwitchAlignments(tank);
@@ -3240,7 +3249,7 @@ namespace TAC_AI.AI
                             if (hasAI || (ManWorldRTS.PlayerIsInRTS && tank.PlayerFocused))
                             {
                                 //Player-Allied AI
-                                if (AIAlign != AIAlignment.Player)
+                                if (AIAlign != AIAlignment.Player || rebootSameAIAlign)
                                 {
                                     ResetOnSwitchAlignments(tank);
                                     RemoveEnemyMatters();
@@ -3254,7 +3263,7 @@ namespace TAC_AI.AI
                             else
                             {   // Static tech
                                 DriveVar = 0;
-                                if (AIAlign != AIAlignment.PlayerNoAI)
+                                if (AIAlign != AIAlignment.PlayerNoAI || rebootSameAIAlign)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log(KickStart.ModID + ": PlayerNoAI Tech " + tank.name + ": reset");
                                     ResetOnSwitchAlignments(tank);
@@ -3264,10 +3273,10 @@ namespace TAC_AI.AI
                                 }
                             }
                         }
-                        else if (KickStart.enablePainMode && !tank.IsNeutral())
+                        else if (!tank.IsNeutral())
                         {
                             //Enemy AI
-                            if (AIAlign != AIAlignment.NonPlayer)
+                            if (AIAlign != AIAlignment.NonPlayer || rebootSameAIAlign)
                             {
                                 ResetOnSwitchAlignments(tank);
                                 AIAlign = AIAlignment.NonPlayer;
@@ -3278,7 +3287,7 @@ namespace TAC_AI.AI
                         else
                         {   // Static tech
                             DriveVar = 0;
-                            if (AIAlign != AIAlignment.Static)
+                            if (AIAlign != AIAlignment.Static || rebootSameAIAlign)
                             {   // Reset and ready for static tech
                                 DebugTAC_AI.Log(KickStart.ModID + ": Static Tech " + tank.name + ": reset");
                                 ResetOnSwitchAlignments(tank);
@@ -3295,7 +3304,7 @@ namespace TAC_AI.AI
                             if (hasAI || (World.ManWorldRTS.PlayerIsInRTS && tank.PlayerFocused))
                             {
                                 //Player-Allied AI
-                                if (AIAlign != AIAlignment.Player)
+                                if (AIAlign != AIAlignment.Player || rebootSameAIAlign)
                                 {
                                     ResetOnSwitchAlignments(tank);
                                     RemoveEnemyMatters();
@@ -3309,7 +3318,7 @@ namespace TAC_AI.AI
                             else
                             {   // Static tech
                                 DriveVar = 0;
-                                if (AIAlign != AIAlignment.PlayerNoAI)
+                                if (AIAlign != AIAlignment.PlayerNoAI || rebootSameAIAlign)
                                 {   // Reset and ready for static tech
                                     DebugTAC_AI.Log(KickStart.ModID + ": PlayerNoAI Tech " + tank.name + ": reset");
                                     ResetOnSwitchAlignments(tank);
@@ -3319,10 +3328,10 @@ namespace TAC_AI.AI
                                 }
                             }
                         }
-                        else if (KickStart.enablePainMode && !tank.IsNeutral())
+                        else if (!tank.IsNeutral())
                         {   //MP is NOT supported!
                             //Enemy AI
-                            if (AIAlign != AIAlignment.NonPlayer)
+                            if (AIAlign != AIAlignment.NonPlayer || rebootSameAIAlign)
                             {
                                 ResetOnSwitchAlignments(tank);
                                 DebugTAC_AI.Log(KickStart.ModID + ": Enemy AI " + tank.name + " of Team " + tank.Team + ":  Ready to kick some Tech!");
@@ -3333,7 +3342,7 @@ namespace TAC_AI.AI
                         else
                         {   // Static tech
                             DriveVar = 0;
-                            if (AIAlign != AIAlignment.Static)
+                            if (AIAlign != AIAlignment.Static || rebootSameAIAlign)
                             {   // Reset and ready for static tech
                                 DebugTAC_AI.Log(KickStart.ModID + ": Static Tech " + tank.name + ": reset");
                                 ResetOnSwitchAlignments(tank);
@@ -4248,6 +4257,8 @@ namespace TAC_AI.AI
         // ----------------------------  General Targeting  ----------------------------
         internal void AimAndFireWeapons(Vector3 aimWorld, float aimRadius)
         {
+            if (maxBlockCount < AIGlobals.SmolTechBlockThreshold)
+                FireAllWeapons();
             tank.control.TargetPositionWorld = aimWorld;
             tank.control.TargetRadiusWorld = aimRadius;
         }
@@ -5170,7 +5181,7 @@ namespace TAC_AI.AI
                         return;
                     }
                     Vector3 startPos = tank.visible.centrePosition;
-                    Quaternion tankFore = Quaternion.LookRotation(tank.trans.forward.SetY(0).normalized, Vector3.up);
+                    Quaternion tankFore = AIGlobals.LookRot(tank.trans.forward.SetY(0).normalized, Vector3.up);
                     tank.visible.Teleport(startPos, tankFore, true);
                     //Quaternion tankStartRot = tank.trans.rotation;
                     for (int step = 0; step < 16; step++)
@@ -5270,7 +5281,7 @@ namespace TAC_AI.AI
                     return;
                 }
                 Vector3 startPos = tank.visible.centrePosition;
-                Quaternion tankFore = Quaternion.LookRotation(tank.trans.forward.SetY(0).normalized, Vector3.up);
+                Quaternion tankFore = AIGlobals.LookRot(tank.trans.forward.SetY(0).normalized, Vector3.up);
                 tank.visible.Teleport(startPos, tankFore, true);
                 //Quaternion tankStartRot = tank.trans.rotation;
                 for (int step = 0; step < 6; step++)
@@ -5401,7 +5412,7 @@ namespace TAC_AI.AI
                                 heldBlock.rbody.AddForce(-(TankAIManager.GravVector * heldBlock.AverageGravityScaleFactor), ForceMode.Acceleration);
                                 Vector3 forward = tank.trans.TransformDirection(blockHoldRot * Vector3.forward);
                                 Vector3 up = tank.trans.TransformDirection(blockHoldRot * Vector3.up);
-                                Quaternion rotChangeWorld = Quaternion.LookRotation(forward, up);
+                                Quaternion rotChangeWorld = AIGlobals.LookRot(forward, up);
                                 heldBlock.rbody.MoveRotation(Quaternion.RotateTowards(heldBlock.trans.rotation, rotChangeWorld, (360 / AIGlobals.BlockAttachDelay) * Time.fixedDeltaTime));
                             }
                             heldBlock.visible.SetLockTimout(Visible.LockTimerTypes.Interactible, 0.25f);

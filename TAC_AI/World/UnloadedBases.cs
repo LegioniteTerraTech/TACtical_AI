@@ -374,7 +374,7 @@ namespace TAC_AI.World
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                         if (RawTechLoader.IsFallback(type))
                             return;
-                        ManEnemyWorld.ConstructNewTech(EBU, EP, type);
+                        ManEnemyWorld.ConstructNewTech(EBU, EP, type, !AIGlobals.PlayerCanDetectTile(EBU.tilePos));
                         //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                     }
                     return;
@@ -405,7 +405,7 @@ namespace TAC_AI.World
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                     if (RawTechLoader.IsFallback(type))
                         return;
-                    ManEnemyWorld.ConstructNewBase(pos, EBU, EP, type);
+                    ManEnemyWorld.ConstructNewBase(pos, EBU, EP, type, !AIGlobals.PlayerCanDetectTile(EBU.tilePos));
                     //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
                 }
                 else
@@ -434,7 +434,7 @@ namespace TAC_AI.World
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                         if (RawTechLoader.IsFallback(type))
                             return;
-                        ManEnemyWorld.ConstructNewTech(EBU, EP, type);
+                        ManEnemyWorld.ConstructNewTech(EBU, EP, type, !AIGlobals.PlayerCanDetectTile(EBU.tilePos));
                         //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                     }
                 }

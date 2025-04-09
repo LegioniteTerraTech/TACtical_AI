@@ -291,7 +291,7 @@ namespace TAC_AI.World
         private static bool setup = false;
         internal static void Initiate()
         {
-            if (inst)
+            if (inst || !KickStart.AllowStrategicAI)
                 return;
             inst = new GameObject("ManEnemyWorld").AddComponent<ManEnemyWorld>();
             DebugTAC_AI.Log(KickStart.ModID + ": Created ManEnemyWorld.");
@@ -376,7 +376,7 @@ namespace TAC_AI.World
                             {
                                 if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
                                 {
-                                    RegisterTechUnloaded(tech);
+                                    RegisterTechUnloaded(tech, ManBaseTeams.inst.HiddenVisibles.Contains(tech.m_ID), true, false);
                                     count++;
                                 }
                             }
@@ -396,7 +396,7 @@ namespace TAC_AI.World
                             {
                                 if (Vis is ManSaveGame.StoredTech tech && !loaded.Contains(tech.m_ID))
                                 {
-                                    RegisterTechUnloaded(tech);
+                                    RegisterTechUnloaded(tech, ManBaseTeams.inst.HiddenVisibles.Contains(tech.m_ID), true, false);
                                     count++;
                                 }
                             }
@@ -426,7 +426,7 @@ namespace TAC_AI.World
             if (Vis is ManSaveGame.StoredTech tech)
             {
                 if (tech.m_TechData.IsBase() || GetTeam(tech.m_TeamID) != null)
-                    RegisterTechUnloaded(tech);
+                    RegisterTechUnloaded(tech, ManBaseTeams.inst.HiddenVisibles.Contains(tech.m_ID), true, false);
             }
         }
 
@@ -437,14 +437,24 @@ namespace TAC_AI.World
             if (Vis.type == ObjectTypes.Vehicle)
             {
                 var tank = Vis.tank;
-                if (TryGetETUFromTank(tank, out NP_TechUnit ETU))
+                if (tank != null)
                 {
-                    if (ETU is NP_BaseUnit EBU)
+                    if (ManBaseTeams.inst.HiddenVisibles.Contains(Vis.ID))
                     {
+                        ManBaseTeams.inst.HiddenVisibles.Remove(Vis.ID);
+                        TrackedVisible TV = ManVisible.inst.GetTrackedVisible(Vis.ID);
+                        if (TV != null)
+                            TV.RadarType = tank.IsAnchored ? RadarTypes.Base : RadarTypes.Vehicle;
                     }
-                    if (ETU.ShouldApplyShields())
-                        ETU.DoApplyShields(tank);
-                    StopManagingUnit(ETU); // Cannot manage loaded techs
+                    if (TryGetETUFromTank(tank, out NP_TechUnit ETU))
+                    {
+                        if (ETU is NP_BaseUnit EBU)
+                        {
+                        }
+                        if (ETU.ShouldApplyShields())
+                            ETU.DoApplyShields(tank);
+                        StopManagingUnit(ETU); // Cannot manage loaded techs
+                    }
                 }
             }
         }
@@ -474,20 +484,23 @@ namespace TAC_AI.World
                                 UnityEngine.Random.InitState(request.GetHashCode() + ManWorld.inst.SeedValue);
                                 if (UnityEngine.Random.Range(0f, 1f) <= KickStart.SpawnFoundersPositional)
                                 {
-                                    LastSecondAddBaseToWorldTile(request);
+                                    LastSecondAddBaseToWorldTile(request, false);
                                 }
                                 UnityEngine.Random.state = statePrev;
                             }
                         }
-                        else if (AIGlobals.TileLoadedCanSpawnNewEnemy(ManWorld.inst.TileManager.CalcTileCentreScene(request), ManWorld.inst.TileSize * 1.27f))
+                        else
                         {
-                            var statePrev = UnityEngine.Random.state;
-                            UnityEngine.Random.InitState(request.GetHashCode() + ManWorld.inst.SeedValue);
-                            if (UnityEngine.Random.Range(0f, 1f) <= KickStart.SpawnFoundersPositional)
+                            if (AIGlobals.TileLoadedCanSpawnNewEnemy(ManWorld.inst.TileManager.CalcTileCentreScene(request), ManWorld.inst.TileSize * 1.27f))
                             {
-                                LastSecondAddBaseToWorldTile(request);
+                                var statePrev = UnityEngine.Random.state;
+                                UnityEngine.Random.InitState(request.GetHashCode() + ManWorld.inst.SeedValue);
+                                if (UnityEngine.Random.Range(0f, 1f) <= KickStart.SpawnFoundersPositional)
+                                {
+                                    LastSecondAddBaseToWorldTile(request, false);
+                                }
+                                UnityEngine.Random.state = statePrev;
                             }
-                            UnityEngine.Random.state = statePrev;
                         }
                     }
                     else if (AIGlobals.TileNeverLoadedBefore(request) && 
@@ -496,7 +509,7 @@ namespace TAC_AI.World
                         var statePrev = UnityEngine.Random.state;
                         UnityEngine.Random.InitState(request.GetHashCode() + ManWorld.inst.SeedValue);
                         if (UnityEngine.Random.Range(0f, 1f) <= KickStart.SpawnFoundersPositional)
-                            LastSecondAddBaseToWorldTile(request);
+                            LastSecondAddBaseToWorldTile(request, false);
                         UnityEngine.Random.state = statePrev;
                     }
                 }
@@ -524,12 +537,12 @@ namespace TAC_AI.World
             }
         }
 
-        public static void LastSecondAddBaseToWorldTile(IntVector2 coord)
+        public static void LastSecondAddBaseToWorldTile(IntVector2 coord, bool hide)
         {
             var WTS = ManSaveGame.inst.GetStoredTile(coord, true);
             if (WTS.m_StoredVisibles.TryGetValue(1, out var caseL) && caseL.Any())
                 return; // Techs already exist here!
-            Quaternion baseRotation = Quaternion.LookRotation(UnityEngine.Random.onUnitSphere.SetY(0).normalized,
+            Quaternion baseRotation = AIGlobals.LookRot(UnityEngine.Random.onUnitSphere.SetY(0).normalized,
                 Vector3.up);
             if (!FindFreeSpaceOnTile((baseRotation * Vector3.forward).ToVector2XZ(), WTS, out Vector2 newPosOff))
             {
@@ -570,7 +583,7 @@ namespace TAC_AI.World
             if (RTT == null)
                 return;
             cost -= RTT.baseCost;
-            CreateNewBase(WTS, posBase, baseRotation, team, RTT, cost * 2);
+            CreateNewBase(WTS, posBase, baseRotation, team, RTT, cost * 2, hide);
 
 
             if (!FindFreeSpaceOnTile((baseRotation * Vector3.forward).ToVector2XZ(), WTS, out Vector2 newPosOff2))
@@ -587,7 +600,7 @@ namespace TAC_AI.World
             RawTech RTT2 = RawTechLoader.FilteredSelectFromAll(RTF, true, true);
             if (RTT2 == null)
                 return;
-            CreateNewTech(WTS, posTech, baseRotation, team, RTT2);
+            CreateNewTech(WTS, posTech, baseRotation, team, RTT2, hide);
             DebugTAC_AI.Log(KickStart.ModID + ": LastSecondAddBaseToWorldTile - Spawned base " + RTT.techName);
         }
 
@@ -669,13 +682,14 @@ namespace TAC_AI.World
         /// <param name="tech"></param>
         /// <param name="tilePos"></param>
         /// <param name="isNew"></param>
-        public static void RegisterTechUnloaded(ManSaveGame.StoredTech tech, bool isNew = true, bool forceRegister = false)
+        public static void RegisterTechUnloaded(ManSaveGame.StoredTech tech, bool hide, bool isNew, bool forceRegister)
         {
             var TV = AIGlobals.GetTrackedVisible(tech.m_ID);
+            bool isBase = tech.m_TechData.IsBase();
             if (TV == null)
             {
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech unit " + tech.m_TechData.Name + " lacked TrackedVisible, fixing...");
-                TV = RawTechLoader.TrackTank(tech, tech.m_ID);
+                TV = RawTechLoader.TrackTank(tech, tech.m_ID, hide, isBase);
             }
             int team = TV.RadarTeamID;
             //if (TV.TeamID != tech.m_TeamID)
@@ -684,7 +698,7 @@ namespace TAC_AI.World
             //    throw new Exception("NP_BaseUnit and TrackedVisible RadarTeamID Mismatch " + TV.TeamID + " vs " + TV.RadarTeamID);
             if (AIGlobals.IsBaseTeamDynamic(team) || forceRegister)
             {   // Enemy Team
-                if (tech.m_TechData.IsBase())
+                if (isBase)
                 {
                     try
                     {
@@ -811,7 +825,7 @@ namespace TAC_AI.World
                         blockIDs = null,
                         teamID = tech.tech.m_TeamID,
                         position = newPos,
-                        rotation = Quaternion.LookRotation(Singleton.cameraTrans.position - tech.tech.GetBackwardsCompatiblePosition(), Vector3.up),
+                        rotation = AIGlobals.LookRot(Singleton.cameraTrans.position - tech.tech.GetBackwardsCompatiblePosition(), Vector3.up),
                         ignoreSceneryOnSpawnProjection = false,
                         forceSpawn = true,
                         isPopulation = false,
@@ -851,14 +865,15 @@ namespace TAC_AI.World
                         EntirelyRemoveUnitFromTile(tech);
                         //RemoveTechFromTeam(tech);
                         Vector3 newPos = newPosOff.ToVector3XZ() + ManWorld.inst.TileManager.CalcTileOriginScene(tileToMoveInto.coord);
-                        Quaternion fromDirect = Quaternion.LookRotation(newPos - ST.m_Position);
+                        Quaternion fromDirect = AIGlobals.LookRot(newPos - ST.m_Position);
                         if (setPrecise)
                         {
                             //Vector3 inTilePos = newPosOff.ToVector3XZ();
                             ManWorld.inst.GetTerrainHeight(newPos, out newPos.y);
                             //techInst.m_WorldPosition = new WorldPosition(tileToMoveInto.coord, inTilePos); // Accurate it!
                         }
-                        if (AddTechToTileAndSetETU(tech, tileToMoveInto, ST.m_TechData, BlockTypeCache.ToArray(), ST.m_TeamID, newPos, fromDirect, false))
+                        if (AddTechToTileAndSetETU(tech, tileToMoveInto, ST.m_TechData, BlockTypeCache.ToArray(), ST.m_TeamID, 
+                            newPos, fromDirect, !AIGlobals.PlayerCanDetectTile(tech.tilePos), false))
                         {
                             //RegisterTechUnloaded(techInst, tileToMoveInto.coord, false);
                             //DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile - Moved a Tech");
@@ -1063,28 +1078,28 @@ namespace TAC_AI.World
             }
             return true;
         }
-        public static void AddTechToTile(ManSaveGame.StoredTile ST, TechData TD, int[] bIDs, int Team, Vector3 posScene, Quaternion forwards, bool anchored = false)
+        public static void AddTechToTile(ManSaveGame.StoredTile ST, TechData TD, int[] bIDs, int Team, Vector3 posScene, Quaternion forwards, bool hide, bool anchored)
         {
             int ID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
-            ST.AddSavedTech(TD, posScene, Quaternion.LookRotation(forwards * Vector3.right, Vector3.up), ID, Team, bIDs, true, false, true, false, 99, false);
+            ST.AddSavedTech(TD, posScene, AIGlobals.LookRot(forwards * Vector3.right, Vector3.up), ID, Team, bIDs, true, false, true, false, 99, false);
             if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
             {
                 var sTech = (ManSaveGame.StoredTech)SV.Last();
-                RawTechLoader.TrackTank(sTech, ID, anchored);
+                RawTechLoader.TrackTank(sTech, ID, hide, anchored);
                 sTech.m_ID = ID;
-                RegisterTechUnloaded(sTech, true, true);
+                RegisterTechUnloaded(sTech, true, true,false);
             }
             else
                 throw new Exception("AddTechToTile added saved tech but could not find the added saved Tech afterwards!");
         }
-        public static bool AddTechToTileAndSetETU(NP_TechUnit ETU, ManSaveGame.StoredTile ST, TechData TD, int[] bIDs, int Team, Vector3 posScene, Quaternion forwards, bool anchored = false)
+        public static bool AddTechToTileAndSetETU(NP_TechUnit ETU, ManSaveGame.StoredTile ST, TechData TD, int[] bIDs, int Team, Vector3 posScene, Quaternion forwards, bool hide, bool anchored)
         {
             int ID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
-            ST.AddSavedTech(TD, posScene, Quaternion.LookRotation(forwards * Vector3.right, Vector3.up), ID, Team, bIDs, true, false, true, false, 99, false);
+            ST.AddSavedTech(TD, posScene, AIGlobals.LookRot(forwards * Vector3.right, Vector3.up), ID, Team, bIDs, true, false, true, false, 99, false);
             if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
             {
                 var sTech = (ManSaveGame.StoredTech)SV.Last();
-                ETU.SetTracker(RawTechLoader.TrackTank(sTech, ID, anchored));
+                ETU.SetTracker(RawTechLoader.TrackTank(sTech, ID, hide, anchored));
                 sTech.m_ID = ID;
                 ETU.SetTech(sTech);
                 return true;
@@ -1416,25 +1431,25 @@ namespace TAC_AI.World
 
 
         // TECH BUILDING
-        public static void CreateNewTech(ManSaveGame.StoredTile ST, Vector3 posInScene, Quaternion rot, int team, RawTech RTT)
+        public static void CreateNewTech(ManSaveGame.StoredTile ST, Vector3 posInScene, Quaternion rot, int team, RawTech RTT, bool hide)
         {
             if (ST != null)
             {
                 TechData TD = RawTechLoader.GetUnloadedTech(RTT, team, false, out int[] bIDs);
                 if (TD != null)
-                    AddTechToTile(ST, TD, bIDs, team, posInScene, rot, false);
+                    AddTechToTile(ST, TD, bIDs, team, posInScene, rot, hide, false);
             }
         }
-        public static void CreateNewBase(ManSaveGame.StoredTile ST, Vector3 posInScene, Quaternion rot, int team, RawTech RTT, int startingBB)
+        public static void CreateNewBase(ManSaveGame.StoredTile ST, Vector3 posInScene, Quaternion rot, int team, RawTech RTT, int startingBB, bool hide)
         {
             if (ST != null)
             {
                 TechData TD = RawTechLoader.GetUnloadedBase(RTT, team, false, out int[] bIDs, startingBB);
                 if (TD != null)
-                    AddTechToTile(ST, TD, bIDs, team, posInScene, rot, false);
+                    AddTechToTile(ST, TD, bIDs, team, posInScene, rot, hide, false);
             }
         }
-        public static void ConstructNewTech(NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT)
+        public static void ConstructNewTech(NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT, bool hide)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1452,11 +1467,11 @@ namespace TAC_AI.World
                 TechData TD = RawTechLoader.GetUnloadedTech(RawTechLoader.GetBaseTemplate(SBT), BuilderTech.tech.m_TeamID, false, out int[] bIDs);
                 if (TD != null)
                 {
-                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, pos, quat, false);
+                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, pos, quat, hide, false);
                 }
             }
         }
-        public static void ConstructNewBase(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT)
+        public static void ConstructNewBase(Vector3 position, NP_BaseUnit BuilderTech, NP_Presence EP, SpawnBaseTypes SBT, bool hide)
         {
             ManSaveGame.StoredTile ST = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(BuilderTech.tilePos, true);
             if (ST != null)
@@ -1471,7 +1486,7 @@ namespace TAC_AI.World
                 TechData TD = RawTechLoader.GetBaseExpansionUnloaded(position, EP, RawTechLoader.GetBaseTemplate(SBT), out int[] bIDs);
                 if (TD != null)
                 {
-                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, position, quat, true);
+                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, position, quat, hide, true);
                 }
             }
         }
@@ -1493,7 +1508,7 @@ namespace TAC_AI.World
                 TechData TD = RawTechLoader.GetUnloadedTech(BT, EP.Team, false, out int[] bIDs);
                 if (TD != null)
                 {
-                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, pos, quat, false);
+                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, pos, quat, !AIGlobals.PlayerCanDetectTile(BuilderTech.tilePos), false);
                 }
             }
         }
@@ -1512,7 +1527,7 @@ namespace TAC_AI.World
                 TechData TD = RawTechLoader.GetBaseExpansionUnloaded(position, EP, BT, out int[] bIDs);
                 if (TD != null)
                 {
-                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, position, quat, true);
+                    AddTechToTile(ST, TD, bIDs, BuilderTech.tech.m_TeamID, position, quat, !AIGlobals.PlayerCanDetectTile(BuilderTech.tilePos), true);
                 }
             }
         }

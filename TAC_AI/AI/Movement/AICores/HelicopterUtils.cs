@@ -36,12 +36,12 @@ namespace TAC_AI.AI.Movement.AICores
                 helper.Navi3DDirect = forwardFlat;
                 helper.Navi3DUp = Vector3.up;
                 fwdDelta = tank.rootBlockTrans.InverseTransformDirection(forwardFlat);
-                turnVal = Quaternion.LookRotation(fwdDelta, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+                turnVal = AIGlobals.LookRot(fwdDelta, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
             }
             else
             {
                 fwdDelta = tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DDirect);
-                turnVal = Quaternion.LookRotation(fwdDelta, tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
+                turnVal = AIGlobals.LookRot(fwdDelta, tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
             }
             bool needsTurnControl = fwdDelta.z < 0.65f;
 
@@ -304,7 +304,7 @@ namespace TAC_AI.AI.Movement.AICores
                 if (helpGUI == null)
                     helpGUI = new GameObject().AddComponent<HelperGUI>();
             }
-            private void OnGUI()
+            public void OnGUI()
             {
                 try
                 {

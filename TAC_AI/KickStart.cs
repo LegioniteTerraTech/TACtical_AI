@@ -15,6 +15,8 @@ using SafeSaves;
 using TerraTechETCUtil;
 using System.Runtime.CompilerServices;
 using Snapshots;
+using DevCommands;
+
 
 
 
@@ -70,8 +72,8 @@ namespace TAC_AI
         public static int NPTInteractKeySav = (int)NPTInteract;
         //internal static bool testEnemyAI = true; // OBSOLETE
 
-        public static float TerrainHeight = ManWorld.inst.TileSize;
-        public static float TerrainHeightOffset = -50;
+        public static float TerrainHeight => ManWorldGeneratorExt.CurrentTotalHeight;
+        public static float TerrainHeightOffset => ManWorldGeneratorExt.CurrentMinHeight;
 
         internal static int EnemyTeamTechLimit = 6;// Allow the bases plus 6 additional capacity of the AIs' choosing
 
@@ -263,6 +265,8 @@ namespace TAC_AI
         public static int EnemyBlockDropChance = 40;
 
         public static bool WarnOnEnemyLock = true;
+        public static bool DisableEnemyFogOfWar = true;
+
 
         //Calculated
         public static int LastRawTechCount = 0;
@@ -565,7 +569,6 @@ namespace TAC_AI
             GUINPTInteraction.Initiate();
 
             PatchMod();
-
 
             AIERepair.RefreshDelays();
             // Because official fails to init this while switching modes

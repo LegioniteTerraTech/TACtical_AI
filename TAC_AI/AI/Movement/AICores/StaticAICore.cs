@@ -180,9 +180,9 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 forwardFlat = tank.rootBlockTrans.forward;
             forwardFlat.y = 0;
             forwardFlat = forwardFlat.normalized;
-            turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
+            turnVal = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
 
-            Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+            Vector3 turnValUp = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
             if (helper.Navi3DUp == Vector3.up)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": Forwards");

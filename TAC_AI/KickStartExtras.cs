@@ -55,6 +55,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "difficulty");
             thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepair");
             thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepairInMP");
+            thisModConfig.BindConfig<AIGlobals>(null, "AllowWeaponsDisarm");
             thisModConfig.BindConfig<KickStart>(null, "LandEnemyOverrideChanceSav");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
@@ -314,7 +315,21 @@ namespace TAC_AI
 
             var TACAIEnemies = KickStart.ModID + " - Non-Player Techs (NPT) General";
             painfulEnemies = new OptionToggle("<b>Enable Advanced NPTs</b>", TACAIEnemies, KickStart.enablePainMode);
-            painfulEnemies.onValueSaved.AddListener(() => { KickStart.enablePainMode = painfulEnemies.SavedValue; });
+            painfulEnemies.onValueSaved.AddListener(() => {
+                if (KickStart.enablePainMode != painfulEnemies.SavedValue)
+                {
+                    foreach (var item in ManTechs.inst.IterateTechs())
+                    {
+                        if (item != null && item.IsEnemy())
+                        {
+                            TankAIHelper help = item.GetHelperInsured();
+                            help.ForceRebuildAlignment();
+                        }
+                    }
+                }
+                KickStart.enablePainMode = painfulEnemies.SavedValue;
+                //DebugRawTechSpawner.CanOpenDebugSpawnMenu = DebugRawTechSpawner.CheckValidMode();
+            });
             diff = SuperNativeOptions.OptionRangeAutoDisplay("NPT Difficulty", 
                 TACAIEnemies, KickStart.difficulty, -50, 150, 25, (float value) => {
                     string pre = Mathf.RoundToInt((value + 50) / 2).ToString();

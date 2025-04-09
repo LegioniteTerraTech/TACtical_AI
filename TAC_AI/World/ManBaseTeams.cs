@@ -495,6 +495,8 @@ namespace TAC_AI
         public Dictionary<int, EnemyTeamData> teams = null;
         [SSaveField]
         public Dictionary<int, int> TradingSellOffers = new Dictionary<int, int>();
+        [SSaveField]
+        public HashSet<int> HiddenVisibles = new HashSet<int>();
 
         public static void PickupRecycled(Visible vis)
         {
@@ -1222,6 +1224,8 @@ namespace TAC_AI
         {
             try
             {
+                if (inst.HiddenVisibles == null)
+                    inst.HiddenVisibles = new HashSet<int>();
                 if (inst.teams == null)
                 {
                     InsureDefaultTeams(false);
@@ -1446,9 +1450,17 @@ namespace TAC_AI
             public override void Deserialize(NetworkReader read)
             {
                 int count = read.ReadByte();
-                for (int step = 0; step < count; step++)
+                int step = 0;
+                try
                 {
-                    UnpackTeamInfo(ref read);
+                    for (; step < count; step++)
+                    {
+                        UnpackTeamInfo(ref read);
+                    }
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TAC_AI: FAILED to process NetworkedAITeamUpdate.Deserialize() on step [" + step + "], teams might be corrupted!!! - " + e);
                 }
             }
 
@@ -1457,7 +1469,7 @@ namespace TAC_AI
             {
                 write.WritePackedInt32(ETD.teamID);
                 write.WritePackedInt32(ETD.BuildBucks);
-                PackDictInfo(ref write, ETD.align);
+                PackTeamAlignmentInfo(ref write, ETD.align);
             }
             private void PackTeamBBInfo(ref NetworkWriter write, EnemyTeamData ETD)
             {
@@ -1482,11 +1494,11 @@ namespace TAC_AI
                 {   // Add/Update
                     var teamInst = InsureBaseTeam(team);
                     teamInst.SetBuildBucks = BB;
-                    UnpackDictInfo(ref read, ref teamInst.align);
+                    UnpackTeamAlignmentInfo(ref read, ref teamInst.align);
                 }
                 TankAIManager.UpdateEntireTeam(team);
             }
-            private void PackDictInfo(ref NetworkWriter write, Dictionary<int,TeamRelations> input)
+            private void PackTeamAlignmentInfo(ref NetworkWriter write, Dictionary<int,TeamRelations> input)
             {
                 write.WritePackedInt32(input.Count);
                 foreach (var item in input)
@@ -1495,13 +1507,21 @@ namespace TAC_AI
                     write.WritePackedInt32((int)item.Value);
                 }
             }
-            private void UnpackDictInfo(ref NetworkReader read, ref Dictionary<int, TeamRelations> input)
+            private void UnpackTeamAlignmentInfo(ref NetworkReader read, ref Dictionary<int, TeamRelations> input)
             {
-                int unpack = read.ReadPackedInt32();
-                for (int step = 0; step < unpack; step++)
+                try
                 {
-                    TeamRelations val = (TeamRelations)read.ReadPackedInt32();
-                    input[read.ReadPackedInt32()] = val;
+                    int unpack = read.ReadPackedInt32();
+                    for (int step = 0; step < unpack; step++)
+                    {
+                        int teamID = read.ReadPackedInt32();
+                        TeamRelations val = (TeamRelations)read.ReadPackedInt32();
+                        input[teamID] = val;
+                    }
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log("TAC_AI: FAILED to process UnpackTeamAlignmentInfo(), teams might be corrupted!!! - " + e);
                 }
             }
 

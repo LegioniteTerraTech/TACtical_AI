@@ -559,7 +559,7 @@ namespace TAC_AI.World
                 }
             }
         }
-        public void HandleBoxSelectUnits()
+        private void HandleBoxSelectUnits()
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": GROUP Select ACTIVATED");
             Vector3 ScreenBoxEnd = Input.mousePosition;
@@ -739,9 +739,9 @@ namespace TAC_AI.World
                         return;
                     var TechUnit = grabbedTech.GetHelperInsured();
 
+                    bool shift = GroupSelecting;
                     if (KickStart.UseClassicRTSControls)
                     {
-                        bool shift = GroupSelecting;
                         if (!controlled.Contains(TechUnit))
                         {
                             if (!shift)
@@ -762,17 +762,7 @@ namespace TAC_AI.World
                             }
                             else
                             {
-                                if (!shift)
-                                {
-                                    ClearList();
-                                    if (StartControlling(TechUnit, controlled))
-                                    {
-                                        SetSelectHalo(TechUnit, true);
-                                        //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
-                                        SelectUnitSFX();
-                                    }
-                                }
-                                else
+                                if (shift)
                                 {
                                     if (StopControlling(TechUnit, controlled))
                                     {
@@ -782,6 +772,16 @@ namespace TAC_AI.World
                                         UnSelectUnitSFX();
                                     }
                                 }
+                                else
+                                {
+                                    ClearList();
+                                    if (StartControlling(TechUnit, controlled))
+                                    {
+                                        SetSelectHalo(TechUnit, true);
+                                        //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
+                                        SelectUnitSFX();
+                                    }
+                                }
                                 //DebugTAC_AI.Log(KickStart.ModID + ": Selected Tank " + grabbedTech.name + ".");
                             }
                             QueuedRelease = !QueuedRelease;
@@ -789,7 +789,6 @@ namespace TAC_AI.World
                     }
                     else
                     {
-                        bool shift = GroupSelecting;
                         if (controlled.Contains(TechUnit) && !shift)
                         {
                             if (StopControlling(TechUnit, controlled))
@@ -1669,7 +1668,6 @@ namespace TAC_AI.World
                         //UpdateCameraOverride();
                         UpdateCursor();
 
-
                         if (Input.GetMouseButtonUp(0))
                         {
                             if (isBoxSelecting)
@@ -1760,7 +1758,7 @@ namespace TAC_AI.World
                     lookPos = Vector3.MoveTowards(lastCameraPos.ScenePosition, tankPos - enemyLookVec, dist / dividend);
                     if (!Input.GetMouseButton(1))
                     {
-                        Quaternion look = Quaternion.LookRotation(enemyLookVec);
+                        Quaternion look = AIGlobals.LookRot(enemyLookVec);
                         Singleton.cameraTrans.rotation = Quaternion.Slerp(Singleton.cameraTrans.rotation, look, 1 / dividend);
                     }
                 }
@@ -1771,7 +1769,7 @@ namespace TAC_AI.World
                     lookPos = Vector3.MoveTowards(lastCameraPos.ScenePosition, tankPos, dist / dividend);
                     if (!Input.GetMouseButton(1))
                     {
-                        Quaternion look = Quaternion.LookRotation(lookVec);
+                        Quaternion look = AIGlobals.LookRot(lookVec);
                         Singleton.cameraTrans.rotation = Quaternion.Slerp(Singleton.cameraTrans.rotation, look, 1 / dividend);
                     }
                 }
@@ -2291,7 +2289,7 @@ namespace TAC_AI.World
         private static Texture2D matRect;
         internal class GUIRectSelect : MonoBehaviour
         {
-            private void OnGUI()
+            internal void OnGUI()
             {
                 if (KickStart.IsIngame)
                 {
@@ -2371,7 +2369,7 @@ namespace TAC_AI.World
                 }
                 return false;
             }
-            private void OnGUI()
+            internal void OnGUI()
             {
                 if (PlayerIsInRTS && !ManPauseGame.inst.IsPaused && !AIGlobals.HideHud && 
                     Singleton.playerTank?.GetHelperInsured())

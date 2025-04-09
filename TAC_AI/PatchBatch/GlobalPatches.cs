@@ -52,6 +52,17 @@ namespace TAC_AI
             }
         }*/
 
+        internal static class ManPlayerPatches
+        {
+            internal static Type target = typeof(ManPlayer);
+
+            /// <summary> CatchPlayerInitCheats </summary>
+            internal static void SetPlayerHasEnabledCheatCommands_Prefix(ManPlayer __instance)
+            {
+                DebugRawTechSpawner.CanOpenDebugSpawnMenu = true;
+            }
+        }
+
         internal static class SpawnTechDataPatches
         {
             internal static Type target = typeof(SpawnTechData);

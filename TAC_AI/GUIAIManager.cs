@@ -88,7 +88,7 @@ namespace TAC_AI
 
         internal class GUIDisplay : MonoBehaviour
         {
-            private void OnGUI()
+            internal void OnGUI()
             {
                 if (isCurrentlyOpen && KickStart.CanUseMenu)
                 {

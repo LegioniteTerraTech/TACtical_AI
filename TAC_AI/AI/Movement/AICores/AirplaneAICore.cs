@@ -1181,7 +1181,7 @@ namespace TAC_AI.AI.Movement.AICores
         }
         public Vector3 DetermineRoll(Tank tank, AIControllerAir pilot, Vector3 Navi3DDirect, bool forceUp, out float nudgeTargPosUp)
         {
-            //Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+            //Vector3 turnValUp = AIGlobals.LookRot(tank.rootBlockTrans.forward, tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
             nudgeTargPosUp = 0;
 
             if (forceUp)
@@ -1318,9 +1318,9 @@ namespace TAC_AI.AI.Movement.AICores
 
             // We must make the controls local to the cab to insure predictable performance
             Vector3 ForwardsLocal = root.InverseTransformDirection(helper.Navi3DDirect);
-            Vector3 turnVal = Quaternion.LookRotation(ForwardsLocal, Vector3.up).eulerAngles;
+            Vector3 turnVal = AIGlobals.LookRot(ForwardsLocal, Vector3.up).eulerAngles;
             Vector3 UpLocal = root.InverseTransformDirection(helper.Navi3DUp);
-            Vector3 turnValUp = Quaternion.LookRotation(Vector3.forward, UpLocal).eulerAngles;
+            Vector3 turnValUp = AIGlobals.LookRot(Vector3.forward, UpLocal).eulerAngles;
             //Vector3 forwardFlat = tank.rootBlockTrans.forward;
             //forwardFlat.y = 0;
 

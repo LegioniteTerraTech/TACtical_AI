@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using TerraTechETCUtil;
 using System.Diagnostics;
 using System.ComponentModel.Composition.Primitives;
+using DevCommands;
 
 
 namespace TAC_AI.Templates
@@ -102,7 +103,7 @@ namespace TAC_AI.Templates
 
         internal class GUIDisplayTechLoader : MonoBehaviour
         {
-            private void OnGUI()
+            internal void OnGUI()
             {
                 if (UIIsCurrentlyOpen && KickStart.CanUseMenu)
                 {
@@ -1457,6 +1458,16 @@ namespace TAC_AI.Templates
                 GUIWindow.SetActive(true);
             }
         }
+        public static void LaunchSubMenuClickable(DebugMenus type)
+        {
+            if (!UIIsCurrentlyOpen)
+            {
+                menu = type;
+                RawTechExporter.ReloadTechsNow();
+                DebugTAC_AI.Log(KickStart.ModID + ": Opened Raw Techs Debug menu!");
+                GUIWindow.SetActive(true);
+            }
+        }
         public static void CloseSubMenuClickable()
         {
             if (UIIsCurrentlyOpen)
@@ -1622,12 +1633,13 @@ namespace TAC_AI.Templates
 #else
         internal static bool ShowDebugFeedBack = false;
 #endif
-        private static bool CheckValidMode()
+        internal static bool CheckValidMode()
         {
 #if DEBUG
             return true;
 #else
-            if (KickStart.enablePainMode && (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeMisc>() || (Singleton.Manager<ManGameMode>.inst.IsCurrent<ModeCoOpCreative>() && ManNetwork.IsHost)))
+            if (ManGameMode.inst.IsCurrent<ModeMisc>() || 
+                (ManDevCommands.inst.CommandAccessLevel >= Access.Cheat && ManNetwork.IsHost))
             {
                 return true;
             }

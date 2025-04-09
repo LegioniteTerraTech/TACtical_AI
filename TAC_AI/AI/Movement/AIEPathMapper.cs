@@ -277,7 +277,7 @@ namespace TAC_AI.AI.Movement
                 sub = true;
                 inst = new GameObject("PathMapper").AddComponent<AIEPathMapper>();
                 ManWorld.inst.TileManager.TileDestroyedEvent.Subscribe(UnregisterTile);
-                WorldDeformer.OnTerrainDeformed.Subscribe(UnregisterTile);
+                ManWorldDeformerExt.OnTerrainDeformed.Subscribe(UnregisterTile);
             }
             if (tilesMapped.ContainsKey(tile.Coord))
                 throw new Exception("AIPathMapper(RegisterTile) - Tried to add a WorldTile that is already present");

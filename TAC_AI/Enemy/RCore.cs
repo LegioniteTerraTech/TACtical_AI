@@ -75,6 +75,8 @@ namespace TAC_AI.AI.Enemy
         // ----------------------------  Setup  ---------------------------- 
         internal static void AutoSetIntelligence(this EnemyMind newMind)
         {
+            if (!KickStart.enablePainMode)
+                newMind.CommanderSmarts = EnemySmarts.Default; // Use defaults
             //add Smartness
             int randomNum = UnityEngine.Random.Range(KickStart.LowerDifficulty, KickStart.UpperDifficulty);
             if (randomNum < 35)

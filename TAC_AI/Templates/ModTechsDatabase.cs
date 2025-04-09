@@ -425,7 +425,7 @@ namespace TAC_AI.Templates
                     return false;
                 }
                 bool valid = true;
-                for (int step = toScreen.Count - 1; step > -1; step++)
+                for (int step = toScreen.Count - 1; step >= 0; step--)
                 {
                     RawBlockMem bloc = toScreen[step];
                     BlockTypes type = BlockIndexer.StringToBlockType(bloc.t);

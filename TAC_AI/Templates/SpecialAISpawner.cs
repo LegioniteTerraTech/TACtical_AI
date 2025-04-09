@@ -411,25 +411,36 @@ namespace TAC_AI.Templates
                 return;
             }
 
-            if (playerTank.IsNull() || AIGlobals.AtSceneTechMaxSpawnLimit())
+            // Get the air spawn origin
+            Tank SpawnOrigin = playerTank;
+            if (ManNetwork.IsNetworked)
+            {   // try getting another player 
+               int randIndex = UnityEngine.Random.Range(0, ManNetwork.inst.GetNumPlayers());
+               NetPlayer NP = ManNetwork.inst.GetPlayer(randIndex);
+                SpawnOrigin = NP.CurTech.tech;
+            }
+
+            if (SpawnOrigin.IsNull() || AIGlobals.AtSceneTechMaxSpawnLimit())
                 return;
             if (AirPool.Count >= MaxAirborneAIAllowed)
                 return;
 
             Vector3 pos;
-            if (playerTank.rbody.IsNotNull())
-                pos = (playerTank.rbody.velocity * Time.deltaTime * 5) + playerTank.boundsCentreWorldNoCheck;
+            if (SpawnOrigin.rbody.IsNotNull())
+                pos = (SpawnOrigin.rbody.velocity * Time.deltaTime * 5) + SpawnOrigin.boundsCentreWorldNoCheck;
             else
-                pos = playerTank.boundsCentreWorldNoCheck;
+                pos = SpawnOrigin.boundsCentreWorldNoCheck;
 
             Vector3 forwards = GetRandAirAngle();
 
             pos = GetAirOffsetFromPosition(pos, forwards);
+            if (!ManWorld.inst.TileManager.IsTileAtPositionLoaded(pos))
+                return; //DO NOT SPAWN OUT OF BOUNDS.  Since this spawn is not mandatory, we can hold off.
 
 
             Tank newAirborneAI;
             bool spawnSpace;
-            if (playerTank.boundsCentreWorld.y > SpaceBeginAltitude)
+            if (SpawnOrigin.boundsCentreWorld.y > SpaceBeginAltitude)
             {
                 spawnSpace = true;
             }

@@ -11,6 +11,7 @@ using TAC_AI.World;
 using TerraTech.Network;
 using TerraTechETCUtil;
 using UnityEngine;
+using static TAC_AI.AI.TankAIHelper;
 using static WobblyLaser;
 
 namespace TAC_AI.AI
@@ -182,7 +183,7 @@ namespace TAC_AI.AI
             //helper.ResetAll(tonk);
             //helper.OnTechTeamChange();
             helper.dirtyExtents = true;
-            helper.dirtyAI = true;
+            helper.dirtyAI = AIDirtyState.Dirty;
             helper.RunState = AIRunState.Advanced;
             helper.enabled = true;
             DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  OnTankAddition - Spawned!");
@@ -203,7 +204,7 @@ namespace TAC_AI.AI
             if (tonk.FirstUpdateAfterSpawn)
             {
                 helper.dirtyExtents = true;
-                helper.dirtyAI = true;
+                helper.dirtyAI = AIDirtyState.Dirty;
                 helper.RunState = AIRunState.Advanced;
                 helper.enabled = true;
                 DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Spawned!");
@@ -265,7 +266,8 @@ namespace TAC_AI.AI
                 if (tonk != null)
                 {
                     helper = tonk.GetHelperInsured();
-                    helper.OnTechTeamChange();
+                    //helper.OnTechTeamChange();
+                    helper.ForceRebuildAlignment();
                 }
                 else
                 {

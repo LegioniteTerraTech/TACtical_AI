@@ -204,7 +204,8 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (lastTank.GetComponent<RLoadedBases.EnemyBaseFunder>() && !ManBaseTeams.IsTeammate(lastTank.Team, playerTeam))
+                    if (lastTank.GetComponent<RLoadedBases.EnemyBaseFunder>() && !ManBaseTeams.IsTeammate(lastTank.Team, playerTeam) &&
+                        ManBaseTeams.TryGetBaseTeamAny(lastTank.Team, out var ETD) && !ETD.IsReadonly)
                     {
                         GUIBaseTeam();
                     }

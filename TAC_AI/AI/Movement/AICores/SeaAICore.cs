@@ -271,9 +271,9 @@ namespace TAC_AI.AI.Movement.AICores
             if (helper.Navi3DDirect == Vector3.zero)
             {   //keep upright!
                 if (core.DriveDir == EDriveFacing.Backwards)
-                    turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(-forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+                    turnVal = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(-forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
                 else
-                    turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+                    turnVal = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
 
                 //Convert turnVal to runnable format
                 if (turnVal.x > 180)
@@ -292,11 +292,11 @@ namespace TAC_AI.AI.Movement.AICores
             else
             {   //for special cases we want to angle at the enemy
                 if (core.DriveDir == EDriveFacing.Backwards)
-                    turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(-helper.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
+                    turnVal = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(-helper.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
                 else
-                    turnVal = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
+                    turnVal = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DDirect), tank.rootBlockTrans.InverseTransformDirection(helper.Navi3DUp)).eulerAngles;
 
-                Vector3 turnValUp = Quaternion.LookRotation(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
+                Vector3 turnValUp = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
                 if (helper.Navi3DUp == Vector3.up)
                 {
                     //DebugTAC_AI.Log(KickStart.ModID + ": Forwards");

@@ -31,7 +31,8 @@ namespace TAC_AI
             /// See CursorChanger for more information
             /// </summary>
             /// <param name="__result"></param>
-            private static void GetCursorState_Postfix(ref GameCursor.CursorState __result)
+            [HarmonyPriority(-200)]
+            internal static void GetCursorState_Postfix(ref GameCursor.CursorState __result)
             {
                 if (!CursorChanger.AddedNewCursors)
                     return;
@@ -365,11 +366,13 @@ namespace TAC_AI
         internal static class UIRadialTechControlMenuPatches
         {
             internal static Type target = typeof(UIRadialTechControlMenu);
+            //static readonly FieldInfo techExtras = typeof(UIRadialTechControlMenu).GetField("m_AllowTargetRefinement", BindingFlags.NonPublic | BindingFlags.Instance);
             //DetectAIRadialAction
-            private static void Show_Prefix(ref object context)
+            internal static void Show_Prefix(UIRadialTechControlMenu __instance, ref object context)
             {
                 OpenMenuEventData nabData = (OpenMenuEventData)context;
                 TankBlock thisBlock = nabData.m_TargetTankBlock;
+                //techExtras.SetValue(__instance, true); // Does not do anything useful atm other than maybe set the AI to go somewhere immedeately
                 if (thisBlock.tank.IsNotNull())
                 {
                     DebugTAC_AI.Info(KickStart.ModID + ": grabbed tank data = " + thisBlock.tank.name.ToString());
@@ -381,7 +384,7 @@ namespace TAC_AI
                 }
             }
             //DetectAIRadialMenuAction
-            private static void OnAIOptionSelected_Prefix(UIRadialTechControlMenu __instance, ref UIRadialTechControlMenu.PlayerCommands command)
+            internal static void OnAIOptionSelected_Prefix(UIRadialTechControlMenu __instance, ref UIRadialTechControlMenu.PlayerCommands command)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": click menu FIRED!!!  input = " + command.ToString() + " | num = " + (int)command);
                 if ((int)command == 3)

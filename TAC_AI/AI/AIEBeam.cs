@@ -88,7 +88,7 @@ namespace TAC_AI.AI
                                 //tank.beam.EnableBeam(true);
                                 var allyTrans = helper.theResource.tank.trans;
                                 tank.rbody.velocity = Vector3.zero;
-                                helper.tank.trans.rotation = Quaternion.LookRotation(allyTrans.TransformDirection(helper.MTOffsetRot), allyTrans.TransformDirection(helper.MTOffsetRotUp));
+                                helper.tank.trans.rotation = AIGlobals.LookRot(allyTrans.TransformDirection(helper.MTOffsetRot), allyTrans.TransformDirection(helper.MTOffsetRotUp));
                                 helper.tank.trans.position = allyTrans.TransformPoint(helper.MTOffsetPos);
                                 return;
                             }
