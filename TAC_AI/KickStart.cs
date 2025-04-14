@@ -212,6 +212,9 @@ namespace TAC_AI
                 case 3:
                     CullFarEnemyBasesDistance = 16;
                     break;
+                case 4:
+                    CullFarEnemyBasesDistance = 32;
+                    break;
                 default:
                     throw new NotImplementedException("Unknown EnemyMaxDistLimit mode: " + CullFarEnemyBasesMode);
             }

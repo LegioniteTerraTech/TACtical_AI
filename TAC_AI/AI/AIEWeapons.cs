@@ -15,7 +15,7 @@ namespace TAC_AI.AI
                 {
                     if (helper.lastEnemyGet?.tank)
                     {
-                        if (AIGlobals.AllowWeaponsDisarm)
+                        if (AIGlobals.AllowWeaponsDisarm2)
                         {
                             if (helper.DriverType == AIDriverType.Stationary || ManBaseTeams.IsEnemy(tank.Team, helper.lastEnemyGet.tank.Team))
                             {   // Stationary AI should NEVER lower guard - even against Sub-Neutrals
@@ -53,7 +53,7 @@ namespace TAC_AI.AI
                     }
                     else
                     {
-                        if (AIGlobals.AllowWeaponsDisarm)
+                        if (AIGlobals.AllowWeaponsDisarm2)
                         {
                             if (tank.TechIsActivePlayer())
                                 helper.WeaponState = AIWeaponState.Normal;

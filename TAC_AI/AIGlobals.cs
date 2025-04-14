@@ -262,7 +262,7 @@ namespace TAC_AI
         public const int LonerEnemyTeam = ManSpawn.NewEnemyTeam;
         public const int DefaultEnemyTeam = ManSpawn.FirstEnemyTeam;
         public const float YieldSpeed = 10;
-        public static bool AllowWeaponsDisarm = false;
+        public static bool AllowWeaponsDisarm2 = false;
         public const bool BaseSubNeutralsCuriousFollow = true;
 
         // Elevation

@@ -55,7 +55,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "difficulty");
             thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepair");
             thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepairInMP");
-            thisModConfig.BindConfig<AIGlobals>(null, "AllowWeaponsDisarm");
+            thisModConfig.BindConfig<AIGlobals>(null, "AllowWeaponsDisarm2");
             thisModConfig.BindConfig<KickStart>(null, "LandEnemyOverrideChanceSav");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
@@ -222,8 +222,8 @@ namespace TAC_AI
             aiPathing.onValueSaved.AddListener(() => {
                 AIEPathMapper.PathRequestsToCalcPerFrame = (int)aiPathing.SavedValue;
             });
-            HoldFireOnNeutral = new OptionToggle("Don't auto-attack neutrals", TACAI, AIGlobals.AllowWeaponsDisarm);
-            HoldFireOnNeutral.onValueSaved.AddListener(() => { AIGlobals.AllowWeaponsDisarm = HoldFireOnNeutral.SavedValue; });
+            HoldFireOnNeutral = new OptionToggle("Don't auto-attack neutrals", TACAI, AIGlobals.AllowWeaponsDisarm2);
+            HoldFireOnNeutral.onValueSaved.AddListener(() => { AIGlobals.AllowWeaponsDisarm2 = HoldFireOnNeutral.SavedValue; });
 
             var TACAISP = KickStart.ModID + " - A.I. Single Player";
             aiUpkeepRefresh = SuperNativeOptions.OptionRangeAutoDisplay("A.I. Awareness Update Laziness",
