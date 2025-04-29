@@ -195,7 +195,7 @@ namespace TAC_AI
             new BaseTeamsUpdateRate("ALL"),
         };
         public static int CullFarEnemyBasesMode = 0;
-        public static bool CullFarEnemyBases => CullFarEnemyBasesDistance == int.MaxValue;
+        public static bool CullFarEnemyBases => CullFarEnemyBasesDistance != int.MaxValue;
         public static void UpdateCullDist()
         {
             switch (CullFarEnemyBasesMode)
@@ -726,6 +726,7 @@ namespace TAC_AI
             }
 
             UpdateCullDist();
+            ResourcesHelper.ModsPostLoadEvent.Subscribe(AIWiki.InsureAllValidAIs);
             ResourcesHelper.BlocksPostChangeEvent.Subscribe(AIWiki.InsureAllValidAIs);
         }
 

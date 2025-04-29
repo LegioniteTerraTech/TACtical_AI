@@ -25,7 +25,7 @@ namespace TAC_AI
 {
     public class KickStartConfigHelper
     {
-        public static bool CullFarEnemyBases = false;
+        public static bool CullFarEnemyBasesDevStartup = false;
         internal static void PushExtModConfigHandlingConfigOnly()
         {
             KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
@@ -76,7 +76,6 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "CommitDeathMode");
             thisModConfig.BindConfig<KickStart>(null, "CatMode");
             thisModConfig.BindConfig<KickStart>(null, "EnemySellGainModifier");
-            thisModConfig.BindConfig<KickStartConfigHelper>(null, "CullFarEnemyBases");
             thisModConfig.BindConfig<KickStart>(null, "CullFarEnemyBasesMode");
             thisModConfig.BindConfig<KickStart>(null, "ForceRemoveOverEnemyMaxCap");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBaseUpdateMode");
@@ -95,10 +94,10 @@ namespace TAC_AI
             KickStart.CommandHotkey = (KeyCode)KickStart.CommandHotkeySav;
             KickStart.CommandBoltsHotkey = (KeyCode)KickStart.CommandBoltsHotkeySav;
             KickStart.MultiSelect = (KeyCode)KickStart.MultiSelectKeySav;
-            if (CullFarEnemyBases)
+            if (CullFarEnemyBasesDevStartup)
             {
                 KickStart.CullFarEnemyBasesMode = 2;
-                CullFarEnemyBases = false;
+                CullFarEnemyBasesDevStartup = false;
             }
             return thisModConfig;
         }
@@ -178,7 +177,6 @@ namespace TAC_AI
         public static OptionToggle enemyStrategic;
         public static OptionToggle enemyMiners;
         public static OptionToggle useKeypadForGroups;
-        public static OptionToggle enemyBaseCulling;
 
         public static OptionToggle WarnEnemyLock;
         public static OptionToggle HoldFireOnNeutral;
@@ -340,7 +338,7 @@ namespace TAC_AI
                     if (value.Approximately(150))
                         return pre + "% Insanity";
                     if (value < 0)
-                        return pre +"% Easy";
+                        return pre + "% Easy";
                     if (value >= 75)
                         return pre + "% Hard";
                     return pre + "% Medium";
@@ -448,7 +446,6 @@ namespace TAC_AI
                     return Mathf.RoundToInt(value).ToString();
                 });
             enemyExpandLim.onValueSaved.AddListener(() => { KickStart.MaxBasesPerTeam = (int)enemyExpandLim.SavedValue; });
-            enemyBaseCulling = new OptionToggle("Remove Far NPT Bases", TACAIEnemies, KickStart.CullFarEnemyBases);
             var SpawnLimiterSettings = new OptionList<EnemyMaxDistLimit>("Remove Far NPT Bases", TACAIEnemies, KickStart.limitTypes, (int)KickStart.CullFarEnemyBasesMode);
             SpawnLimiterSettings.onValueSaved.AddListener(() =>
             {
