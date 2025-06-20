@@ -577,7 +577,7 @@ namespace TAC_AI.World
             RTF.Progression = lvl;
             RTF.Purpose = BasePurpose.Harvesting;
             RTF.Terrain = Terra;
-            RTF.MaxGrade = grade;
+            RTF.TargetFactionGrade = grade;
             RTF.MaxPrice = cost;
             RawTech RTT = RawTechLoader.FilteredSelectFromAll(RTF, true, true);
             if (RTT == null)
@@ -1671,7 +1671,7 @@ namespace TAC_AI.World
                     }
                 }
                 //DebugRawTechSpawner.RemoveOrphanTrackedVisibles();
-                DebugTAC_AI.LogDevOnly("Calculations for (" + step + ") World AI Operators finished in " +
+                DebugTAC_AI.LogDevOnlyAssert("Calculations for (" + step + ") World AI Operators finished in " +
                     DebugTAC_AI.FinishAIWorldTimer().ToString() + " miliseconds");
             }
             finally

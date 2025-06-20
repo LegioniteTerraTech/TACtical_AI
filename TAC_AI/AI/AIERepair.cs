@@ -9,6 +9,8 @@ using UnityEngine;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
 using System.Diagnostics;
+using static TAC_AI.ManBaseTeams;
+using UnityEngine.Experimental.PlayerLoop;
 
 namespace TAC_AI.AI
 {
@@ -527,7 +529,8 @@ namespace TAC_AI.AI
                             ManSFX.inst.AttachInstanceToPosition(soundSteal[(int)held.BlockConnectionAudioType].PlayEvent(), held.centreOfMassWorld);
                         }
                     }
-                    if (tank.IsAnchored && Helper.AIAlign == AIAlignment.NonPlayer)
+                    
+                    if (tank.IsAnchored && Helper.AIAlign == AIAlignment.NonPlayer && held.GetComponent<ModuleItemProducer>())
                     {
                         MakeMinersMineUnlimited();
                     }
@@ -711,21 +714,55 @@ namespace TAC_AI.AI
             {   // make autominers mine deep based on biome
                 try
                 {
-                    CancelInvoke("DoMakeMinersMineUnlimited");
-                    Invoke("DoMakeMinersMineUnlimited", 2f);
+                    CancelInvoke("TryMakeMinersMineUnlimited");
+                    Invoke("TryMakeMinersMineUnlimited", 2f);
                 }
                 catch
                 {
                     DebugTAC_AI.Log(KickStart.ModID + ": MakeMinersMineUnlimited - game is being stubborn");
                 }
             }
-            internal void DoMakeMinersMineUnlimited()
+
+            public class AutoMineInfMessage : MessageBase
+            {
+                public AutoMineInfMessage() { }
+                public AutoMineInfMessage(uint netTechID)
+                {
+                    this.netTechID = netTechID;
+                }
+                public bool Execute()
+                {
+                    if (this.GetTech(netTechID, out Tank tech))
+                    {
+                        DoMakeMinersMineUnlimited(tech);
+                        return true;
+                    }
+                    return false;
+                }
+                public uint netTechID;
+            }
+            private static NetworkHook<AutoMineInfMessage> netHookMiner = new NetworkHook<AutoMineInfMessage>(
+                "TAC_AI.AutoMineInfMessage", OnReceiveAutomineUpdate, NetMessageType.ToClientsOnly);
+            internal static bool OnReceiveAutomineUpdate(AutoMineInfMessage update, bool isServer)
+            {
+                return update.Execute();
+            }
+
+            internal void TryMakeMinersMineUnlimited()
+            {
+                if (netHookMiner.CanBroadcast())
+                {
+                    netHookMiner.TryBroadcast(new AutoMineInfMessage(tank.GetTechNetID()));
+                }
+                else
+                    DoMakeMinersMineUnlimited(tank);
+            }
+            internal static void DoMakeMinersMineUnlimited(Tank tankInst)
             {   // make autominers mine deep based on biome
                 try
                 {
-                    Helper.AdjustAnchors();
                     //DebugTAC_AI.Log(KickStart.ModID + ": " + tank.name + " is trying to mine unlimited");
-                    foreach (ModuleItemProducer module in tank.blockman.IterateBlockComponents<ModuleItemProducer>())
+                    foreach (ModuleItemProducer module in tankInst.blockman.IterateBlockComponents<ModuleItemProducer>())
                     {
                         module.gameObject.GetOrAddComponent<ReverseCache>().SaveComponents();
                     }
@@ -775,9 +812,9 @@ namespace TAC_AI.AI
                     }
                     else
                     {
-                        DebugTAC_AI.LogDevOnly(KickStart.ModID + ": AI " + tank.name + ": Could not afford " + BlockType
+                        DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": AI " + tank.name + ": Could not afford " + BlockType
                             + " from the shop for " + priceIsRight + " because ");
-                       DebugTAC_AI.LogDevOnly(" Funds are " + ManBaseTeams.GetTeamMoney(tank.Team) + ", but cost is " +
+                       DebugTAC_AI.LogDevOnlyAssert(" Funds are " + ManBaseTeams.GetTeamMoney(tank.Team) + ", but cost is " +
                                 priceIsRight);
                         return false;
                     }

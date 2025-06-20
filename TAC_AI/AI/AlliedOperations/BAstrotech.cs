@@ -23,11 +23,18 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (helper.lastPlayer == null)
                 return;
-            direct.SetLastDest(helper.lastPlayer.tank.boundsCentreWorldNoCheck);
+            bool hasMessaged = false;
+            //direct.SetLastDest(helper.lastPlayer.tank.boundsCentreWorldNoCheck); 
+            // Disabling the above causes the AI to move as expected, but not float high enough!
+            if (helper.lastPlayer == tank.visible)
+            {   // WE ARE FOLLOWING OURSELVES, just hold position!
+                OnIdle(helper, tank, ref direct, ref hasMessaged);
+                direct.STOP(helper);
+                return;
+            }
             float dist = helper.GetDistanceFromTask(helper.lastPlayer.tank.boundsCentreWorldNoCheck, helper.lastPlayer.GetCheapBounds());
             float range = helper.MaxObjectiveRange + helper.lastTechExtents;
 
-            bool hasMessaged = false;
 
             float playerExt = helper.lastPlayer.GetCheapBounds();
 
@@ -160,7 +167,7 @@ namespace TAC_AI.AI.AlliedOperations
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
                 helper.AvoidStuff = true;
                 helper.SettleDown();
-                if (helper.DelayedAnchorClock < 15)
+                if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                     helper.DelayedAnchorClock++;
                 if (helper.CanAutoAnchor)
                 {
@@ -174,19 +181,24 @@ namespace TAC_AI.AI.AlliedOperations
             else
             {
                 //Likely idle
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
-                helper.AvoidStuff = true;
-                helper.SettleDown();
-                helper.DriveVar = 0;
-                if (helper.DelayedAnchorClock < 15)
-                    helper.DelayedAnchorClock++;
-                if (helper.CanAutoAnchor)
+                OnIdle(helper, tank, ref direct, ref hasMessaged);
+            }
+        }
+
+        private static void OnIdle(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct, ref bool hasMessaged)
+        {
+            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
+            helper.AvoidStuff = true;
+            helper.SettleDown();
+            helper.DriveVar = 0;
+            if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
+                helper.DelayedAnchorClock++;
+            if (helper.CanAutoAnchor)
+            {
+                if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                 {
-                    if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
-                    {
-                        AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                        helper.TryInsureAnchor();
-                    }
+                    AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
+                    helper.TryInsureAnchor();
                 }
             }
         }
@@ -339,7 +351,7 @@ namespace TAC_AI.AI.AlliedOperations
                 hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Settling");
                 helper.AvoidStuff = true;
                 helper.SettleDown();
-                if (helper.DelayedAnchorClock < 15)
+                if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                     helper.DelayedAnchorClock++;
                 if (helper.CanAutoAnchor)
                 {
@@ -357,7 +369,7 @@ namespace TAC_AI.AI.AlliedOperations
                 helper.AvoidStuff = true;
                 helper.SettleDown();
                 helper.DriveVar = 0;
-                if (helper.DelayedAnchorClock < 15)
+                if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                     helper.DelayedAnchorClock++;
                 if (helper.CanAutoAnchor)
                 {

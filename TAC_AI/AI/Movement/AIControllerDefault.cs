@@ -244,6 +244,9 @@ namespace TAC_AI.AI
                     case AIDriverType.Astronaut:
                         AICore = new SpaceAICore();
                         break;
+                    case AIDriverType.Stationary: // Fallback when unanchored stationary
+                        AICore = new SpaceAICore();
+                        break;
                     default:
                         throw new Exception("Invalid control type for Non-NPT Vehicle " + helper.DriverType.ToString());
                 }
@@ -265,8 +268,11 @@ namespace TAC_AI.AI
                     case EnemyHandling.SuicideMissile:
                         AICore = new SpaceAICore();
                         break;
+                    case EnemyHandling.Stationary: // Fallback when unanchored stationary
+                        AICore = new SpaceAICore();
+                        break;
                     default:
-                        throw new Exception("Invalid control type for MPT Vehicle " + mind.EvilCommander.ToString());
+                        throw new Exception("Invalid control type for NPT Vehicle " + mind.EvilCommander.ToString());
                 }
                 //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " has been assigned Non-Player Vehicle AI with " + mind.EvilCommander.ToString() + ".");
             }

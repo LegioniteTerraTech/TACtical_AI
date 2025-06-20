@@ -26,6 +26,11 @@ namespace TAC_AI
     public class KickStartConfigHelper
     {
         public static bool CullFarEnemyBasesDevStartup = false;
+        private static ModConfig modConfig;
+        internal static void Save()
+        {
+            modConfig.WriteConfigJsonFile();
+        }
         internal static void PushExtModConfigHandlingConfigOnly()
         {
             KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
@@ -39,9 +44,9 @@ namespace TAC_AI
             ModConfig thisModConfig = new ModConfig();
             if (!thisModConfig.ReadConfigJsonFile())
             {
-                LoadingHintsExt.MandatoryHints.Add(AltUI.ObjectiveString("Advanced AI") + " adds multiple layers of depth and " +
-                AltUI.EnemyString("difficulty") + " to TerraTech.  " +
-                AltUI.HintString("Best suited for prospecting veterans looking for a new challenge."));
+                LoadingHintsExt.MandatoryHints.Add(new LocExtStringNonReg(AltUI.ObjectiveString("Advanced AI") + 
+                    " adds multiple layers of depth and " + AltUI.EnemyString("difficulty") + " to TerraTech.  " +
+                AltUI.HintString("Best suited for prospecting veterans looking for a new challenge.")));
             }
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "RetreatHotkeySav");
@@ -99,6 +104,7 @@ namespace TAC_AI
                 KickStart.CullFarEnemyBasesMode = 2;
                 CullFarEnemyBasesDevStartup = false;
             }
+            modConfig = thisModConfig;
             return thisModConfig;
         }
         internal static void PushExtModConfigHandling()
@@ -183,6 +189,32 @@ namespace TAC_AI
         public static bool ShownRebootWarning = false;
 
 
+        public static void EnoughLocalTechsSanityCheck()
+        {
+            if (KickStart.TryForceOnlyPlayerLocalSpawns && ModTechsDatabase.DoWeNotHaveEnoughLocalTechs())
+            {
+                ManModGUI.ShowErrorPopup("Advanced AI - \"Try Only Use Local Spawns\" does not have enough Local Techs to insure random spawning!\n  You only have " +
+                    ModTechsDatabase.ExtPopTechsAll.Count + " Techs, while at least " + ModTechsDatabase.MinimumLocalTechsToTriggerWarning +
+                    " Techs in your local enemies folder is suggested.  This automatic check does not cover edge-cases caused by a lack of diversity in your Tech selection.\n" +
+                    AltUI.ObjectiveString("  Press \"Fix\" to disable \"Try Only Use Local Spawns\""), false, () =>
+                    {
+                        localPlayerMadeTechsOnly.Value = false;
+                        if (KickStart.isConfigHelperPresent)
+                        {
+                            try
+                            {
+                                KickStart.ENCAPSULATEErrorSaveConfig();
+                            }
+                            catch (Exception e)
+                            {
+                                DebugTAC_AI.Log(KickStart.ModID + ": Error on Option & Config saving");
+                                DebugTAC_AI.Log(e);
+                                DebugTAC_AI.ErrorReport("Error on hooks with ConfigHelper");
+                            }
+                        }
+                    });
+            }
+        }
         internal static void PushExtModOptionsHandling()
         {
             var TACAI = KickStart.ModID + " - A.I. General";
@@ -240,7 +272,7 @@ namespace TAC_AI
 
 
             var TACAIRTS = KickStart.ModID + " - Real-Time Strategy [RTS] Mode";
-            playerStrategic = new OptionToggle("Enable Player RTS HUD", TACAIRTS, KickStart.AllowPlayerRTSHUD);//\nRandomAdditions and TweakTech highly advised for best experience
+            playerStrategic = new OptionToggle("Enable A.I. Click-based Control", TACAIRTS, KickStart.AllowPlayerRTSHUD);//\nRandomAdditions and TweakTech highly advised for best experience
             playerStrategic.onValueSaved.AddListener(() => { 
                 KickStart.AllowPlayerRTSHUD = playerStrategic.SavedValue;
                 if (KickStart.AllowPlayerRTSHUD)
@@ -254,7 +286,7 @@ namespace TAC_AI
                     // ManUI.inst.ShowErrorPopup("A game restart is required to let the changes take effect"); // causes settings fail
                 }
             });
-            enemyStrategic = new OptionToggle("Enemy RTS A.I.", TACAIRTS, KickStart.AllowStrategicAI);//\nRandomAdditions and TweakTech highly advised for best experience
+            enemyStrategic = new OptionToggle("Allow A.I. to Act When Out of View", TACAIRTS, KickStart.AllowStrategicAI);//\nRandomAdditions and TweakTech highly advised for best experience
             enemyStrategic.onValueSaved.AddListener(() => {
                 KickStart.AllowStrategicAI = enemyStrategic.SavedValue;
                 if (KickStart.AllowStrategicAI)
@@ -517,6 +549,28 @@ namespace TAC_AI
                     {
                         KickStart.TryForceOnlyPlayerSpawns = playerMadeTechsOnly.SavedValue;
                         ModTechsDatabase.ValidateAndAddAllInternalTechs();
+                        if (KickStart.TryForceOnlyPlayerSpawns)
+                        {
+                            ManModGUI.ShowErrorPopup("Advanced AI - \"Try Exclude Vanilla Spawns\" does not have enough community spawns to " +
+                                "insure that each spawn is random enough. \n  Use this option at your own risk.  " +
+                                AltUI.ObjectiveString("Press \"Fix\" to disable \"Try Exclude Vanilla Spawns\"."), false, () =>
+                                {
+                                    playerMadeTechsOnly.Value = false;
+                                    if (KickStart.isConfigHelperPresent)
+                                    {
+                                        try
+                                        {
+                                            KickStart.ENCAPSULATEErrorSaveConfig();
+                                        }
+                                        catch (Exception e)
+                                        {
+                                            DebugTAC_AI.Log(KickStart.ModID + ": Error on Option & Config saving");
+                                            DebugTAC_AI.Log(e);
+                                            DebugTAC_AI.ErrorReport("Error on hooks with ConfigHelper");
+                                        }
+                                    }
+                                });
+                        }
                     }
                 });
                 localPlayerMadeTechsOnly = new OptionToggle("Try Only Use Local Spawns", TACAIEnemiesPop, KickStart.TryForceOnlyPlayerLocalSpawns);
@@ -525,6 +579,7 @@ namespace TAC_AI
                     {
                         KickStart.TryForceOnlyPlayerLocalSpawns = localPlayerMadeTechsOnly.SavedValue;
                         ModTechsDatabase.ValidateAndAddAllInternalTechs();
+                        EnoughLocalTechsSanityCheck();
                     }
                 });
                 permitEradication = new OptionToggle("<b>Eradicators</b> - Huge NPT Tech Spawns - Requires Beefy Computer", TACAIEnemiesPop, KickStart.EnemyEradicators);
@@ -541,6 +596,7 @@ namespace TAC_AI
                 {
                     KickStart.CatMode = copycat.SavedValue;
                 });*/
+                EnoughLocalTechsSanityCheck();
             }
             if (KickStart.EnemyBlockDropChance == 0)
             {

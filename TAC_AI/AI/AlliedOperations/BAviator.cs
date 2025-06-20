@@ -22,6 +22,10 @@ namespace TAC_AI.AI.AlliedOperations
                 DebugTAC_AI.LogError(KickStart.ModID + ": AI " + tank.name + ":  MotivateFly could not get valid lastPlayer");
                 return;
             }
+            if (helper.lastPlayer == tank.visible)
+            {   // WE ARE FOLLOWING OURSELVES, just hold position!
+                return;
+            }
 
             if (!(helper.MovementController is AIControllerAir))
             {

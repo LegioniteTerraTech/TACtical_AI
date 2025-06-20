@@ -25,7 +25,7 @@ namespace TAC_AI.Templates
             Progression = RawTechLoader.TryGetPlayerLicenceLevel();
             Terrain = BaseTerrain.Any;
             Offset = RawTechOffset.Exact;
-            MaxGrade = 99;
+            TargetFactionGrade = 99;
             MaxPrice = 0;
             RandSkins = true;
             TeamSkins = true;
@@ -51,7 +51,7 @@ namespace TAC_AI.Templates
             Progression = RawTechLoader.TryGetPlayerLicenceLevel();
             Terrain = BaseTerrain.Any;
             Offset = RawTechOffset.Exact;
-            MaxGrade = 99;
+            TargetFactionGrade = 99;
             MaxPrice = 0;
             RandSkins = true;
             TeamSkins = true;
@@ -87,7 +87,10 @@ namespace TAC_AI.Templates
             }
         }
         public RawTechOffset Offset;
-        public int MaxGrade;
+        /// <summary>
+        /// DO NOT GIVE THIS A VALUE IF Faction IS UNSET - IT WILL NOT BE RESPECTED
+        /// </summary>
+        public int TargetFactionGrade;
         public int MaxPrice;
         public bool ForceAnchor
         {

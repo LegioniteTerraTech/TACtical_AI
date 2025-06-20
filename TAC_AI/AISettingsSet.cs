@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using TAC_AI.AI;
+using TerraTechETCUtil;
 using UnityEngine;
 
 namespace TAC_AI
@@ -254,20 +255,62 @@ namespace TAC_AI
             }
         }
 
+        private static LocExtStringMod LOC_FullMelee_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Ram into the target at all costs" },//Smart Melee with target
+            { LocalisationEnums.Languages.Japanese,
+                "いかなる犠牲を払ってでも標的に突撃する"},
+        });
+        private static LocExtStringMod LOC_SideToThreat_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Attacks broadside to target" },
+            { LocalisationEnums.Languages.Japanese,
+                "ターゲットの側面攻撃"},
+        });
+        private static LocExtStringMod LOC_AdvancedAI_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Smarter in-depth A.I. decision making" },
+            { LocalisationEnums.Languages.Japanese,
+                "よりスマートで詳細なAIによる意思決定"},
+        });
+        private static LocExtStringMod LOC_AllMT_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Multi-Tech works with A.I. in addition to player" },
+            { LocalisationEnums.Languages.Japanese,
+                "マルチテックはプレイヤーだけでなくAIとも連携します"},
+        });
+        private static LocExtStringMod LOC_AutoRepair_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Can replace blocks lost in combat from blocks on the field" },
+            { LocalisationEnums.Languages.Japanese,
+                "戦闘中に失われたブロックをフィールド上のブロックで置き換えることができます"},
+        });
+        private static LocExtStringMod LOC_UseInventory_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Lets the A.I. replace blocks lost in combat from the inventory when no blocks are nearby" },
+            { LocalisationEnums.Languages.Japanese,
+                "近くにブロックがない場合、AIが戦闘中に失われたブロックをインベントリから補充できるようにします。"},
+        });
         internal void GUIDisplay(AISettings lim, ref bool delta)
         {
             GUIAIManager.StatusLabelButtonToggle(new Rect(20, 145, 80, 30), "RAM+", lim.FullMelee, ref fullMelee,
-                "Smart Melee with target", "Need GeoCorp A.I.", ref delta);
+                LOC_FullMelee_desc, GUIAIManager.LOC_FindTheAI, ref delta);//"Need GeoCorp A.I."
             GUIAIManager.StatusLabelButtonToggle(new Rect(100, 145, 80, 30), "Side", lim.SideToThreat, ref sideToThreat,
-                "Attacks broadside to target", "Need Venture A.I.", ref delta);
+                LOC_SideToThreat_desc, GUIAIManager.LOC_FindTheAI, ref delta);//"Need Venture A.I."
             GUIAIManager.StatusLabelButtonToggle(new Rect(20, 175, 80, 30), "CPU+", lim.AdvancedAI, ref advancedAI,
-                "Smarter overall Logic", "Need Hawkeye or Venture A.I.", ref delta);
+                LOC_AdvancedAI_desc, GUIAIManager.LOC_FindTheAI, ref delta);//"Need Hawkeye or Venture A.I."
             GUIAIManager.StatusLabelButtonToggle(new Rect(100, 175, 80, 30), "Multi+", lim.AllMT, ref allMT,
-                "Multi-Tech works with other A.I.", "Need GeoCorp A.I.", ref delta);
+                LOC_AllMT_desc, GUIAIManager.LOC_FindTheAI, ref delta);//"Need GeoCorp A.I."
             GUIAIManager.StatusLabelButtonToggle(new Rect(20, 205, 80, 30), "Repair", lim.AutoRepair, ref autoRepair,
-                "Replace missing blocks", "Need GeoCorp or Better Future A.I.", ref delta);
+                LOC_AutoRepair_desc, GUIAIManager.LOC_FindTheAI, ref delta);//"Need GeoCorp or Better Future A.I."
             GUIAIManager.StatusLabelButtonToggle(new Rect(100, 205, 80, 30), "SCU", lim.UseInventory, ref useInventory,
-                "Repair using inventory blocks", "Need Better Future A.I.", ref delta);
+                LOC_UseInventory_desc, GUIAIManager.LOC_FindTheAI, ref delta);//"Need Better Future A.I."
         }
 
 

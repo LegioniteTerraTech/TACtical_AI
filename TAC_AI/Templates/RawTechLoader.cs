@@ -393,7 +393,7 @@ namespace TAC_AI.Templates
             RTF.Terrain = BT;
             RTF.Purpose = purpose;
             RTF.Progression = lvl;
-            RTF.MaxGrade = grade;
+            RTF.TargetFactionGrade = grade;
             BTemp = FilteredSelectFromAll(RTF, true, AIGlobals.CancelOnErrorTech);
             if (BTemp == null)
                 return 0;
@@ -598,7 +598,7 @@ namespace TAC_AI.Templates
             RTF.Terrain = BT;
             RTF.Purpose = purpose;
             RTF.Progression = lvl;
-            RTF.MaxGrade = grade;
+            RTF.TargetFactionGrade = grade;
             BTemp = FilteredSelectFromAll(RTF, true, AIGlobals.CancelOnErrorTech);
             if (BTemp == null)
                 return 0;
@@ -778,10 +778,18 @@ namespace TAC_AI.Templates
         {
             return SpawnBase(pos, Vector3.forward, Team, toSpawn, storeBB, ExtraBB);
         }
+        public static bool BypassSpawnCheckOnce = false;
         internal static int SpawnBase(Vector3 pos, Vector3 facing, int Team, RawTech toSpawn, bool storeBB, int ExtraBB = 0)
         {
-            if (!AIGlobals.IsBaseTeamDynamic(Team))
-                DebugTAC_AI.Exception(KickStart.ModID + ": SpawnBase - Unexpected non-base team assigned to base spawn " + Team);
+#if DEBUG
+            if (!AIGlobals.IsBaseTeamDynamic(Team) && !BypassSpawnCheckOnce)
+            {
+                //*
+                DebugTAC_AI.Assert(KickStart.ModID + ": SpawnBase - Unexpected non-base team assigned to base spawn " + Team);
+                // */ DebugTAC_AI.Exception(KickStart.ModID + ": SpawnBase - Unexpected non-base team assigned to base spawn " + Team);
+            }
+#endif
+            BypassSpawnCheckOnce = false;
             Singleton.Manager<ManWorld>.inst.GetTerrainHeight(pos, out float offset);
             Vector3 position = pos;
             position.y = offset;
@@ -1676,7 +1684,7 @@ namespace TAC_AI.Templates
                 ShufflerSingleUse.Clear();
             }
         }
-        public static void FilteredSelectBatchFromAll(RawTechPopParams filter, List<RawTech> rTechs)
+        public static void FilteredSelectBatchFromAll(RawTechPopParams filter, List<RawTech> rTechs, bool fallbackHandling)
         {
             if (rTechs == null)
                 throw new InvalidOperationException("rTechs is null");
@@ -1687,8 +1695,8 @@ namespace TAC_AI.Templates
             try
             {
                 rTechs.Clear();
-                List<int> selectedExt = GetExternalIndexes(filter, SearchSingleUse, false);
-                List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(filter, ShufflerSingleUse, false);
+                List<int> selectedExt = GetExternalIndexes(filter, SearchSingleUse, fallbackHandling);
+                List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(filter, ShufflerSingleUse, fallbackHandling);
                 foreach (var item in SBT)
                     rTechs.Add(ModTechsDatabase.InternalPopTechs[item]);
                 for (int i = 0; i < selectedExt.Count; i++)
@@ -1715,8 +1723,8 @@ namespace TAC_AI.Templates
             }
             try
             {
-                List<int> selectedExt = GetExternalIndexes(filter, SearchSingleUse, false);
-                List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(filter, ShufflerSingleUse, false);
+                List<int> selectedExt = GetExternalIndexes(filter, SearchSingleUse, handleFallback);
+                List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(filter, ShufflerSingleUse, handleFallback);
                 int LocalTechs = selectedExt.Count;
                 int PrefabTechs = SBT.Count;
                 int CombinedVal = LocalTechs + PrefabTechs;
@@ -1730,7 +1738,7 @@ namespace TAC_AI.Templates
                         if (handleFallback)
                         {
                             ShufflerSingleUse.Clear();
-                            return ModTechsDatabase.InternalPopTechs[FallbackHandler(filter.Faction, ShufflerSingleUse).GetRandomEntry()];
+                            return ModTechsDatabase.InternalPopTechs[InternalFallbackHandler(filter.Faction, ShufflerSingleUse).GetRandomEntry()];
                         }
                         if (nullIfErrorTech)
                             return null;
@@ -1780,7 +1788,7 @@ namespace TAC_AI.Templates
                             if (handleFallback)
                             {
                                 ShufflerSingleUse.Clear();
-                                return ModTechsDatabase.InternalPopTechs[FallbackHandler(filter.Faction, ShufflerSingleUse).GetRandomEntry()];
+                                return ModTechsDatabase.InternalPopTechs[InternalFallbackHandler(filter.Faction, ShufflerSingleUse).GetRandomEntry()];
                             }
                             if (nullIfErrorTech)
                                 return null;
@@ -1825,7 +1833,7 @@ namespace TAC_AI.Templates
                             if (handleFallback)
                             {
                                 ShufflerSingleUse.Clear();
-                                return ModTechsDatabase.InternalPopTechs[FallbackHandler(filter.Faction, ShufflerSingleUse).GetRandomEntry()];
+                                return ModTechsDatabase.InternalPopTechs[InternalFallbackHandler(filter.Faction, ShufflerSingleUse).GetRandomEntry()];
                             }
                             if (nullIfErrorTech)
                                 return null;
@@ -2745,6 +2753,8 @@ namespace TAC_AI.Templates
         }
         internal static bool GetEnemyBaseSupplies(RawTech toSpawn)
         {
+            if (toSpawn.purposes == null)
+                return false;
             if (toSpawn.purposes.Contains(BasePurpose.Headquarters))
             {
                 return true;
@@ -2900,8 +2910,11 @@ namespace TAC_AI.Templates
                     throw new NotImplementedException("Unexpected terra type " + tech);
             }
 
+            if (filter.Progression < tech.factionLim)
+                return false;
+
             if (filter.Faction != FactionSubTypes.NULL)
-            {
+            {   // Filter by SPECIFIC Corp
                 FactionTypesExt FST = (FactionTypesExt)filter.Faction;
                 if (ManMods.inst.IsModdedCorp(filter.Faction))
                 {
@@ -2913,10 +2926,18 @@ namespace TAC_AI.Templates
                     if (tech.faction != FST || tech.factionLim > filter.Progression)
                         return false;
                 }
+                if (filter.TargetFactionGrade != 99 && tech.faction != FactionTypesExt.NULL)
+                {
+                    if (tech.IntendedGrade > filter.TargetFactionGrade)
+                        return false;
+                }
             }
-
-            if (filter.MaxGrade != 99 && tech.IntendedGrade > filter.MaxGrade)
-                return false;
+            else
+            {   // Filter out by player grade
+                FactionLicense FL = ManLicenses.inst.GetLicense(RawTechUtil.CorpExtToCorp(tech.faction));
+                if (FL != null && !FL.HasReachedMaxLevel && tech.IntendedGrade > FL.CurrentLevel)
+                    return false;
+            }
 
             //KickStart.DoPopSpawnCostCheck && !KickStart.CommitDeathMode
             if (filter.MaxPrice > 0 && tech.baseCost > filter.MaxPrice)
@@ -2943,7 +2964,7 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Log("GetEnemyBaseTypes called with - faction: " + filter.Faction.ToString() +
                     ", bestPlayerFaction: " + filter.Progression.ToString() + ", purposes: " + listAll +
                     "terra: " + filter.Terrain.ToString() + ", searchAttract: " + filter.SearchAttract.ToString() +
-                    ", maxGrade: " + filter.MaxGrade.ToString() + ", maxPrice: " + filter.MaxPrice.ToString() +
+                    ", maxGrade: " + filter.TargetFactionGrade.ToString() + ", maxPrice: " + filter.MaxPrice.ToString() +
                     ", subNeutral: " + filter.Disarmed.ToString());
             }
             if (filter.Faction == FactionSubTypes.SPE)
@@ -2977,7 +2998,7 @@ namespace TAC_AI.Templates
                 if (!cache.Any())
                 {
                     if (fallbackHandling)
-                        return FallbackHandler(filter.Faction, cache);
+                        return InternalFallbackHandler(filter.Faction, cache);
                     return cache;
                 }
 
@@ -3000,14 +3021,14 @@ namespace TAC_AI.Templates
             }
             cache.Clear();
             if (fallbackHandling)
-                return FallbackHandler(filter.Faction, cache);
+                return InternalFallbackHandler(filter.Faction, cache);
             return cache;
         }
         private static List<SpawnBaseTypes> fallback = new List<SpawnBaseTypes> { SpawnBaseTypes.NotAvail };
-        internal static List<SpawnBaseTypes> FallbackHandler(FactionSubTypes faction, List<SpawnBaseTypes> cache)
+        internal static List<SpawnBaseTypes> InternalFallbackHandler(FactionSubTypes faction, List<SpawnBaseTypes> cache)
         {
             if (canidates.Any())
-                DebugTAC_AI.Exception("Cannot nest FallbackHandler calls!");
+                DebugTAC_AI.Exception("Cannot nest InternalFallbackHandler calls!");
             if (cache.Any())
                 DebugTAC_AI.Exception("cache given had some entries in it!  Clear it out first!");
             try
@@ -3116,7 +3137,7 @@ namespace TAC_AI.Templates
                 RTF.Purposes = purposes;
                 RTF.Faction = faction;
                 RTF.Progression = lvl;
-                RTF.MaxGrade = maxGrade;
+                RTF.TargetFactionGrade = maxGrade;
                 RTF.SearchAttract = searchAttract;
                 RTF.Terrain = terra;
                 RTF.MaxPrice = maxPrice;

@@ -102,6 +102,11 @@ namespace TAC_AI.Templates
                 ActiveGameInterop.TryTransmit("RetreiveTechPop", Path.Combine(RawTechsDirectory, "RawTechs.RTList"));
             });
         }
+        private static LocExtStringMod LOC_Autopilot = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,  "Toggle Self-Driving for your own Tech"},
+            { LocalisationEnums.Languages.Japanese,  "自動操縦"},
+        });
         public static void Initiate()
         {
             if (inst)
@@ -145,8 +150,8 @@ namespace TAC_AI.Templates
                 };
                 firstInit = true;
                 DebugTAC_AI.Log(KickStart.ModID + ": FirstInit RawTechExporter");
-                TankAIManager.toggleAuto = new ManToolbar.ToolbarToggle("Autopilot", aiIconsEnemy[EnemySmarts.Meh],
-                    TankAIManager.TogglePlayerAutopilot);
+                TankAIManager.toggleAuto = new ManToolbar.ToolbarToggle(LOC_Autopilot, aiIconsEnemy[EnemySmarts.Meh],
+                    TankAIManager.ButtonTogglePlayerAutopilot);
                     //new AbilityToggle("Autopilot", aiIconsEnemy[EnemySmarts.IntAIligent], TankAIManager.TogglePlayerAutopilot, 0.2f);
             }
             inst = Instantiate(new GameObject("RawTechExporter")).AddComponent<RawTechExporter>();
@@ -408,7 +413,7 @@ namespace TAC_AI.Templates
             int count = 0;
             string location = new DirectoryInfo(Assembly.GetExecutingAssembly().Location).Parent.Parent.ToString();// Go to the cluster directory
 
-            DebugTAC_AI.LogDevOnly(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
+            DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": RegisterExternalCorpTechs - searching in " + location);
             string fileName = "RawTechs.RTList";
             foreach (string directoryLoc in Directory.GetDirectories(location))
             {
@@ -914,7 +919,7 @@ namespace TAC_AI.Templates
             {
                 DebugTAC_AI.LogError(KickStart.ModID + ": Could not read RawTech.JSON for " + TechName + ".  \n   This could be due to a bug with this mod or file permissions.");
 
-                DebugTAC_AI.LogDevOnly(KickStart.ModID + ": Attempted directory - |" + Path.Combine(destination, TechName + ".JSON"));
+                DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": Attempted directory - |" + Path.Combine(destination, TechName + ".JSON"));
                 return null;
             }
         }

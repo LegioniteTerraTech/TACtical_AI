@@ -261,7 +261,7 @@ namespace TAC_AI.Templates
                 RTF.Terrain = BaseTerrain.Land;
                 RTF.Purpose = BasePurpose.NotStationary;
                 RTF.Progression = lvl;
-                RTF.MaxGrade = grade;
+                RTF.TargetFactionGrade = grade;
                 RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                 if (RawTechLoader.ShouldUseCustomTechs(out int randSelect, RTF))
                 {
@@ -337,7 +337,7 @@ namespace TAC_AI.Templates
                 RawTechPopParams RTF = RawTechPopParams.Default;
                 RTF.Faction = FTE;
                 RTF.Progression = lvl;
-                RTF.MaxGrade = grade;
+                RTF.TargetFactionGrade = grade;
                 RTF.Terrain = BaseTerrain.Sea;
                 RTF.Purpose = BasePurpose.NotStationary;
                 if (RawTechLoader.ShouldUseCustomTechs(out int randSelect, RTF))
@@ -554,7 +554,7 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Log(KickStart.ModID + ": There are now " + (AirPool.Count + 1) + " airborneAI present on-scene");
                 RTF = RawTechPopParams.Default;
                 RTF.Faction = finalFaction;
-                RTF.MaxGrade = Licences.GetLicense(finalFaction).CurrentLevel;
+                RTF.TargetFactionGrade = Licences.GetLicense(finalFaction).CurrentLevel;
                 RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                 RTF.Offset = RawTechOffset.OffGround60Meters;
                 RTF.Terrain = BaseTerrain.Air;
@@ -637,7 +637,7 @@ namespace TAC_AI.Templates
 
                 RTF = RawTechPopParams.Default;
                 RTF.Faction = finalFaction;
-                RTF.MaxGrade = Licences.GetLicense(finalFaction).CurrentLevel;
+                RTF.TargetFactionGrade = Licences.GetLicense(finalFaction).CurrentLevel;
                 RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                 RTF.Offset = RawTechOffset.OffGround60Meters;
                 RTF.Terrain = BaseTerrain.Space;
@@ -673,7 +673,7 @@ namespace TAC_AI.Templates
             if (UnityEngine.Random.Range(-50, 150) > KickStart.Difficulty)
                 return;
 
-            if (!AIEBases.IsLocationGridEmpty(pos))
+            if (!AIEBases.IsLocationGridEmpty(pos, AIGlobals.defaultExpandRad))
                 return;
 
             RawTechPopParams RTF;
@@ -707,7 +707,7 @@ namespace TAC_AI.Templates
                     {   // Spawn harvest tech
                         RTF = RawTechPopParams.Default;
                         RTF.Faction = factionSelect;
-                        RTF.MaxGrade = licence;
+                        RTF.TargetFactionGrade = licence;
                         RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                         RTF.IsPopulation = true;
                         RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary };
@@ -718,7 +718,7 @@ namespace TAC_AI.Templates
                     {
                         RTF = RawTechPopParams.Default;
                         RTF.Faction = factionSelect;
-                        RTF.MaxGrade = licence;
+                        RTF.TargetFactionGrade = licence;
                         RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                         RTF.IsPopulation = true;
                         RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Defense };

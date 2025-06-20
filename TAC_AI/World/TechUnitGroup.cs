@@ -55,7 +55,7 @@ namespace TAC_AI
                             if (ManNetwork.IsNetworked)
                                 NetworkHandler.TryBroadcastRTSAttack(helper.tank.netTech.netId.Value, grabbedTech.netTech.netId.Value);
                             helper.lastEnemy = grabbedTech.visible;
-                            ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                            ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                             success = true;
                         }
                     }
@@ -77,7 +77,7 @@ namespace TAC_AI
                                         helper.foundBase = false;
                                         helper.CollectedTarget = false;
                                     }
-                                    ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                                    ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                                     success = true;
                                 }
                             }
@@ -97,7 +97,7 @@ namespace TAC_AI
                                         helper.theResource = grabbedTech.visible;
                                         helper.CollectedTarget = false;
                                     }
-                                    ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                                    ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                                     success = true;
                                 }
                             }
@@ -124,9 +124,9 @@ namespace TAC_AI
                 if (helper != null)
                 {
                     helper.RTSDestination = terrainPoint;
-                    ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                    ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                     if (helper.lastAIType != AITreeType.AITypes.Escort)
-                        helper.ForceAllAIsToEscort(true, false);
+                        helper.WakeAIForChange(true);
                     helper.SetRTSState(true);
                     success = true;
                 }
@@ -155,7 +155,7 @@ namespace TAC_AI
                                 helper.theResource = node.visible;
                                 helper.CollectedTarget = false;
                             }
-                            ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                            ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                             success = true;
                         }
                     }
@@ -183,7 +183,7 @@ namespace TAC_AI
                             helper.CollectedTarget = false;
                         }
                         success = true;
-                        ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                        ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                     }
                 }
             }

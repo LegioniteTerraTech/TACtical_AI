@@ -36,7 +36,7 @@ namespace TAC_AI
                     if (ManNetwork.IsNetworked)
                         NetworkHandler.TryBroadcastRTSAttack(helper.tank.netTech.netId.Value, grabbedTech.netTech.netId.Value);
                     helper.lastEnemy = grabbedTech.visible;
-                    ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                    ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                     success = true;
                 }
                 else if (grabbedTech.IsFriendly(tank.Team))
@@ -52,7 +52,7 @@ namespace TAC_AI
                                 helper.foundBase = false;
                                 helper.CollectedTarget = false;
                             }
-                            ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                            ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                             success = true;
                         }
                         else
@@ -66,7 +66,7 @@ namespace TAC_AI
                                 helper.theResource = grabbedTech.visible;
                                 helper.CollectedTarget = false;
                             }
-                            ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                            ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                             success = true;
                         }
                     }
@@ -97,7 +97,7 @@ namespace TAC_AI
                         helper.theResource = node.visible;
                         helper.CollectedTarget = false;
                     }
-                    ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                    ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
                     success = true;
                 }
             }
@@ -120,7 +120,7 @@ namespace TAC_AI
                     helper.CollectedTarget = false;
                 }
                 success = true;
-                ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                ManWorldRTS.inst.TechMovementQueue.Remove(helper.tank.visible.ID);
             }
             return success;
         }
@@ -131,11 +131,11 @@ namespace TAC_AI
             if (enqueue)
             {
                 helper.SetRTSState(true);
-                ManWorldRTS.inst.QueueNextDestination(helper, pos);
+                ManWorldRTS.inst.QueueNextCommand(helper, pos);
             }
             else
             {
-                ManWorldRTS.inst.TechMovementQueue.Remove(helper);
+                ManWorldRTS.inst.TechMovementQueue.Remove(tank.visible.ID);
                 helper.RTSDestination = pos;
                 helper.SetRTSState(true);
             }

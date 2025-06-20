@@ -452,7 +452,7 @@ namespace TAC_AI.AI.Movement.AICores
                     else
                     {
                         core.Stop();
-                        DebugTAC_AI.Log("lastBasePos is null when " + helper.name + " was told to go to the base");
+                        DebugTAC_AI.LogDevOnly("lastBasePos is null when " + helper.name + " was told to go to the base");
                     }
                 }
                 else if (helper.DriveDestDirected == EDriveDest.ToMine)
@@ -460,7 +460,7 @@ namespace TAC_AI.AI.Movement.AICores
                     if (helper.theResource == null)
                     {
                         core.Stop();
-                        DebugTAC_AI.Log("theResource is null when " + helper.name + " was told to go to the mines");
+                        DebugTAC_AI.LogDevOnly("theResource is null when " + helper.name + " was told to go to the mines");
                     }
                     else
                     {

@@ -20,21 +20,24 @@ namespace TAC_AI.World
             if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
                 ETD.AddBuildBucks(value);
             else
-                DebugTAC_AI.Assert("BuildBucks was added but ManBaseTeams didn't have the base team " +
-                    Team + "! " + value + " was lost to oblivion!");
+                DebugTAC_AI.Assert("AddBuildBucks was called but ManBaseTeams didn't have the base team " +
+                    Team + "!  [" + value + "] was lost to oblivion!");
         }
         public void SpendBuildBucks(int value)
         {
             if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
-                ETD.AddBuildBucks(value);
+                ETD.SpendBuildBucks(value);
             else
-                DebugTAC_AI.Assert("BuildBucks was added but ManBaseTeams didn't have the base team " +
-                    Team + "! " + value + " was lost to oblivion!");
+                DebugTAC_AI.Assert("SpendBuildBucks was called but ManBaseTeams didn't have the base team " +
+                    Team + "!  gues its free then");
         }
         public void SetBuildBucks(int value)
         {
             if (ManBaseTeams.TryGetBaseTeamDynamicOnly(Team, out var ETD))
                 ETD.SetBuildBucks = value;
+            else
+                DebugTAC_AI.Assert("SetBuildBucks was called but ManBaseTeams didn't have the base team " +
+                    Team + "!  Nothing happens!");
         }
         public int BlockCount => tech.m_TechData.m_BlockSpecs.Count;
         public Tank tank => null;

@@ -133,7 +133,6 @@ namespace TAC_AI.AI
 
         public void OnMoveWorldOrigin(IntVector3 move)
         {
-            //SceneStayPos += (Vector2)move.ToVector2XZ();
         }
         public Vector3 GetDestination()
         {

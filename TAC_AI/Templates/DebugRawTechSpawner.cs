@@ -1192,12 +1192,14 @@ namespace TAC_AI.Templates
             {
                 RTF = RawTechPopParams.Default;
                 RTF.IsPopulation = true;
+                RawTechLoader.BypassSpawnCheckOnce = true;
                 tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, RTF);
             }
             else
             {
                 if (InstantLoad)
                 {
+                    RawTechLoader.BypassSpawnCheckOnce = true;
                     if (val.purposes.Contains(BasePurpose.Defense))
                         tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, false);
                     else if (val.purposes.Contains(BasePurpose.Headquarters))
@@ -1280,6 +1282,7 @@ namespace TAC_AI.Templates
                     RawTechPopParams RTF = RawTechPopParams.Default;
                     RTF.IsPopulation = true;
                     RTF.SpawnCharged = true;
+                    RawTechLoader.BypassSpawnCheckOnce = true;
                     tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), 
                         AIGlobals.GetRandomBaseTeam(), RawTechLoader.GetBaseTemplate(type), RTF);
                 }
@@ -1287,6 +1290,7 @@ namespace TAC_AI.Templates
                 {
                     if (InstantLoad)
                     {
+                        RawTechLoader.BypassSpawnCheckOnce = true;
                         if (val.purposes.Contains(BasePurpose.Defense))
                             tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, false);
                         else if (val.purposes.Contains(BasePurpose.Headquarters))

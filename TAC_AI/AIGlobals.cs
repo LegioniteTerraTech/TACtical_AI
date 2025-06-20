@@ -156,6 +156,7 @@ namespace TAC_AI
 
         // BASES
         public static bool CancelOnErrorTech = true;
+        public const short BaseAnchorMinimumTimeDelay = 20;
         public const int NaturalBaseSpacingFromOriginTiles = 2;
         public const int NaturalBaseSpacingTiles = 2;
         public const int NaturalBaseCostBase = 250000;
@@ -189,7 +190,7 @@ namespace TAC_AI
                     if (GUINPTInteraction.lastTank)
                     {
                         int techCost = Mathf.RoundToInt(RawTechTemplate.GetBBCost(GUINPTInteraction.lastTank) * BribeMulti);
-                        GUINPTInteraction.TryLoneCommand(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
+                        GUINPTInteraction.TrySendNPTBribe(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
                         ModularMenu.CloseGUI();
                     }
                     return 0;
@@ -222,7 +223,7 @@ namespace TAC_AI
                 OnSet = (float in1) => {
                     if (GUINPTInteraction.lastTank)
                     {
-                        GUINPTInteraction.TryLoneCommand(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
+                        GUINPTInteraction.TrySendNPTBribe(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
                         ModularMenu.CloseGUI();
                     }
                     return 0; 
@@ -241,7 +242,7 @@ namespace TAC_AI
                     if (GUINPTInteraction.lastTank)
                     {
                         int techCost = Mathf.RoundToInt(RawTechTemplate.GetBBCost(GUINPTInteraction.lastTank) * BribeMulti);
-                        GUINPTInteraction.TryLoneCommand(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
+                        GUINPTInteraction.TrySendNPTBribe(ManNetwork.inst.MyPlayer, GUINPTInteraction.lastTank, 0);
                         ModularMenu.CloseGUI();
                     }
                     return 0;
@@ -264,6 +265,8 @@ namespace TAC_AI
         public const float YieldSpeed = 10;
         public static bool AllowWeaponsDisarm2 = false;
         public const bool BaseSubNeutralsCuriousFollow = true;
+        public const float defaultExpandRad = 24f;
+        public const float defaultExpandRadRange = 192f;
 
         // Elevation
         public const float GroundOffsetGeneralAir = 10;
@@ -325,8 +328,8 @@ namespace TAC_AI
         public const float AircraftPreCrashDetection = 1.6f;
         public const float AircraftDestSuccessRadius = 32;
         public const float AerofoilSluggishnessBaseValue = 30;
-        public const float AircraftMaxDive = 0.65f;//0.6f;
-        public const float AircraftDangerDive = 0.7f;
+        public const float AircraftMaxDive = 0.75f;//0.6f;
+        public const float AircraftDangerDive = 0.675f;
         public const float AircraftChillFactorMulti = 4.5f;         // More accuraccy, less responsiveness
         public const float LargeAircraftChillFactorMulti = 1.25f;   // More responsiveness, less accuraccy
 
@@ -466,7 +469,7 @@ namespace TAC_AI
 
         internal static bool TurboAICheat
         {
-            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.KeypadPlus); }
+            get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftShift) && Input.GetKey(KeyCode.KeypadPlus); }
         }
 
 

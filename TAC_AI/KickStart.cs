@@ -16,6 +16,8 @@ using TerraTechETCUtil;
 using System.Runtime.CompilerServices;
 using Snapshots;
 using DevCommands;
+using System.Runtime.Remoting.Messaging;
+
 
 
 
@@ -126,8 +128,55 @@ namespace TAC_AI
                 return AutopilotPlayerMain;
             }
         }
-        internal static bool AutopilotPlayerMain = false;
-        internal static bool AutopilotPlayerRTS = false;
+        internal static bool AutopilotPlayerMain {
+            get => _AutopilotPlayerMain;
+            set {
+                if (_AutopilotPlayerMain != value)
+                {
+                    OnSetPlayerAutopilot(value);
+                    _AutopilotPlayerMain = value;
+                }
+            }
+        }
+        private static bool _AutopilotPlayerMain = false;
+        internal static bool AutopilotPlayerRTS
+        {
+            get => _AutopilotPlayerRTS;
+            set
+            {
+                if (_AutopilotPlayerRTS != value)
+                {
+                    OnSetPlayerAutopilot(value);
+                    _AutopilotPlayerRTS = value;
+                }
+            }
+        }
+        private static bool _AutopilotPlayerRTS = false;
+        private static void OnSetPlayerAutopilot(bool state)
+        {
+            if (state)
+            {
+                UIHelpersExt.BigF5broningBanner("Self-Driving Enabled");
+                Tank playerTank = Singleton.playerTank;
+                if (playerTank)
+                {
+                    var tankInst = playerTank.GetHelperInsured();
+                    if (tankInst)
+                    {
+                        tankInst.RTSDestination = playerTank.boundsCentreWorldNoCheck;
+                        ManWorldRTS.inst.TechMovementQueue.Remove(tankInst.tank.visible.ID);
+                        if (tankInst.lastAIType != AITreeType.AITypes.Escort)
+                            tankInst.WakeAIForChange(true);
+                        tankInst.SetRTSState(true);
+                        tankInst.MovementAIControllerDirty = true;
+                    }
+                }
+            }
+            else
+            {
+                UIHelpersExt.BigF5broningBanner("Self-Driving Disabled");
+            }
+        }
 
         /// <summary>
         /// For handing Directors
@@ -176,7 +225,13 @@ namespace TAC_AI
         public static bool CommitDeathMode = false;
         public static bool CatMode = false;
 
+        /// <summary>
+        /// Allows player to use the RTS HUD
+        /// </summary>
         public static bool AllowPlayerRTSHUD = true;
+        /// <summary>
+        /// Allows the enemies to act outside of the active play area.  Might be laggy
+        /// </summary>
         public static bool AllowStrategicAI = true;
         public static List<EnemyMaxDistLimit> limitTypes = new List<EnemyMaxDistLimit>()
         {
@@ -679,6 +734,45 @@ namespace TAC_AI
             EnableBetterAI = true;
         }
         private static bool launched = false;
+        public static void ENCAPSULATEErrorSaveConfig()
+        {
+            try
+            {
+                KickStartConfigHelper.Save();
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log(KickStart.ModID + ": Error on Option & Config saving");
+                DebugTAC_AI.Log(e);
+                DebugTAC_AI.ErrorReport("Error on hook with ConfigHelper");
+            }
+        }
+        public static void ENCAPSULATEErrorInitConfig()
+        {
+            try
+            {
+                KickStartConfigHelper.PushExtModConfigHandling();
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log(KickStart.ModID + ": Error on Option & Config setup");
+                DebugTAC_AI.Log(e);
+                DebugTAC_AI.ErrorReport("Error on hooks with ConfigHelper/NativeOptions");
+            }
+        }
+        public static void ENCAPSULATEErrorInitModOptions()
+        {
+            try
+            {
+                KickStartNativeOptions.PushExtModOptionsHandling();
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log(KickStart.ModID + ": Error on NativeOptions setup");
+                DebugTAC_AI.Log(e);
+                DebugTAC_AI.ErrorReport("Error on hooks with NativeOptions");
+            }
+        }
         public static void InitSettings()
         {
             if (launched)
@@ -689,7 +783,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    KickStartConfigHelper.PushExtModConfigHandling();
+                    ENCAPSULATEErrorInitConfig();
                 }
                 catch (Exception e)
                 {
@@ -702,7 +796,7 @@ namespace TAC_AI
             {
                 try
                 {
-                    KickStartNativeOptions.PushExtModOptionsHandling();
+                    ENCAPSULATEErrorInitModOptions();
                 }
                 catch (Exception e)
                 {
@@ -726,7 +820,7 @@ namespace TAC_AI
             }
 
             UpdateCullDist();
-            ResourcesHelper.ModsPostLoadEvent.Subscribe(AIWiki.InsureAllValidAIs);
+            //ResourcesHelper.ModsPostLoadEvent.Subscribe(AIWiki.InsureAllValidAIs);
             ResourcesHelper.BlocksPostChangeEvent.Subscribe(AIWiki.InsureAllValidAIs);
         }
 
@@ -866,10 +960,12 @@ namespace TAC_AI
             if (Doing)
             {
                 ManBaseTeams.OnWorldSave();
+                ManWorldRTS.OnWorldSave();
             }
             else
             {
                 ManBaseTeams.OnWorldFinishSave();
+                ManWorldRTS.OnWorldFinishSave();
             }
         }
         public static void OnLoadManagers(bool Doing)
@@ -878,10 +974,12 @@ namespace TAC_AI
             if (Doing)
             {
                 ManBaseTeams.OnWorldPreLoad();
+                ManWorldRTS.OnWorldPreLoad();
             }
             else
             {
                 ManBaseTeams.OnWorldLoad();
+                ManWorldRTS.OnWorldLoad();
             }
         }
 

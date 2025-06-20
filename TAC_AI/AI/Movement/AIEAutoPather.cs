@@ -140,7 +140,7 @@ namespace TAC_AI.AI.Movement
         {
             if (pathable.Pathfinder != null)
             {
-                DebugTAC_AI.Log("AIAutoPather - Cancelled pathfinding.");
+                //DebugTAC_AI.Log("AIAutoPather - Cancelled pathfinding.");
                 if (!AIEPathMapper.StopPather(pathable.Pathfinder))
                 {
                     //DebugTAC_AI.Log("AIAutoPather - Cancelled pathfinding but it was already not active?!");

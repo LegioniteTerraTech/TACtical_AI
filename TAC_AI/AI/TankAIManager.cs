@@ -51,7 +51,7 @@ namespace TAC_AI.AI
         private const float ChangeRate = 1.5f;
         //public static AbilityToggle toggleAuto;
         public static ManToolbar.ToolbarToggle toggleAuto;
-        internal static void TogglePlayerAutopilot(bool state)
+        internal static void ButtonTogglePlayerAutopilot(bool state)
         {
             if (KickStart.AllowPlayerRTSHUD && ManWorldRTS.PlayerIsInRTS)
             {
@@ -224,7 +224,7 @@ namespace TAC_AI.AI
             helper.Recycled();
             RemoveTech(recycledTech);
             CheckDestroyedTeams();
-            DebugTAC_AI.LogDevOnly(KickStart.ModID + ": Allied AI " + recycledTech.name + ":  Called OnTankRecycled");
+            DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": Allied AI " + recycledTech.name + ":  Called OnTankRecycled");
 
             if (helper.AIControlOverride != null)
             {

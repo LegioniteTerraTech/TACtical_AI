@@ -8,6 +8,8 @@ using TAC_AI.AI;
 using SafeSaves;
 using TerraTechETCUtil;
 using System.Runtime.Remoting.Messaging;
+using static TankPreset;
+using static CompoundExpression;
 
 public class ModuleAIExtension : TAC_AI.ModuleAIExtension { }
 namespace TAC_AI
@@ -36,6 +38,10 @@ namespace TAC_AI
         public bool WasMobileAnchor = false;
         [SSaveField]
         public string BooleanSerial = null;
+        [SSaveField]
+        public float lastSetRangeMin = 5000;
+        [SSaveField]
+        public float lastSetRangeMax = 5000;
 
         /*
         // What can this new AI do? 
@@ -142,6 +148,7 @@ namespace TAC_AI
         {
             if (block.IsAttached)
                 OnAttach();
+            //AIWiki.AllValidAIs.Add((BlockTypes)GetComponent<Visible>().m_ItemType.ItemType);
         }
         /*
         public void DelayedSub()
@@ -223,7 +230,7 @@ namespace TAC_AI
         }
         public override void OnAttach()
         {
-            block.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            block.serializeEvent.Subscribe(new Action<bool, TankPreset.BlockSpec>(OnSerializeWorldSave));
             block.serializeTextEvent.Subscribe(new Action<bool, TankPreset.BlockSpec, bool>(OnSerializeSnapshot));
             if (!KickStart.EnableBetterAI)
                 return;
@@ -240,7 +247,7 @@ namespace TAC_AI
         }
         public override void OnDetach()
         {
-            block.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerialize));
+            block.serializeEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec>(OnSerializeWorldSave));
             block.serializeTextEvent.Unsubscribe(new Action<bool, TankPreset.BlockSpec, bool>(OnSerializeSnapshot));
             if (!KickStart.EnableBetterAI)
                 return;
@@ -255,7 +262,21 @@ namespace TAC_AI
             //    helper.RefreshAI();
             SavedAI = AIType.Escort;
         }
-
+        public static void Insure(ModuleAIBot AIBot)
+        {
+            ModuleAIExtension valid = AIBot.GetComponent<ModuleAIExtension>();
+            if (valid)
+            {
+                valid.OnPool();
+            }
+            else
+            {
+                valid = AIBot.gameObject.AddComponent<ModuleAIExtension>();
+                valid.OnPool();
+                // Now retrofit AIs
+                valid.AlterExisting();
+            }
+        }
         public void AlterExisting()
         {
             try
@@ -382,7 +403,7 @@ namespace TAC_AI
                         break;
                         */
                 }
-                if (tank.Team == ManPlayer.inst.PlayerTeam)
+                if (tank && tank.Team == ManPlayer.inst.PlayerTeam)
                     OnGrabbed();
             }
             catch (Exception e)
@@ -418,7 +439,7 @@ namespace TAC_AI
         {
             try
             {
-                if (Serialize(false))
+                if (SerializeWorldSave(false))
                 {
                     var helper = block.tank.GetHelperInsured();
                     if (helper.DediAI != SavedAI || helper.DriverType != SavedAIDriver)
@@ -447,23 +468,27 @@ namespace TAC_AI
             return false;
         }
 
-        internal bool Serialize(bool Saving)
+        internal bool SerializeWorldSave(bool Saving)
         {
             KickStart.TryHookUpToSafeSavesIfNeeded();
+            var helper = tank.GetHelperInsured();
             if (Saving)
             {
-                var helper = tank.GetHelperInsured();
                 SaveRTS(helper, helper.RTSDestination);
                 AISettingsSet.StringSerial(tank, true, ref BooleanSerial);
                 return this.SerializeToSafe();
             }
             bool deserial = this.DeserializeFromSafe();
             AISettingsSet.StringSerial(tank, false, ref BooleanSerial);
+            AISettingsSet additionalEdits = helper.AISetSettings;
+            additionalEdits.CombatSpacing = lastSetRangeMin;
+            additionalEdits.CombatChase = lastSetRangeMax;
+            helper.AISetSettings = additionalEdits;
             //DebugTAC_AI.Log("AI State was saved as " + SavedAIDriver + " | " + SavedAI + " | loaded " + deserial);
             //DebugTAC_AI.Log("GetRTSScenePos - " + RTSPosTile + " | " + RTSInTilePos);
             return deserial;
         }
-        private void OnSerialize(bool saving, TankPreset.BlockSpec blockSpec)
+        private void OnSerializeWorldSave(bool saving, TankPreset.BlockSpec blockSpec)
         {
             try
             {
@@ -495,6 +520,8 @@ namespace TAC_AI
                         SavedAI = Helper.DediAI;
                         AttackMode = Helper.AttackMode;
                         WasMobileAnchor = Helper.PlayerAllowAutoAnchoring;
+                        lastSetRangeMin = Helper.MinCombatRange;
+                        lastSetRangeMax = Helper.MaxCombatRange;
                         switch (Helper.DediAI)
                         {
                             case AIType.Assault:
@@ -531,7 +558,7 @@ namespace TAC_AI
                                 LastTargetVisibleID = -1;
                                 break;
                         }
-                        Serialize(true);
+                        SerializeWorldSave(true);
                         // OBSOLETE - CAN CAUSE CRASHES
                         //serialData.Store(blockSpec.saveState);
                         //DebugTAC_AI.Log(KickStart.ModID + ": Saved " + SavedAI.ToString() + " in gameObject " + gameObject.name);

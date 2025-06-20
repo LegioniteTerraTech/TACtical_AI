@@ -147,6 +147,12 @@ namespace TAC_AI
         {
             if (!LogDev)
                 return;
+            UnityEngine.Debug.Log(message);
+        }
+        internal static void LogDevOnlyAssert(string message)
+        {
+            if (!LogDev)
+                return;
             UnityEngine.Debug.Log(message + "\n" + StackTraceUtility.ExtractStackTrace().ToString());
         }
         internal static void Exception(string message)

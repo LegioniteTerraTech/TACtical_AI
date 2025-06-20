@@ -362,7 +362,7 @@ namespace TAC_AI.World
                         RTF.Terrain = BaseTerrain.AnyNonSea;
                         RTF.Purpose = BasePurpose.NotStationary;
                         RTF.Progression = lvl;
-                        RTF.MaxGrade = grade;
+                        RTF.TargetFactionGrade = grade;
                         RTF.MaxPrice = Cost;
                         if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                         {
@@ -393,7 +393,7 @@ namespace TAC_AI.World
                     RTF.Terrain = Terra;
                     RTF.Purpose = reason;
                     RTF.Progression = lvl;
-                    RTF.MaxGrade = grade;
+                    RTF.TargetFactionGrade = grade;
                     RTF.MaxPrice = Cost;
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
@@ -422,7 +422,7 @@ namespace TAC_AI.World
                         RTF.Terrain = Terra;
                         RTF.Purpose = BasePurpose.NotStationary;
                         RTF.Progression = lvl;
-                        RTF.MaxGrade = grade;
+                        RTF.TargetFactionGrade = grade;
                         RTF.MaxPrice = Cost;
                         if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                         {

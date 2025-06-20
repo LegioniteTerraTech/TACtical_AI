@@ -7,6 +7,7 @@ using Rewired.UI.ControlMapper;
 using TAC_AI.AI.AlliedOperations;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
+using TAC_AI.AI.Movement.AICores;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using TerraTechETCUtil;
@@ -109,7 +110,7 @@ namespace TAC_AI.AI
         public bool CanCopyControls => !IsMultiTech || tank.PlayerFocused;
         public bool CanUseBuildBeam => !(tank.IsAnchored && !PlayerAllowAutoAnchoring);
         public bool CanAutoAnchor => AutoAnchor && PlayerAllowAutoAnchoring && !AttackEnemy && tank.Anchors.NumPossibleAnchors > 0 
-            && tank.Anchors.NumIsAnchored == 0 && DelayedAnchorClock >= 15 && CanAnchorNow;
+            && tank.Anchors.NumIsAnchored == 0 && DelayedAnchorClock >= AIGlobals.BaseAnchorMinimumTimeDelay && CanAnchorNow;
         public bool CanAutoUnanchor => AutoAnchor && PlayerAllowAutoAnchoring && tank.Anchors.NumIsAnchored > 0;
         public bool CanAnchorNow => CanAttemptAnchor && CanAnchorSafely;
         public bool CanAnchorSafely => !lastEnemyGet || (lastEnemyGet && lastCombatRange > AIGlobals.SafeAnchorDist);
@@ -275,7 +276,6 @@ namespace TAC_AI.AI
         /// <summary>
         /// Repairs requested?
         /// </summary>
-        public bool PendingDamageCheck = true;
         /*
         private bool damageCheck = true;
         public bool PendingDamageCheck
@@ -286,7 +286,8 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Log("PendingDamageCheck set by: " + StackTraceUtility.ExtractStackTrace());
                 damageCheck = value;
             }
-        }*/
+        }
+        // */ public bool PendingDamageCheck = true;
 
         public float DamageThreshold = 0;   // How much damage have we taken? (100 is total destruction)
 
@@ -525,6 +526,7 @@ namespace TAC_AI.AI
         } // force the tech to be controlled by RTS
         public bool IsGoingToRTSDest => RTSDestInternal != RTSDisabled;
         public static IntVector3 RTSDisabled => AIGlobals.RTSDisabled;
+        public ManWorldRTS.CommandLink RTSCommand = default;
         public IntVector3 RTSDestination
         {
             get
@@ -566,6 +568,7 @@ namespace TAC_AI.AI
                 }
             }
         }
+
         private IntVector3 RTSDestInternal = RTSDisabled;
 
         public Vector3 DriveTargetLocation
@@ -596,6 +599,13 @@ namespace TAC_AI.AI
         {
             if (control == ExtControlStatus.MaintainersAndDirectors)
             {
+                if (helper.DriverType != AIDriverType.Astronaut)
+                {
+                    var enemy = helper.GetComponent<EnemyMind>();
+                    if (enemy)
+                        enemy.EvilCommander = EnemyHandling.Starship;
+                    helper.SetDriverType(AIDriverType.Astronaut);
+                }
                 helper.Unanchor();
                 helper.MaxBoost();
                 return false;
@@ -1112,6 +1122,82 @@ namespace TAC_AI.AI
             MovementController.Initiate(tank, this, null);
         }
 
+        private bool RecalMoveAIControllerNPT(EnemyMind enemy)
+        {
+            if (enemy.IsNotNull())
+            {
+                if ((enemy.EvilCommander == EnemyHandling.Stationary || enemy.StartedAnchored) && AnchorState != AIAnchorState.Unanchor)
+                {
+                    if (!(MovementController is AIControllerStatic))
+                    {
+                        IMovementAIController controller = MovementController;
+                        MovementController = null;
+                        if (controller != null)
+                        {
+                            controller.Recycle();
+                        }
+                    }
+                    DriverType = AIDriverType.Stationary;
+                    MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
+                    MovementController.Initiate(tank, this, enemy);
+                    return false;
+                }
+                if (enemy.EvilCommander == EnemyHandling.Chopper || enemy.EvilCommander == EnemyHandling.Airplane)
+                {
+                    if (!(MovementController is AIControllerAir))
+                    {
+                        IMovementAIController controller = MovementController;
+                        MovementController = null;
+                        if (controller != null)
+                        {
+                            controller.Recycle();
+                        }
+                    }
+                    MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
+                    MovementController.Initiate(tank, this, enemy);
+                    UsingAirControls = true;
+                    return false;
+                }
+                return true;
+            }
+            else
+                throw new Exception("RecalibrateMovementAIController for " + tank.name + " was NonPlayer but no EnemyMind present!");
+        }
+        private bool RecalMoveAIControllerPlayer()
+        {
+            if (DriverType == AIDriverType.Stationary && AnchorState != AIAnchorState.Unanchor)
+            {
+                if (!(MovementController is AIControllerStatic))
+                {
+                    IMovementAIController controller = MovementController;
+                    MovementController = null;
+                    if (controller != null)
+                    {
+                        controller.Recycle();
+                    }
+                }
+                MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
+                MovementController.Initiate(tank, this);
+                return false;
+            }
+            else if (DriverType == AIDriverType.Pilot)
+            {
+                if (!(MovementController is AIControllerAir))
+                {
+                    IMovementAIController controller = MovementController;
+                    MovementController = null;
+                    if (controller != null)
+                    {
+                        controller.Recycle();
+                    }
+                }
+                MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
+                MovementController.Initiate(tank, this);
+                UsingAirControls = true;
+                return false;
+            }
+            return true;
+        }
         /// <summary>
         /// Automatically sets the movement controller.  MUST be automatically done once we are ABSOLUTELY SURE
         ///   we have selected a new DriverType!
@@ -1127,77 +1213,13 @@ namespace TAC_AI.AI
                 var enemy = gameObject.GetComponent<EnemyMind>();
                 if (AIAlign == AIAlignment.NonPlayer)
                 {
-                    if (enemy.IsNotNull())
-                    {
-                        if (enemy.StartedAnchored && AnchorState != AIAnchorState.Unanchor)
-                        {
-                            if (!(MovementController is AIControllerStatic))
-                            {
-                                IMovementAIController controller = MovementController;
-                                MovementController = null;
-                                if (controller != null)
-                                {
-                                    controller.Recycle();
-                                }
-                            }
-                            DriverType = AIDriverType.Stationary;
-                            MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
-                            MovementController.Initiate(tank, this, enemy);
-                            return;
-                        }
-                        if (enemy.EvilCommander == EnemyHandling.Chopper || enemy.EvilCommander == EnemyHandling.Airplane)
-                        {
-                            if (!(MovementController is AIControllerAir))
-                            {
-                                IMovementAIController controller = MovementController;
-                                MovementController = null;
-                                if (controller != null)
-                                {
-                                    controller.Recycle();
-                                }
-                            }
-                            MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
-                            MovementController.Initiate(tank, this, enemy);
-                            UsingAirControls = true;
-                            return;
-                        }
-                    }
-                    else
-                        throw new Exception("RecalibrateMovementAIController for " + tank.name + " was NonPlayer but no EnemyMind present!");
+                    if (!RecalMoveAIControllerNPT(enemy))
+                        return;
                 }
                 else
                 {
-                    if (DriverType == AIDriverType.Stationary && AnchorState != AIAnchorState.Unanchor)
-                    {
-                        if (!(MovementController is AIControllerStatic))
-                        {
-                            IMovementAIController controller = MovementController;
-                            MovementController = null;
-                            if (controller != null)
-                            {
-                                controller.Recycle();
-                            }
-                        }
-                        MovementController = gameObject.GetOrAddComponent<AIControllerStatic>();
-                        MovementController.Initiate(tank, this);
+                    if (!RecalMoveAIControllerPlayer())
                         return;
-                    }
-                    else if (DriverType == AIDriverType.Pilot)
-                    {
-                        if (!(MovementController is AIControllerAir))
-                        {
-                            IMovementAIController controller = MovementController;
-                            MovementController = null;
-                            if (controller != null)
-                            {
-                                controller.Recycle();
-                            }
-                        }
-                        MovementController = gameObject.GetOrAddComponent<AIControllerAir>();
-                        MovementController.Initiate(tank, this);
-                        UsingAirControls = true;
-                        return;
-                    }
                 }
                 if (!(MovementController is AIControllerDefault))
                 {
@@ -1339,7 +1361,7 @@ namespace TAC_AI.AI
             tank.AI.SetBehaviorType(type);
             //DebugTAC_AI.Log(KickStart.ModID + ": ForceAllAIsToEscort() - Set AIType");
         }
-        public void ForceAllAIsToEscort(bool Do, bool RebuildAlignmentDelayed)
+        public void ForceAllAIsToEscort(bool Do)
         {
             //Needed to return AI mode back to Escort on unanchor as unanchoring causes it to go to idle
             //DebugTAC_AI.Log(KickStart.ModID + ": ForceAllAIsToEscort()");
@@ -1379,16 +1401,20 @@ namespace TAC_AI.AI
                         lastAIType = AITreeType.AITypes.Idle;
                     }
                 }
-                if (!RebuildAlignmentDelayed)
-                    ForceRebuildAlignment();
-                else
-                    dirtyAI = AIDirtyState.Dirty;
+                dirtyAI = AIDirtyState.Dirty;
                 MovementAIControllerDirty = true;
             }
             catch (Exception e)
             {
                 throw e;
             }
+        }
+        public void WakeAIForChange(bool immedeateRebuildAlignment = false)
+        {
+            ForceAllAIsToEscort(true);
+            MovementAIControllerDirty = true;
+            if (immedeateRebuildAlignment)
+                ForceRebuildAlignment();
         }
 
 
@@ -1437,7 +1463,7 @@ namespace TAC_AI.AI
                 }
                 if (DebugRawTechSpawner.ShowDebugFeedBack)
                 {
-                    output += "\nDirect [" + ControlCore.DriveDir + "], Dest [" + ControlCore.DriveDest +
+                    output =  "[" + DriverType + "]\n" + output + "\nDirect [" + ControlCore.DriveDir + "], Dest [" + ControlCore.DriveDest +
                         "]\nWeaponState [" + WeaponState +
                         "]\nMinRange [" + AutoSpacing.ToString("0.000") +
                         (ThrottleState == AIThrottleState.ForceSpeed ? ("]\nDrive[F] [" + DriveVar.ToString("0.000") + ", " +
@@ -1496,7 +1522,9 @@ namespace TAC_AI.AI
                     break;
                 case AIDriverType.Pilot:
                     if (lastEnemyGet)
+                    {
                         output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                    }
                     else
                     {
                         if (MovementController is AIControllerAir air)
@@ -1535,6 +1563,43 @@ namespace TAC_AI.AI
                         }
                         else
                             output = "Unhandled error in switch";
+                    }
+                    AIControllerAir Air = MovementController as AIControllerAir;
+                    if (Air.AICore is AirplaneAICore plane)
+                    {
+                        if (plane.PerformDiveAttack > 0)
+                        {
+                            switch (plane.PerformDiveAttack)
+                            {
+                                case 1:
+                                    output += "\nDive - turn to face target";
+                                    break;
+                                case 2:
+                                    output += "\nDive - diving!";
+                                    break;
+                                default:
+                                    output += "\nDive - Code [" + plane.PerformDiveAttack + "]";
+                                    break;
+                            }
+                        }
+                        if (plane.PerformUTurn > 0)
+                        {
+                            switch (plane.PerformUTurn)
+                            {
+                                case 1:
+                                    output += "\nU-Turn - facing from target";
+                                    break;
+                                case 2:
+                                    output += "\nU-Turn - point upwards";
+                                    break;
+                                case 3:
+                                    output += "\nU-Turn - turn to face target";
+                                    break;
+                                default:
+                                    output += "\nU-Turn - Code [" + plane.PerformUTurn + "]";
+                                    break;
+                            }
+                        }
                     }
                     break;
                 case AIDriverType.Sailor:
@@ -2720,9 +2785,9 @@ namespace TAC_AI.AI
                     SettleDown();
                     ThrottleState = AIThrottleState.PivotOnly;
                     //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  RTS - resting");
-                    if (DelayedAnchorClock < 15)
+                    if (DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                         DelayedAnchorClock++;
-                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": " + AutoAnchor + " | " + PlayerAllowAnchoring + " | " + (tank.Anchors.NumPossibleAnchors >= 1) + " | " + (DelayedAnchorClock >= 15) + " | " + !DANGER);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": " + AutoAnchor + " | " + PlayerAllowAnchoring + " | " + (tank.Anchors.NumPossibleAnchors >= 1) + " | " + (DelayedAnchorClock >= AIGlobals.BaseAnchorMinimumTimeDelay) + " | " + !DANGER);
                     if (CanAutoAnchor)
                     {
                         if (!tank.IsAnchored)
@@ -2859,11 +2924,11 @@ namespace TAC_AI.AI
                     SettleDown();
                     ThrottleState = AIThrottleState.PivotOnly;
                     //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  RTS - resting");
-                    if (DelayedAnchorClock < 15)
+                    if (DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                         DelayedAnchorClock++;
                     //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": " + AutoAnchor + " | " + PlayerAllowAnchoring + " | " + (tank.Anchors.NumPossibleAnchors >= 1) + " | " + (DelayedAnchorClock >= 15) + " | " + !DANGER);
                     if (AutoAnchor && !AttackEnemy && tank.Anchors.NumPossibleAnchors >= 1
-                        && DelayedAnchorClock >= 15 && CanAnchorNow)
+                        && DelayedAnchorClock >= AIGlobals.BaseAnchorMinimumTimeDelay && CanAnchorNow)
                     {
                         if (!tank.IsAnchored && anchorAttempts <= AIGlobals.MaxAnchorAttempts)
                         {
@@ -3368,7 +3433,7 @@ namespace TAC_AI.AI
         {
             if (ExpectAITampering)
             {
-                ForceAllAIsToEscort(true, false);
+                WakeAIForChange();
                 ExpectAITampering = false;
             }
             else
@@ -3387,7 +3452,7 @@ namespace TAC_AI.AI
                         break;
                     case AIAnchorState.Unanchor:
                         DoUnAnchor();
-                        ForceAllAIsToEscort(true, false);
+                        WakeAIForChange();
                         break;
                     default:
                         var temp = AnchorState;
@@ -3978,6 +4043,12 @@ namespace TAC_AI.AI
             return orbitDistDelta * (KickStart.AIClockPeriod / 40) < minimumCloseInSpeed &&
                 Vector3.Dot((taskLocation - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) < 0.35f;
         }
+        /// <summary>
+        /// IMPORTANT - Sets lastOperatorRange!!!
+        /// </summary>
+        /// <param name="taskLocation"></param>
+        /// <param name="additionalSpacing"></param>
+        /// <returns></returns>
         public float GetDistanceFromTask(Vector3 taskLocation, float additionalSpacing = 0)
         {
             if (Attempt3DNavi)
@@ -5214,7 +5285,10 @@ namespace TAC_AI.AI
         public void AnchorIgnoreChecks(bool forced = false)
         {
             if (forced)
+            {
+                DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": AI " + tank.name + ":  TryReallyAnchor(true)");
                 AnchorState = AIAnchorState.ForceAnchor;
+            }
             else
                 AnchorState = AIAnchorState.Anchor;
         }
@@ -5255,7 +5329,7 @@ namespace TAC_AI.AI
             if (!tank.IsAnchored && anchorAttempts <= AIGlobals.MaxAnchorAttempts)
             {
                 anchorAttempts++;
-                DebugTAC_AI.LogDevOnly(KickStart.ModID + ": AI " + tank.name + ":  TryReallyAnchor(" + forced + ")");
+                //DebugTAC_AI.LogDevOnly(KickStart.ModID + ": AI " + tank.name + ":  TryReallyAnchor(" + forced + ")");
                 tank.Anchors.TryAnchorAll(true);
                 if (tank.Anchors.NumIsAnchored > 0)
                 {
@@ -5347,7 +5421,7 @@ namespace TAC_AI.AI
                 if (!tank.IsAnchored && AIAlign == AIAlignment.Player)
                 {
                     //DebugTAC_AI.Log("DoUnAnchor() - success");
-                    ForceAllAIsToEscort(true, false);
+                    WakeAIForChange();
                 }
                 AnchorState = AIAnchorState.None;
             }
@@ -5364,7 +5438,7 @@ namespace TAC_AI.AI
         /// <summary> Hold blocks for self-build-repair and scavenging operations </summary>
         private void UpdateBlockHold()
         {
-            if (heldBlock)
+            if (heldBlock?.visible)
             {
                 if (!ManNetwork.IsNetworked)
                 {
@@ -5392,7 +5466,7 @@ namespace TAC_AI.AI
                         Vector3 moveVec;
                         if (blockHoldOffset)
                         {
-                            moveVec = tank.transform.TransformPoint(blockHoldPos) - heldBlock.transform.position;
+                            moveVec = tank.trans.TransformPoint(blockHoldPos) - heldBlock.transform.position;
                             float dotVal = Vector3.Dot(moveVec.normalized, Vector3.down);
                             if (dotVal > 0.75f)
                                 moveVec.y += moveVec.ToVector2XZ().magnitude / 3;
@@ -5404,7 +5478,7 @@ namespace TAC_AI.AI
                             finalPos += moveVec / ((100 / AIGlobals.BlockAttachDelay) * Time.fixedDeltaTime);
                             if (finalPos.y < tank.trans.TransformPoint(blockHoldPos).y)
                                 finalPos.y = tank.trans.TransformPoint(blockHoldPos).y;
-                            heldBlock.trans.position = finalPos;
+                            heldBlock.transform.position = finalPos;
                             if (heldBlock.rbody)
                             {
                                 if (tank.rbody)
@@ -5413,7 +5487,8 @@ namespace TAC_AI.AI
                                 Vector3 forward = tank.trans.TransformDirection(blockHoldRot * Vector3.forward);
                                 Vector3 up = tank.trans.TransformDirection(blockHoldRot * Vector3.up);
                                 Quaternion rotChangeWorld = AIGlobals.LookRot(forward, up);
-                                heldBlock.rbody.MoveRotation(Quaternion.RotateTowards(heldBlock.trans.rotation, rotChangeWorld, (360 / AIGlobals.BlockAttachDelay) * Time.fixedDeltaTime));
+                                heldBlock.rbody.MoveRotation(Quaternion.RotateTowards(heldBlock.transform.rotation, rotChangeWorld, 
+                                    (360 / AIGlobals.BlockAttachDelay) * Time.fixedDeltaTime));
                             }
                             heldBlock.visible.SetLockTimout(Visible.LockTimerTypes.Interactible, 0.25f);
                         }
@@ -5421,7 +5496,8 @@ namespace TAC_AI.AI
                         {
                             moveVec = tank.boundsCentreWorldNoCheck + (Vector3.up * (lastTechExtents + 3)) - heldBlock.visible.centrePosition;
                             moveVec = Vector3.ClampMagnitude(moveVec * 4, AIGlobals.ItemGrabStrength);
-                            heldBlock.rbody.AddForce(moveVec - (TankAIManager.GravVector * heldBlock.AverageGravityScaleFactor), ForceMode.Acceleration);
+                            if (heldBlock.rbody)
+                                heldBlock.rbody.AddForce(moveVec - (TankAIManager.GravVector * heldBlock.AverageGravityScaleFactor), ForceMode.Acceleration);
                             heldBlock.visible.SetLockTimout(Visible.LockTimerTypes.Interactible, 0.25f);
                         }
                     }

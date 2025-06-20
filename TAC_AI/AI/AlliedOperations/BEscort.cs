@@ -1,21 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 using UnityEngine;
 
 namespace TAC_AI.AI.AlliedOperations
 {
-    internal struct BEscort
+    internal static class BEscort
     {
-        public void Init(TankAIHelper helper)
-        {
-        }
-        public void DeInit(TankAIHelper helper)
-        {
-        }
-        public void MovementActions(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
-        {
-        }
-
         public static void MotivateMove(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
         {
             //The Handler that tells the Tank (Escort) what to do movement-wise
@@ -29,6 +20,14 @@ namespace TAC_AI.AI.AlliedOperations
             helper.lastPlayer = helper.GetPlayerTech();
             if (helper.lastPlayer == null)
                 return;
+            bool hasMessaged = false;
+            if (helper.lastPlayer == tank.visible)
+            {   // WE ARE FOLLOWING OURSELVES, just hold position!
+                //DebugTAC_AI.Log("Player Tech: We are following ourselves!!!!");
+                OnIdle(helper, tank, ref direct, ref hasMessaged);
+                direct.STOP(helper);
+                return;
+            }
             /*
             Vector3 veloFlat;
             if ((bool)tank.rbody)   // So that drifting is minimized
@@ -36,11 +35,10 @@ namespace TAC_AI.AI.AlliedOperations
                 veloFlat = tank.rbody.velocity;
                 veloFlat.y = 0;
             }*/
-            bool hasMessaged = false;
 
-            float dist = helper.GetDistanceFromTask(helper.lastPlayer.tank.boundsCentreWorldNoCheck, helper.lastPlayer.GetCheapBounds());
             float range = helper.MaxObjectiveRange + helper.lastTechExtents;
             float playerExt = helper.lastPlayer.GetCheapBounds();
+            float dist = helper.GetDistanceFromTask2D(helper.lastPlayer.tank.boundsCentreWorldNoCheck, helper.lastPlayer.GetCheapBounds());
 
             if ((bool)helper.lastEnemyGet && !helper.Retreat)
             {   // combat pilot will take care of the rest
@@ -174,7 +172,7 @@ namespace TAC_AI.AI.AlliedOperations
                     helper.ThrottleState = AIThrottleState.PivotOnly;
                 }
 
-                if (helper.DelayedAnchorClock < 15)
+                if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                     helper.DelayedAnchorClock++;
                 if (helper.CanAutoAnchor)
                 {
@@ -185,22 +183,26 @@ namespace TAC_AI.AI.AlliedOperations
             else
             {
                 //Likely idle
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
-                helper.AvoidStuff = true;
-                helper.SettleDown();
-                if ((bool)helper.lastEnemyGet)
-                {
-                    helper.ThrottleState = AIThrottleState.PivotOnly;
-                }
+                OnIdle(helper, tank, ref direct, ref hasMessaged);
+            }
+        }
+        private static void OnIdle(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct, ref bool hasMessaged)
+        {
+            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
+            helper.AvoidStuff = true;
+            helper.SettleDown();
+            if ((bool)helper.lastEnemyGet)
+            {
+                helper.ThrottleState = AIThrottleState.PivotOnly;
+            }
 
-                //helper.DriveVar = 0;
-                if (helper.DelayedAnchorClock < 15)
-                    helper.DelayedAnchorClock++;
-                if (helper.CanAutoAnchor)
-                {
-                    AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                    helper.TryInsureAnchor();
-                }
+            //helper.DriveVar = 0;
+            if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
+                helper.DelayedAnchorClock++;
+            if (helper.CanAutoAnchor)
+            {
+                AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
+                helper.TryInsureAnchor();
             }
         }
     }

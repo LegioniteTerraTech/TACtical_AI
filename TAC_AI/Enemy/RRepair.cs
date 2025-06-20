@@ -86,8 +86,12 @@ namespace TAC_AI.AI.Enemy
 
         internal static bool EnemyInstaRepair(Tank tank, EnemyMind mind, int RepairAttempts = 0)
         {
-            if (!KickStart.AISelfRepair)
+            if (!KickStart.AISelfRepair && !mind.StartedAnchored)
+            {
+                DebugTAC_AI.LogDevOnlyAssert("Stopped repairing for " + tank.name +
+                    " - reason: KickStart.AISelfRepair is set to false");
                 return true;
+            }
             bool success = false;
 
             try
@@ -120,11 +124,15 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    DebugTAC_AI.LogDevOnly("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
+                    DebugTAC_AI.LogDevOnlyAssert("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
                         + " | PreRepair lerp: " + PreRepairPrep(tank, mind));
                 }
             }
-            catch { } // it failed - [patch later]
+            catch (Exception e)
+            {
+                DebugTAC_AI.LogDevOnlyAssert("Stopped repairing for " + tank.name + " - reason: CRASH - " + mind.TechMemor.SystemsCheck()
+                    + " | PreRepair lerp: " + PreRepairPrep(tank, mind) + " | " + e);
+            } // it failed - [patch later]
             return success;
         }
         internal static bool EnemyRepairStepper(TankAIHelper helper, Tank tank, EnemyMind mind, bool Super = false)
@@ -168,8 +176,12 @@ namespace TAC_AI.AI.Enemy
                 }
                 else
                 {
-                    if (!KickStart.AISelfRepair)
+                    if (!KickStart.AISelfRepair && !mind.StartedAnchored)
+                    {
+                        DebugTAC_AI.LogDevOnlyAssert("Stopped building for " + tank.name +
+                            " - reason: KickStart.AISelfRepair is set to false");
                         return false;
+                    }
                     if (mind.AIControl.Provoked == 0)
                     {
                         if (!Super)
@@ -214,7 +226,7 @@ namespace TAC_AI.AI.Enemy
                                 }
                                 else
                                 {
-                                    DebugTAC_AI.LogDevOnly("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
+                                    DebugTAC_AI.LogDevOnlyAssert("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
                                         + " | PreRepair lerp: " + PreRepairPrep(tank, mind));
                                     helper.PendingDamageCheck = false; // cannot repair as invalid block 
                                 }
@@ -229,7 +241,7 @@ namespace TAC_AI.AI.Enemy
                         }
                         else
                         {
-                            DebugTAC_AI.LogDevOnly("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
+                            DebugTAC_AI.LogDevOnlyAssert("Stopped repairing for " + tank.name + " - reason: sysCheck - " + mind.TechMemor.SystemsCheck()
                                 + " | PreRepair lerp: " + PreRepairPrep(tank, mind));
                             helper.PendingDamageCheck = false;
                         }
@@ -245,15 +257,15 @@ namespace TAC_AI.AI.Enemy
                             helper.FinishedRepairEvent.Send(helper);
                             if (mind.TechMemor.IsDesignComplete())
                             {
-                                DebugTAC_AI.LogDevOnly(KickStart.ModID + ": EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
+                                DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": EnemyRepairStepper - Done for " + tank.name + ": Job Finished.");
                             }
                             else
                             {
                                 if (mind.TechMemor.ranOutOfParts)
-                                    DebugTAC_AI.LogDevOnly(KickStart.ModID + ": EnemyRepairStepper - Unfinished for " + tank.name + ": No more funds.");
+                                    DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": EnemyRepairStepper - Unfinished for " + tank.name + ": No more funds.");
                                 else
                                 {
-                                    DebugTAC_AI.LogDevOnly(KickStart.ModID + ": EnemyRepairStepper - Unfinished for " + tank.name 
+                                    DebugTAC_AI.LogDevOnlyAssert(KickStart.ModID + ": EnemyRepairStepper - Unfinished for " + tank.name 
                                         + ": Floating or invalid blocks in memory.  Purging...");
                                     mind.TechMemor.SaveTech();
                                 }

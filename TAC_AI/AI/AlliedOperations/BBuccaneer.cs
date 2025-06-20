@@ -27,11 +27,18 @@ namespace TAC_AI.AI.AlliedOperations
 
             if (helper.lastPlayer == null)
                 return;
+            bool hasMessaged = false;
+            //direct.SetLastDest(helper.lastPlayer.tank.boundsCentreWorldNoCheck);
+            // Disabling the above causes the AI to move as expected.
+            if (helper.lastPlayer == tank.visible)
+            {   // WE ARE FOLLOWING OURSELVES, just hold position!
+                OnIdle(helper, tank, ref direct, ref hasMessaged);
+                direct.STOP(helper);
+                return;
+            }
             float playerExt = helper.lastPlayer.GetCheapBounds();
-            direct.SetLastDest(helper.lastPlayer.tank.boundsCentreWorldNoCheck);
             float dist = helper.GetDistanceFromTask(helper.lastPlayer.tank.boundsCentreWorldNoCheck, helper.lastPlayer.GetCheapBounds());
             float range = helper.MaxObjectiveRange + helper.lastTechExtents + playerExt;
-            bool hasMessaged = false;
 
 
             if ((bool)helper.lastEnemyGet && !helper.Retreat)
@@ -166,7 +173,7 @@ namespace TAC_AI.AI.AlliedOperations
                 //direct.lastDestination = OffsetToSea(tank.transform.position, helper);
                 helper.AvoidStuff = true;
                 helper.SettleDown();
-                if (helper.DelayedAnchorClock < 15)
+                if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                     helper.DelayedAnchorClock++;
                 if (helper.CanAutoAnchor)
                 {
@@ -180,18 +187,22 @@ namespace TAC_AI.AI.AlliedOperations
             else
             {
                 //Likely idle
-                hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
-                //direct.lastDestination = OffsetToSea(tank.transform.position, helper);
-                helper.AvoidStuff = true;
-                helper.SettleDown();
-                helper.DriveVar = 0;
-                if (helper.DelayedAnchorClock < 15)
-                    helper.DelayedAnchorClock++;
-                if (helper.CanAutoAnchor && tank.Anchors.NumIsAnchored == 0)
-                {
-                    AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                    helper.TryInsureAnchor();
-                }
+                OnIdle(helper, tank, ref direct, ref hasMessaged);
+            }
+        }
+        private static void OnIdle(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct, ref bool hasMessaged)
+        {
+            hasMessaged = AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  in resting state");
+            //direct.lastDestination = OffsetToSea(tank.transform.position, helper);
+            helper.AvoidStuff = true;
+            helper.SettleDown();
+            helper.DriveVar = 0;
+            if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
+                helper.DelayedAnchorClock++;
+            if (helper.CanAutoAnchor && tank.Anchors.NumIsAnchored == 0)
+            {
+                AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
+                helper.TryInsureAnchor();
             }
         }
     }

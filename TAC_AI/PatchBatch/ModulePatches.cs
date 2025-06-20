@@ -23,18 +23,7 @@ namespace TAC_AI
             //ImproveAI
             private static void OnAttached_Postfix(ModuleAIBot __instance)
             {
-                var valid = __instance.GetComponent<ModuleAIExtension>();
-                if (valid)
-                {
-                    valid.OnPool();
-                }
-                else
-                {
-                    var ModuleAdd = __instance.gameObject.AddComponent<ModuleAIExtension>();
-                    ModuleAdd.OnPool();
-                    // Now retrofit AIs
-                    ModuleAdd.AlterExisting();
-                }
+                ModuleAIExtension.Insure(__instance);
             }
         }
         internal static class ModuleWeaponPatches

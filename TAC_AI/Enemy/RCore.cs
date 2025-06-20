@@ -868,8 +868,8 @@ namespace TAC_AI.AI.Enemy
                     int teamAttacker = helper.lastEnemyGet.tank.Team;
                     if (AIGlobals.IsBaseTeamDynamic(teamAttacker) || teamAttacker == ManPlayer.inst.PlayerTeam)
                     {
-                        var ETD = ManBaseTeams.InsureBaseTeam(tank.Team);
-                        ETD.DegradeRelations(teamAttacker);
+                        if (ManBaseTeams.TryGetBaseTeamDynamicOnly(tank.Team, out var ETD))
+                            ETD.DegradeRelations(teamAttacker);
                         helper.EndPursuit();
                         return;
                     }

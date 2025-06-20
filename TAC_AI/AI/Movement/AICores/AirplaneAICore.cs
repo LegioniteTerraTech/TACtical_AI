@@ -1164,13 +1164,13 @@ namespace TAC_AI.AI.Movement.AICores
             {   // Pitch Up
                 //DebugTAC_AI.Assert(!AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck), KickStart.ModID + ": ASSERT - " + tank.name + " is UTurning above max allowed altitude");
                 AngleTowards(helper, tank, pilot, tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward.SetY(1.75f).normalized * 100));
-                if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.75f)
+                if (Vector3.Dot(tank.rootBlockTrans.forward, Vector3.up) > 0.65f)
                     PerformUTurn = 3;
             }
             else if (PerformUTurn == 3)
             {   // Aim back at target
-                AngleTowards(helper, tank, pilot, pilot.PathPointSet);
-                if (Vector3.Dot((pilot.PathPointSet - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.2f)
+                AngleTowards(helper, tank, pilot, pilot.PathPointSet.SetY(tank.boundsCentreWorldNoCheck.y));
+                if (Vector3.Dot((pilot.PathPointSet - tank.boundsCentreWorldNoCheck).normalized, tank.rootBlockTrans.forward) > 0.1f)
                 {
                     pilot.ErrorsInUTurn = 0;
                     PerformUTurn = 0;
@@ -1188,7 +1188,7 @@ namespace TAC_AI.AI.Movement.AICores
                 return Vector3.up;
             Vector3 Heading = tank.rootBlockTrans.InverseTransformDirection(Navi3DDirect);
             float fwdHeading = Heading.ToVector2XZ().normalized.y;
-            bool PitchNotNeeded = Navi3DDirect.y > -0.6f && Navi3DDirect.y < 0.6f;
+            bool targetLevelElevation = Navi3DDirect.y > -0.6f && Navi3DDirect.y < 0.6f;
 
             Vector3 direct = Vector3.up;
             if (PerformUTurn == 3)
@@ -1205,9 +1205,10 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 // Stay upright
             }
-            else if (fwdHeading < -0.325f && PitchNotNeeded && PerformUTurn == 0 &&
+            else if (fwdHeading < -0.325f && Heading.y < 0.6f && targetLevelElevation && PerformUTurn == 0 &&
                 AIEPathing.IsUnderMaxAltPlayer(tank.boundsCentreWorldNoCheck.y))
-            {
+            {   // Check we are not facing target, not pointing up, target is level elevation,
+                //  are within interactive height limit, and we aren't already doing UTurn
                 //DebugTAC_AI.Log("directed is " + Navi3DDirect);
                 if (pilot.ErrorsInUTurn > 3)    // Aircraft failed Immelmann over 3 times in a row
                     PerformUTurn = -1;
@@ -1219,7 +1220,7 @@ namespace TAC_AI.AI.Movement.AICores
             else if (pilot.LargeAircraft || BankOnly)
             {
                 // Because we likely yaw slower, we should bank as much as possible
-                if (PitchNotNeeded && fwdHeading < 0.925f - (0.2f / pilot.RollStrength))
+                if (targetLevelElevation && fwdHeading < 0.925f - (0.2f / pilot.RollStrength))
                 {
                     if (Heading.x > 0f)
                     { // We roll to aim at target
@@ -1241,7 +1242,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             else
             {
-                if (PitchNotNeeded && fwdHeading < 0.85f - (0.2f / pilot.RollStrength))
+                if (targetLevelElevation && fwdHeading < 0.85f - (0.2f / pilot.RollStrength))
                 {
                     if (Heading.x > 0f)
                     { // We roll to aim at target
@@ -1278,12 +1279,12 @@ namespace TAC_AI.AI.Movement.AICores
                     EmergencyUp = true;
                 }
             }
-            else if (!AIEPathing.AboveHeightFromGround(pilot.Helper.DodgeSphereCenter, helper.lastTechExtents + 2))
+            else if (!AIEPathing.AboveHeightFromGround(pilot.Helper.DodgeSphereCenter, helper.lastTechExtents + 4))
             {
                 EmergencyUp = true;
             }
             Vector3 insureUpright = (destPos - tank.boundsCentreWorldNoCheck).normalized;
-            if (root.forward.y < -AIGlobals.AircraftDangerDive || EmergencyUp)
+            if (EmergencyUp)// || root.forward.y < -AIGlobals.AircraftDangerDive)
             {   // CRASH LIKELY, PULL UP! 
                 //DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is trying to break from a crash-dive " + root.forward.y);
                 insureUpright = new Vector3(0, 1.45f, 0) + root.forward.SetY(0).normalized;
@@ -1292,6 +1293,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 insureUpright = insureUpright.SetY(0).normalized;
                 insureUpright.y = -AIGlobals.AircraftMaxDive;
+                insureUpright.Normalize();
             }
             else if (Vector3.Dot(insureUpright, root.forward) < 0 && !pilot.ForcePitchUp && PerformUTurn == 0)
             {

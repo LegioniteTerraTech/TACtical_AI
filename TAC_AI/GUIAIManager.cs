@@ -9,6 +9,8 @@ using TAC_AI.AI;
 using TAC_AI.World;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
+using System.Security.Cryptography;
+using System.Security.Policy;
 
 namespace TAC_AI
 {
@@ -103,6 +105,35 @@ namespace TAC_AI
             }
         }
 
+        private static LocExtStringMod LOC_Back = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Back" },
+            { LocalisationEnums.Languages.Japanese,
+                "メインに戻る"},
+        });
+        private static LocExtStringMod LOC_Back_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Return to Main Control" },
+            { LocalisationEnums.Languages.Japanese,
+                "メインコントロールに戻る"},
+        });
+
+        private static LocExtStringMod LOC_ToAdv = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Adv. Settings" },
+            { LocalisationEnums.Languages.Japanese,
+                "詳細設定"},
+        });
+        private static LocExtStringMod LOC_ToAdv_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Set the AI operating ranges and behavior" },
+            { LocalisationEnums.Languages.Japanese,
+                "AIの動作範囲と考え方を設定する"},
+        });
         private static void GUIHandler(int ID)
         {
             if (IsTankNull())
@@ -129,7 +160,7 @@ namespace TAC_AI
                 if (AdvancedToggles)
                 {
                     GUIOptionsDisplay(stuckAnchored, CantPerformActions);
-                    if (GUI.Button(new Rect(20, HotWindow.height - 85, 160, 30), new GUIContent("Back", "Main Controls"), AltUI.ButtonBlue))
+                    if (GUI.Button(new Rect(20, HotWindow.height - 85, 160, 30), new GUIContent(LOC_Back, LOC_Back_desc), AltUI.ButtonBlue))
                     {
                         AdvancedToggles = false;
                     }
@@ -137,7 +168,7 @@ namespace TAC_AI
                 else
                 {
                     GUIMainDisplay(stuckAnchored, CantPerformActions);
-                    if (GUI.Button(new Rect(20, HotWindow.height - 85, 160, 30), new GUIContent("More Options", "Advanced Settings"), AltUI.ButtonBlue))
+                    if (GUI.Button(new Rect(20, HotWindow.height - 85, 160, 30), new GUIContent(LOC_ToAdv, LOC_ToAdv_desc), AltUI.ButtonBlue))
                     {
                         AdvancedToggles = true;
                     }
@@ -176,11 +207,74 @@ namespace TAC_AI
                 GUIAnchorButtonLayout();
             }
         }
+        private static LocExtStringMod LOC_NullAI = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "No AI!" },
+            { LocalisationEnums.Languages.Japanese,
+                "AIなし"},
+        });
+        private static LocExtStringMod LOC_CannotCommand = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Cannot Control!" },
+            { LocalisationEnums.Languages.Japanese,
+                "制御できない"},
+        });
+        internal static LocExtStringMod LOC_Dismantle = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "SELF\nDESTRUCT"},
+            { LocalisationEnums.Languages.Japanese,
+                "崩壊"},
+        });
+        internal static LocExtStringMod LOC_DismantleStep_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Click to dismantle Tech!"},
+            { LocalisationEnums.Languages.Japanese,
+                "解体するには押す"},
+        });
+        internal static LocExtStringMod LOC_Dismantle_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "DISMANTLE NOW"},
+            { LocalisationEnums.Languages.Japanese,
+                "分解する"},
+        });
+        internal static LocExtStringMod LOC_Dismantle_disabled = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Cannot SELF\nDESTRUCT"},
+            { LocalisationEnums.Languages.Japanese,
+                "自己破壊が無効"},
+        });
+        internal static LocExtStringMod LOC_Dismantle_disabled_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Cannot self-destruct in Multi-Player"},
+            { LocalisationEnums.Languages.Japanese,
+                "マルチプレイで自爆できない"},
+        });
+        private static LocExtStringMod LOC_HasNoControl = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "No Control" },
+            { LocalisationEnums.Languages.Japanese,
+                "AIなし"},
+        });
+        private static LocExtStringMod LOC_HasNoControl_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Needs working AI Module" },
+            { LocalisationEnums.Languages.Japanese,
+                "動作するAIモジュールが必要"},
+        });
         private static void GUINoAI()
         {
             HotWindow = new Rect(HotWindow.x, HotWindow.y, 200, 380);
-            string textAnchor = "No AI!";
-            if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Cannot Control!"), AltUI.ButtonRed))
+            string textAnchor = LOC_NullAI.ToString();
+            if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, LOC_CannotCommand.ToString()), AltUI.ButtonRed))
             {
                 ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
             }
@@ -188,8 +282,8 @@ namespace TAC_AI
             string textError;
             if (SelfDestruct == 0)
             {
-                textError = "<color=#ffffffff>SELF\nDESTRUCT</color>";
-                if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textError, "DISMANTLE NOW"), AltUI.ButtonRed))
+                textError = "<color=#ffffffff>" + LOC_Dismantle + "</color>";
+                if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textError, LOC_Dismantle_desc.ToString()), AltUI.ButtonRed))
                 {
                     if (!ManNetwork.IsNetworked)
                     {
@@ -202,8 +296,8 @@ namespace TAC_AI
             }
             else
             {
-                textError = "<color=#ffffffff>Self\nDestruct\nin " + SelfDestruct + "</color>";
-                if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textError, "Click to dismantle Tech!"), AltUI.ButtonRed))
+                textError = "<color=#ffffffff>" + LOC_Dismantle + SelfDestruct + "</color>";
+                if (GUI.Button(new Rect(20, 115, 160, 150), new GUIContent(textError, LOC_DismantleStep_desc.ToString()), AltUI.ButtonRed))
                 {
                     if (!ManNetwork.IsNetworked)
                     {
@@ -211,32 +305,75 @@ namespace TAC_AI
                     }
                 }
             }
-            if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Control", "Needs working AI Module"), AltUI.ButtonGrey))
+            if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_HasNoControl.ToString(), LOC_HasNoControl_desc.ToString()), AltUI.ButtonGrey))
             {
             }
         }
+        private static LocExtStringMod LOC_BaseTech = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Base" },
+            { LocalisationEnums.Languages.Japanese,
+                "ベース"},
+        });
+        private static LocExtStringMod LOC_BaseTech_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Stationary builder" },
+            { LocalisationEnums.Languages.Japanese,
+                "固定ビルダー"},
+        });
+        private static LocExtStringMod LOC_GuardBase = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "<color=#ffffffff>Guard\nBase</color>" },
+            { LocalisationEnums.Languages.Japanese,
+                "<color=#ffffffff>警備基地</color>"},
+        });
+        private static LocExtStringMod LOC_GuardBase_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Anchored base defender" },
+            { LocalisationEnums.Languages.Japanese,
+                "固定防御"},
+        });
+        internal static LocExtStringMod LOC_BuildBase = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Build" },
+            { LocalisationEnums.Languages.Japanese,
+                "建てる"},
+        });
+        internal static LocExtStringMod LOC_BuildBase_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Build a Tech" },
+            { LocalisationEnums.Languages.Japanese,
+                "テクノロジーを構築する"},
+        });
         private static void GUIAnchored()
         {
             HotWindow = new Rect(HotWindow.x, HotWindow.y, 200, 380);
-            string textAnchor = "Base";
-            if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, "Stationary builder"), AltUI.ButtonGreen))
+            string textAnchor = LOC_BaseTech;
+            if (GUI.Button(new Rect(20, 30, 160, 60), new GUIContent(textAnchor, LOC_BaseTech_desc), AltUI.ButtonGreen))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
             }
 
-            string textDefend = "<color=#ffffffff>Guard\nBase</color>";
-            if (GUI.Button(new Rect(20, 115, 160, 80), new GUIContent(textDefend, "Anchored"), AltUI.ButtonBlueActive))
+            string textDefend = LOC_GuardBase;
+            if (GUI.Button(new Rect(20, 115, 160, 80), new GUIContent(textDefend, LOC_GuardBase_desc), AltUI.ButtonBlueActive))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimGCCab);
             }
-            string textBuild = "<color=#ffffffff>Build</color>";
-            if (GUI.Button(new Rect(20, 200, 160, 60), new GUIContent(textBuild, "Build a Tech"), AltUI.ButtonBlueActive))
+            string textBuild = "<color=#ffffffff>" + LOC_BuildBase + "</color>";
+            if (GUI.Button(new Rect(20, 200, 160, 60), new GUIContent(textBuild, LOC_BuildBase_desc), AltUI.ButtonBlueActive))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimGCFabricator);
                 Debug_TTExt.LogAll = true;
                 PlayerRTSUI.ShowTechPlacementUI(lastTank);
             }
         }
+
         private static void GUIMobileLegacy(bool CantPerformActions)
         {
             HotWindow = new Rect(HotWindow.x, HotWindow.y, 200, 380);
@@ -314,15 +451,15 @@ namespace TAC_AI
                     bool toTog = !lastTank.RTSControlled;
                     lastTank.SetRTSState(toTog);
                     int select = 0;
-                    int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
-                    for (int step = 0; amount > step; step++)
+                    int amount = 0;
+                    foreach (TankAIHelper helper in ManWorldRTS.IterateControlledTechs())
                     {
-                        TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                        if ((bool)helper && helper != lastTank)
+                        if (helper != lastTank)
                         {
                             select++;
                             helper.SetRTSState(toTog);
                         }
+                        amount++;
                     }
                     if (select > 0)
                     {
@@ -445,33 +582,87 @@ namespace TAC_AI
 
             if (clickedDriver)
             {
-                SetOptionDriver(AIDriver);
+                SetDriver(AIDriver);
             }
             if (clicked)
             {
-                SetOption(changeAI);
+                SetAIType(changeAI);
             }
         }
-        private static void GUIMobile(bool CantPerformActions)
+
+        private static LocExtStringMod LOC_Tank = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
-            HotWindow = new Rect(HotWindow.x, HotWindow.y, 200, 420);
-            bool clicked = false;
-            bool clickedDriver = false;
+            { LocalisationEnums.Languages.US_English,
+               "<color=#ffffffff>Tank</color>" },
+            { LocalisationEnums.Languages.Japanese,
+                "<color=#ffffffff>タンク</color>"},
+        }); 
+        private static LocExtStringMod LOC_Tank_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Drive on Wheels or Treads" },
+            { LocalisationEnums.Languages.Japanese,
+                "車輪または履帯で走行する"},
+        });
+        private static LocExtStringMod LOC_Air_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Fly Planes or Helicopters" },
+            { LocalisationEnums.Languages.Japanese,
+                "車輪または履帯で走行する"},
+        });
+        private static LocExtStringMod LOC_Water_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Stay within the water" },
+            { LocalisationEnums.Languages.Japanese,
+                "車輪または履帯で走行する"},
+        });
+        private static LocExtStringMod LOC_Water_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "You need to subscribe to the \"Water Mod\"" },
+            { LocalisationEnums.Languages.Japanese,
+                "500メートル以内の資源を採掘する"},
+        });
+        private static LocExtStringMod LOC_Space_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Fly with Antigravity or Hoverbug" },
+            { LocalisationEnums.Languages.Japanese,
+                "車輪または履帯で走行する"},
+        });
+
+
+        internal static LocExtStringMod LOC_FindTheAI = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Incorrect A.I. installed.  Try other AI modules!" },
+            { LocalisationEnums.Languages.Japanese,
+                "現在のAIはこの機能と互換性がありません"},
+        });
+        private static LocExtStringMod LOC_Active = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "ACTIVE" },
+            { LocalisationEnums.Languages.Japanese,
+                "アクティブ"},
+        });
+        private static void GUIDriverSetter(bool CantPerformActions, GUILayoutOption GLO, GUILayoutOption GLH, ref bool clickedDriver)
+        {
             Sprite sprite;
             GUIContent tankI;
             if (RawTechExporter.aiIcons.TryGetValue(AIType.Escort, out sprite))
             {
-                tankI = AIDriver == AIDriverType.Tank ? new GUIContent(sprite.texture, "ACTIVE")
-                    : new GUIContent(sprite.texture, "Drive on Wheels or Treads");
+                tankI = AIDriver == AIDriverType.Tank ? new GUIContent(sprite.texture, LOC_Active)
+                    : new GUIContent(sprite.texture, LOC_Tank_desc);
             }
             else
             {
-                string textTank = "<color=#ffffffff>Tank</color>";
-                tankI = AIDriver == AIDriverType.Tank ? new GUIContent(textTank, "ACTIVE") 
-                    : new GUIContent(textTank, "Drive on Wheels or Treads");
+                string textTank = LOC_Tank;
+                tankI = AIDriver == AIDriverType.Tank ? new GUIContent(textTank, LOC_Active)
+                    : new GUIContent(textTank, LOC_Tank_desc);
             }
-            GUILayoutOption GLO = GUILayout.MinWidth(HotWindow.width / 2.5f);
-            GUILayoutOption GLH = GUILayout.Height(HotWindow.width / 6f);
             GUILayout.BeginHorizontal(GLH);
             if (GUILayout.Button(tankI, AIDriver == AIDriverType.Tank ? AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
             {
@@ -480,53 +671,82 @@ namespace TAC_AI
             }
 
             DriverButton("Pilot", AIDriverType.Pilot, AIType.Aviator, isAviatorAvail,
-                "Fly Planes or Helicopters", "Need HE or VEN AI", ref clickedDriver);
+                LOC_Air_desc, LOC_FindTheAI, ref clickedDriver);//"Need HE or VEN AI"
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(GLH);
             DriverButton("Ship", AIDriverType.Sailor, AIType.Buccaneer, isBuccaneerAvail && KickStart.isWaterModPresent,
-                "Stay in Water", KickStart.isWaterModPresent ? "Need GSO or VEN AI" : "Need Water Mod", ref clickedDriver);
+                LOC_Water_desc, KickStart.isWaterModPresent ? LOC_FindTheAI : LOC_Water_req, ref clickedDriver);//"Need GSO or VEN AI"
 
-            DriverButton("Space", AIDriverType.Astronaut, AIType.Astrotech, isAstrotechAvail, "Fly with Antigravity or Hoverbug",
-                "Need BF or HE AI", ref clickedDriver);
+            DriverButton("Space", AIDriverType.Astronaut, AIType.Astrotech, isAstrotechAvail, LOC_Space_desc,
+                LOC_FindTheAI, ref clickedDriver);//"Need BF or HE AI"
             GUILayout.EndHorizontal();
             GUILayout.Box("", GUILayout.Height(10));
+        }
 
-            // Tasks
-            // top - Escort
-            //string textEscort = "<color=#ffffffff>Escort</color>";
-            GUILayout.BeginHorizontal(GLH);
-            //Texture texEscort = ManPlayerRTS.GetLineMat().mainTexture;
-            //string texEscort = "<color=#ffffffff>Escort</color>";
-            //if (GUILayout.Button(fetchAI == AIType.Escort ?
-            if (GUILayout.Button(fetchAI == AIType.Escort ?
-                new GUIContent(RawTechExporter.GuardAIIcon.texture, "ACTIVE") :
-                new GUIContent(RawTechExporter.GuardAIIcon.texture, "Escort player"),
-                fetchAI == AIType.Escort ? AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
-            {
-                changeAI = AIType.Escort;
-                clicked = true;
-            }
-
+        internal static LocExtStringMod LOC_GoTo = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Go to" },
+            { LocalisationEnums.Languages.Japanese,
+                "に行く"},
+        }); 
+        internal static LocExtStringMod LOC_Attack = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Attack" },
+            { LocalisationEnums.Languages.Japanese,
+                "攻撃"},
+        });
+        internal static LocExtStringMod LOC_Stop = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Stop" },
+            { LocalisationEnums.Languages.Japanese,
+                "攻撃"},
+        });
+        internal static LocExtStringMod LOC_SelectAll = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Select All" },
+            { LocalisationEnums.Languages.Japanese,
+                "すべて選択"},
+        });
+        internal static LocExtStringMod LOC_SelectAllSplit = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Select\nAll" },
+            { LocalisationEnums.Languages.Japanese,
+                "すべて\n選択"},
+        });
+        private static LocExtStringMod LOC_RTSDisabled = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "RTS Mode is disabled" },
+            { LocalisationEnums.Languages.Japanese,
+                "RTSモードが無効になっています"},
+        });
+        private static void GUIRTSButton(bool CantPerformActions, GUILayoutOption GLO, GUILayoutOption GLH)
+        {
             Texture textRTS = ManWorldRTS.GetLineMat().mainTexture;
             //string textRTS = "<color=#ffffffff>Order</color>";
             if (KickStart.AllowPlayerRTSHUD)
             {
-                if (GUILayout.Button(lastTank.RTSControlled ? new GUIContent(textRTS, "ACTIVE") : new GUIContent(textRTS, "Go to last target"),
+                if (GUILayout.Button(lastTank.RTSControlled ? new GUIContent(textRTS, LOC_Active) : new GUIContent(textRTS, LOC_GoTo),
                     lastTank.RTSControlled ? AltUI.ButtonGreenActive : AltUI.ButtonGreen, GLO, GLH))
                 {
                     bool toTog = !lastTank.RTSControlled;
                     lastTank.SetRTSState(toTog);
                     int select = 0;
-                    int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
-                    for (int step = 0; amount > step; step++)
+                    int amount = 0;
+                    foreach (TankAIHelper helper in ManWorldRTS.IterateControlledTechs())
                     {
-                        TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                        if ((bool)helper && helper != lastTank)
+                        if (helper != lastTank)
                         {
                             select++;
                             helper.SetRTSState(toTog);
                         }
+                        amount++;
                     }
                     if (select > 0)
                     {
@@ -538,128 +758,293 @@ namespace TAC_AI
                         return;
                 }
             }
-            else if (GUILayout.Button(new GUIContent(textRTS, "RTS Mode Disabled"), AltUI.ButtonGrey, GLO, GLH))
+            else if (GUILayout.Button(new GUIContent(textRTS, LOC_RTSDisabled), AltUI.ButtonGrey, GLO, GLH))
             {
                 ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
             }
+        }
+
+        private static LocExtStringMod LOC_MTPlayer_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Player not in range" },
+            { LocalisationEnums.Languages.Japanese,
+                "プレイヤーが範囲内にいません"},
+        });
+        private static LocExtStringMod LOC_MTAlly_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Ally not in range" },
+            { LocalisationEnums.Languages.Japanese,
+                "味方が範囲内にいません"},
+        });
+        private static void GUIMTButton(string name, AIType type, string desc, bool CantPerformActions, GUILayoutOption GLO, GUILayoutOption GLH, ref bool clicked)
+        {
+            if (RawTechExporter.aiIcons.TryGetValue(type, out Sprite sprite))
+            {
+                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ?
+                new GUIContent(sprite.texture, LOC_MTPlayer_req) : new GUIContent(sprite.texture, LOC_MTAlly_req) :
+                fetchAI == type ? new GUIContent(sprite.texture, LOC_Active) : new GUIContent(sprite.texture, desc),
+                    fetchAI == type ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
+                {
+                    changeAI = type;
+                    clicked = true;
+                }
+            }
+            else
+            {
+                string textStation = "<color=#ffffffff>" + name + "</color>";
+                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ?
+                    new GUIContent(textStation, LOC_MTPlayer_req) : new GUIContent(textStation, LOC_MTAlly_req) :
+                    fetchAI == type ? new GUIContent(textStation, LOC_Active) : new GUIContent(textStation, desc),
+                    fetchAI == type ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
+                {
+                    changeAI = type;
+                    clicked = true;
+                }
+            }
+        }
+
+        private static LocExtStringMod LOC_Escort_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Escort allied players" },
+            { LocalisationEnums.Languages.Japanese,
+                "味方プレイヤーを護衛する"},
+        });
+        private static LocExtStringMod LOC_Miner_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Mine resources within 500 meters" },
+            { LocalisationEnums.Languages.Japanese,
+                "500メートル以内の資源を採掘する"},
+        });
+        private static LocExtStringMod LOC_Miner_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Needs a Tech with resource receivers" },
+            { LocalisationEnums.Languages.Japanese,
+                "リソースレシーバーを備えたベースが必要です"},
+        });
+        private static LocExtStringMod LOC_Static_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Mobile Tech Hardpoint"},
+            { LocalisationEnums.Languages.Japanese,
+                "モバイルハードポイント"},
+        });
+        private static LocExtStringMod LOC_Turret_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Mobile Tech Turret" },
+            { LocalisationEnums.Languages.Japanese,
+                "移動式砲塔"},
+        });
+        private static LocExtStringMod LOC_Mimic_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Mobile Tech Copycat" },
+            { LocalisationEnums.Languages.Japanese,
+                "リレー制御"},
+        });
+        private static LocExtStringMod LOC_Scout_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Attack distant enemies"},
+            { LocalisationEnums.Languages.Japanese,
+                "遠方の敵を巡回して攻撃する"},
+        });
+        private static LocExtStringMod LOC_Battery_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Needs other Tech with wireless chargers" },
+            { LocalisationEnums.Languages.Japanese,
+                "ワイヤレス充電器付きの別のベースが必要"},
+        });
+        private static LocExtStringMod LOC_Protect_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Follow closest mobile ally"},
+            { LocalisationEnums.Languages.Japanese,
+                "最も近いモバイル仲間をフォロー"},
+        });
+        private static LocExtStringMod LOC_Protect_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "No Allies in range of 500 meters" },
+            { LocalisationEnums.Languages.Japanese,
+                "500メートル以内に味方がいない"},
+        });
+        private static LocExtStringMod LOC_Charger_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Recharges the closest allies"},
+            { LocalisationEnums.Languages.Japanese,
+                "最も近い味方を再充電する"},
+        });
+        private static LocExtStringMod LOC_Collect_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Collect loose blocks within 500 meters"},
+            { LocalisationEnums.Languages.Japanese,
+                "500メートル以内の緩いブロックを集める"},
+        });
+        private static LocExtStringMod LOC_Collect_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Need other Tech with SCU or Scrappers" },
+            { LocalisationEnums.Languages.Japanese,
+                "SCUまたはスクラッパーを備えた別の基地が必要"},
+        });
+        private static void GUIMobile(bool CantPerformActions)
+        {
+            HotWindow = new Rect(HotWindow.x, HotWindow.y, 200, 420);
+            bool clicked = false;
+            bool clickedDriver = false;
+            Sprite sprite;
+            GUIContent tankI;
+            GUILayoutOption GLO = GUILayout.MinWidth(HotWindow.width / 2.5f);
+            GUILayoutOption GLH = GUILayout.Height(HotWindow.width / 6f);
+
+            GUIDriverSetter(CantPerformActions, GLO, GLH, ref clickedDriver);
+
+            // Tasks
+            // top - Escort
+            GUILayout.BeginHorizontal(GLH);
+            if (GUILayout.Button(fetchAI == AIType.Escort ?
+                new GUIContent(RawTechExporter.GuardAIIcon.texture, LOC_Active) :
+                new GUIContent(RawTechExporter.GuardAIIcon.texture, LOC_Escort_desc),
+                fetchAI == AIType.Escort ? AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
+            {
+                changeAI = AIType.Escort;
+                clicked = true;
+            }
+            GUIRTSButton(CantPerformActions, GLO, GLH);
 
             GUILayout.EndHorizontal();
 
             // upper right - MT
             GUILayout.BeginHorizontal(GLH);
             // upper left, bottom - Aux modes
-            AuxButton("Miner", AIType.Prospector, isProspectorAvail, "Needs Receiver Base", "Mine Resources",
-                "Need GSO or GC AI", ref CantPerformActions, ref clicked);
-            if (RawTechExporter.aiIcons.TryGetValue(AIType.MTStatic, out sprite))
-            {
-                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ? 
-                    new GUIContent(sprite.texture, "Player not in range") : new GUIContent(sprite.texture, "Ally not in range") :
-                    fetchAI == AIType.MTStatic ? new GUIContent(sprite.texture, "ACTIVE") : new GUIContent(sprite.texture, "Mobile Tech Hardpoint"),
-                    fetchAI == AIType.MTStatic ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
-                {
-                    changeAI = AIType.MTStatic;
-                    clicked = true;
-                }
-            }
-            else
-            {
-                string textStation = "<color=#ffffffff>Static</color>";
-                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ? new GUIContent(textStation, "Player not in range") : new GUIContent(textStation, "Ally not in range") :
-                    fetchAI == AIType.MTStatic ? new GUIContent(textStation, "ACTIVE") : new GUIContent(textStation, "Mobile Tech Hardpoint"),
-                    fetchAI == AIType.MTStatic ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
-                {
-                    changeAI = AIType.MTStatic;
-                    clicked = true;
-                }
-            }
+            AuxButton("Miner", AIType.Prospector, isProspectorAvail, LOC_Miner_req, LOC_Miner_desc,
+                LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GSO or GC AI"
+            GUIMTButton("Static", AIType.MTStatic, LOC_Static_desc, CantPerformActions, GLO, GLH, ref clicked);
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(GLH);
-            AuxButton("Scout", AIType.Assault, isAssassinAvail, "Needs Charging Base", "Attack Enemies",
-                 "Need HE AI", ref CantPerformActions, ref clicked);
+            AuxButton("Scout", AIType.Assault, isAssassinAvail, LOC_Battery_req,  LOC_Scout_desc,
+                 LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need HE AI"
 
-            if (RawTechExporter.aiIcons.TryGetValue(AIType.MTTurret, out sprite))
-            {
-                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ?
-                    new GUIContent(sprite.texture, "Player not in range") : new GUIContent(sprite.texture, "Ally not in range") :
-                    fetchAI == AIType.MTTurret ? new GUIContent(sprite.texture, "ACTIVE") : new GUIContent(sprite.texture, "Mobile Tech Turret"),
-                    fetchAI == AIType.MTTurret ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
-                {
-                    changeAI = AIType.MTTurret;
-                    clicked = true;
-                }
-            }
-            else
-            {
-                string textTurret = "<color=#ffffffff>Turret</color>";
-                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ? new GUIContent(textTurret, "Player not in range") : new GUIContent(textTurret, "Ally not in range") :
-                    fetchAI == AIType.MTTurret ? new GUIContent(textTurret, "ACTIVE") : new GUIContent(textTurret, "Mobile Tech Turret"),
-                    fetchAI == AIType.MTTurret ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
-                {
-                    changeAI = AIType.MTTurret;
-                    clicked = true;
-                }
-            }
+            GUIMTButton("Turret", AIType.MTTurret, LOC_Turret_desc, CantPerformActions, GLO, GLH, ref clicked);
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(GLH);
-            AuxButton("Protect", AIType.Aegis, isAegisAvail, "No Allies Nearby", "Follow Closest Ally",
-                 "Need GSO AI", ref CantPerformActions, ref clicked);
+            AuxButton("Protect", AIType.Aegis, isAegisAvail, LOC_Protect_req, LOC_Protect_desc,
+                 LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GSO AI"
 
-            if (RawTechExporter.aiIcons.TryGetValue(AIType.MTMimic, out sprite))
-            {
-                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ?
-                    new GUIContent(sprite.texture, "Player not in range") : new GUIContent(sprite.texture, "Ally not in range")
-                    : fetchAI == AIType.MTMimic ? new GUIContent(sprite.texture, "ACTIVE") : new GUIContent(sprite.texture, "Mobile Tech Copycat"),
-                    fetchAI == AIType.MTMimic ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
-                {
-                    changeAI = AIType.MTMimic;
-                    clicked = true;
-                }
-            }
-            else
-            {
-                string textMimic = "<color=#ffffffff>Mimic</color>";
-                if (GUILayout.Button(CantPerformActions ? !lastTank.AllMT ? new GUIContent(textMimic, "Player not in range") : new GUIContent(textMimic, "Ally not in range")
-                    : fetchAI == AIType.MTMimic ? new GUIContent(textMimic, "ACTIVE") : new GUIContent(textMimic, "Mobile Tech Copycat"),
-                    fetchAI == AIType.MTMimic ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
-                {
-                    changeAI = AIType.MTMimic;
-                    clicked = true;
-                }
-            }
+            GUIMTButton("Mimic", AIType.MTTurret, LOC_Mimic_desc, CantPerformActions, GLO, GLH, ref clicked);
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(GLH);
-            AuxButton("Charger", AIType.Energizer, isEnergizerAvail, "Need Charge Base & Charger", "Recharge Closest Ally",
-                 "Need GC AI", ref CantPerformActions, ref clicked);
+            AuxButton("Charger", AIType.Energizer, isEnergizerAvail, LOC_Battery_req,  LOC_Charger_desc,
+                 LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GC AI"
 
-            AuxButton("Fetch", AIType.Scrapper, isEnergizerAvail, "Need Block Receiving Base", "Collect Blocks",
-                 "Need GC AI", ref CantPerformActions, ref clicked);
+            AuxButton("Fetch", AIType.Scrapper, isScrapperAvail, LOC_Collect_req, LOC_Collect_desc,
+                 LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GC AI"
             GUILayout.EndHorizontal();
 
             if (clickedDriver)
             {
-                SetOptionDriver(AIDriver);
+                SetDriver(AIDriver);
             }
             if (clicked)
             {
-                SetOption(changeAI);
+                SetAIType(changeAI);
             }
         }
+        internal static LocExtStringMod LOC_AnchorNone = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "No Anchors" },
+            { LocalisationEnums.Languages.Japanese,
+                "アンカーなし"},
+        });
+        internal static LocExtStringMod LOC_AnchorNone_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Needs working anchors" },
+            { LocalisationEnums.Languages.Japanese,
+                "作動するアンカーが必要です"},
+        });
+        internal static LocExtStringMod LOC_AnchorEnemy = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Enemy Jammed" },
+            { LocalisationEnums.Languages.Japanese,
+                "敵が干渉している"},
+        });
+        internal static LocExtStringMod LOC_AnchorEnemy_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Enemy too close!" },
+            { LocalisationEnums.Languages.Japanese,
+                "敵が近すぎます!"},
+        });
+        internal static LocExtStringMod LOC_AnchorRough = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Rough Terrain" },
+            { LocalisationEnums.Languages.Japanese,
+                "起伏の多い地形"},
+        });
+        internal static LocExtStringMod LOC_AnchorRough_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Too rough to deploy anchors. Try somewhere else." },
+            { LocalisationEnums.Languages.Japanese,
+                "地形が悪すぎます。別の場所でもう一度お試しください。"},
+        });
+        internal static LocExtStringMod LOC_Anchor = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+             "Stop & Anchor" },
+            { LocalisationEnums.Languages.Japanese,
+                "停止とアンカー"},
+        });
+        internal static LocExtStringMod LOC_Anchor_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+                "Fixate to ground" },
+            { LocalisationEnums.Languages.Japanese,
+                "アンカーを停止して発射する"},
+        });
+        internal static LocExtStringMod LOC_UnAnchor = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+             "Mobilize" },
+            { LocalisationEnums.Languages.Japanese,
+                "動員する"},
+        });
+        internal static LocExtStringMod LOC_UnAnchor_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+                "Detach from ground" },
+            { LocalisationEnums.Languages.Japanese,
+                "アンカーを外して移動する"},
+        });
         private static void GUIAnchorButton()
         {
             if (!lastTank.tank.IsAnchored)//(lastTank.PlayerAllowAutoAnchoring)
             {
                 if (lastTank.tank.Anchors.NumPossibleAnchors < 1)
-                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AltUI.ButtonGrey);
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_AnchorNone, LOC_AnchorNone_desc), AltUI.ButtonGrey);
                 else if (!lastTank.CanAnchorSafely)
-                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AltUI.ButtonRed);
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_AnchorEnemy, LOC_AnchorEnemy_desc), AltUI.ButtonRed);
                 else if (!lastTank.CanAttemptAnchor)
-                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Rough Terrain", "Too rough to deploy anchors. Try somewhere else."), AltUI.ButtonRed);
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_AnchorRough, LOC_AnchorRough_desc), AltUI.ButtonRed);
                 else
                 {
-                    if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Stop & Anchor", "Fixate to ground"), AltUI.ButtonGreen))
+                    if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_Anchor, LOC_Anchor_desc), AltUI.ButtonGreen))
                     {
                         ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
                         if (ManNetwork.IsHost)
@@ -669,12 +1054,12 @@ namespace TAC_AI
                         }
                         AIDriver = AIDriverType.Stationary;
                         changeAI = AIType.Escort;
-                        SetOptionDriver(AIDriver);
-                        SetOption(changeAI);
+                        SetDriver(AIDriver);
+                        SetAIType(changeAI);
                     }
                 }
             }
-            else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Mobilize", "Detach from ground"), AltUI.ButtonGreen))
+            else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_UnAnchor, LOC_UnAnchor_desc), AltUI.ButtonGreen))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
                 if (ManNetwork.IsHost)
@@ -683,7 +1068,7 @@ namespace TAC_AI
                     lastTank.PlayerAllowAutoAnchoring = true;
                 }
                 AIDriver = AIDriverType.AutoSet;
-                SetOptionDriver(AIDriver);
+                SetDriver(AIDriver);
             }
         }
         private static void GUIAnchorButtonLayout()
@@ -692,14 +1077,14 @@ namespace TAC_AI
             if (lastTank.PlayerAllowAutoAnchoring)
             {
                 if (lastTank.tank.Anchors.NumPossibleAnchors < 1)
-                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("No Anchors", "Needs working anchors"), AltUI.ButtonGrey);
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_AnchorNone, LOC_AnchorNone_desc), AltUI.ButtonGrey);
                 else if (!lastTank.CanAnchorSafely)
-                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Enemy Jammed", "Enemy too close!"), AltUI.ButtonRed);
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_AnchorEnemy, LOC_AnchorEnemy_desc), AltUI.ButtonRed);
                 else if (!lastTank.CanAttemptAnchor)
-                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent("Rough Terrain", "Too rough to deploy anchors. Try somewhere else."), AltUI.ButtonRed);
+                    GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_AnchorRough, LOC_AnchorRough_desc), AltUI.ButtonRed);
                 else
                 {
-                    if (GUILayout.Button(new GUIContent("Stop & Anchor", "Fixate to ground"), AltUI.ButtonGreen, GLH))
+                    if (GUILayout.Button(new GUIContent(LOC_Anchor, LOC_Anchor_desc), AltUI.ButtonGreen, GLH))
                     {
                         ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimSolarGen);
                         if (ManNetwork.IsHost)
@@ -709,12 +1094,12 @@ namespace TAC_AI
                         }
                         AIDriver = AIDriverType.Stationary;
                         changeAI = AIType.Escort;
-                        SetOptionDriver(AIDriver);
-                        SetOption(changeAI);
+                        SetDriver(AIDriver);
+                        SetAIType(changeAI);
                     }
                 }
             }
-            else if (GUILayout.Button(new GUIContent("Mobilize", "Detach from ground"), AltUI.ButtonGreen, GLH))
+            else if (GUILayout.Button(new GUIContent(LOC_UnAnchor, LOC_UnAnchor_desc), AltUI.ButtonGreen, GLH))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
                 if (ManNetwork.IsHost)
@@ -725,11 +1110,136 @@ namespace TAC_AI
                 if (AIDriver == AIDriverType.Stationary)
                 {
                     AIDriver = AIDriverType.AutoSet;
-                    SetOptionDriver(AIDriver);
+                    SetDriver(AIDriver);
                 }
             }
         }
 
+
+        static float selectedOnceTime = 0;
+        static float selectedUIDisplayTime = 0;
+        static bool releasedOnce = false;
+        static bool handoffControl = false;
+        static Vector2 selectedOncePos = default;
+        //private static FieldInfo delay = typeof(ManHUD).GetField("m_RadialShowDelay", BindingFlags.NonPublic | BindingFlags.Instance);
+        //private static float delaySelect = (float)delay.GetValue(ManHUD.inst);
+        private static string SelectedFieldControlName = string.Empty;
+        private static string SelectedFieldControlValue = string.Empty;
+        const int defaultState = -1;
+        private static bool DisplayFieldSettableSliderProto(string Label, float LabelVal, string LabelDesc, int heightPos, float lastSetting, float limit, out float outVal)
+        {
+            int setValInt;
+            string labelSet = "<color=#ffffffff>" + Label + (LabelVal == 5000f ? "Max" : LabelVal.ToString()) + "</color>";
+            if (SelectedFieldControlName == Label)
+            {
+                setValInt = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, heightPos, 150, 30), defaultState,
+                    defaultState, limit, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
+                GUI.SetNextControlName(SelectedFieldControlName);
+                SelectedFieldControlValue = GUI.TextField(new Rect(20, heightPos, 160, 30), SelectedFieldControlValue, 12, AltUI.ButtonBlue);
+                if (handoffControl)
+                {
+                    handoffControl = false;
+                    GUI.FocusControl(SelectedFieldControlName);
+                    /*
+                    if (GUI.GetNameOfFocusedControl() != SelectedFieldControlName)
+                    {
+                        DebugTAC_AI.Assert("gues ill die");
+                        throw new InvalidOperationException("gues ill die");
+                    }*/
+                }
+
+                if (GUI.GetNameOfFocusedControl() != SelectedFieldControlName && selectedUIDisplayTime <= 0)
+                {
+                    if (int.TryParse(SelectedFieldControlValue, out int result))
+                        setValInt = result;
+                    SelectedFieldControlName = string.Empty;
+                    SelectedFieldControlValue = string.Empty;
+                    ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Close);
+                }
+            }
+            else if (selectedOnceTime > 0 && selectedOncePos.x.Approximately(Input.mousePosition.x, 9f) && 
+                selectedOncePos.y.Approximately(Input.mousePosition.y, 9f))
+            {
+                GUI.Label(new Rect(20, heightPos, 160, 30), new GUIContent(labelSet, LabelDesc), AltUI.ButtonBlue);
+
+                setValInt = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, heightPos, 150, 30), defaultState,
+                    defaultState, limit, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
+                if (!Input.GetMouseButton(0) && !Input.GetMouseButton(1))
+                    releasedOnce = true;
+                if (setValInt != defaultState && releasedOnce)
+                {
+                    selectedOnceTime = 0;
+                    selectedUIDisplayTime = Globals.inst.doubleTapDelay;
+
+                    SelectedFieldControlName = Label;
+                    GUI.SetNextControlName(SelectedFieldControlName);
+                    SelectedFieldControlValue = GUI.TextField(new Rect(20, heightPos, 160, 30), lastSetting.ToString(), 12, AltUI.ButtonBlue);
+                    ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Open);
+                    handoffControl = true;
+                    GUI.FocusControl(SelectedFieldControlName);
+                }
+            }
+            else
+            {
+                GUI.Label(new Rect(20, heightPos, 160, 30), new GUIContent(labelSet, LabelDesc), AltUI.ButtonBlue);
+                GUI.SetNextControlName(Label);
+                setValInt = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, heightPos, 150, 30), defaultState,
+                    defaultState, limit, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
+                releasedOnce = false;
+                if (setValInt != defaultState)
+                {
+                    selectedOnceTime = Globals.inst.doubleTapDelay;
+                    selectedOncePos = Input.mousePosition;
+                    //ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Select);
+                    //DebugTAC_AI.Log("SL - FocusedControlName: " + GUI.GetNameOfFocusedControl());
+                }
+                else
+                {
+                    //DebugTAC_AI.Log("FocusedControlName: " + GUI.GetNameOfFocusedControl());
+                }
+            }
+            if (setValInt == defaultState)
+                outVal = lastSetting;
+            else
+                outVal = setValInt;
+            return !lastSetting.Approximately(outVal);
+        }
+
+        private static LocExtStringMod LOC_MaxCombatRange = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Maximum combat range" },
+            { LocalisationEnums.Languages.Japanese,
+                "最大戦闘範囲"},
+        });
+        private static LocExtStringMod LOC_SpaceRange = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Spacing from target" },
+            { LocalisationEnums.Languages.Japanese,
+                "ターゲットからの間隔"},
+        });
+        private static LocExtStringMod LOC_AttackMethod = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Attack method" },
+            { LocalisationEnums.Languages.Japanese,
+                "攻撃戦略"},
+        });
+        private static LocExtStringMod LOC_SecondAvoidence_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Smarter pathing" },
+            { LocalisationEnums.Languages.Japanese,
+                "よりスマートなパス"},
+        });
+        private static LocExtStringMod LOC_AutoAnchor_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+              "Anchor when idle" },
+            { LocalisationEnums.Languages.Japanese,
+                "アイドル時にアンカー"},
+        });
         /// <summary>
         /// Pending - allow toggling of AI special operations
         /// </summary>
@@ -739,33 +1249,35 @@ namespace TAC_AI
 
             var lim = lastTank.AILimitSettings;
             var set = lastTank.AISetSettings;
-            
-            StatusLabel(new Rect(20, 30, 160, 30), "Range: " + lastTank.MaxCombatRange, "Maximum combat range");
-            set.CombatChase = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 30, 150, 30), lastTank.MaxCombatRange,
-                0, lim.CombatChase, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
-            if (!lastTank.MinCombatRange.Approximately(set.CombatChase))
-                delta = true;
 
-            StatusLabel(new Rect(20, 60, 160, 30), "Spacing: " + lastTank.MinCombatRange, "Spacing from target");
-            set.CombatSpacing = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 60, 150, 30), lastTank.MinCombatRange,
-               0, lim.CombatSpacing, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
-            if (!lastTank.MinCombatRange.Approximately(set.CombatSpacing))
+            if (DisplayFieldSettableSliderProto("Range: ", lastTank.MaxCombatRange, LOC_MaxCombatRange,
+                30, lastTank.MaxCombatRange, lim.CombatChase, out float setCombatChase))
+            {
+                set.CombatChase = setCombatChase;
                 delta = true;
+            }
+
+            if (DisplayFieldSettableSliderProto("Spacing: ", lastTank.MinCombatRange, LOC_SpaceRange,
+                60, lastTank.MinCombatRange, lim.CombatSpacing, out float setCombatRange))
+            {
+                set.CombatSpacing = setCombatRange;
+                delta = true;
+            }
 
 
             StatusLabelButton(new Rect(20, 115, 80, 30), "Aware", lastTank.SecondAvoidence, 
-                "Better pathing", "Need Non-Anchor AI", ref delta);
+                LOC_SecondAvoidence_desc, LOC_FindTheAI, ref delta);//"Need Non-Anchor AI"
             StatusLabelButton(new Rect(100, 115, 80, 30), "Crafty", lastTank.AutoAnchor, 
-                "Anchor when idle", "Need GC AI", ref delta);
+                LOC_AutoAnchor_desc, LOC_FindTheAI, ref delta);//"Need GC AI"
 
             set.GUIDisplay(lim, ref delta);
 
             lastTank.AttackMode = (EAttackMode)Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, 235, 150, 30), (int)lastTank.AttackMode, 0, (int)EAttackMode.Ranged));
-            StatusLabel(new Rect(20, 235, 160, 30), "Mode: " + lastTank.AttackMode, "Attack method");
+            StatusLabel(new Rect(20, 235, 160, 30), "Mode: " + lastTank.AttackMode, LOC_AttackMethod);
 
             if (delta)
             {
-                set.Sync(lastTank, lastTank.AILimitSettings);
+                set.Sync(lastTank, lim);
                 lastTank.AISetSettings = set;
             }
         }
@@ -828,7 +1340,7 @@ namespace TAC_AI
             {
                 if (isAvail)
                 {
-                    if (GUILayout.Button(AIDriver == type ? new GUIContent(sprite.texture, "ACTIVE") : new GUIContent(sprite.texture, Desc),
+                    if (GUILayout.Button(AIDriver == type ? new GUIContent(sprite.texture, LOC_Active) : new GUIContent(sprite.texture, Desc),
                       AIDriver == type ? AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
                     {
                         AIDriver = type;
@@ -846,7 +1358,7 @@ namespace TAC_AI
                 string textTitle = "<color=#ffffffff>" + title + "</color>";
                 if (isAvail)
                 {
-                    if (GUILayout.Button(AIDriver == type ? new GUIContent(textTitle, "ACTIVE") : new GUIContent(textTitle, Desc),
+                    if (GUILayout.Button(AIDriver == type ? new GUIContent(textTitle, LOC_Active) : new GUIContent(textTitle, Desc),
                       AIDriver == type ? AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
                     {
                         AIDriver = type;
@@ -871,7 +1383,7 @@ namespace TAC_AI
                 {
                     if (GUILayout.Button(fetchAI == type && 
                         CantPerformActions ? new GUIContent(sprite.texture, runReq) 
-                        : fetchAI == AIType.Aegis ? new GUIContent(sprite.texture, "ACTIVE") : new GUIContent(sprite.texture, desc),
+                        : fetchAI == AIType.Aegis ? new GUIContent(sprite.texture, LOC_Active) : new GUIContent(sprite.texture, desc),
                       fetchAI == type ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
                     {
                         changeAI = type;
@@ -891,7 +1403,7 @@ namespace TAC_AI
                 {
                     if (GUILayout.Button(fetchAI == type &&
                         CantPerformActions ? new GUIContent(textTitle, runReq)
-                        : fetchAI == type ? new GUIContent(textTitle, "ACTIVE") : new GUIContent(textTitle, desc),
+                        : fetchAI == type ? new GUIContent(textTitle, LOC_Active) : new GUIContent(textTitle, desc),
                       fetchAI == type ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLH))
                     {
                         changeAI = type;
@@ -909,7 +1421,12 @@ namespace TAC_AI
 
         internal static FieldInfo bubble = typeof(Tank).GetField("m_Overlay", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        internal static void SetOptionDriver(AIDriverType driver, bool playSFX = true)
+        private static void SetDriver(AIDriverType driver, bool playSFX = true)
+        {
+            SetDriver(lastTank, driver, playSFX);
+            inst.TrySetDriverAllRTSControlled(driver);
+        }
+        public static void SetDriver(TankAIHelper lastTank, AIDriverType driver, bool playSFX = true)
         {
             try
             {
@@ -917,8 +1434,7 @@ namespace TAC_AI
                     return;
                 if (!lastTank.tank)
                     return;
-                SetOptionDriverCase(lastTank, driver, ManWorldRTS.inst.LocalPlayerTechsControlled.Count == 1);
-                inst.TrySetOptionDriverRTS(driver);
+                SetDriverCase(lastTank, driver, ManWorldRTS.inst.LocalPlayerTechsControlled.Count == 1);
                 if (playSFX)
                 {
                     switch (driver)
@@ -947,57 +1463,66 @@ namespace TAC_AI
             }
             catch { }
         }
-        private void TrySetOptionDriverRTS(AIDriverType driver)
+        private void TrySetDriverAllRTSControlled(AIDriverType driver)
         {
             if (!(bool)ManWorldRTS.inst)
                 return;
             if (ManWorldRTS.PlayerIsInRTS || ManWorldRTS.PlayerRTSOverlay)
             {
                 int select = 0;
-                int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
-                for (int step = 0; amount > step; step++)
+                int amount = 0;
+                foreach (TankAIHelper helper in ManWorldRTS.IterateControlledTechs())
                 {
-                    TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                    if ((bool)helper && helper != lastTank)
+                    if (helper != lastTank)
                     {
                         select++;
-                        SetOptionDriverCase(helper, driver, false);
+                        SetDriverCase(helper, driver, false);
                     }
+                    amount++;
                 }
-                DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionRTS - Set " + amount + " Techs to drive " + driver);
+                DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionDriverRTS - Set " + amount + " Techs to drive " + driver);
                 if (select > 0)
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionDriverCase(TankAIHelper helper, AIDriverType driver, bool allowSetMultiTech)
+        private static void SetDriverCase(TankAIHelper helper, AIDriverType driver, bool allowSetMultiTech)
         {
             if (helper.IsNull())
                 return;
             if (helper.IsMultiTech && !allowSetMultiTech)
                 return;
             bool guess = driver == AIDriverType.AutoSet;
+            /*
             if (guess)
-                DebugTAC_AI.Log(KickStart.ModID + ": Given " + lastTank.name + " set to driver " + driver);
+                DebugTAC_AI.Info(KickStart.ModID + ": Given " + lastTank.name + " set to driver " + driver);
             else
                 DebugTAC_AI.Assert(KickStart.ModID + ": Set " + lastTank.name + " to driver " + driver);
+            */
             AIDriverType locDediAI = AIDriverType.Tank;
             switch (driver)
             {
                 case AIDriverType.Astronaut:
-                    if (helper.isAstrotechAvail)
-                        locDediAI = driver;
+                    if (!helper.isAstrotechAvail)
+                        return;
+                    locDediAI = driver;
                     break;
                 case AIDriverType.Pilot:
-                    if (helper.isAviatorAvail)
-                        locDediAI = driver;
+                    if (!helper.isAviatorAvail)
+                        return;
+                    locDediAI = driver;
                     break;
                 case AIDriverType.Sailor:
-                    if (helper.isBuccaneerAvail)
-                        locDediAI = driver;
+                    if (!helper.isBuccaneerAvail)
+                        return;
+                    locDediAI = driver;
                     break;
                 case AIDriverType.Stationary:
                     if (helper.tank.Anchors.NumPossibleAnchors < 1 || !helper.CanAnchorNow)
                         return;
+                    locDediAI = driver;
+                    break;
+                case AIDriverType.Tank:
+                    locDediAI = driver;
                     break;
                 case AIDriverType.AutoSet:
                     break;
@@ -1005,6 +1530,8 @@ namespace TAC_AI
                     DebugTAC_AI.LogError(KickStart.ModID + ": Encountered illegal AIDriverType on AI Driver switch!");
                     break;
             }
+
+
             if (ManNetwork.IsNetworked)
             {
                 try
@@ -1015,8 +1542,7 @@ namespace TAC_AI
                         helper.ExecuteAutoSetNoCalibrate();
                     else
                         helper.SetDriverType(driver);
-                    helper.ForceAllAIsToEscort(true, false);
-                    helper.ForceRebuildAlignment();
+                    helper.WakeAIForChange(true);
                     if (helper.DriverType != driver)
                     {
                         WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(helper.tank.visible);
@@ -1035,23 +1561,31 @@ namespace TAC_AI
                     helper.ExecuteAutoSetNoCalibrate();
                 else
                     helper.SetDriverType(driver);
+                helper.WakeAIForChange();
+                /*
                 //DebugTAC_AI.Log(KickStart.ModID + ": 1");
                 helper.ForceAllAIsToEscort(true, true);
                 //DebugTAC_AI.Log(KickStart.ModID + ": 2");
                 helper.ForceRebuildAlignment();
                 //DebugTAC_AI.Log(KickStart.ModID + ": 3");
+                */
                 if (helper.DriverType != driver)
                 {
                     WorldPosition worPos = Singleton.Manager<ManOverlay>.inst.WorldPositionForFloatingText(helper.tank.visible);
                     AIGlobals.PopupPlayerInfo(driver.ToString(), worPos);
                 }
-                DebugTAC_AI.Log(KickStart.ModID + ": 41");
+                //DebugTAC_AI.Log(KickStart.ModID + ": 41");
             }
             if (guess)
                 DebugTAC_AI.Assert(KickStart.ModID + ": Set " + lastTank.name + " to driver " + driver);
         }
 
-        public static void SetOption(AIType dediAI, bool playSFX = true)
+        private static void SetAIType(AIType dediAI, bool playSFX = true)
+        {
+            SetAIType(lastTank, dediAI, playSFX);
+            inst.TrySetAITypeAllRTSControlled(dediAI);
+        }
+        public static void SetAIType(TankAIHelper lastTank, AIType dediAI, bool playSFX = true)
         {
             if (lastTank.IsNull())
                 return;
@@ -1067,9 +1601,8 @@ namespace TAC_AI
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     lastTank.DediAI = dediAI;
-                    lastTank.ForceAllAIsToEscort(true, false);
                     fetchAI = dediAI;
-                    lastTank.ForceRebuildAlignment();
+                    lastTank.WakeAIForChange(true);
 
                 }
                 catch (Exception e)
@@ -1086,12 +1619,10 @@ namespace TAC_AI
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 lastTank.DediAI = dediAI;
-                lastTank.ForceAllAIsToEscort(true, false);
                 fetchAI = dediAI;
-                lastTank.ForceRebuildAlignment();
+                lastTank.WakeAIForChange(true);
 
             }
-            inst.TrySetOptionRTS(dediAI);
             if (playSFX)
             {
                 switch (dediAI)
@@ -1140,75 +1671,96 @@ namespace TAC_AI
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
             //CloseSubMenuClickable();
         }
-        private void TrySetOptionRTS(AIType dediAI)
+        private void TrySetAITypeAllRTSControlled(AIType dediAI)
         {
             if (!(bool)ManWorldRTS.inst)
                 return;
             if (ManWorldRTS.PlayerIsInRTS || ManWorldRTS.PlayerRTSOverlay)
             {
                 int select = 0;
-                int amount = ManWorldRTS.inst.LocalPlayerTechsControlled.Count;
-                for (int step = 0; amount > step; step++)
+                int amount = 0;
+                foreach (TankAIHelper helper in ManWorldRTS.IterateControlledTechs())
                 {
-                    TankAIHelper helper = ManWorldRTS.inst.LocalPlayerTechsControlled.ElementAt(step);
-                    if ((bool)helper && helper != lastTank)
+                    if (helper != lastTank)
                     {
                         select++;
-                        SetOptionCase(helper, dediAI);
+                        SetAITypeCase(helper, dediAI);
                     }
+                    amount++;
                 }
                 DebugTAC_AI.Log(KickStart.ModID + ": TrySetOptionRTS - Set " + amount + " Techs to mode " + dediAI);
-                if (select > 0)
+                if (select > 1)
                     Invoke("DelayedExtraNoise", 0.15f);
             }
         }
-        private static void SetOptionCase(TankAIHelper helper, AIType dediAI)
+        private static void SetAITypeCase(TankAIHelper helper, AIType dediAI)
         {
             if (helper.IsNull())
                 return;
             AIType locDediAI;
             switch (dediAI)
             {
+                case AIType.Assault:
+                    if (helper.isAssassinAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.Null;
+                    break;
                 case AIType.Aegis:
                     if (helper.isAegisAvail)
                         locDediAI = dediAI;
                     else
-                        locDediAI = AIType.Escort;
+                        locDediAI = AIType.Null;
                     break;
                 case AIType.Aviator:
                     if (helper.isAviatorAvail)
                         locDediAI = dediAI;
                     else
-                        locDediAI = AIType.Escort;
+                        locDediAI = AIType.Null;
                     break;
                 case AIType.Buccaneer:
                     if (helper.isBuccaneerAvail)
                         locDediAI = dediAI;
                     else
-                        locDediAI = AIType.Escort;
+                        locDediAI = AIType.Null;
+                    break;
+                case AIType.Astrotech:
+                    if (helper.isAstrotechAvail)
+                        locDediAI = dediAI;
+                    else
+                        locDediAI = AIType.Null;
                     break;
                 case AIType.Energizer:
                     if (helper.isEnergizerAvail)
                         locDediAI = dediAI;
                     else
-                        locDediAI = AIType.Escort;
+                        locDediAI = AIType.Null;
                     break;
                 case AIType.Prospector:
                     if (helper.isProspectorAvail)
                         locDediAI = dediAI;
                     else
-                        locDediAI = AIType.MTStatic;
+                        locDediAI = AIType.Null;
                     break;
                 case AIType.Scrapper:
                     if (helper.isScrapperAvail)
                         locDediAI = dediAI;
                     else
-                        locDediAI = AIType.MTStatic;
+                        locDediAI = AIType.Null;
                     break;
+                case AIType.Null:
+                case AIType.Escort:
+                case AIType.MTTurret:
+                case AIType.MTStatic:
+                case AIType.MTMimic:
                 default:
                     locDediAI = dediAI;
                     break;
             }
+
+            if (locDediAI == AIType.Null)
+                return; // DO NOT CHANGE on conflict
+
             if (ManNetwork.IsNetworked)
             {
                 try
@@ -1221,8 +1773,7 @@ namespace TAC_AI
                         AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                     }
                     helper.DediAI = locDediAI;
-                    helper.ForceAllAIsToEscort(true, false);
-                    helper.ForceRebuildAlignment();
+                    helper.WakeAIForChange(true);
 
                 }
                 catch (Exception e)
@@ -1239,8 +1790,7 @@ namespace TAC_AI
                     AIGlobals.PopupPlayerInfo(dediAI.ToString(), worPos);
                 }
                 helper.DediAI = locDediAI;
-                helper.ForceAllAIsToEscort(true, false);
-                helper.ForceRebuildAlignment();
+                helper.WakeAIForChange(true);
             }
         }
         internal void DelayedExtraNoise()
@@ -1405,6 +1955,11 @@ namespace TAC_AI
 
         private void Update()
         {
+            if (selectedOnceTime > 0)
+                selectedOnceTime -= Time.deltaTime;
+            if (selectedUIDisplayTime > 0)
+                selectedUIDisplayTime -= Time.deltaTime;
+
             if (windowTimer > 0)
             {
                 windowTimer -= Time.deltaTime;

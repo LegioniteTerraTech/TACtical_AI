@@ -18,17 +18,17 @@ namespace TAC_AI.World
         private static HashSet<Tank> techsAltered = new HashSet<Tank>();
         private static TankAIHelper Leader;
 
-        private const int ButtonWidth = 64;
-        private const int ButtonHeight = 64;
+        private const int ButtonWidth = 42;
+        private const int ButtonHeight = 42;
 
         private static readonly int borderSize = 4;
         private static readonly int wF = ButtonWidth - borderSize;
         private static readonly int hF = ButtonHeight - borderSize;
 
 
-        private const int MaxCountWidthUnits = 8;
+        private const int MaxCountWidthUnits = 9;
         private const int MaxCountWidthButtons = 3;
-        private const int MaxCountHeight = 2;
+        private const int MaxCountHeight = 3;
         private static readonly int MaxWindowHeight = MaxCountHeight * ButtonHeight;
         private static readonly int MaxWindowWidthUnits = MaxCountWidthUnits * ButtonWidth;
         private static readonly int MaxWindowWidthSpacer = ButtonWidth;
@@ -38,7 +38,7 @@ namespace TAC_AI.World
         private static float widthW = MaxWindowWidth + Offset;
         private static float heightW = MaxWindowHeight + Offset;
         private static Rect CommandBar = new Rect(0, 0, widthW, heightW + 20);   // the "window"
-        private static Rect CommandBarSmall = new Rect(0, 0, (ButtonWidth * 2) + Offset, 50 + Offset);   // the "window"
+        private static Rect CommandBarSmall = new Rect(0, 0, (ButtonWidth * 3) + Offset, 50 + Offset);   // the "window"
         private static Vector2 scrolll = new Vector2(0, 0);
         private static float scrolllSize = 50;
         private static int Offset = 20;
@@ -47,7 +47,7 @@ namespace TAC_AI.World
         {
             if (inst)
                 return;
-            inst = new GameObject("PlayerRTSUI").AddComponent<GUIRTSDisplay>();
+            inst = new GameObject("PlayerRTSUI").AddComponent<GUIRTSControlBar>();
             TankAIManager.TechRemovedEvent.Subscribe(OnTechRemoved);
             ManTechs.inst.TankBlockAttachedEvent.Subscribe(OnTechChanged);
             ManTechs.inst.TankBlockDetachedEvent.Subscribe(OnTechChanged);
@@ -81,6 +81,7 @@ namespace TAC_AI.World
         }
         private static bool unitListActive = false;
 
+        public static bool BuilderMenuOpen => CurrentBuilder != null;
         private static TankAIHelper CurrentBuilder = null;
         public static void DoTechBuild(Snapshot snap)
         {
@@ -92,6 +93,7 @@ namespace TAC_AI.World
         }
         public static void ShowTechPlacementUI(TankAIHelper helper)
         {
+            ManModGUI.ClearTempHidden();
             if (Input.GetKey(KickStart.MultiSelect) && helper?.lastBuiltTech != null)
             {
                 if (DoTechBuild(helper, helper.lastBuiltTech))
@@ -183,10 +185,12 @@ namespace TAC_AI.World
             ManHUD.inst.Show(ManHUD.HideReason.Paused, show);
         }
 
-        private static GUIRTSDisplay inst;
+        private static GUIRTSControlBar inst;
         private const int AIRTSDisplayID = 8015;
         private static GUIStyle SmallTextTitle = null;
         private static GUIStyle SmallTextDesc = null;
+        private static GUIStyle SmallTextDescW = null;
+        private static GUIStyle ButtonSmallText = null;
         private static Canvas hudBack = null;
         private static Vector2 hudBackOrigin;
         public static void RTSDamageWarnings(float duration, float strength)
@@ -201,7 +205,30 @@ namespace TAC_AI.World
             }
             inst.Invoke("RTSDamageWarningEnd", duration);
         }
-        internal class GUIRTSDisplay : MonoBehaviour
+
+
+        private static LocExtStringMod LOC_AIStatus = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "A.I. Status" },
+            { LocalisationEnums.Languages.Japanese,
+                "AIステータス"},
+        });
+        private static LocExtStringMod LOC_AISelect = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               "Tech Select" },
+            { LocalisationEnums.Languages.Japanese,
+                "テックセレクト"},
+        });
+        private static LocExtStringMod LOC_AIUnable = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+               " (Unable)" },
+            { LocalisationEnums.Languages.Japanese,
+                "(できない)"},
+        });
+        internal class GUIRTSControlBar : MonoBehaviour
         {
             internal void OnGUI()
             {
@@ -211,15 +238,70 @@ namespace TAC_AI.World
                     if (SmallTextTitle == null)
                     {
                         SmallTextTitle = new GUIStyle(AltUI.LabelBlueTitle);
-                        SmallTextTitle.fontSize = 11;
+                        SmallTextTitle.fontSize = 10;
                         SmallTextTitle.clipping = TextClipping.Overflow;
                         SmallTextTitle.wordWrap = true;
+                        SmallTextTitle.alignment = TextAnchor.UpperLeft;
+                        var border2 = SmallTextTitle.contentOffset;
+                        border2.y -= 4;
+                        SmallTextTitle.contentOffset = border2;
 
                         SmallTextDesc = new GUIStyle(AltUI.LabelBlackTitle);
                         SmallTextDesc.font = AltUI.ExoFontExtraBold;
-                        SmallTextDesc.fontSize = 10;
+                        SmallTextDesc.fontSize = 9;
                         SmallTextDesc.clipping = TextClipping.Overflow;
                         SmallTextDesc.wordWrap = false;
+
+                        SmallTextDescW = new GUIStyle(AltUI.LabelWhiteTitle);
+                        SmallTextDescW.font = AltUI.ExoFontExtraBold;
+                        SmallTextDescW.fontSize = 9;
+                        SmallTextDescW.clipping = TextClipping.Overflow;
+                        SmallTextDescW.wordWrap = false;
+
+                        ButtonSmallText = new GUIStyle(AltUI.ButtonBlue);
+                        ButtonSmallText.font = AltUI.ExoFontExtraBold;
+                        ButtonSmallText.fontSize = 9;
+                        /*
+                        ButtonSmallText.normal = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.normal.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };
+                        ButtonSmallText.hover = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.hover.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };
+                        ButtonSmallText.active = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.active.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };
+                        ButtonSmallText.focused = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.focused.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };
+                        ButtonSmallText.onNormal = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.onNormal.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };
+                        ButtonSmallText.onHover = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.onHover.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };
+                        ButtonSmallText.onActive = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.onActive.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };
+                        ButtonSmallText.onFocused = new GUIStyleState()
+                        {
+                            background = ButtonSmallText.onFocused.background,
+                            textColor = AltUI.ColorDefaultWhite,
+                        };*/
 
                         hudBack = ManHUD.inst.GetComponent<Canvas>();
                         hudBackOrigin = hudBack.pixelRect.position;
@@ -234,7 +316,7 @@ namespace TAC_AI.World
                             if (CommandQueued != null)
                                 controlName = CommandQueued.Method.Name.Replace("_", " ");
                             else
-                                controlName = "Tech Select";
+                                controlName = LOC_AISelect;
                             if (!CurrentBuilder)
                             {
                                 if (ManWorldRTS.inst.LocalPlayerTechsControlled.Any())
@@ -242,6 +324,8 @@ namespace TAC_AI.World
                                 else
                                     CommandBarSmall = GUI.Window(AIRTSDisplayID, CommandBarSmall, GUIHandlerControlSmall, controlName, AltUI.MenuLeft);
                             }
+                            else if (!ManHUD.inst.IsHudElementVisible(ManHUD.HUDElementType.TechLoader))
+                                    CurrentBuilder = null;
 
                             IDStep = AIRTSHealthStartID;
                             if (HPBarGreen == null)
@@ -286,9 +370,9 @@ namespace TAC_AI.World
                     {
                         string action = hovered.GetActionStatus(out bool notAble);
                         if (notAble)
-                            AltUI.TooltipWorld("A.I. Status", action + " (Unable)");
+                            AltUI.TooltipWorld(LOC_AIStatus, action + LOC_AIUnable);
                         else
-                            AltUI.TooltipWorld("A.I. Status", action);
+                            AltUI.TooltipWorld(LOC_AIStatus, action);
                     }
                 }
                 else
@@ -306,9 +390,9 @@ namespace TAC_AI.World
         {
             try
             {
-                GUIData data;
+                GUIUnitDataFloating data;
                 if (!Pending.Any())
-                    data = new GUIData();
+                    data = new GUIUnitDataFloating();
                 else
                     data = Pending.Dequeue();
                 Did.Enqueue(data);
@@ -349,9 +433,9 @@ namespace TAC_AI.World
         {
             try
             {
-                GUIData data;
+                GUIUnitDataFloating data;
                 if (!Pending.Any())
-                    data = new GUIData();
+                    data = new GUIUnitDataFloating();
                 else
                     data = Pending.Dequeue();
                 Did.Enqueue(data);
@@ -379,11 +463,11 @@ namespace TAC_AI.World
             catch (Exception e)
             { throw new Exception("PlayerRTSUI.GUIShowHP(Visible) has errored: " + e); }
         }
-        private static Queue<GUIData> Did = new Queue<GUIData>();
-        private static Queue<GUIData> Pending = new Queue<GUIData>();
+        private static Queue<GUIUnitDataFloating> Did = new Queue<GUIUnitDataFloating>();
+        private static Queue<GUIUnitDataFloating> Pending = new Queue<GUIUnitDataFloating>();
         private const int AIRTSHealthStartID = 18017;
         private static int IDStep = AIRTSHealthStartID;
-        public class GUIData
+        public class GUIUnitDataFloating
         {
 
             public bool AlwaysShowName = false;
@@ -467,7 +551,7 @@ namespace TAC_AI.World
         }
         private static void GUIHandlerControlSmall(int ID)
         {
-            if (GUILayout.Button("Select ALL", AltUI.ButtonBlue))
+            if (GUILayout.Button(GUIAIManager.LOC_SelectAll, AltUI.ButtonBlue))
                 ManWorldRTS.inst.ControlAllPlayer();
             if (UIHelpersExt.MouseIsOverSubMenu(CommandBarSmall))
             ManModGUI.IsMouseOverAnyModGUI = 2;
@@ -499,7 +583,7 @@ namespace TAC_AI.World
 
             scrolll = GUI.BeginScrollView(new Rect(0, Offset, CommandBar.width, CommandBar.height - Offset), scrolll, new Rect(0, 0, CommandBar.width - Offset, scrolllSize));
 
-            if (GUI.Button(new Rect(HoriPosOff, VertPosOff, ButtonWidth, ButtonHeight), "Select\nALL"))
+            if (GUI.Button(new Rect(HoriPosOff, VertPosOff, ButtonWidth, ButtonHeight), GUIAIManager.LOC_SelectAllSplit, ButtonSmallText))
             {
                 ManWorldRTS.inst.ControlAllPlayer();
             }
@@ -567,9 +651,9 @@ namespace TAC_AI.World
                     newPos.x = Mathf.Clamp(Mous.x + 16, 0, Display.main.renderingWidth - toolWindow.width);
                     newPos.y = Mathf.Clamp(Mous.y + 16, 0, Display.main.renderingHeight - toolWindow.height);
                     Vector2 hotWindowLocal = newPos - CommandBar.position;
-                    GUI.Box(new Rect(hotWindowLocal.x, hotWindowLocal.y, toolWindow.width, toolWindow.height), "A.I. Status", AltUI.MenuLeft);
+                    GUI.Box(new Rect(hotWindowLocal.x, hotWindowLocal.y, toolWindow.width, toolWindow.height), LOC_AIStatus, AltUI.MenuLeft);
                     if (notAble)
-                        GUI.Label(new Rect(20 + hotWindowLocal.x, 15 + hotWindowLocal.y, 160, 60), AltUI.UIAlphaText + action + " (Unable)</color>");
+                        GUI.Label(new Rect(20 + hotWindowLocal.x, 15 + hotWindowLocal.y, 160, 60), AltUI.UIAlphaText + action + LOC_AIUnable + "</color>");
                     else
                         GUI.Label(new Rect(20 + hotWindowLocal.x, 15 + hotWindowLocal.y, 160, 60), AltUI.UIAlphaText + action + "</color>");
                 }
@@ -610,15 +694,24 @@ namespace TAC_AI.World
             Vector2.zero, 1f, 0u, SpriteMeshType.FullRect);
         private static void CommandsSelfDestruct()
         {
-            if (SelfDestruct == 5)
-                CommandButton("Dismantle", BlowUpIcon, ManSFX.UISfxType.Undo, "Dismantle", true,
-                "Dismantle the Tech", "ERROR", false, false, CommandExplode);
-            else if (SelfDestruct == 0)
-                CommandButton("Dismantle", SkullIcon, ManSFX.UISfxType.MissionFailed, "Dismantle", true,
-                "Dismantle the Tech NOW", "ERROR", false, false, CommandExplode);
+            if (ManNetwork.IsNetworked)
+            {
+                CommandButton(GUIAIManager.LOC_Dismantle_disabled, BlowUpIcon, ManSFX.UISfxType.AnchorFailed, 
+                    GUIAIManager.LOC_Dismantle_disabled, false,
+                GUIAIManager.LOC_Dismantle_disabled_desc, "ERROR", true, false, null);
+            }
             else
-                CommandButton(SelfDestruct.ToString(), ManSFX.UISfxType.Undo, "Dismantle", true,
-                "Dismantle in " + SelfDestruct + " clicks", "ERROR", false, false, CommandExplode);
+            {
+                if (SelfDestruct == 5)
+                    CommandButton(GUIAIManager.LOC_Dismantle, BlowUpIcon, ManSFX.UISfxType.Undo, GUIAIManager.LOC_Dismantle, true,
+                    GUIAIManager.LOC_DismantleStep_desc, "ERROR", false, false, CommandExplode);
+                else if (SelfDestruct == 0)
+                    CommandButton(GUIAIManager.LOC_Dismantle, SkullIcon, ManSFX.UISfxType.MissionFailed, GUIAIManager.LOC_Dismantle, true,
+                    GUIAIManager.LOC_Dismantle_desc, "ERROR", false, false, CommandExplode);
+                else
+                    CommandButton(SelfDestruct.ToString(), ManSFX.UISfxType.Undo, GUIAIManager.LOC_Dismantle, true,
+                    GUIAIManager.LOC_Dismantle + "\n" + SelfDestruct, "ERROR", false, false, CommandExplode);
+            }
         }
         private static void CommandsMobile()
         {
@@ -628,29 +721,40 @@ namespace TAC_AI.World
             GUILayout.BeginHorizontal(GLOh);
             bool enemy = lastTank.lastEnemy;
             bool moving = lastTank.GetDrive != 0 && lastTank.IsDirectedMoving;
-            CommandButton("Move", (Texture2D)ManWorldRTS.GetLineMat().mainTexture, ManSFX.UISfxType.Select, "Move to Destination", true,
-                "Unanchor Tech", "ERROR", false, moving, CommandMove);
-
+            CommandButton(GUIAIManager.LOC_GoTo, (Texture2D)ManWorldRTS.GetLineMat().mainTexture, ManSFX.UISfxType.Select, GUIAIManager.LOC_GoTo, true,
+                GUIAIManager.LOC_UnAnchor, "ERROR", false, moving, CommandMove);
 
             if (RawTechExporter.aiIcons.TryGetValue(AIType.Assault, out SPR))
                 tex = SPR.texture;
-            CommandButton("Attack", tex, ManSFX.UISfxType.LockOn, "Attack Move", true, "Unanchor Tech",
+            CommandButton(GUIAIManager.LOC_Attack, tex, ManSFX.UISfxType.LockOn, GUIAIManager.LOC_Attack, true, GUIAIManager.LOC_UnAnchor,
                 "ERROR", false, enemy, CommandMove);
 
-
-            CommandButton("Stop", StopIcon, ManSFX.UISfxType.AIIdle,
-                "Stop current action", true, string.Empty, "ERROR", false, !enemy && !moving, CommandStop);
+            CommandButton(GUIAIManager.LOC_Stop, StopIcon, ManSFX.UISfxType.AIIdle,
+                GUIAIManager.LOC_Stop, true, string.Empty, "ERROR", false, !enemy && !moving, CommandStop);
             GUILayout.EndHorizontal();
+
             GUILayout.BeginHorizontal();
             /*
             if (RawTechExporter.aiIcons.TryGetValue(AIType.MTMimic, out SPR))
                 tex = SPR.texture;
             CommandButton("Patrol", tex, "Patrol Between", true,
                 "Unanchor Tech", "ERROR", false, false, CommandMove);*/
-            CommandsSelfDestruct();
             EmptyButton();
-            CommandButton("Anchor", AnchorIcon, ManSFX.UISfxType.Select, "Anchor to ground", lastTank.tank.Anchors.NumPossibleAnchors > 0,
-                "Need Anchors", "Enemy too close!", !lastTank.CanAnchorNow, lastTank.tank.IsAnchored, CommandAnchor);
+            EmptyButton();
+            EmptyButton();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            if (lastTank.AutoRepair || lastTank.tank == Singleton.playerTank)
+            {
+                CommandButton(GUIAIManager.LOC_BuildBase, LoadTechIcon, ManSFX.UISfxType.Craft, GUIAIManager.LOC_BuildBase_desc, true,
+                    "ERROR", "ERROR", false, false, CommandBuild);
+            }
+            else
+                EmptyButton();
+            CommandButton(GUIAIManager.LOC_Anchor, AnchorIcon, ManSFX.UISfxType.Select, GUIAIManager.LOC_Anchor_desc, lastTank.tank.Anchors.NumPossibleAnchors > 0,
+                GUIAIManager.LOC_AnchorNone, GUIAIManager.LOC_AnchorEnemy, !lastTank.CanAnchorNow, lastTank.tank.IsAnchored, CommandAnchor);
+            CommandsSelfDestruct();
             GUILayout.EndHorizontal();
         }
 
@@ -663,19 +767,26 @@ namespace TAC_AI.World
             EmptyButton();
             if (RawTechExporter.aiIcons.TryGetValue(AIType.Assault, out SPR))
                 tex = SPR.texture;
-            CommandButton("Attack", tex, ManSFX.UISfxType.LockOn, "Attack Tech", true, "Unanchor Tech", 
+            CommandButton(GUIAIManager.LOC_Attack, tex, ManSFX.UISfxType.LockOn, GUIAIManager.LOC_Attack, true, GUIAIManager.LOC_UnAnchor, 
                 "ERROR", false, lastTank.lastEnemy, CommandMove);
 
-            CommandButton("Stop", StopIcon, ManSFX.UISfxType.LockOn, "Stop all actions", true, "", "ERROR", 
+            CommandButton(GUIAIManager.LOC_Stop, StopIcon, ManSFX.UISfxType.LockOn, GUIAIManager.LOC_Stop, true, string.Empty, "ERROR", 
                 false, !lastTank.lastEnemy, CommandStop);
 
             GUILayout.EndHorizontal();
+
             GUILayout.BeginHorizontal(GLOh);
-            CommandsSelfDestruct();
-            CommandButton("Build", LoadTechIcon, ManSFX.UISfxType.Craft, "Build a Tech", true,
+            EmptyButton();
+            EmptyButton();
+            EmptyButton();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            CommandButton(GUIAIManager.LOC_BuildBase, LoadTechIcon, ManSFX.UISfxType.Craft, GUIAIManager.LOC_BuildBase_desc, true,
                 "ERROR", "ERROR", false, false, CommandBuild);
-            CommandButton("Un-Anchor", UnanchorIcon, ManSFX.UISfxType.Select, "Un-Anchor from ground", true,
+            CommandButton(GUIAIManager.LOC_UnAnchor, UnanchorIcon, ManSFX.UISfxType.Select, GUIAIManager.LOC_UnAnchor_desc, true,
                 "ERROR", "ERROR", false, false, CommandAnchor);
+            CommandsSelfDestruct();
             GUILayout.EndHorizontal();
         }
         private static void CommandsStatic()
@@ -688,10 +799,17 @@ namespace TAC_AI.World
             EmptyButton();
             EmptyButton();
             GUILayout.EndHorizontal();
+
             GUILayout.BeginHorizontal();
+            EmptyButton();
+            EmptyButton();
+            EmptyButton();
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            EmptyButton();
+            EmptyButton();
             CommandsSelfDestruct();
-            EmptyButton();
-            EmptyButton();
             GUILayout.EndHorizontal();
         }
         private static void CommandsNone()
@@ -704,6 +822,13 @@ namespace TAC_AI.World
             EmptyButton();
             EmptyButton();
             GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            EmptyButton();
+            EmptyButton();
+            EmptyButton();
+            GUILayout.EndHorizontal();
+
             GUILayout.BeginHorizontal();
             EmptyButton();
             EmptyButton();
@@ -747,7 +872,7 @@ namespace TAC_AI.World
                 var item = lastTanks[step];
                 item.RTSControlled = false;
                 item.lastEnemy = null;
-                item.ForceAllAIsToEscort(false, true);
+                item.ForceAllAIsToEscort(false);
             }
             ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AIIdle);
         }
@@ -758,7 +883,6 @@ namespace TAC_AI.World
         }
         private static void CommandAnchor()
         {
-            GUIAIManager.lastTank = lastTank;
             if (lastTank.tank.IsAnchored)
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
@@ -771,7 +895,12 @@ namespace TAC_AI.World
                         item.PlayerAllowAutoAnchoring = true;
                     }
                 }
-                GUIAIManager.SetOptionDriver(AIDriverType.AutoSet, false);
+                for (int step = lastTanks.Count - 1; step > -1; step--)
+                {
+                    var item = lastTanks[step];
+                    GUIAIManager.SetDriver(item, AIDriverType.AutoSet, false);
+                }
+                //GUIAIManager.SetDriver(lastTank, AIDriverType.AutoSet, false);
             }
             else
             {
@@ -785,14 +914,26 @@ namespace TAC_AI.World
                         item.TryInsureAnchor();
                     }
                 }
-                GUIAIManager.SetOptionDriver(AIDriverType.Stationary, false);
-                GUIAIManager.SetOption(AIType.Escort, false);
+                for (int step = lastTanks.Count - 1; step > -1; step--)
+                {
+                    var item = lastTanks[step];
+                    GUIAIManager.SetDriver(item, AIDriverType.Stationary, false);
+                    GUIAIManager.SetAIType(item, AIType.Escort, false);
+                }
+                //GUIAIManager.SetDriver(lastTank, AIDriverType.Stationary, false);
+                //GUIAIManager.SetAIType(lastTank, AIType.Escort, false);
             }
         }
 
+        private static GUIStyle ButtonStyle(bool selected, bool CantPerformActions)
+        {
+            return selected ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue;
+        }
         private static void EmptyButton()
         {
-            GUILayout.Button(string.Empty, AltUI.ButtonGrey, GUILayout.Width(ButtonWidth), GUILayout.Height(ButtonHeight));
+            GUILayout.Button(string.Empty, 
+                AltUI.ButtonGrey, 
+                GUILayout.Width(ButtonWidth), GUILayout.Height(ButtonHeight));
         }
         private static void CommandButton(string title, ManSFX.UISfxType SFX, string desc, bool isAvail, string availReq, string runReq, bool CantPerformActions, bool selected, Action act)
         {
@@ -801,7 +942,7 @@ namespace TAC_AI.World
             if (isAvail)
             {
                 if (GUILayout.Button(CantPerformActions ? new GUIContent(title, runReq) : new GUIContent(title, desc),
-                  selected ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLO2))
+                  ButtonStyle(selected, CantPerformActions), GLO, GLO2))
                 {
                     if (act != null)
                     {
@@ -809,7 +950,7 @@ namespace TAC_AI.World
                         act.Invoke();
                     }
                 }
-                ManIngameWiki.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
+                AltUI.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
             }
             else
             {
@@ -817,7 +958,7 @@ namespace TAC_AI.World
                 {
                     ManSFX.inst.PlayUISFX(SFX);
                 }
-                ManIngameWiki.Tooltip.GUITooltip(availReq);
+                AltUI.Tooltip.GUITooltip(availReq);
             }
         }
 
@@ -830,7 +971,7 @@ namespace TAC_AI.World
                 if (isAvail)
                 {
                     if (GUILayout.Button(CantPerformActions ? new GUIContent(title, runReq) : new GUIContent(title, desc),
-                      selected ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLO2))
+                      ButtonStyle(selected, CantPerformActions), GLO, GLO2))
                     {
                         if (act != null)
                         {
@@ -838,7 +979,7 @@ namespace TAC_AI.World
                             act.Invoke();
                         }
                     }
-                    ManIngameWiki.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
+                    AltUI.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
                 }
                 else
                 {
@@ -846,7 +987,7 @@ namespace TAC_AI.World
                     {
                         ManSFX.inst.PlayUISFX(SFX);
                     }
-                    ManIngameWiki.Tooltip.GUITooltip(availReq);
+                    AltUI.Tooltip.GUITooltip(availReq);
                 } 
             }
             else
@@ -861,12 +1002,12 @@ namespace TAC_AI.World
                             act.Invoke();
                         }
                     }
-                    ManIngameWiki.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
+                    AltUI.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
                 }
                 else
                 {
                     AltUI.Button(tex, ManSFX.UISfxType.AnchorFailed, AltUI.ButtonGrey, GLO, GLO2);
-                    ManIngameWiki.Tooltip.GUITooltip(availReq);
+                    AltUI.Tooltip.GUITooltip(availReq);
                 }
             }
         }
@@ -880,7 +1021,7 @@ namespace TAC_AI.World
                 if (isAvail)
                 {
                     if (GUILayout.Button(CantPerformActions ? new GUIContent(title, runReq) : new GUIContent(title, desc),
-                      selected ? CantPerformActions ? AltUI.ButtonRedActive : AltUI.ButtonBlueActive : AltUI.ButtonBlue, GLO, GLO2))
+                      ButtonStyle(selected, CantPerformActions), GLO, GLO2))
                     {
                         if (act != null)
                         {
@@ -888,7 +1029,7 @@ namespace TAC_AI.World
                             act.Invoke();
                         }
                     }
-                    ManIngameWiki.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
+                    AltUI.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
                 }
                 else
                 {
@@ -896,7 +1037,7 @@ namespace TAC_AI.World
                     {
                         ManSFX.inst.PlayUISFX(SFX);
                     }
-                    ManIngameWiki.Tooltip.GUITooltip(availReq);
+                    AltUI.Tooltip.GUITooltip(availReq);
                 }
             }
             else
@@ -911,12 +1052,12 @@ namespace TAC_AI.World
                             act.Invoke();
                         }
                     }
-                    ManIngameWiki.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
+                    AltUI.Tooltip.GUITooltip(CantPerformActions ? runReq : desc);
                 }
                 else
                 {
                     AltUI.Button(tex, ManSFX.UISfxType.AnchorFailed, AltUI.ButtonGrey, GLO, GLO2);
-                    ManIngameWiki.Tooltip.GUITooltip(availReq);
+                    AltUI.Tooltip.GUITooltip(availReq);
                 }
             }
         }
@@ -1011,19 +1152,19 @@ namespace TAC_AI.World
             NoHPBar.SetPixels(0, 0, 2, 2, new Color[4] { colorC, colorC, colorC, colorC, });
             NoHPBar.Apply();
 
-            colorC = new Color(0.525f, 1, 0.75f, 1f);
+            colorC = new Color(0.675f, 1, 0.8f, 1f);
             HPBarGreen = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             HPBarGreen.SetPixels(0, 0, 2, 2, new Color[4] { colorC, colorC, colorC, colorC, });
             HPBarGreen.Apply();
 
             //colorC = new Color(1, 0.3f, 0.4f, 1f);
-            colorC = new Color(1, 0.525f, 0.75f, 1f);
+            colorC = new Color(1, 0.675f, 0.8f, 1f);
             HPBarRed = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             HPBarRed.SetPixels(0, 0, 2, 2, new Color[4]{ colorC, colorC, colorC, colorC, });
             HPBarRed.Apply();
 
             //colorC = new Color(0.225f, 0.75f, 1, 1f);
-            colorC = new Color(0.525f, 0.85f, 1, 1f);
+            colorC = new Color(0.675f, 0.8f, 1f, 1f);
             HPBarBlue = new Texture2D(2, 2, TextureFormat.RGBA32, false, false);
             HPBarBlue.SetPixels(0, 0, 2, 2, new Color[4] { colorC, colorC, colorC, colorC, });
             HPBarBlue.Apply();

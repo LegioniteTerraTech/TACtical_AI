@@ -13,6 +13,7 @@ namespace TAC_AI.Templates
 {
     internal static class ModTechsDatabase
     {
+        public const int MinimumLocalTechsToTriggerWarning = 32;
         private static int lastExtLocalCount = 0;
         private static int lastExtModCount = 0;
 
@@ -129,6 +130,10 @@ namespace TAC_AI.Templates
         {
             ValidateAndAddAllInternalTechs();
             ValidateAndAddAllExternalTechs();
+        }
+        public static bool DoWeNotHaveEnoughLocalTechs()
+        {
+            return ExtPopTechsAll.Count < MinimumLocalTechsToTriggerWarning;
         }
         public static void ValidateAndAddAllInternalTechs(bool reloadPublic = true)
         {

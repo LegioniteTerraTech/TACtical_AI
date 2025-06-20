@@ -75,7 +75,7 @@ namespace TAC_AI.AI.AlliedOperations
                     AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Waiting for other tech to finish their actions...");
                     helper.AvoidStuff = true;
                     helper.SettleDown();
-                    if (helper.DelayedAnchorClock < 15)
+                    if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                         helper.DelayedAnchorClock++;
                     if (helper.CanAutoAnchor)
                     {
@@ -187,7 +187,7 @@ namespace TAC_AI.AI.AlliedOperations
                 //direct.lastDestination = tank.transform.position;
                 helper.AvoidStuff = true;
                 helper.SettleDown();
-                if (helper.DelayedAnchorClock < 15)
+                if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                     helper.DelayedAnchorClock++;
                 if (helper.CanAutoAnchor)
                 {
@@ -207,7 +207,7 @@ namespace TAC_AI.AI.AlliedOperations
                 helper.AvoidStuff = true;
                 helper.SettleDown();
                 //helper.DriveVar = 0;
-                if (helper.DelayedAnchorClock < 15)
+                if (helper.DelayedAnchorClock < AIGlobals.BaseAnchorMinimumTimeDelay)
                     helper.DelayedAnchorClock++;
                 if (helper.CanAutoAnchor)
                 {

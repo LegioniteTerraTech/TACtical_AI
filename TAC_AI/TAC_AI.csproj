@@ -376,6 +376,7 @@
     <Compile Include="UnityEngineExtensions.cs" />
     <Compile Include="World\NP_BaseUnit.cs" />
     <Compile Include="World\NP_MobileUnit.cs" />
+    <Compile Include="World\SelectHalo.cs" />
     <Compile Include="World\TechUnitGroup.cs" />
     <Compile Include="World\UnloadedBases.cs" />
     <Compile Include="World\NP_Presence.cs" />

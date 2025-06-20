@@ -39,6 +39,7 @@ namespace TAC_AI
     /// </summary>
     public interface TeamBasePointer
     {
+        string Name { get; }
         /// <summary>
         ///  MAY NOT ALWAYS BE PRESENT
         /// </summary>
@@ -235,33 +236,51 @@ namespace TAC_AI
             }
         }
 
+        private void ReadonlyComplaint()
+        {
+#if DEBUG
+            /*
+            throw new InvalidOperationException("Team " + teamID +
+                " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+            // */  DebugTAC_AI.Assert("Team " + teamID + " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+#endif
+            //We do nothing
+        }
 
         // EnemyPurchase
         public void AddBuildBucks(int toAdd)
         {
             if (IsReadonly)
-                throw new InvalidOperationException("Team " + teamID +
-                    " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+            {
+                ReadonlyComplaint();
+                return;
+            }
             AddBuildBucks_Internal = toAdd;
         }
         public void SpendBuildBucks(int toUse)
         {
             if (IsReadonly)
-                throw new InvalidOperationException("Team " + teamID +
-                    " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+            {
+                ReadonlyComplaint();
+                return;
+            }
             AddBuildBucks_Internal = -toUse;
         }
         public int StealBuildBucks(float stealSeverity = 0.2f)
         {
             if (IsReadonly)
-                throw new InvalidOperationException("Team " + teamID +
-                    " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+            {
+                ReadonlyComplaint();
+                return 0;
+            }
             int stealAmount = Mathf.CeilToInt(BuildBucks * UnityEngine.Random.Range(0, stealSeverity));
             AddBuildBucks_Internal = -stealAmount;
             return stealAmount;
         }
         public bool PurchasePossible(int BBCost)
         {
+            if (IsReadonly)
+                return true;
             return BBCost <= BuildBucks;
         }
         public bool TryMakePurchase(BlockTypes bloc)
@@ -271,8 +290,10 @@ namespace TAC_AI
         public bool TryMakePurchase(int Pay)
         {
             if (IsReadonly)
-                throw new InvalidOperationException("Team " + teamID +
-                    " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+            {
+                ReadonlyComplaint();
+                return true;
+            }
             if (PurchasePossible(Pay))
             {
                 SpendBuildBucks(Pay);
@@ -283,8 +304,10 @@ namespace TAC_AI
         public void FlagBankrupt()
         {
             if (IsReadonly)
-                throw new InvalidOperationException("Team " + teamID +
-                    " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+            {
+                ReadonlyComplaint();
+                return;
+            }
             bankrupt = true;
         }
 
@@ -373,15 +396,17 @@ namespace TAC_AI
 
         public void SetInfighting(bool state)
         {
-            if (!IsReadonly)
-                Infighting = state;
+            //if (!IsReadonly)
+            Infighting = state;
         }
         public void Set(int team, TeamRelations relate) => ManBaseTeams.SetRelations(teamID, team, relate);
         internal void Set_Internal(int team, TeamRelations relate)
         {
             if (IsReadonly)
-                throw new InvalidOperationException("Team " + teamID +
-                    " has IsReadonly set to true!  Check for this first using ManTeams.CanAlterRelations()");
+            {
+                ReadonlyComplaint();
+                return;
+            }
             align[team] = relate;
             if (ManBaseTeams.inst.teams.TryGetValue(team, out var val) && val.Alignment_Internal(teamID) != relate)
             {
@@ -407,7 +432,6 @@ namespace TAC_AI
             Set(team, TeamRelations.Enemy);
         }
 
-        private static List<TeamBasePointer> baseFundersCache = new List<TeamBasePointer>();
         /// <summary>
         /// This is VERY lazy.  There's only a small chance it will actually transfer the funds to the real strongest base.
         /// <para>This is normally handled automatically by the manager, but you can call this if you want to move the cash NOW</para>
@@ -419,19 +443,22 @@ namespace TAC_AI
             if (IsReadonly)
                 throw new InvalidOperationException("What's this? Team " + teamID +
                     " has IsReadonly set to true! This team should NEVER be updated under any circumstances!");
-            try
+
+            TeamBasePointer prevHQ = _HQ;
+            int baseSize = 0;
+            foreach (RLoadedBases.EnemyBaseFunder item in RLoadedBases.IterateTeamBaseFunders(Team))
             {
-                RLoadedBases.IterateTeamBaseFunders(Team, baseFundersCache);
-                var teamInstU = ManEnemyWorld.GetTeam(Team);
-                int baseSize = 0;
-                if (teamInstU != null)
+                int blockC = item.BlockCount;
+                if (baseSize < blockC)
                 {
-                    foreach (var item in teamInstU.EBUs)
-                    {
-                        baseFundersCache.Add(item);
-                    }
+                    baseSize = blockC;
+                    _HQ = item;
                 }
-                foreach (TeamBasePointer fundC in baseFundersCache)
+            }
+            var teamInstU = ManEnemyWorld.GetTeam(Team);
+            if (teamInstU != null)
+            {
+                foreach (TeamBasePointer fundC in teamInstU.EBUs)
                 {
                     int blockC = fundC.BlockCount;
                     if (baseSize < blockC)
@@ -441,10 +468,8 @@ namespace TAC_AI
                     }
                 }
             }
-            finally
-            {
-                baseFundersCache.Clear();
-            }
+            if (prevHQ != _HQ)
+                DebugTAC_AI.LogTeams(KickStart.ModID + ": Base " + _HQ.Name + " is assigned as new HQ for team " + teamID);
             return true;
         }
 
@@ -459,7 +484,11 @@ namespace TAC_AI
             if (presence != null)
                 UnloadedBases.TryUnloadedBaseOperations(presence);
             */
-            if (HQ != null)
+            if (HQ == null)
+            {
+                SetHQToStrongestOrRandomBase();
+            }
+            else
             {
                 if (HQ is RLoadedBases.EnemyBaseFunder funder)
                 {
@@ -534,36 +563,38 @@ namespace TAC_AI
                 inst.teams.Add(team, ETD);
             }
             else if (fixup)
+                SetDefaultTeam(ETDG, defaultRelations, infighting, lockedReadOnly);
+        }
+        private static void SetDefaultTeam(EnemyTeamData ETD, TeamRelations defaultRelations, bool infighting, bool lockedReadOnly)
+        {
+            bool doFixup = false;
+            if (ETD.relationInt != (int)defaultRelations)
             {
-                bool doFixup = false;
-                if (ETDG.relationInt != (int)defaultRelations)
-                {
-                    DebugTAC_AI.Assert("Somehow our default team " + ETDG.teamName + " was set to an ILLEGAL VALUE " +
-                        (TeamRelations)ETDG.relationInt + " when it SHOULD be " + defaultRelations + "!");
-                    doFixup = true;
-                }
-                else if (ETDG.IsInfighting != infighting)
-                {
-                    DebugTAC_AI.Assert("Somehow our default team " + ETDG.teamName + " was set to INFIGHTING " +
-                        ETDG.IsInfighting + " when it SHOULD be " + infighting + "!");
-                    doFixup = true;
-                }
+                DebugTAC_AI.Assert("Somehow our default team " + ETD.teamName + " was set to an ILLEGAL VALUE " +
+                    (TeamRelations)ETD.relationInt + " when it SHOULD be " + defaultRelations + "!");
+                doFixup = true;
+            }
+            else if (ETD.IsInfighting != infighting)
+            {
+                DebugTAC_AI.Assert("Somehow our default team " + ETD.teamName + " was set to INFIGHTING " +
+                    ETD.IsInfighting + " when it SHOULD be " + infighting + "!");
+                doFixup = true;
+            }
 
-                if (doFixup)
+            if (doFixup)
+            {
+                if (lockedReadOnly)
                 {
-                    if (lockedReadOnly)
-                    {
-                        inst.teams.Remove(team);
-                        EnemyTeamData ETD = new EnemyTeamData(lockedReadOnly, team, infighting, defaultRelations);
-                        ETD.SetInfighting(infighting);
-                        inst.teams.Add(team, ETD);
-                        //TankAIManager.UpdateEntireTeam(team); 
-                    }
-                    else
-                    {
-                        ETDG.SetInfighting(infighting);
-                        ETDG.defaultRelations = defaultRelations;
-                    }
+                    int prevTeam = ETD.Team;
+                    ETD.SetInfighting(infighting);
+                    ETD.align.Clear();
+                    ETD.defaultRelations = defaultRelations;
+                    //TankAIManager.UpdateEntireTeam(team); 
+                }
+                else
+                {
+                    ETD.SetInfighting(infighting);
+                    ETD.defaultRelations = defaultRelations;
                 }
             }
         }
@@ -628,6 +659,29 @@ namespace TAC_AI
                 }
             }
         }
+        public static void SanityCheckIfDefaultTeam(EnemyTeamData team)
+        {
+            switch (team.Team)
+            {
+                case ManSpawn.DefaultPlayerTeam:
+                    SetDefaultTeam(team, TeamRelations.Enemy, false, false);
+                    break;
+                case AIGlobals.DefaultEnemyTeam:
+                    SetDefaultTeam(team, TeamRelations.Enemy, false, true);
+                    break;
+                case AIGlobals.LonerEnemyTeam:
+                    SetDefaultTeam(team, TeamRelations.Enemy, true, true);
+                    break;
+                case ManSpawn.NeutralTeam:
+                    SetDefaultTeam(team, TeamRelations.Neutral, false, true);
+                    break;
+                case SpecialAISpawner.trollTeam:
+                    SetDefaultTeam(team, TeamRelations.Enemy, false, true);
+                    break;
+                default:
+                    break;
+            }
+        }
         public static void DeInit()
         {
             if (inst == null)
@@ -677,36 +731,29 @@ namespace TAC_AI
         }
 
 
-        private static List<EnemyTeamData> cachedTeams = new List<EnemyTeamData>();
-        private static List<EnemyTeamData> IterateALLTeams(Func<EnemyTeamData, bool> ETD)
+        private static IEnumerable<EnemyTeamData> IterateALLTeams(Func<EnemyTeamData, bool> ETD)
         {
-            cachedTeams.Clear();
             foreach (var item in inst.teams.Values)
             {
-                if (item != null && ETD(item))
-                    cachedTeams.Add(item);
+                if (item != null && ETD(item)) 
+                    yield return item;
             }
-            return cachedTeams;
         }
-        private static List<EnemyTeamData> IterateBaseTeams(Func<EnemyTeamData,bool> ETD)
+        private static IEnumerable<EnemyTeamData> IterateBaseTeams(Func<EnemyTeamData,bool> ETD)
         {
-            cachedTeams.Clear();
             foreach (var item in inst.teams.Values)
             {
                 if (item != null && !item.IsReadonly && ETD(item))
-                    cachedTeams.Add(item);
+                    yield return item;
             }
-            return cachedTeams;
         }
-        private static List<EnemyTeamData> IterateBaseTeams()
+        private static IEnumerable<EnemyTeamData> IterateBaseTeams()
         {
-            cachedTeams.Clear();
             foreach (var item in inst.teams.Values)
             {
                 if (item != null && !item.IsReadonly)
-                    cachedTeams.Add(item);
+                    yield return item;
             }
-            return cachedTeams;
         }
         public static EnemyTeamData GetNewBaseTeam(TeamRelations defaultRelations)
         {
@@ -811,11 +858,24 @@ namespace TAC_AI
         }
         public static EnemyTeamData GetRandomExistingBaseTeam()
         {
-            return IterateBaseTeams().GetRandomEntry();
+            var Enumer = IterateBaseTeams();
+            int count = Enumer.Count();
+            if (count < 1)
+            {
+                return null;
+            }
+            return Enumer.ElementAt(UnityEngine.Random.Range(0, count - 1));
         }
         public static bool TryGetExistingBaseTeamWithPlayerAlignment(TeamRelations relations, out EnemyTeamData data)
         {
-            data = IterateBaseTeams(x => x.Alignment_Internal(playerTeam) == relations).GetRandomEntry();
+            var Enumer = IterateBaseTeams(x => x.Alignment_Internal(playerTeam) == relations);
+            int count = Enumer.Count();
+            if (count < 1)
+            {
+                data = null;
+                return false;
+            }
+            data = Enumer.ElementAt(UnityEngine.Random.Range(0, count - 1));
             return data != null;
         }
 
@@ -922,6 +982,14 @@ namespace TAC_AI
             }
             return fallback;
         }
+        private static void ComplainOnIllegalTeamModification()
+        {
+#if DEBUG
+                    DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
+#else
+            DebugTAC_AI.Assert("We tried to change relations of a READONLY faction - this should be impossible!");
+#endif
+        }
         public static bool CanAlterRelations(int teamID1, int teamID2)
         {
             if (GetRelationsWithReadonlyPriority(teamID1, teamID2, out var ETD))
@@ -933,7 +1001,7 @@ namespace TAC_AI
             if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
             {
                 if (!CanAlterRelations(teamID1, teamID2))
-                    DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
+                    ComplainOnIllegalTeamModification();
                 ETD.Set_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, set);
                 return true;
             }
@@ -944,7 +1012,7 @@ namespace TAC_AI
             if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
             {
                 if (!CanAlterRelations(teamID1, teamID2))
-                    DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
+                    ComplainOnIllegalTeamModification();
                 ETD.ImproveRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2);
                 return true;
             }
@@ -955,7 +1023,7 @@ namespace TAC_AI
             if (GetRelationsWithWriteablePriority(teamID1, teamID2, out var ETD))
             {
                 if (!CanAlterRelations(teamID1, teamID2))
-                    DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
+                    ComplainOnIllegalTeamModification();
                 ETD.DegradeRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, damage);
                 return true;
             }
@@ -1280,19 +1348,22 @@ namespace TAC_AI
                         if (enabledTabs.Contains(item.Key))
                         {
                             GUILayout.BeginHorizontal();
-                            GUILayout.Label("Default Relations: ");
-                            GUILayout.Label(item.Value.defaultRelations.ToString());
-                            GUILayout.FlexibleSpace();
-                            GUILayout.EndHorizontal();
-                            GUILayout.BeginHorizontal();
-                            GUILayout.Label("To Player: ");
+                            GUILayout.Label("Relations: [To Player: ");
                             GUILayout.Label(item.Value.Alignment_Internal(playerTeam).ToString());
                             GUILayout.FlexibleSpace();
+                            GUILayout.Label("Other: ");
+                            GUILayout.Label(item.Value.defaultRelations.ToString());
+                            GUILayout.Label("]");
                             GUILayout.EndHorizontal();
                             GUILayout.BeginHorizontal();
                             GUILayout.Label("Infighting: ");
                             GUILayout.Label(item.Value.IsInfighting.ToString());
                             GUILayout.FlexibleSpace();
+                            GUILayout.EndHorizontal();
+                            GUILayout.BeginHorizontal();
+                            GUILayout.Label("Money: ");
+                            GUILayout.FlexibleSpace();
+                            GUILayout.Label(item.Value.BuildBucks.ToString());
                             GUILayout.EndHorizontal();
                             foreach (var item2 in item.Value.align)
                             {
@@ -1531,11 +1602,12 @@ namespace TAC_AI
             public int TeamID;
             public int BribeAmount;
         }
-        private static NetworkHook<NetworkedAITeamUpdate> netHook = new NetworkHook<NetworkedAITeamUpdate>(OnReceiveTeamUpdate, NetMessageType.ToClientsOnly);
+        private static NetworkHook<NetworkedAITeamUpdate> netHook = new NetworkHook<NetworkedAITeamUpdate>(
+            "TAC_AI.NetworkedAITeamUpdate", OnReceiveTeamUpdate, NetMessageType.ToClientsOnly);
 
         internal static void InsureNetHooks()
         {
-            netHook.Register();
+            netHook.Enable();
         }
         /// <summary>
         /// Just permits it to carry on
