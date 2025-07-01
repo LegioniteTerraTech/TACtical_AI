@@ -688,7 +688,7 @@ namespace TAC_AI.Templates
 
                 if (!AIEBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos3))
                     return;
-
+                bool spawned = false;
                 int licence = Licences.GetLicense(factionSelect).CurrentLevel;
                 if (AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
                 {
@@ -712,7 +712,8 @@ namespace TAC_AI.Templates
                         RTF.IsPopulation = true;
                         RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary };
 
-                        RawTechLoader.TrySpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, RTF);
+                        if (RawTechLoader.TrySpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, RTF))
+                            spawned = true;
                     }
                     else // Spawn turret lol
                     {
@@ -723,16 +724,22 @@ namespace TAC_AI.Templates
                         RTF.IsPopulation = true;
                         RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Defense };
 
-                        RawTechLoader.TrySpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, RTF);
+                        if (RawTechLoader.TrySpawnSpecificTechSafe(pos3, Vector3.forward, trollTeam, RTF))
+                            spawned = true;
                     }
                 }
 
-                DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
-                try
+                if (spawned)
                 {
-                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
+                    DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
+                    try
+                    {
+                        Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
+                    }
+                    catch { }
                 }
-                catch { }
+                else
+                    DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - It is likely too early and we could not find a good canidate");
 
                 return;
             }
@@ -746,15 +753,18 @@ namespace TAC_AI.Templates
             RTF.IsPopulation = true;
             RTF.Purposes = new HashSet<BasePurpose> { BasePurpose.Defense };
 
-            RawTechLoader.TrySpawnSpecificTechSafe(pos2, Vector3.forward, trollTeam, RTF);
-
-            DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
-            try
+            if (RawTechLoader.TrySpawnSpecificTechSafe(pos2, Vector3.forward, trollTeam, RTF))
             {
-                Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
-            }
-            catch { }
 
+                DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Spawned!");
+                try
+                {
+                    Singleton.Manager<UIMPChat>.inst.AddMissionMessage("<b>Trader Troll ahead!</b>");
+                }
+                catch { }
+            }
+            else // We failed so we do nothing
+                DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - It is likely too early and we could not find a good canidate");
         }
 
         private static void ManagePooledAIs()

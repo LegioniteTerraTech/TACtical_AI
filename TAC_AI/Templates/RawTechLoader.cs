@@ -1426,6 +1426,8 @@ namespace TAC_AI.Templates
         internal static bool TrySpawnSpecificTechSafe(Vector3 pos, Vector3 forwards, int Team, RawTechPopParams filter, Action<Tank> fallbackOp = null)
         {
             RawTech baseTemplate = FilteredSelectFromAll(filter, false, true);
+            if (baseTemplate == null)
+                return false;
 
             if (filter.Disarmed && filter.IsPopulation)
                 Team = AIGlobals.GetRandomSubNeutralBaseTeam();

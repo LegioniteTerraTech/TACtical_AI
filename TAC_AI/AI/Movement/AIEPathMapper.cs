@@ -1042,7 +1042,11 @@ namespace TAC_AI.AI.Movement
             {
                 bool isTrue = (chunkByte >> 1) < GetChunkAltWater();
                 if (isTrue && !KickStart.isWaterModPresent)
-                    throw new Exception("BytesToWater returned true when no water is present");
+                {
+                    // We encountered this issue too frequently.  This is now disabled.
+                    //throw new Exception("BytesToWater returned true when no water is present");
+                    return false;
+                }
                 return isTrue;
             }
             /// <summary>
