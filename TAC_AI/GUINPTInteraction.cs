@@ -339,7 +339,7 @@ namespace TAC_AI.AI
                 {
                     if (!canPursuade)
                         bribeButton = new GUIContent(randomAllow, "Refuses to be bribed");
-                    if (!afford)
+                    else if (!afford)
                         bribeButton = new GUIContent(randomAllow, "Not enough BB");
                     else
                     {
@@ -372,18 +372,23 @@ namespace TAC_AI.AI
                                 int newTeam = ManPlayer.inst.PlayerTeam;
                                 ManEnemyWorld.ChangeTeam(lastTeam, newTeam);
                                 ManEnemyWorld.TeamBribeEvent.Send(lastTeam, newTeam);
+                                CloseSubMenuClickable();
                             }
                             else
                             {
-                                ETD.ImproveRelations(playerTeam);
-                                if (ManBaseTeams.IsFriendlyBaseTeam(lastTeam))
+                                if (ETD.ImproveRelations(playerTeam))
                                 {
-                                    UIHelpersExt.BigF5broningBanner(playerTeam,
-                                        ETD.teamName + " is now allied!");
+                                    if (ManBaseTeams.IsFriendlyBaseTeam(lastTeam))
+                                    {
+                                        UIHelpersExt.BigF5broningBanner(playerTeam,
+                                            ETD.teamName + " is now allied!");
+                                    }
+                                    ManEnemyWorld.TeamBribeEvent.Send(lastTeam, lastTeam);
+                                    CloseSubMenuClickable();
                                 }
-                                ManEnemyWorld.TeamBribeEvent.Send(lastTeam, lastTeam);
+                                else
+                                    ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                             }
-                            CloseSubMenuClickable();
                         }
                         else
                             ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
@@ -403,19 +408,25 @@ namespace TAC_AI.AI
                 }
                 else
                 {
-                    if (GUILayout.Button(new GUIContent(randomEvict, "Annoy the Team"), AltUI.ButtonRed))
+                    bool canPursuade = ManBaseTeams.CanAlterRelations(playerTeam, lastTeam);
+                    if (GUILayout.Button(new GUIContent(randomEvict, canPursuade ? "Annoy the Team" : "Cannot annoy"), 
+                        canPursuade ? AltUI.ButtonRed : AltUI.ButtonGrey))
                     {
                         ManSFX.inst.PlayUISFX(ManSFX.UISfxType.PayloadIncoming);
                         var mind = lastTank?.GetComponent<EnemyMind>();
                         if (!ManBaseTeams.IsEnemyBaseTeam(lastTeam))
                         {
-                            ETD.DegradeRelations(playerTeam);
-                            if (ManBaseTeams.IsEnemy(ETD.teamID, playerTeam))
+                            if (ETD.DegradeRelations(playerTeam))
                             {
-                                ManEnemyWorld.TeamWarEvent.Send(lastTeam, lastTeam);
-                                UIHelpersExt.BigF5broningBanner(TeamNamer.GetTeamName(lastTeam) + " is now hostile!");
+                                if (ManBaseTeams.IsEnemy(ETD.teamID, playerTeam))
+                                {
+                                    ManEnemyWorld.TeamWarEvent.Send(lastTeam, lastTeam);
+                                    UIHelpersExt.BigF5broningBanner(TeamNamer.GetTeamName(lastTeam) + " is now hostile!");
+                                }
+                                CloseSubMenuClickable();
                             }
-                            CloseSubMenuClickable();
+                            else
+                                ManSFX.inst.PlayUISFX(ManSFX.UISfxType.AnchorFailed);
                         }
                         else
                             UIHelpersExt.BigF5broningBanner(TeamNamer.GetTeamName(lastTeam) + " is angry!");

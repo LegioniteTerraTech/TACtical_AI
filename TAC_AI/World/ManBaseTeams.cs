@@ -982,12 +982,15 @@ namespace TAC_AI
             }
             return fallback;
         }
+        /// <summary>
+        /// MUTED for now.  We will now use boolean checking to insure this NEVER happens
+        /// </summary>
         private static void ComplainOnIllegalTeamModification()
         {
 #if DEBUG
                     DebugTAC_AI.FatalError("We tried to change relations of a READONLY faction - this should be impossible!");
 #else
-            DebugTAC_AI.Assert("We tried to change relations of a READONLY faction - this should be impossible!");
+            //DebugTAC_AI.Assert("We tried to change relations of a READONLY faction - this should be impossible!");
 #endif
         }
         public static bool CanAlterRelations(int teamID1, int teamID2)
@@ -1002,8 +1005,11 @@ namespace TAC_AI
             {
                 if (!CanAlterRelations(teamID1, teamID2))
                     ComplainOnIllegalTeamModification();
-                ETD.Set_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, set);
-                return true;
+                else
+                {
+                    ETD.Set_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, set);
+                    return true;
+                }
             }
             return false;
         }
@@ -1013,8 +1019,11 @@ namespace TAC_AI
             {
                 if (!CanAlterRelations(teamID1, teamID2))
                     ComplainOnIllegalTeamModification();
-                ETD.ImproveRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2);
-                return true;
+                else
+                {
+                    ETD.ImproveRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2);
+                    return true;
+                }
             }
             return false;
         }
@@ -1024,8 +1033,11 @@ namespace TAC_AI
             {
                 if (!CanAlterRelations(teamID1, teamID2))
                     ComplainOnIllegalTeamModification();
-                ETD.DegradeRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, damage);
-                return true;
+                else
+                {
+                    ETD.DegradeRelations_Internal(ETD.teamID == teamID2 ? teamID1 : teamID2, damage);
+                    return true;
+                }
             }
             return false;
         }
