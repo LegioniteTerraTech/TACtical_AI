@@ -265,7 +265,7 @@ namespace TAC_AI.Templates
                 RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                 if (RawTechLoader.ShouldUseCustomTechs(out int randSelect, RTF))
                 {
-                    newTech = RawTechLoader.GetUnloadedTech(ModTechsDatabase.ExtPopTechsAll[randSelect], TSP.m_Team, true, out _);
+                    newTech = RawTechLoader.GetUnloadedTech(ModTechsDatabase.ExtPopTechsAllLookup(randSelect), TSP.m_Team, true, out _);
 
                     if (newTech == null)
                     {
@@ -342,7 +342,7 @@ namespace TAC_AI.Templates
                 RTF.Purpose = BasePurpose.NotStationary;
                 if (RawTechLoader.ShouldUseCustomTechs(out int randSelect, RTF))
                 {
-                    newTech = RawTechLoader.GetUnloadedTech(ModTechsDatabase.ExtPopTechsAll[randSelect], TSP.m_Team, true, out _);
+                    newTech = RawTechLoader.GetUnloadedTech(ModTechsDatabase.ExtPopTechsAllLookup(randSelect), TSP.m_Team, true, out _);
 
                     if (newTech == null)
                     {
@@ -1011,16 +1011,16 @@ namespace TAC_AI.Templates
         /// </summary>
         /// <param name="tech"></param>
         /// <param name="player"></param>
-        internal static bool PurgeHost(int HostID, string name)
+        internal static bool PurgeHost(int HostVisibleID, string name)
         {   // 
             if (!ManNetwork.IsHost)
                 throw new Exception(KickStart.ModID + ": SpecialAISpawner.PurgeHost called on non-host");
-            DebugTAC_AI.Info(KickStart.ModID + ": PurgeHost - Name " + name +  " | " + HostID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
+            DebugTAC_AI.Info(KickStart.ModID + ": PurgeHost - Name " + name +  " | " + HostVisibleID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
             if (ManNetwork.IsNetworked)
             {
                 try
                 {
-                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(HostID);
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(HostVisibleID);
                     Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
                     {
                         m_HostID = TV.HostID,
@@ -1082,8 +1082,16 @@ namespace TAC_AI.Templates
             {
                 try
                 {
-                    ManVisible.inst.ObliterateTrackedVisibleFromWorld(HostID);
-                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name);
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisible(HostVisibleID);
+                    if (TV != null)
+                    {
+                        ManVisible.inst.ObliterateTrackedVisibleFromWorld(TV);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name);
+                    }
+                    else
+                    {
+                        DebugTAC_AI.Assert(KickStart.ModID + ": Purge - failed to purge visible!!!!");
+                    }
                     AIGlobals.SceneTechCount = -1;
                     return true;
                 }

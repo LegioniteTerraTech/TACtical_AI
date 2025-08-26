@@ -58,10 +58,12 @@ namespace TAC_AI.World
         {
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return false;
+            enemyTeamInvolved.PresenceDebugDEV("Siege active? " + InProgress.ToString() + ", Siege cooldown (sec) " + RaidCooldown.ToString("0.000") + ", counts [" +
+                enemyTeamInvolved.GlobalMobileTechCount() + " vs " + (KickStart.EnemyTeamTechLimit / 2f) + "]");
             if (!InProgress && (RaidCooldown <= 0 || AIGlobals.TurboAICheat))
             {
-                if (enemyTeamInvolved.GlobalMobileTechCount() + 1 > KickStart.EnemyTeamTechLimit)
-                {
+                if (enemyTeamInvolved.GlobalMobileTechCount() > (KickStart.EnemyTeamTechLimit / 2f))//(enemyTeamInvolved.GlobalMobileTechCount() + 3 > KickStart.EnemyTeamTechLimit)
+                {   // the siege only begins IF the AI's team is at a certain threshold
                     inst.EP = enemyTeamInvolved;
                     WarnPlayers();
                     inProgress = true;
@@ -89,19 +91,19 @@ namespace TAC_AI.World
                     // Sieges are "All In" for the AI.  They should not retreat since a siege is a long distance attack.
                     if (inst.EP == null || !Singleton.playerTank)
                         return; // Cannot run while no targetable player Tech is present
-                    CallAllRaidersToPlayerTile();
-                    TryRefocusIdleOrDistractedRaidersOnPlayer();
-                    ScrapStuckOrFrozenRaiders();
-                    CheckSiegeEnded();
+                    inst.CallAllRaidersToPlayerTile();
+                    inst.TryRefocusIdleOrDistractedRaidersOnPlayer();
+                    inst.WakeOrScrapFrozenRaiders();
+                    inst.CheckSiegeEnded();
                 }
             }
         }
 
-        private static void CallAllRaidersToPlayerTile()
+        private void CallAllRaidersToPlayerTile()
         {
             try
             {
-                inst.EP.SetSiegeMode(WorldPosition.FromScenePosition(Singleton.playerTank.boundsCentreWorldNoCheck).TileCoord);
+                EP.SetSiegeMode(WorldPosition.FromScenePosition(Singleton.playerTank.boundsCentreWorldNoCheck).TileCoord);
             }
             catch
             {
@@ -109,12 +111,12 @@ namespace TAC_AI.World
                 return;
             }
         }
-        private static void TryRefocusIdleOrDistractedRaidersOnPlayer()
+        private void TryRefocusIdleOrDistractedRaidersOnPlayer()
         {
-            inst.techsInvolved.Clear();
+            techsInvolved.Clear();
             foreach (Tank tech in ManTechs.inst.CurrentTechs)
             {
-                if ((bool)tech?.visible?.isActive && tech.Team == inst.EP.Team && !tech.IsAnchored)
+                if ((bool)tech?.visible?.isActive && tech.Team == EP.Team && !tech.IsAnchored)
                 {
                     if (!tech.IsSleeping)
                     {
@@ -130,35 +132,72 @@ namespace TAC_AI.World
                                 mind.CommanderMind = EnemyAttitude.Homing;
                             }
                         }
-                        inst.techsInvolved.Add(tech);
+                        techsInvolved.Add(tech);
                     }
                     else
-                        inst.techsFrozen.Add(tech);
+                        techsFrozen.Add(tech);
                 }
             }
         }
-        private static void ScrapStuckOrFrozenRaiders()
+        private void WakeOrScrapFrozenRaiders()
         {
-            int count = inst.techsFrozen.Count;
-            for (int step = 0; step < count; count--)
+            int countManaged = techsFringe.Count;
+            for (int step = 0; step < countManaged; )
             {
-                Tank tech = inst.techsFrozen[0];
-                inst.techsFrozen.RemoveAt(0);
+                Tank tech = techsFringe[step];
                 if ((bool)tech?.visible)
                 {
-                    UnloadedBases.RecycleLoadedTechToTeam(tech);
-                    SpecialAISpawner.Purge(tech);
+                    WorldPosition WP = WorldPosition.FromScenePosition(tech.visible.centrePosition);
+                    if (tech.rbody && AIGlobals.CanPlaceSafelyInTile(WP.TileCoord, ManWorld.inst.TileManager.GetTileOverlapDirection(WP, tech.GetCheapBounds())))
+                    {   // It's loadable
+                        if (tech.rbody.IsSleeping())
+                            tech.rbody.WakeUp();
+                        step++;
+                    }
+                    else
+                    {   // It's VERY stuck
+                        //UnloadedBases.RecycleLoadedTechToTeam(tech);
+                        //SpecialAISpawner.Purge(tech);
+                        techsFringe.RemoveAt(step);
+                        countManaged--;
+                    }
+                }
+                else
+                {   // Unloaded - It will move back into the warzone.
+                    techsFringe.RemoveAt(step);
+                    countManaged--;
                 }
             }
-            inst.techsFrozen.Clear();
+            int count = techsFrozen.Count;
+            for (int step = 0; step < count; count--)
+            {
+                Tank tech = techsFrozen[0];
+                techsFrozen.RemoveAt(0);
+                if ((bool)tech?.visible)
+                {
+                    WorldPosition WP = WorldPosition.FromScenePosition(tech.visible.centrePosition);
+                    if (tech.rbody && AIGlobals.CanPlaceSafelyInTile(WP.TileCoord, ManWorld.inst.TileManager.GetTileOverlapDirection(WP, tech.GetCheapBounds())))
+                    {   // It's loadable
+                        techsFringe.Add(tech);
+                        tech.rbody.WakeUp();
+                    }
+                    else
+                    {   // It's VERY stuck.  Over the edge of the loaded WorldTiles yet not loaded out of the world yet.
+                        //   Scrap to prevent issues
+                        //UnloadedBases.RecycleLoadedTechToTeam(tech);
+                        //SpecialAISpawner.Purge(tech);
+                    }
+                }
+            }
+            techsFrozen.Clear();
         }
-        private static void CheckSiegeEnded()
+        private void CheckSiegeEnded()
         {
-            var mainBase = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(inst.EP);
-            bool defeatedAllUnits = !ManBaseTeams.IsEnemy(inst.Team, ManPlayer.inst.PlayerTeam) || (inst.techsInvolved.Count == 0 && !inst.EP.HasMobileETUs());
+            var mainBase = UnloadedBases.RefreshTeamMainBaseIfAnyPossible(EP);
+            bool defeatedAllUnits = !ManBaseTeams.IsEnemy(Team, ManPlayer.inst.PlayerTeam) || (techsInvolved.Count == 0 && !EP.HasMobileETUs());
             if (mainBase == null || !UnloadedBases.IsPlayerWithinProvokeDist(mainBase.tilePos) || defeatedAllUnits)
             {
-                NetworkHandler.TryBroadcastNewEnemySiege(inst.Team, TotalHP, false);
+                NetworkHandler.TryBroadcastNewEnemySiege(Team, TotalHP, false);
                 EndSiege(shouldCooldown: defeatedAllUnits);
             }
         }
@@ -293,6 +332,10 @@ namespace TAC_AI.World
 
         float delay = 0;
         private readonly List<Tank> techsFrozen = new List<Tank>();
+        /// <summary>
+        /// Techs that may fall out of the world and thus should be monitored
+        /// </summary>
+        private readonly List<Tank> techsFringe = new List<Tank>();
         private void CheckShouldRun()
         {
             bool should = RaidCooldown <= 0 && ready && Team != 0;

@@ -5240,42 +5240,6 @@ namespace TAC_AI.AI
         {
             if (!tank.IsAnchored && CanAnchorNow)
             {
-                /*
-                DebugTAC_AI.Assert(KickStart.ModID + ": AI " + tank.name + ":  TryAnchor()");
-                tank.FixupAnchors(false);
-                if (!tank.IsAnchored)
-                {
-                    tank.Anchors.TryAnchorAll(true);
-                    if (tank.IsAnchored)
-                    {
-                        ExpectAITampering = true;
-                        return;
-                    }
-                    Vector3 startPos = tank.visible.centrePosition;
-                    Quaternion tankFore = AIGlobals.LookRot(tank.trans.forward.SetY(0).normalized, Vector3.up);
-                    tank.visible.Teleport(startPos, tankFore, true);
-                    //Quaternion tankStartRot = tank.trans.rotation;
-                    for (int step = 0; step < 16; step++)
-                    {
-                        if (!tank.IsAnchored)
-                        {
-                            Vector3 newPos = startPos + new Vector3(0, -4, 0);
-                            newPos.y += step / 2f;
-                            tank.visible.Teleport(newPos, tankFore, false);
-                            tank.Anchors.TryAnchorAll();
-                        }
-                        if (tank.IsAnchored)
-                        {
-                            ExpectAITampering = true;
-                            return;
-                        }
-                        tank.FixupAnchors(true);
-                    }
-                }
-                else
-                    ExpectAITampering = true;
-                //TryReallyAnchor();
-                */
                 AnchorState = AIAnchorState.Anchor;
             }
         }
@@ -5356,7 +5320,7 @@ namespace TAC_AI.AI
                 }
                 Vector3 startPos = tank.visible.centrePosition;
                 Quaternion tankFore = AIGlobals.LookRot(tank.trans.forward.SetY(0).normalized, Vector3.up);
-                tank.visible.Teleport(startPos, tankFore, true);
+                tank.visible.Teleport(startPos, tankFore, true, true);
                 //Quaternion tankStartRot = tank.trans.rotation;
                 for (int step = 0; step < 6; step++)
                 {
@@ -5364,7 +5328,7 @@ namespace TAC_AI.AI
                     {
                         Vector3 newPos = startPos + Vector3.down;
                         newPos.y += step / 4f;
-                        tank.visible.Teleport(newPos, tankFore, false);
+                        tank.visible.Teleport(newPos, tankFore, false, true);
                         tank.Anchors.TryAnchorAll();
                     }
                     if (tank.IsAnchored)
@@ -5407,7 +5371,7 @@ namespace TAC_AI.AI
                 }
                 ExpectAITampering = true;
                 // Reset to ground so it doesn't go flying off into space
-                tank.visible.Teleport(startPos, tankFore, true);
+                tank.visible.Teleport(startPos, tankFore, true, true);
                 AnchorState = AIAnchorState.None;
             }
         }

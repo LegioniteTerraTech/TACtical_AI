@@ -118,7 +118,7 @@ namespace TAC_AI.AI
                                     // Charge the new Tech and send it on it's way!
                                     RawTechLoader.ChargeAndClean(tank);
                                     tank.visible.Teleport(tank.boundsCentreWorldNoCheck + (tank.rootBlockTrans.forward *
-                                        tank.blockBounds.size.magnitude), tank.rootBlockTrans.rotation, true, false);
+                                        tank.blockBounds.size.magnitude), tank.rootBlockTrans.rotation, false, false);
                                     if (!ManVisible.inst.AllTrackedVisibles.Any(delegate (TrackedVisible cand)
                                     { return cand.visible == tank.visible; }))
                                     {

@@ -157,9 +157,12 @@ namespace TAC_AI.AI.Enemy
             }
             WorldPosition worPos = ManOverlay.inst.WorldPositionForFloatingText(tank.visible);
             int tankCost = RawTechBase.GetBBCost(tank);
-            string compressed = CompressIfNeeded(tankCost, out int smaller);
-            AIGlobals.PopupColored(Localisation.inst.GetMoneyStringWithSymbol(smaller) + compressed, tank.Team, worPos);
-            ETD.AddBuildBucks(tankCost);
+            if (tankCost > 0)
+            {
+                string compressed = CompressIfNeeded(tankCost, out int smaller);
+                AIGlobals.PopupColored(Localisation.inst.GetMoneyStringWithSymbol(smaller) + compressed, tank.Team, worPos);
+                ETD.AddBuildBucks(tankCost);
+            }
             SpecialAISpawner.Eradicate(tank);
         }
         public static string CompressIfNeeded(int input, out int smaller)
@@ -1258,7 +1261,7 @@ namespace TAC_AI.AI.Enemy
                     
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
-                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                         RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, BTemp);
                         if (DebugRawTechSpawner.ShowDebugFeedBack)
                             AIGlobals.PopupColored("Combat Expand2", tech.Team, pos2);
@@ -1347,7 +1350,7 @@ namespace TAC_AI.AI.Enemy
                     DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
-                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                         return RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, BTemp);
                     }
                     DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - was given " + Terra + " | " + grade + " | " + Cost);
@@ -1409,7 +1412,7 @@ namespace TAC_AI.AI.Enemy
 
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
-                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                         RawTechLoader.SpawnTechFragment(pos, funds.Team, BTemp);
                         //DebugTAC_AI.Log(KickStart.ModID + ": BaseConstructTech - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
                         return;
@@ -1518,7 +1521,7 @@ namespace TAC_AI.AI.Enemy
                     DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
-                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                         RawTechLoader.SpawnBaseExpansion(tech, pos, tech.Team, BTemp);
                         return;
                     }
@@ -1548,7 +1551,7 @@ namespace TAC_AI.AI.Enemy
                     DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(2) - Team " + tech.Team + ": That expansion is mine!  Type: " + reason + ", Faction: " + mind.MainFaction);
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
-                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                         RawTechLoader.SpawnBaseExpansion(tech, pos2, tech.Team, BTemp);
                         return;
                     }

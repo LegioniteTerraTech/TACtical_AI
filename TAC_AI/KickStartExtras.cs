@@ -194,7 +194,7 @@ namespace TAC_AI
             if (KickStart.TryForceOnlyPlayerLocalSpawns && ModTechsDatabase.DoWeNotHaveEnoughLocalTechs())
             {
                 ManModGUI.ShowErrorPopup("Advanced AI - \"Try Only Use Local Spawns\" does not have enough Local Techs to insure random spawning!\n  You only have " +
-                    ModTechsDatabase.ExtPopTechsAll.Count + " Techs, while at least " + ModTechsDatabase.MinimumLocalTechsToTriggerWarning +
+                    ModTechsDatabase.ExtPopTechsAllCount() + " Techs, while at least " + ModTechsDatabase.MinimumLocalTechsToTriggerWarning +
                     " Techs in your local enemies folder is suggested.  This automatic check does not cover edge-cases caused by a lack of diversity in your Tech selection.\n" +
                     AltUI.ObjectiveString("  Press \"Fix\" to disable \"Try Only Use Local Spawns\""), false, () =>
                     {

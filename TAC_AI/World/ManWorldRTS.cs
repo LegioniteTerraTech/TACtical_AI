@@ -2719,9 +2719,11 @@ namespace TAC_AI.World
 
         private static void GUIHandlerPlayerAutopilot(int ID)
         {
-            if (GUI.Button(new Rect(10, 10, 140, 30), KickStart.AutopilotPlayerRTS ? "<b>Self-Driving ON</b>" : "Self-Driving Off", KickStart.AutopilotPlayerRTS ? AltUI.ButtonGreen : AltUI.ButtonBlue))
+            if (GUI.Button(new Rect(10, 10, 140, 30), KickStart.AutopilotPlayerMain ? "<b>Self-Driving ON</b>" : "Self-Driving Off", 
+                KickStart.AutopilotPlayerMain ? AltUI.ButtonGreen : AltUI.ButtonBlue))
             {
-                KickStart.AutopilotPlayerRTS = !KickStart.AutopilotPlayerRTS;
+                KickStart.AutopilotPlayerMain = !KickStart.AutopilotPlayerMain;
+                TankAIManager.toggleAuto.SetToggleState(KickStart.AutopilotPlayerMain);
             }
             if (GUI.Button(new Rect(10, 40, 140, 30), DevCamLock == DebugCameraLock.LockCamToTech ? "<b>Follow Cam ON</b>" : "Follow Cam Off"))
             {

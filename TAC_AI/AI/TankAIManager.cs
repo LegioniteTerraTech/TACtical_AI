@@ -53,16 +53,8 @@ namespace TAC_AI.AI
         public static ManToolbar.ToolbarToggle toggleAuto;
         internal static void ButtonTogglePlayerAutopilot(bool state)
         {
-            if (KickStart.AllowPlayerRTSHUD && ManWorldRTS.PlayerIsInRTS)
-            {
-                KickStart.AutopilotPlayerRTS = state;
-                toggleAuto.SetToggleState(KickStart.AutopilotPlayerRTS);
-            }
-            else
-            {
-                KickStart.AutopilotPlayerMain = state;
-                toggleAuto.SetToggleState(KickStart.AutopilotPlayerMain);
-            }
+            KickStart.AutopilotPlayerMain = state;
+            toggleAuto.SetToggleState(KickStart.AutopilotPlayerMain);
         }
 
         internal static void Initiate()

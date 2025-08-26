@@ -60,9 +60,13 @@ namespace TAC_AI.World
         }
         public Vector3 PosSceneCurTime()
         {
+            if (ManWorld.inst.CheckIsTileAtPositionLoaded(new WorldPosition(TargetTileCoord, posInTile).ScenePosition))
+                return ManWorld.inst.TileManager.CalcTileOriginScene(PrevTileCoord) + posInTile;// don't move
+
             float percent = (float)CurrentTurn / ExpectedMoveTurns;
-            return Vector3.Lerp(ManWorld.inst.TileManager.CalcTileOriginScene(PrevTileCoord),
-                ManWorld.inst.TileManager.CalcTileOriginScene(TargetTileCoord), percent) + posInTile;
+            Vector3 TargetPosWorld = ManWorld.inst.TileManager.CalcTileOriginScene(TargetTileCoord) + posInTile;
+            return Vector3.Lerp(ManWorld.inst.TileManager.CalcTileOriginScene(PrevTileCoord) + posInTile,
+                TargetPosWorld, percent);
         }
     }
 }

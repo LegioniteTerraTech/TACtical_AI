@@ -77,6 +77,9 @@ namespace TAC_AI
         public static float TerrainHeight => ManWorldGeneratorExt.CurrentTotalHeight;
         public static float TerrainHeightOffset => ManWorldGeneratorExt.CurrentMinHeight;
 
+        /// <summary>
+        /// This is the Tech limit PER AI team
+        /// </summary>
         internal static int EnemyTeamTechLimit = 6;// Allow the bases plus 6 additional capacity of the AIs' choosing
 
         public static float SavedDefaultEnemyFragility;
@@ -119,15 +122,7 @@ namespace TAC_AI
 #else
         public static bool EnableBetterAI = true;
 #endif
-        internal static bool AutopilotPlayer
-        {
-            get
-            {
-                if (ManWorldRTS.PlayerIsInRTS)
-                    return AllowPlayerRTSHUD && AutopilotPlayerRTS;
-                return AutopilotPlayerMain;
-            }
-        }
+        internal static bool AutopilotPlayer => AutopilotPlayerMain;
         internal static bool AutopilotPlayerMain {
             get => _AutopilotPlayerMain;
             set {
@@ -139,19 +134,6 @@ namespace TAC_AI
             }
         }
         private static bool _AutopilotPlayerMain = false;
-        internal static bool AutopilotPlayerRTS
-        {
-            get => _AutopilotPlayerRTS;
-            set
-            {
-                if (_AutopilotPlayerRTS != value)
-                {
-                    OnSetPlayerAutopilot(value);
-                    _AutopilotPlayerRTS = value;
-                }
-            }
-        }
-        private static bool _AutopilotPlayerRTS = false;
         private static void OnSetPlayerAutopilot(bool state)
         {
             if (state)

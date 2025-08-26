@@ -505,34 +505,6 @@ namespace TAC_AI.AI.Enemy
             }
             //add Attack
             newMind.CommanderAttack = RWeapSetup.GetAttackStrat(tank, newMind);
-            /*
-            int randomNum3 = UnityEngine.Random.Range(1, 6);
-            switch (randomNum3)
-            {
-                case 1:
-                    toSet.CommanderAttack = EnemyAttack.Circle;
-                    break;
-                case 2:
-                    toSet.CommanderAttack = EnemyAttack.Grudge;
-                    break;
-                case 3:
-                    toSet.CommanderAttack = EnemyAttack.Coward;
-                    break;
-                case 4:
-                    toSet.CommanderAttack = EnemyAttack.Bully;
-                    break;
-                case 5:
-                    toSet.CommanderAttack = EnemyAttack.Pesterer;
-                    break;
-                case 6:
-                    if (toSet.LikelyMelee)
-                    {
-                        toSet.CommanderAttack = EnemyAttack.Bully;
-                        toSet.InvertBullyPriority = true;
-                    }
-                    toSet.CommanderAttack = EnemyAttack.Spyper;
-                    break;
-            }*/
         }
 
 

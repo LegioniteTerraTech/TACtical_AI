@@ -23,11 +23,29 @@ namespace TAC_AI.Templates
         /// </summary>
         public static Dictionary<SpawnBaseTypes, RawTech> InternalPopTechs;
 
-        public static List<RawTech> ExtPopTechsLocal = new List<RawTech>();
+        internal static List<RawTech> ExtPopTechsLocal = new List<RawTech>();
 
-        public static List<RawTech> ExtPopTechsMods = new List<RawTech>();
+        internal static List<RawTech> ExtPopTechsMods = new List<RawTech>();
 
-        public static List<RawTech> ExtPopTechsAll = new List<RawTech>();
+        private static List<RawTech> ExtPopTechsAll = new List<RawTech>();
+
+        public static int ExtPopTechsAllCount() => ExtPopTechsAll.Count;
+        public static RawTech ExtPopTechsAllLookup(int index)
+        {
+            if (ExtPopTechsAll.Count <= index)
+            {
+                DebugTAC_AI.Exception("Our external population composed of Techs that player and external mods have added only amounts to " +
+                   ExtPopTechsAll.Count + ", but the final template lookup ID is " + index + " which is outside our range of [0-"
+                    + (ExtPopTechsAll.Count - 1) + "].  How is this possible?  Was our collection changed DURING our search???");
+            }
+            return ExtPopTechsAll[index];
+        }
+        public static RawTech ExtPopTechsAllFindByName(string name)
+        {
+            if (name == null)
+                throw new ArgumentNullException("name");
+            return ExtPopTechsAll.Find(delegate (RawTech cand) { return cand.techName == name; });
+        }
 
         private static void AddInternalTechs(List<KeyValuePair<SpawnBaseTypes, RawTech>> compile)
         {

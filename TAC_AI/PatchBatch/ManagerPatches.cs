@@ -110,19 +110,14 @@ namespace TAC_AI
                 if (__result)
                     ManEnemyWorld.VisibleLoaded(__result);
             }
-        }
-
-        internal static class ManSaveGame_StoredTilePatches
-        {
-            internal static Type target = typeof(ManSaveGame.StoredTile);
-
-            private static void AddStoredVisibleToTile_Postfix(ManSaveGame.StoredTile __instance, 
-                ref ManSaveGame.StoredVisible storedVisible, ref ObjectTypes objectType)
+            private static void CreateStoredVisible_Postfix(Visible visible,
+                ManSaveGame.StoredVisible __result)
             {
-                if (objectType == ObjectTypes.Vehicle)
-                    ManEnemyWorld.VisibleUnloaded(storedVisible);
+                if (__result != null)
+                    ManEnemyWorld.VisibleUnloaded(__result);
             }
         }
+
         internal static class TileManagerPatches
         {
             internal static Type target = typeof(TileManager);

@@ -46,7 +46,7 @@ namespace TAC_AI.Templates
                     {
                         CloseSubMenuClickable();
                         if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Plus))
-                            DestroyAllInvalidVisibles();
+                            CheckAndDestroyAllInvalidVisibles();
                     }
                     inst.enabled = value;
                 }
@@ -376,7 +376,7 @@ namespace TAC_AI.Templates
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "CLEAR TRACKED</b></color>"))
             {
-                DestroyAllInvalidVisibles();
+                CheckAndDestroyAllInvalidVisibles();
             }
             StepMenuPlacer();
 
@@ -1552,8 +1552,9 @@ namespace TAC_AI.Templates
         }
 
         private static bool DoCullInvalidVisibles = false;
-        internal static void DestroyAllInvalidVisibles()
+        internal static void CheckAndDestroyAllInvalidVisibles()
         {
+            AIGlobals.LogAllTrackedEnemyBaseVisibles();
             if (DoCullInvalidVisibles)
             {
                 foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
@@ -1564,7 +1565,12 @@ namespace TAC_AI.Templates
                     {
                         if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
                         {
-                            if (item.wasDestroyed || item.visible == null)
+                            WorldTile WT = ManWorld.inst.TileManager.LookupTile(item.GetWorldPosition().TileCoord);
+                            if (WT.StoredVisiblesWaitingToLoad != null && WT.StoredVisiblesWaitingToLoad.Exists(x => x.m_ID == item.HostID))
+                            {
+                                DebugTAC_AI.Info("  Waiting to load visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                            }
+                            else if (item.wasDestroyed || item.visible == null)
                             {
                                 if (AIGlobals.IsBaseTeamDynamic(item.TeamID))
                                 {
@@ -1575,10 +1581,10 @@ namespace TAC_AI.Templates
                                     DebugTAC_AI.Info("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                             }
                             else
-                                DebugTAC_AI.Info("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                DebugTAC_AI.Info("  Active Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                         }
                         else
-                            DebugTAC_AI.Info("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                            DebugTAC_AI.Info("  Unloaded Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                     }
                 }
             }

@@ -9,6 +9,7 @@ using TAC_AI.AI;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
 using TAC_AI.World;
+using static ManSaveGame;
 
 namespace TAC_AI
 {
@@ -489,6 +490,20 @@ namespace TAC_AI
             int team = tech.Team;
             return !IsPlayerTeam(team) && ManSpawn.NeutralTeam != team && !TankAIManager.MissionTechs.Contains(tech.visible.ID);
         }
+
+        /// <summary>
+        /// Returns true if the target visible is loaded in a way that DOES NOT overlap unloaded tiles!!!
+        /// </summary>
+        /// <param name="tileCoord"></param>
+        /// <returns></returns>
+        public static bool CanPlaceSafelyInTile(IntVector2 tileCoord, IntVector2 overlapDir)
+        {
+            if (overlapDir != IntVector2.zero)
+            {
+                return ManWorld.inst.TileManager.CheckAllOverlappedNeighboursLoaded(tileCoord, overlapDir, false);
+            }
+            return false;
+        }
         public static bool PlayerCanDetectTile(IntVector2 tileCoord)
         {
             if (KickStart.DisableEnemyFogOfWar)
@@ -508,6 +523,9 @@ namespace TAC_AI
         {
             techSpawned = false;
         }
+        /// <summary>
+        /// Set to -1 to recache the count immedeately next update
+        /// </summary>
         internal static int SceneTechCount = -1;
         public static bool AtSceneTechMaxSpawnLimit()
         {
@@ -831,6 +849,58 @@ namespace TAC_AI
                 }
             }
             return true;
+        }
+
+        internal static void LogAllTrackedEnemyBaseVisibles()
+        {
+            if (!ManNetwork.IsHost)
+                return;
+            DebugTAC_AI.Log(KickStart.ModID + ": Doing BaseTeam TrackedVisibles sanity check...");
+            try
+            {
+                foreach (var item in ManVisible.inst.AllTrackedVisibles)
+                {
+                    if (item != null && ManBaseTeams.IsBaseTeamAny(item.TeamID))
+                    {
+                        if (item.visible != null)
+                        {
+                            DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "] exists as active");
+                        }   // The visible is null!!! - now check to see if it exists somewhere
+                        else if (ManSaveGame.inst.LookupSerializedVisible(item.HostID) != null)
+                        {   // It EXISTS, we do not remove 
+                            DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "] exists as serialized");
+                        }
+                        else
+                        {   // It might be in limbo???
+                            WorldTile tile = ManWorld.inst.TileManager.LookupTile(item.GetWorldPosition().TileCoord);
+                            if (tile != null && tile.StoredVisiblesWaitingToLoad != null &&
+                                tile.StoredVisiblesWaitingToLoad.Exists(x => x.m_ID == item.ID))
+                            {
+                                DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "] exists as waiting to load");
+                            }
+                            else if (ManTechs.inst.IterateTechs().Any(x => x.visible.ID == item.HostID))
+                            {
+                                DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "]!!! exists as active, but not hooked up to the TrackedVisible properly?");
+                            }
+                            else
+                                DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "]!!! exists as registered, but does not actually exist?");
+                        }
+                    }
+                }
+                foreach (var item in ManTechs.inst.IterateTechs())
+                {
+                    if (item != null && ManBaseTeams.IsBaseTeamAny(item.Team))
+                    {
+                        TrackedVisible TV = ManVisible.inst.GetTrackedVisible(item.visible.ID);
+                        if (TV == null)
+                            DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.visible.ID + "]!!! exists as active, but not registered?");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                DebugTAC_AI.Log("Failed to RemoveAllGhostEnemyIcons() - " + e);
+            }
         }
     }
 }

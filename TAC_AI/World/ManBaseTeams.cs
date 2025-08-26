@@ -59,7 +59,10 @@ namespace TAC_AI
         public int teamID;
         internal int Team => teamID;
         public string teamName;
-        private int buildBucks;
+        /// <summary>
+        /// DO NOT MODIFY DIRECTLY, use AddBuildBucks() and related instead!
+        /// </summary>
+        public int buildBucks;
         internal int BuildBucks => buildBucks;
         public int SetBuildBucks
         {

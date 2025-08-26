@@ -316,20 +316,19 @@ namespace TAC_AI.World
                 if (PurgeIfNeeded(EP, EP.MainBase))
                     return;
 
-                bool turboCheat = SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftControl) && Input.GetKey(KeyCode.Backspace);
-
-                if (turboCheat)
+                if (AIGlobals.TurboAICheat)
                 {
                     if (EP.MainBase.BuildBucks < 1000000)
                         EP.MainBase.AddBuildBucks(AIGlobals.MinimumBBToTryExpand);
                 }
-                if (ManEnemyWorld.SpecialUpdate != SpecialUpdateType.Building ||
-                    EP.MainBase.BuildBucks < AIGlobals.MinimumBBToTryExpand)
-                    return; // Reduce expansion lag
-                if (EP.MainBase != null && EP.MainBase.Health == EP.MainBase.MaxHealth && 
-                    !ManEnemyWorld.IsProcessingTech &&  UnityEngine.Random.Range(1, 100) <= 
-                    AIGlobals.BaseExpandChance + (EP.BuildBucks() / 10000))
+                if (ManEnemyWorld.SpecialUpdate == SpecialUpdateType.Building &&
+                    EP.MainBase.BuildBucks >= AIGlobals.MinimumBBToTryExpand)
+                {
+                    if (EP.MainBase != null &&// EP.MainBase.Health == EP.MainBase.MaxHealth &&
+                        !ManEnemyWorld.IsProcessingTech && UnityEngine.Random.Range(1, 100) <=
+                        AIGlobals.BaseExpandChance + (EP.BuildBucks() / 10000))
                         ImTakingThatExpansion(EP, EP.MainBase);
+                }
             }
         }
 
@@ -350,7 +349,7 @@ namespace TAC_AI.World
                 catch { }
 
                 int Cost = EP.BuildBucks();
-                if (EP.GlobalMakerBaseCount() >= KickStart.MaxBasesPerTeam)
+                if (EP.GlobalMakerBaseCount() >= KickStart.MaxBasesPerTeam || UnityEngine.Random.Range(0,100) > 45)
                 {// Build a mobile Tech 
                     TryFreeUpBaseSlots(EP, lvl);
                     if (EP.GlobalMobileTechCount() > KickStart.EnemyTeamTechLimit)
@@ -366,16 +365,16 @@ namespace TAC_AI.World
                         RTF.MaxPrice = Cost;
                         if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                         {
-                            RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                            RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                             ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
-                            //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            DebugTAC_AI.LogDevOnly(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
                             return;
                         }
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type, !AIGlobals.PlayerCanDetectTile(EBU.tilePos));
-                        //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
+                        DebugTAC_AI.LogDevOnly(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                     }
                     return;
                 }
@@ -397,16 +396,16 @@ namespace TAC_AI.World
                     RTF.MaxPrice = Cost;
                     if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                     {
-                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                        RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                         ManEnemyWorld.ConstructNewBaseExt(pos, EBU, EP, BTemp);
-                        //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
+                        DebugTAC_AI.LogDevOnly(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": That expansion is mine!");
                         return;
                     }
                     SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                     if (RawTechLoader.IsFallback(type))
                         return;
                     ManEnemyWorld.ConstructNewBase(pos, EBU, EP, type, !AIGlobals.PlayerCanDetectTile(EBU.tilePos));
-                    //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
+                    DebugTAC_AI.LogDevOnly(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": That expansion is mine!");
                 }
                 else
                 {   // Find new home base position
@@ -426,16 +425,16 @@ namespace TAC_AI.World
                         RTF.MaxPrice = Cost;
                         if (RawTechLoader.ShouldUseCustomTechs(out int spawnIndex, RTF))
                         {
-                            RawTech BTemp = ModTechsDatabase.ExtPopTechsAll[spawnIndex];
+                            RawTech BTemp = ModTechsDatabase.ExtPopTechsAllLookup(spawnIndex);
                             ManEnemyWorld.ConstructNewTechExt(EBU, EP, BTemp);
-                            //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
+                            DebugTAC_AI.LogDevOnly(KickStart.ModID + ": ImTakingThatExpansion(EXT) - Team " + EP.Team + ": Built new mobile tech " + BTemp.techName);
                             return;
                         }
                         SpawnBaseTypes type = RawTechLoader.GetEnemyBaseType(RTF);
                         if (RawTechLoader.IsFallback(type))
                             return;
                         ManEnemyWorld.ConstructNewTech(EBU, EP, type, !AIGlobals.PlayerCanDetectTile(EBU.tilePos));
-                        //DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
+                        DebugTAC_AI.LogDevOnly(KickStart.ModID + ": ImTakingThatExpansion - Team " + EP.Team + ": Built new mobile tech " + type);
                     }
                 }
             }

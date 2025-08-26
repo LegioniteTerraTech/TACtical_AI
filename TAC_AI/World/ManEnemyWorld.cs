@@ -11,6 +11,8 @@ using TAC_AI.AI.Enemy;
 using SafeSaves;
 using TAC_AI.AI;
 using UnityEngine.UI;
+using System.Drawing;
+using FMOD;
 
 namespace TAC_AI.World
 {
@@ -356,7 +358,7 @@ namespace TAC_AI.World
                 ManSaveGame.inst.CurrentState.m_FileHasBeenTamperedWith = true;
             OperatorTick = 0;
             LastTechBuildFrame = MinimumTicksUntilBuild;
-            DebugRawTechSpawner.DestroyAllInvalidVisibles();
+            DebugRawTechSpawner.CheckAndDestroyAllInvalidVisibles();
             try
             {
                 HashSet<int> loaded = new HashSet<int>(); // INFREQUENTLY CALLED
@@ -425,8 +427,16 @@ namespace TAC_AI.World
                 return;
             if (Vis is ManSaveGame.StoredTech tech)
             {
-                if (tech.m_TechData.IsBase() || GetTeam(tech.m_TeamID) != null)
-                    RegisterTechUnloaded(tech, ManBaseTeams.inst.HiddenVisibles.Contains(tech.m_ID), true, false);
+                try
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": Visible " + tech.m_ID + " saved to disk");
+                    if (tech.m_TechData.IsBase() || ManBaseTeams.IsBaseTeamAny(tech.m_TeamID))
+                        RegisterTechUnloaded(tech, ManBaseTeams.inst.HiddenVisibles.Contains(tech.m_ID), true, false);
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": Visible " + tech.m_ID + " FAILED save to disk - " + e);
+                }
             }
         }
 
@@ -637,16 +647,18 @@ namespace TAC_AI.World
         }
         public static bool IsTechOnSetTile(NP_TechUnit tech)
         {
+            if (tech == null)
+                DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - given Tech is NULL");
             ManSaveGame.StoredTech techFind = tech.tech;
             try
             {
-                ManSaveGame.StoredTile tileInst = Singleton.Manager<ManSaveGame>.inst.GetStoredTile(tech.tilePos, false);
+                ManSaveGame.StoredTile tileInst = ManSaveGame.inst.GetStoredTile(tech.tilePos, false);
                 if (tileInst == null)
                 {
                     DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - m_StoredVisibles is missing!");
                     return false;
                 }
-                if (tileInst.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> techs))
+                if (tileInst.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out List<ManSaveGame.StoredVisible> techs))
                 {
                     if (techs.Exists(x => x.m_ID == tech.ID))
                     {
@@ -654,13 +666,24 @@ namespace TAC_AI.World
                     }
                     else
                     {
-                        /*
-                        DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - Tech not present in techs " + techs.Count + "!");
-                        DebugTAC_AI.Log(KickStart.ModID + ": Main - " + tech.ID);
-                        foreach (var item in techs)
+                        WorldTile active = ManWorld.inst.TileManager.LookupTile(tech.tilePos);
+                        if (active != null)
+                        {   // It's in limbo - likely waiting for the tile to load StoredVisiblesWaitingToLoad?
+                            if (active.StoredVisiblesWaitingToLoad != null &&
+                                active.StoredVisiblesWaitingToLoad.Contains(tech.tech))
+                                DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - Tech " + tech.Name +
+                                    " is in StoredVisiblesWaitingToLoad for some reason?");
+                        }
+                        else
                         {
-                            DebugTAC_AI.Log(KickStart.ModID + ": - " + item.m_ID);
-                        }*/
+                            /*
+                            DebugTAC_AI.Log(KickStart.ModID + ": IsTechOnSetTile - Tech not present in techs " + techs.Count + "!");
+                            DebugTAC_AI.Log(KickStart.ModID + ": Main - " + tech.ID);
+                            foreach (var item in techs)
+                            {
+                                DebugTAC_AI.Log(KickStart.ModID + ": - " + item.m_ID);
+                            }*/
+                        }
                     }
                 }
                 else
@@ -706,13 +729,15 @@ namespace TAC_AI.World
                         EBU.SetTracker(TV);
                         if (TV.ID != tech.m_ID)
                             throw new Exception("NP_BaseUnit and TrackedVisible ID Mismatch");
+                        /* // disabled check since it hasn't been assigned yet
                         if (!IsTechOnSetTile(EBU))
                             throw new Exception("NP_BaseUnit is not on given tile");
+                        */
                         AddToTeam(EBU, isNew);
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) Failiure on BASE init! for " + tech.m_TechData.Name + " - " + e.Message);
+                        DebugTAC_AI.Log(KickStart.ModID + ": RegisterTechUnloaded(EBU) Failiure on init! for " + tech.m_TechData.Name + " - " + e.Message);
                     }
                 }
                 else
@@ -723,18 +748,20 @@ namespace TAC_AI.World
                         ETU.SetTracker(TV);
                         if (TV.ID != tech.m_ID)
                             throw new Exception("NP_TechUnit and TrackedVisible ID Mismatch");
+                        /* // disabled check since it hasn't been assigned yet
                         if (!IsTechOnSetTile(ETU))
                             throw new Exception("NP_TechUnit is not on given tile");
+                        */
                         AddToTeam(ETU, isNew);
                     }
                     catch (Exception e)
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Failiure on BASE init! for " + tech.m_TechData.Name + " - " + e.Message);
+                        DebugTAC_AI.Log(KickStart.ModID + ": RegisterTechUnloaded(ETU) Failiure on init! for " + tech.m_TechData.Name + " - " + e.Message);
                     }
                 }
             }
             //else
-            //    DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded() Failed because tech " + tech.m_TechData.Name + "'s team [" + team + "] is not a valid base team");
+            //    DebugTAC_AI.Log(KickStart.ModID + ": RegisterTechUnloaded() Failed because tech " + tech.m_TechData.Name + "'s team [" + team + "] is not a valid base team");
         }
 
 
@@ -791,7 +818,7 @@ namespace TAC_AI.World
             range *= range;
             Vector3 tilePosScene = ManWorld.inst.TileManager.CalcTileCentreScene(tile.Coord);
             */
-            return tile.m_LoadStep >= LevelToAttemptTechEntry; //&& range > (tilePosScene - Singleton.playerPos).sqrMagnitude;
+                        return tile.m_LoadStep >= LevelToAttemptTechEntry; //&& range > (tilePosScene - Singleton.playerPos).sqrMagnitude;
         }
         private static List<int> BlockTypeCache = new List<int>();
         public static bool TryMoveTechIntoTile(NP_TechUnit tech, ManSaveGame.StoredTile tileToMoveInto, bool setPrecise = true)
@@ -807,6 +834,7 @@ namespace TAC_AI.World
                         DebugTAC_AI.Log(KickStart.ModID + ": MoveTechIntoTile(loaded) - Could not find a valid spot to move the Tech");
                         return false;
                     }
+                    ManWorldTileExt.ClientTempLoadTile(tileToMoveInto.coord, false);// make sure it load
                     Vector3 newPos = newPosOff.SetY(tilePosScene.y);
                     if (ManWorld.inst.GetTerrainHeight(newPos, out float Height))
                     {
@@ -1078,15 +1106,30 @@ namespace TAC_AI.World
             }
             return true;
         }
+        /// <summary>
+        /// VERY SKETCHY!
+        /// WE HAVE NOT CHECKED TO SEE IF OUR TARGET WORLDTILE IS STILL IN JSON STATE
+        /// Fixing the "Lazy Chunk" issue here - The visible was being saved to the tile whilist it was in limbo of LOADING visibles.
+        ///   StoredVisiblesWaitingToLoad is held while the tile is terrain loaded, but not ready yet for VISIBLES
+        /// </summary>
+        /// <param name="ST"></param>
+        /// <param name="TD"></param>
+        /// <param name="bIDs"></param>
+        /// <param name="Team"></param>
+        /// <param name="posScene"></param>
+        /// <param name="forwards"></param>
+        /// <param name="hide"></param>
+        /// <param name="anchored"></param>
+        /// <exception cref="Exception"></exception>
         public static void AddTechToTile(ManSaveGame.StoredTile ST, TechData TD, int[] bIDs, int Team, Vector3 posScene, Quaternion forwards, bool hide, bool anchored)
         {
-            int ID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
-            ST.AddSavedTech(TD, posScene, AIGlobals.LookRot(forwards * Vector3.right, Vector3.up), ID, Team, bIDs, true, false, true, false, 99, false);
+            int newVisibleID = Singleton.Manager<ManSaveGame>.inst.CurrentState.GetNextVisibleID(ObjectTypes.Vehicle);
+            ST.AddSavedTech(TD, posScene, AIGlobals.LookRot(forwards * Vector3.right, Vector3.up), newVisibleID, Team, bIDs, true, false, true, false, 99, false);
             if (ST.m_StoredVisibles.TryGetValue(1, out List<ManSaveGame.StoredVisible> SV))
             {
                 var sTech = (ManSaveGame.StoredTech)SV.Last();
-                RawTechLoader.TrackTank(sTech, ID, hide, anchored);
-                sTech.m_ID = ID;
+                RawTechLoader.TrackTank(sTech, newVisibleID, hide, anchored);
+                sTech.m_ID = newVisibleID;
                 RegisterTechUnloaded(sTech, true, true,false);
             }
             else
@@ -1226,7 +1269,8 @@ namespace TAC_AI.World
 #if DEBUG
                     if (AnnounceNew)
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) New tech " + ETU.Name + " of type " + EBU.Faction + ", health " + EBU.MaxHealth + ", weapons " + EBU.AttackPower + ", funds " + EBU.BuildBucks);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(EBU) New tech " + ETU.Name + ", pending stats");
+                            //" of type " + EBU.Faction + ", health " + EBU.MaxHealth + ", weapons " + EBU.AttackPower + ", funds " + EBU.BuildBucks);
                         DebugTAC_AI.Log(KickStart.ModID + ": of Team " + ETU.tech.m_TeamID + ", tile " + ETU.tilePos);
                     }
 #endif
@@ -1248,7 +1292,8 @@ namespace TAC_AI.World
 #if DEBUG
                     if (AnnounceNew)
                     {
-                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) New tech " + ETU.Name + " of type " + ETU.Faction + ", health " + ETU.MaxHealth + ", weapons " + ETU.AttackPower);
+                        DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) New tech " + ETU.Name + ", pending stats");
+                        //DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) New tech " + ETU.Name + " of type " + ETU.Faction + ", health " + ETU.MaxHealth + ", weapons " + ETU.AttackPower);
                         DebugTAC_AI.Log(KickStart.ModID + ": of Team " + ETU.tech.m_TeamID + ", tile " + ETU.tilePos);
                     }
 #endif
@@ -1393,7 +1438,7 @@ namespace TAC_AI.World
             DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveQueue - Enemy Tech " + ETU.Name + " - Destination tile IS NULL OR NOT LOADED!");
             return false;
         }
-        private static bool StrategicMoveConcluded(TileMoveCommand TMC)
+        private static bool StrategicMoveStepConcluded(TileMoveCommand TMC)
         {
             //DebugTAC_AI.Log(KickStart.ModID + ": StrategicMoveConcluded - EXECUTING");
             bool worked = TryMoveUnloadedTech(TMC.ETU, TMC.TargetTileCoord);
@@ -1568,7 +1613,7 @@ namespace TAC_AI.World
                 // We determine WHAT we want to update:
                 OperatorTick++;
                 SpecialUpdate = SpecialUpdateType.None;
-                if (OperatorTick == LastTechBuildFrame)
+                if (OperatorTick >= LastTechBuildFrame)
                 {
                     LastTechBuildFrame = OperatorTick + DelayBetweenBuilding;
                     SpecialUpdate = SpecialUpdateType.Building;
@@ -1702,7 +1747,7 @@ namespace TAC_AI.World
                         QueuedUnitMoves.Remove(pair.Key);
                     else if (move.CurrentTurn >= move.ExpectedMoveTurns)
                     {
-                        StrategicMoveConcluded(move);
+                        StrategicMoveStepConcluded(move);
                         QueuedUnitMoves.Remove(pair.Key);
                     }
                     else
@@ -1998,18 +2043,21 @@ namespace TAC_AI.World
 
         // CALCULATIONS
         private static ExpectedSpeedAsync Speedo = new ExpectedSpeedAsync();
-        private static Queue<NP_TechUnit> ToRead = new Queue<NP_TechUnit>();
-        public static bool IsProcessingTech => ToRead.Any();
+        private static Queue<NP_TechUnit> ToCalculate = new Queue<NP_TechUnit>();
+        /// <summary>
+        /// Any tech is being processed for out-of-scene stats
+        /// </summary>
+        public static bool IsProcessingTech => ToCalculate.Any();
 
         public static void GetStatsAsync(NP_TechUnit unit)
         {
-            if (!ToRead.Any())
+            if (!ToCalculate.Any())
             {
-                ToRead.Enqueue(unit);
+                ToCalculate.Enqueue(unit);
                 InvokeHelper.InvokeCoroutine(Speedo.CollectExpectedSpeedAsync());
             }
             else
-                ToRead.Enqueue(unit);
+                ToCalculate.Enqueue(unit);
         }
 
         private static readonly FieldInfo oomph = typeof(BoosterJet).GetField("m_Force", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -2019,7 +2067,7 @@ namespace TAC_AI.World
         /// </summary>
         protected class ExpectedSpeedAsync
         {
-            private const int BlockCollectIterations = 16;
+            private const int BlockCollectIterations = 32;//16;//
             private const int SpeedCheckIterations = 32;
 
             NP_TechUnit unit = null;
@@ -2070,14 +2118,17 @@ namespace TAC_AI.World
             }
             public IEnumerator CollectExpectedSpeedAsync()
             {
-                while (ToRead.Any())
+                //DebugTAC_AI.Log(KickStart.ModID + ": CollectExpectedSpeedAsync() - CALLED");
+                while (ToCalculate.Any())
                 {
-                    var caseC = ToRead.Dequeue();
-                    if (caseC.Exists())
-                        Speedo.Setup(caseC);
-                    else
-                        continue;
-                    DebugTAC_AI.Log("Tech " + unit.Name + " queued for out-of-scene speed calc");
+                    var caseC = ToCalculate.Dequeue();
+                    while (!caseC.Exists())
+                    {
+                        //DebugTAC_AI.Log(KickStart.ModID + ": CollectExpectedSpeedAsync() - Waiting on " + caseC.Name);
+                        yield return null;
+                    }
+                    Speedo.Setup(caseC);
+                    //DebugTAC_AI.Log("Tech " + unit.Name + " queued for out-of-scene speed calc");
 
                     if (unit is NP_MobileUnit mobile)
                     {
@@ -2177,6 +2228,7 @@ namespace TAC_AI.World
                                     }
                                 }
                             }
+                            //DebugTAC_AI.Log("Tech " + unit.Name + " process blocks step [" + curStep + " out of " + sTech.m_TechData.m_BlockSpecs.Count + "]");
                             yield return null;
                         }
                         if (shieldCoverAll > 0 && batteryAll > 0)
@@ -2194,6 +2246,7 @@ namespace TAC_AI.World
                         mobile.Health = mobile.MaxHealth;
                         mobile.BaseAttackPower = AttackPower;
 
+                        //DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Tech " + mobile.Name + " calc basic stats");
                         yield return null;
                         if (WheelsOrGenRechargeCount > 0)
                         {
@@ -2208,6 +2261,7 @@ namespace TAC_AI.World
                             float ExpectedBoostEfficiency = ExpectedBoostUptime / ExpectedBoostCycle;
                             ForceAirborne += ExpectedBoostEfficiency * BoostPotential;
                         }
+                        //DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Tech " + mobile.Name + " calc boost stats");
                         yield return null;
                         float MaxSpeed = 0;
                         for (int step = 0; step < SpeedCheckIterations; step++)
@@ -2230,6 +2284,7 @@ namespace TAC_AI.World
                             float Drag = (MaxSpeed * MaxSpeed) * 0.001f;
                             MaxSpeed -= Drag;
                         }
+                        //DebugTAC_AI.Log(KickStart.ModID + ": HandleTechUnloaded(ETU) Tech " + mobile.Name + " calc speed stats");
                         yield return null;
                         wheelCurves.Clear();
 
@@ -2241,7 +2296,9 @@ namespace TAC_AI.World
                             ExpectedLiftMaxCapacity += LiftAssistance * ForceAirborne;
                         mobile.IsAirborne = ExpectedLiftMaxCapacity + ForceAirborne >= ExpectedWeight;
                         mobile.MoveSpeed = MaxSpeed;
-                        DebugTAC_AI.Log("Tech " + unit.Name + " is given speed of " +
+                        DebugTAC_AI.LogDevOnly(KickStart.ModID + ": HandleTechUnloaded(ETU) Tech ready " + mobile.Name + " of type " +
+                            mobile.Faction + ", health " + mobile.MaxHealth + ", weapons " + mobile.AttackPower);
+                        DebugTAC_AI.LogDevOnly("Tech " + unit.Name + " is given speed of " +
                             mobile.MoveSpeed + ", can fly: " + mobile.IsAirborne);
                     }
                     else if (unit is NP_BaseUnit baseUnit)
@@ -2305,6 +2362,7 @@ namespace TAC_AI.World
                                     }
                                 }
                             }
+                            //DebugTAC_AI.Log("Tech " + unit.Name + " process blocks step [" + curStep + " out of " + sTech.m_TechData.m_BlockSpecs.Count + "]");
                             yield return null;
                         }
                         if (shieldCoverAll > 0 && batteryAll > 0)
@@ -2346,6 +2404,8 @@ namespace TAC_AI.World
                             if (purps.Contains(BasePurpose.Headquarters))
                                 baseUnit.isSiegeBase = true;
                         }
+                        DebugTAC_AI.LogDevOnly(KickStart.ModID + ": HandleTechUnloaded(EBU) Tech ready " + baseUnit.Name + " of type " +
+                            baseUnit.Faction + ", health " + baseUnit.MaxHealth + ", weapons " + baseUnit.AttackPower);
                     }
                 }
             }

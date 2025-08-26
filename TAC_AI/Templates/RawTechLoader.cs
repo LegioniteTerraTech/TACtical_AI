@@ -104,7 +104,7 @@ namespace TAC_AI.Templates
                     if (teamswatch == -1)
                         return false;
                     tank.SetTeam(teamswatch);
-                    TryRemoveFromPop(tank);
+                    RemoveFromManPopIfNotLoner(tank);
                     return false;
                 }
 
@@ -1199,7 +1199,7 @@ namespace TAC_AI.Templates
             }
             */
             if (theTech && filter.IsPopulation)
-                TryForceIntoPop(theTech, false);
+                AddToManPopIfLoner(theTech, false);
 
             theTech.FixupAnchors(true);
 
@@ -1475,9 +1475,9 @@ namespace TAC_AI.Templates
             {   // Filters
                 //DebugTAC_AI.Log(KickStart.ModID + ": GetExternalIndexes - Fetching with " + faction + " - " + bestPlayerFaction + " - " + terra + " - " + maxGrade + " - " + maxPrice);
 
-                for (int step = 0; step < ModTechsDatabase.ExtPopTechsAll.Count; step++)
+                for (int step = 0; step < ModTechsDatabase.ExtPopTechsAllCount(); step++)
                 {
-                    RawTech cand = ModTechsDatabase.ExtPopTechsAll[step];
+                    RawTech cand = ModTechsDatabase.ExtPopTechsAllLookup(step);
                     if (FilterSelectAll(cand, filter))
                         cache.Add(step);
                 }
@@ -1702,7 +1702,7 @@ namespace TAC_AI.Templates
                 foreach (var item in SBT)
                     rTechs.Add(ModTechsDatabase.InternalPopTechs[item]);
                 for (int i = 0; i < selectedExt.Count; i++)
-                    rTechs.Add(ModTechsDatabase.ExtPopTechsAll[i]);
+                    rTechs.Add(ModTechsDatabase.ExtPopTechsAllLookup(i));
                 rTechs.Shuffle();
             }
             finally { 
@@ -1727,10 +1727,10 @@ namespace TAC_AI.Templates
             {
                 List<int> selectedExt = GetExternalIndexes(filter, SearchSingleUse, handleFallback);
                 List<SpawnBaseTypes> SBT = GetEnemyBaseTypes(filter, ShufflerSingleUse, handleFallback);
-                int LocalTechs = selectedExt.Count;
+                int extTechs = selectedExt.Count;
                 int PrefabTechs = SBT.Count;
-                int CombinedVal = LocalTechs + PrefabTechs;
-                if (LocalTechs == 0)
+                int CombinedVal = extTechs + PrefabTechs;
+                if (extTechs == 0)
                 {
                     if (PrefabTechs == 0)
                     {
@@ -1768,7 +1768,7 @@ namespace TAC_AI.Templates
                 }
                 else
                 {
-                    int outcome;
+                    int outcomeExt;
                     if (KickStart.TryForceOnlyPlayerSpawns)
                     {
                         if (!DebugTAC_AI.NoLogSpawning)
@@ -1782,8 +1782,8 @@ namespace TAC_AI.Templates
                             }
                             DebugTAC_AI.Log(SB.ToString());
                         }
-                        outcome = selectedExt.GetRandomEntry();
-                        if (outcome == -1)
+                        outcomeExt = selectedExt.GetRandomEntry();
+                        if (outcomeExt == -1)
                         {
                             if (!DebugTAC_AI.NoLogSpawning)
                                 DebugTAC_AI.LogSpawn(KickStart.ModID + ": FilteredSelectFromAll - Could not find any techs!");
@@ -1796,7 +1796,7 @@ namespace TAC_AI.Templates
                                 return null;
                             return GetBaseTemplate(SpawnBaseTypes.NotAvail);
                         }
-                        return ModTechsDatabase.ExtPopTechsAll[outcome];
+                        return ModTechsDatabase.ExtPopTechsAllLookup(outcomeExt);
                     }
                     if (PrefabTechs == 0)
                     {
@@ -1811,11 +1811,11 @@ namespace TAC_AI.Templates
                             }
                             DebugTAC_AI.Log(SB.ToString());
                         }
-                        return ModTechsDatabase.ExtPopTechsAll[selectedExt.GetRandomEntry()];
+                        return ModTechsDatabase.ExtPopTechsAllLookup(selectedExt.GetRandomEntry());
                     }
                     float RAND = UnityEngine.Random.Range(0, CombinedVal);
-                    DebugTAC_AI.LogSpawn(KickStart.ModID + ": FilteredSelectFromAll - Chance to pick local tech " + LocalTechs + "/" +
-                        CombinedVal + ", meaning a " + (((float)LocalTechs / (float)CombinedVal) * 100f).ToString("0.00") + "% chance.   RAND value " + RAND);
+                    DebugTAC_AI.LogSpawn(KickStart.ModID + ": FilteredSelectFromAll - Chance to pick local tech " + extTechs + "/" +
+                        CombinedVal + ", meaning a " + (((float)extTechs / (float)CombinedVal) * 100f).ToString("0.00") + "% chance.   RAND value " + RAND);
                     if (RAND <= PrefabTechs)
                     {   // Spawn prefab Tech
                         var toSpawn = SBT.GetRandomEntry();
@@ -1826,9 +1826,9 @@ namespace TAC_AI.Templates
                     }
                     else
                     {   // Spawn local Tech
-                        outcome = selectedExt.GetRandomEntry();
+                        outcomeExt = selectedExt.GetRandomEntry();
                         DebugTAC_AI.LogSpawn(KickStart.ModID + ": FilteredSelectFromAll - Spawn local tech");
-                        if (outcome == -1)
+                        if (outcomeExt == -1)
                         {
                             if (!DebugTAC_AI.NoLogSpawning)
                                 DebugTAC_AI.LogSpawn(KickStart.ModID + ": FilteredSelectFromAll - Could not find any techs!");
@@ -1841,7 +1841,7 @@ namespace TAC_AI.Templates
                                 return null;
                             return GetBaseTemplate(SpawnBaseTypes.NotAvail);
                         }
-                        return ModTechsDatabase.ExtPopTechsAll[outcome];
+                        return ModTechsDatabase.ExtPopTechsAllLookup(outcomeExt);
                     }
                 }
             }
@@ -2188,7 +2188,7 @@ namespace TAC_AI.Templates
                 TrackTank(theTech, false, false);
             }
             if ((bool)theTech)
-                TryForceIntoPop(theTech, false);
+                AddToManPopIfLoner(theTech, false);
             return theTech;
         }
         /// <summary>
@@ -2202,6 +2202,12 @@ namespace TAC_AI.Templates
         }
         internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, List<RawBlockMem> mems)
         {
+            WorldPosition WP = WorldPosition.FromScenePosition(pos);
+            if (!AIGlobals.CanPlaceSafelyInTile(WP.TileCoord, ManWorld.inst.TileManager.GetTileOverlapDirection(WP, 47f)))
+            {
+                DebugTAC_AI.LogError(KickStart.ModID + ": InstantTech - WARNING - Tech is likely going to spawn OUTSIDE of the loaded terrain, which would cause it to fall out of the world!");
+                //return null;
+            }
             CleanupPrefab();
             try
             {
@@ -2277,7 +2283,7 @@ namespace TAC_AI.Templates
                     return null;
                 }
                 else
-                    TryForceIntoPop(theTech, false);
+                    AddToManPopIfLoner(theTech, false);
 
                 ForceAllBubblesUp(theTech);
                 ReconstructConveyorSequencing(theTech);
@@ -2294,6 +2300,12 @@ namespace TAC_AI.Templates
         }
         internal static Tank InstantTech(Vector3 pos, Vector3 forward, int Team, string name, List<RawBlockMem> mems, RawTechPopParams filter)
         {
+            WorldPosition WP = WorldPosition.FromScenePosition(pos);
+            if (!AIGlobals.CanPlaceSafelyInTile(WP.TileCoord, ManWorld.inst.TileManager.GetTileOverlapDirection(WP, 47f)))
+            {
+                DebugTAC_AI.LogError(KickStart.ModID + ": InstantTech - WARNING - Tech is likely going to spawn OUTSIDE of the loaded terrain, which would cause it to fall out of the world!");
+                //return null;
+            }
             CleanupPrefab();
             try
             {
@@ -2410,7 +2422,7 @@ namespace TAC_AI.Templates
                     return null;
                 }
                 else
-                    TryForceIntoPop(theTech, false);
+                    AddToManPopIfLoner(theTech, false);
 
                 ForceAllBubblesUp(theTech);
                 ReconstructConveyorSequencing(theTech);
@@ -2649,13 +2661,21 @@ namespace TAC_AI.Templates
 
 
 
-        private static readonly FieldInfo forceInsert = typeof(ManPop).GetField("m_SpawnedTechs", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo manPopManaged = typeof(ManPop).GetField("m_SpawnedTechs", BindingFlags.NonPublic | BindingFlags.Instance);
         private static WorldPosition GetWorldPos(ManSaveGame.StoredTech tank)
         {
             if (tank.m_WorldPosition == default)
                 return WorldPosition.FromScenePosition(tank.GetBackwardsCompatiblePosition());
             return tank.m_WorldPosition;
         }
+        /// <summary>
+        /// Adds a Tech to the TrackedVisibles list, AKA the map, Tech Manager, ETC
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <param name="ID"></param>
+        /// <param name="hide"></param>
+        /// <param name="anchored"></param>
+        /// <returns></returns>
         internal static TrackedVisible TrackTank(ManSaveGame.StoredTech tank, int ID, bool hide, bool anchored)
         {
             if (ManNetwork.IsNetworked)
@@ -2664,7 +2684,7 @@ namespace TAC_AI.Templates
             }
             TrackedVisible tracked = AIGlobals.GetTrackedVisible(ID);
             if (tracked != null)
-            {
+            {   // Already tracked
                 tracked.RadarType = anchored ? RadarTypes.Base : RadarTypes.Vehicle;
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Updating Tracked " + tank.m_TechData.Name);
                 tracked.SetPos(GetWorldPos(tank));
@@ -2682,6 +2702,13 @@ namespace TAC_AI.Templates
             //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.m_TechData.Name + " ID " + ID);
             return tracked;
         }
+        /// <summary>
+        /// Adds a Tech to the TrackedVisibles list, AKA the map, Tech Manager, ETC.  For ACTIVE Techs
+        /// </summary>
+        /// <param name="tank"></param>
+        /// <param name="hide"></param>
+        /// <param name="anchored"></param>
+        /// <returns></returns>
         internal static TrackedVisible TrackTank(Tank tank, bool hide, bool anchored)
         {
             if (ManNetwork.IsNetworked)
@@ -2708,30 +2735,33 @@ namespace TAC_AI.Templates
             //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.name);
             return tracked;
         }
-        internal static void TryForceIntoPop(Tank tank, bool hide)
+        internal static void AddToManPopIfLoner(Tank tank, bool hide)
         {
             if (tank.Team == AIGlobals.LonerEnemyTeam) // the wild tech pop number
             {
-                List<TrackedVisible> visT = (List<TrackedVisible>)forceInsert.GetValue(ManPop.inst);
+                List<TrackedVisible> visT = (List<TrackedVisible>)manPopManaged.GetValue(ManPop.inst);
                 visT.Add(TrackTank(tank, hide, tank.IsAnchored));
-                forceInsert.SetValue(ManPop.inst, visT);
-                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Forced " + tank.name + " into population");
+                //forceInsert.SetValue(ManPop.inst, visT);
+                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Added " + tank.name + " into ManPop");
             }
         }
-        internal static void TryRemoveFromPop(Tank tank)
+        internal static void RemoveFromManPopIfNotLoner(Tank tank)
         {
-            if (tank.Team != -1) // the wild tech pop number
+            if (tank.Team != AIGlobals.LonerEnemyTeam) // the wild tech pop number
             {
                 try
                 {
                     TrackedVisible tracked = AIGlobals.GetTrackedVisible(tank.visible.ID);
                     //ManVisible.inst.StopTrackingVisible(tank.visible.ID);
-                    List<TrackedVisible> visT = (List<TrackedVisible>)forceInsert.GetValue(ManPop.inst);
+                    List<TrackedVisible> visT = (List<TrackedVisible>)manPopManaged.GetValue(ManPop.inst);
                     visT.Remove(tracked);
-                    forceInsert.SetValue(ManPop.inst, visT);
-                    DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Removed " + tank.name + " from population");
+                    //forceInsert.SetValue(ManPop.inst, visT);
+                    //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Removed " + tank.name + " from ManPop");
                 }
-                catch { }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Removal of " + tank.name + " from ManPop failed - " + e);
+                }
             }
         }
 
@@ -2781,9 +2811,11 @@ namespace TAC_AI.Templates
                     if (ModTechsDatabase.InternalPopTechs.TryGetValue(type, out RawTech val))
                         can = !val.environ;
                 }
-                else if (ModTechsDatabase.ExtPopTechsAll.Exists(delegate (RawTech cand) { return cand.techName == mind.Tank.name; }))
+                else
                 {
-                    can = !ModTechsDatabase.ExtPopTechsAll.Find(delegate (RawTech cand) { return cand.techName == mind.Tank.name; }).environ;
+                    RawTech cand = ModTechsDatabase.ExtPopTechsAllFindByName(mind.Tank.name);
+                    if (cand != null)
+                        can = cand.environ;
                 }
             }
             return can;
@@ -2799,9 +2831,11 @@ namespace TAC_AI.Templates
                     if (ModTechsDatabase.InternalPopTechs.TryGetValue(type, out RawTech val))
                         can = val.deployBoltsASAP;
                 }
-                else if (ModTechsDatabase.ExtPopTechsAll.Exists(delegate (RawTech cand) { return cand.techName == mind.Tank.name; }))
+                else
                 {
-                    can = ModTechsDatabase.ExtPopTechsAll.Find(delegate (RawTech cand) { return cand.techName == mind.Tank.name; }).deployBoltsASAP;
+                    RawTech cand = ModTechsDatabase.ExtPopTechsAllFindByName(mind.Tank.name);
+                    if (cand != null)
+                        can = cand.deployBoltsASAP;
                 }
             }
             catch { }
@@ -3155,13 +3189,16 @@ namespace TAC_AI.Templates
         // External techs
         internal static RawTech GetExtEnemyBaseFromName(string Name)
         {
-            int nameNum = Name.GetHashCode();
             try
             {
+                /*
+                int nameNum = Name.GetHashCode();
                 int lookup = ModTechsDatabase.ExtPopTechsAll.FindIndex(delegate (RawTech cand) { return cand.techName.GetHashCode() == nameNum; });
                 if (lookup == -1) 
                     return null;
-                return ModTechsDatabase.ExtPopTechsAll[lookup];
+                return ModTechsDatabase.ExtPopTechsAllLookup(lookup);
+                */
+                return ModTechsDatabase.ExtPopTechsAllFindByName(Name);
             }
             catch
             {
@@ -3304,7 +3341,7 @@ namespace TAC_AI.Templates
                 int set = AIGlobals.GetRandomBaseTeam(true);
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");
                 tank.SetTeam(set, false);
-                TryRemoveFromPop(tank);
+                RemoveFromManPopIfNotLoner(tank);
             }
         }
         private static int ReassignToExistingEnemyBaseTeam()

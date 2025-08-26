@@ -464,7 +464,7 @@ namespace TAC_AI.World
                         lastEventTile = homeTile;
                         if (canSiege && UnloadedBases.IsPlayerWithinProvokeDist(MainBase.tilePos))
                         {
-                            PresenceDebug("This team can attack your base!  Threshold: " + EMUs.Count + " / " + (KickStart.EnemyTeamTechLimit / 2f));
+                            PresenceDebug("Team " + TeamNamer.GetTeamName(team) +  " can attack your base!  Threshold: " + EMUs.Count + " / " + (KickStart.EnemyTeamTechLimit / 2f));
                             var player = Singleton.playerTank;
                             if (player && ManEnemySiege.CheckShouldLaunchSiege(this))
                             {
