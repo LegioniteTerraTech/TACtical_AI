@@ -124,7 +124,7 @@ namespace TAC_AI.AI
                                     {
                                         DebugTAC_AI.Assert(true, KickStart.ModID + ": ASSERT - " + tank.name +
                                             " was not properly inserted into the TrackedVisibles list and will not function (and network) properly!");
-                                        RawTechLoader.TrackTank(tank, false, false);
+                                        RawTechLoader.InsureTrackingTank(tank, false, false);
                                     }
 
                                     TrackedVisible TV = ManVisible.inst.AllTrackedVisibles.FirstOrDefault(delegate (TrackedVisible cand)

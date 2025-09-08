@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition.Primitives;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using System.Reflection;
-using UnityEngine;
-using TAC_AI.AI.Enemy;
+using DevCommands;
+using Newtonsoft.Json;
 using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
 using TAC_AI.World;
-using System.IO;
-using Newtonsoft.Json;
 using TerraTechETCUtil;
-using System.Diagnostics;
-using System.ComponentModel.Composition.Primitives;
-using DevCommands;
+using UnityEngine;
 
 
 namespace TAC_AI.Templates
@@ -45,8 +45,8 @@ namespace TAC_AI.Templates
                     if (!value)
                     {
                         CloseSubMenuClickable();
-                        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Plus))
-                            CheckAndDestroyAllInvalidVisibles();
+                        //if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.Plus))
+                        //    CheckAndDestroyAllInvalidVisibles();
                     }
                     inst.enabled = value;
                 }
@@ -376,7 +376,7 @@ namespace TAC_AI.Templates
 
             if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "CLEAR TRACKED</b></color>"))
             {
-                CheckAndDestroyAllInvalidVisibles();
+                CheckAndDestroyAllInvalidVisibles(true);
             }
             StepMenuPlacer();
 
@@ -1375,19 +1375,98 @@ namespace TAC_AI.Templates
         {
             try
             {
-                foreach (var item in Singleton.Manager<ManTechs>.inst.IterateTechsWhere(x => x.visible.isActive &&
-                (AIGlobals.IsBaseTeamDynamic(x.Team) || x.IsPopulation || x.Team == AIGlobals.DefaultEnemyTeam || 
-                x.Team == AIGlobals.LonerEnemyTeam) && x.Team != ManPlayer.inst.PlayerTeam && x.name != "DPS Target"))
+                bool TrackedMode = Input.GetKey(KeyCode.LeftShift);
+                bool ALLMode = Input.GetKey(KeyCode.LeftControl);
+                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30),
+                    ALLMode ? (redStart + "PURGE ALL ENEMIES</b></color>") : 
+                    (TrackedMode ? (redStart + "PURGE TRACKED ENEMIES</b></color>") : 
+                    (redStart + "PURGE ENEMIES</b></color>"))))
                 {
-                    techCache.Add(item);
-                }
-                foreach (var tech in techCache)
-                {
-                    SpecialAISpawner.Purge(tech);
+                    bool defaultMode = true;
+                    if (TrackedMode)
+                    { // REMOVE ALL TRACKED
+                        defaultMode = false;
+                        try
+                        {
+                            List<ManSaveGame.StoredTech> storTechs = new List<ManSaveGame.StoredTech>();
+                            foreach (var item in ManVisible.inst.AllTrackedVisibles)
+                            {
+                                if (item != null)
+                                {
+                                    if (item.visible?.tank != null && AIGlobals.TechIsSafelyRemoveable(item.visible.tank))
+                                    {
+                                        techCache.Add(item.visible.tank);
+                                    }
+                                    else
+                                    {
+                                        ManSaveGame.StoredTech storTech = AIGlobals.FindStoredTech(item.ID, item.GetWorldPosition().TileCoord, true);
+                                        if (storTech != null && AIGlobals.TechIsSafelyRemoveable(storTech))
+                                        {
+                                            storTechs.Add(storTech);
+                                        }
+                                    }
+                                }
+                            }
+                            foreach (var tech in techCache)
+                            {
+                                AIGlobals.Purge(tech);
+                            }
+                            foreach (var tech in storTechs)
+                            {
+                                AIGlobals.Purge(tech, true);
+                            }
+                        }
+                        finally
+                        {
+                            techCache.Clear();
+                        }
+                    }
+                    if (ALLMode)
+                    { // REMOVE ALL STORED
+                        defaultMode = false;
+                        var STs = ManSaveGame.inst.CurrentState?.m_StoredTiles;
+                        List<ManSaveGame.StoredTech> storTechs = new List<ManSaveGame.StoredTech>();
+                        foreach (var tile in STs)
+                        {
+                            if (tile.Value != null && tile.Value.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out var tankList))
+                            {
+                                foreach (var vis in tankList)
+                                {
+                                    if (vis != null && vis is ManSaveGame.StoredTech tech && AIGlobals.TechIsSafelyRemoveable(tech))
+                                    {
+                                        storTechs.Add(tech);
+                                    }
+                                }
+                            }
+                        }
+                        foreach (var tech in storTechs)
+                        {
+                            AIGlobals.RemoveStoredTech(tech.m_ID, tech.m_WorldPosition.TileCoord, true);
+                        }
+                    }
+                    if (defaultMode)
+                    {
+                        try
+                        {
+                            foreach (var item in Singleton.Manager<ManTechs>.inst.IterateTechsWhere(x => x.visible.isActive &&
+                            AIGlobals.TechIsSafelyRemoveable(x)))
+                            {
+                                techCache.Add(item);
+                            }
+                            foreach (var tech in techCache)
+                            {
+                                AIGlobals.Purge(tech);
+                            }
+                        }
+                        finally
+                        {
+                            techCache.Clear();
+                        }
+                    }
                 }
             }
+            catch (ExitGUIException e) { throw e; }
             catch { }
-            techCache.Clear();
         }
 
         private static List<TrackedVisible> toDestroy = new List<TrackedVisible>();
@@ -1551,8 +1630,8 @@ namespace TAC_AI.Templates
             }
         }
 
-        private static bool DoCullInvalidVisibles = false;
-        internal static void CheckAndDestroyAllInvalidVisibles()
+        private static bool DoCullInvalidVisibles = true;
+        internal static void CheckAndDestroyAllInvalidVisibles(bool checkALLJSONTilesToo)
         {
             AIGlobals.LogAllTrackedEnemyBaseVisibles();
             if (DoCullInvalidVisibles)
@@ -1572,13 +1651,37 @@ namespace TAC_AI.Templates
                             }
                             else if (item.wasDestroyed || item.visible == null)
                             {
-                                if (AIGlobals.IsBaseTeamDynamic(item.TeamID))
+                                ManSaveGame.StoredTech ST = AIGlobals.FindStoredTech(item.ID, item.GetWorldPosition().TileCoord, checkALLJSONTilesToo);
+                                if (ST != null)
                                 {
-                                    DebugTAC_AI.Info("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                                    ManVisible.inst.StopTrackingVisible(item.ID);
+                                    if (ManBaseTeams.IsBaseTeamAny(item.TeamID))
+                                    {
+                                        DebugTAC_AI.Info("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                        ManVisible.inst.StopTrackingVisible(item.ID);
+                                    }
+                                    else if (AIGlobals.IsBaseTeamDynamicOrUnregistered(item.TeamID))
+                                    {
+                                        DebugTAC_AI.Info("  Invalid UNREGISTERED Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                        ManVisible.inst.StopTrackingVisible(item.ID);
+                                    }
+                                    else
+                                        DebugTAC_AI.Info("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                                 }
                                 else
-                                    DebugTAC_AI.Info("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                {
+                                    if (ManBaseTeams.IsBaseTeamAny(item.TeamID))
+                                    {
+                                        DebugTAC_AI.Info("  NULL Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                        ManVisible.inst.StopTrackingVisible(item.ID);
+                                    }
+                                    else if (AIGlobals.IsBaseTeamDynamicOrUnregistered(item.TeamID))
+                                    {
+                                        DebugTAC_AI.Info("  NULL UNREGISTERED Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                        ManVisible.inst.StopTrackingVisible(item.ID);
+                                    }
+                                    else
+                                        DebugTAC_AI.Info("  NULL Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                }
                             }
                             else
                                 DebugTAC_AI.Info("  Active Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);

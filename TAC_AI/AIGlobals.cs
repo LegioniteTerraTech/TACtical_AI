@@ -1,15 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Reflection;
-using UnityEngine;
-using UnityEngine.UI;
+using System.Text;
+using Rewired.Demos;
 using TAC_AI.AI;
 using TAC_AI.Templates;
-using TerraTechETCUtil;
 using TAC_AI.World;
-using static ManSaveGame;
+using TerraTechETCUtil;
+using UnityEngine;
+using UnityEngine.UI;
 
 namespace TAC_AI
 {
@@ -338,7 +338,7 @@ namespace TAC_AI
         public const float AirWanderMaxHeightIngame = 75;         // How far the AI is allowed to go while wandering randomly above the player
         public static float AirWanderMaxHeight => AIAttract ? 500 : AirWanderMaxHeightIngame;         // How far the AI is allowed to go while wandering randomly above the player
         public const float AirPromoteSpaceHeight = 150;     // The height the player, beyond passing, will encounter more spacecraft
-        public const float AirMaxYaw = 0.2f; // 0 - 1 (float)
+        public const float AirMaxYaw = 0.45f;//0.2f; // 0 - 1 (float)
         public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
 
         public const float ChopperChillFactorMulti = 30f;
@@ -474,6 +474,152 @@ namespace TAC_AI
         }
 
 
+        public static float AngleUnsignedToSigned(float angle)
+        {
+            angle = angle % 360;
+            if (angle > 180)
+                angle -= 360;
+            return angle;
+        }
+        public static WorldPosition GetWorldPos(ManSaveGame.StoredTech tank)
+        {
+            if (tank.m_WorldPosition == default)
+                return WorldPosition.FromScenePosition(tank.GetBackwardsCompatiblePosition());
+            return tank.m_WorldPosition;
+        }
+        public static ManSaveGame.StoredTech FindStoredTech(int visID, IntVector2 coord, bool searchInJSONToo)
+        {
+            WorldTile WT = ManWorld.inst.TileManager.LookupTile(coord);
+            if (WT != null && WT.SaveData != null && WT.SaveData.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out var vals))
+            {   // Our TrackedVisible does exist, now to find it...
+                for (int step = 0; step < vals.Count; step++)
+                {
+                    var val = vals[step];
+                    if (val != null && val.m_ID == visID)
+                    {
+                        return val as ManSaveGame.StoredTech;
+                    }
+                }
+            }
+            var tile = ManSaveGame.inst.GetStoredTile(coord, false);
+            if (tile != null && tile.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out vals))
+            {   // Try in the unloaded tile!?
+                for (int step = 0; step < vals.Count; step++)
+                {
+                    var val = vals[step];
+                    if (val != null && val.m_ID == visID)
+                    {
+                        return val as ManSaveGame.StoredTech;
+                    }
+                }
+            }
+            if (searchInJSONToo)
+            {
+                var jsonTiles = ManSaveGame.inst.CurrentState?.m_StoredTilesJSON;
+                if (jsonTiles != null && jsonTiles.TryGetValue(coord, out string jsonTile) && !jsonTile.NullOrEmpty())
+                {
+                    ManSaveGame.StoredTile storedTile = null;
+                    ManSaveGame.LoadObjectFromRawJson(ref storedTile, jsonTile, false, false);
+                    if (storedTile != null && storedTile.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out vals))
+                    {   // Try in the unloaded tile!?
+                        for (int step = 0; step < vals.Count; step++)
+                        {
+                            var val = vals[step];
+                            if (val != null && val.m_ID == visID)
+                            {
+                                return val as ManSaveGame.StoredTech;
+                            }
+                        }
+                    }
+                }
+            }
+            // Our storedTech DOES NOT EXISTS 
+            return null;
+        }
+        public static ManSaveGame.StoredTech RemoveStoredTech(int visID, IntVector2 coord, bool removeFromJSONToo)
+        {
+            WorldTile WT = ManWorld.inst.TileManager.LookupTile(coord);
+            if (WT != null)
+            {   // Our TrackedVisible does exist, now to find it...
+                if (WT.StoredVisiblesWaitingToLoad != null)
+                {
+                    var storVis = WT.StoredVisiblesWaitingToLoad.Find(x => x.m_ID == visID);
+                    if (storVis != null && storVis is ManSaveGame.StoredTech tech)
+                        return tech;
+                }
+                if (WT.SaveData != null && WT.SaveData.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out var vals))
+                {
+                    for (int step = 0; step < vals.Count; step++)
+                    {
+                        var val = vals[step];
+                        if (val != null && val.m_ID == visID)
+                        {
+                            vals.RemoveAt(step);
+                            return val as ManSaveGame.StoredTech;
+                        }
+                    }
+                }
+            }
+            var tile = ManSaveGame.inst.GetStoredTile(coord, false);
+            if (tile != null && tile.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out var vals2))
+            {   // Try in the unloaded tiles!?
+                for (int step = 0; step < vals2.Count; step++)
+                {
+                    var val = vals2[step];
+                    if (val != null && val.m_ID == visID)
+                    {
+                        vals2.RemoveAt(step);
+                        return val as ManSaveGame.StoredTech;
+                    }
+                }
+            }
+            if (removeFromJSONToo)
+            {
+                var jsonTiles = ManSaveGame.inst.CurrentState?.m_StoredTilesJSON;
+                if (jsonTiles != null && jsonTiles.TryGetValue(coord, out string jsonTile) && !jsonTile.NullOrEmpty())
+                {
+                    ManSaveGame.StoredTile storedTile = null;
+                    ManSaveGame.LoadObjectFromRawJson(ref storedTile, jsonTile, false, false);
+                    if (storedTile != null && storedTile.m_StoredVisibles.TryGetValue((int)ObjectTypes.Vehicle, out vals2))
+                    {   // Try in the unloaded tile!?
+                        for (int step = 0; step < vals2.Count; step++)
+                        {
+                            var val = vals2[step];
+                            if (val != null && val.m_ID == visID)
+                            {
+                                vals2.RemoveAt(step);
+                                ManSaveGame.inst.CurrentState.m_StoredTilesJSON[coord] = ManSaveGame.SaveObjectToRawJson(storedTile);
+                                return val as ManSaveGame.StoredTech;
+                            }
+                        }
+                    }
+                }
+            }
+            // Our storedTech DOES NOT EXISTS 
+            return null;
+        }
+
+        /// <summary>
+        /// WIP
+        /// </summary>
+        /// <param name="posScene"></param>
+        /// <param name="anchored"></param>
+        /// <returns></returns>
+        public static RadarTypes DetermineRadarType(int ID, Vector3 posScene, bool anchored)
+        {
+            WorldPosition WP = WorldPosition.FromScenePosition(posScene);
+            return DetermineRadarType(ID, true, anchored);
+        }
+        public static RadarTypes DetermineRadarType(int ID, bool show, bool anchored)
+        {
+            if (!show)
+            {
+                ManBaseTeams.inst.HiddenVisibles.Add(ID);
+                return RadarTypes.Hidden;
+            }
+            ManBaseTeams.inst.HiddenVisibles.Remove(ID);
+            return anchored ? RadarTypes.Base : RadarTypes.Vehicle;
+        }
 
         // Utilities
         public static Quaternion LookRot(Vector3 forward) => LookRot(forward, Vector3.up);
@@ -485,10 +631,20 @@ namespace TAC_AI
         }
         public static bool TechIsSafelyRemoveable(Tank tech)
         {
-            if (!tech)
+            if (tech == null)
                 return false;
             int team = tech.Team;
-            return !IsPlayerTeam(team) && ManSpawn.NeutralTeam != team && !TankAIManager.MissionTechs.Contains(tech.visible.ID);
+            return (IsBaseTeamDynamic(team) || tech.IsPopulation || team == DefaultEnemyTeam || team == LonerEnemyTeam) &&
+                !IsPlayerTeam(team) && team != ManSpawn.NeutralTeam && !TankAIManager.MissionTechs.Contains(tech.visible.ID) &&
+                tech.name != "DPS Target";
+        }
+        public static bool TechIsSafelyRemoveable(ManSaveGame.StoredTech tech, bool excludeDefaultEnemyTeam = false)
+        {
+            if (tech == null)
+                return false;
+            int team = tech.m_TeamID;
+            return (IsBaseTeamDynamic(team) || tech.m_IsPopulation || (excludeDefaultEnemyTeam ? false : team == DefaultEnemyTeam) || team == LonerEnemyTeam) &&
+                !IsPlayerTeam(team) && team != ManSpawn.NeutralTeam;
         }
 
         /// <summary>
@@ -577,6 +733,7 @@ namespace TAC_AI
 
         public static bool IsBaseTeamAny(int team) => ManBaseTeams.IsBaseTeamAny(team);
         public static bool IsBaseTeamDynamic(int team) => ManBaseTeams.IsBaseTeamDynamic(team);
+        public static bool IsBaseTeamDynamicOrUnregistered(int team) => ManBaseTeams.IsBaseTeamDynamicOrUnregistered(team);
         public static bool IsBaseTeamStatic(int team) => ManBaseTeams.IsBaseTeamStatic(team);
         internal static NP_Types GetNPTTeamTypeForDebug(int team)
         {
@@ -855,51 +1012,343 @@ namespace TAC_AI
         {
             if (!ManNetwork.IsHost)
                 return;
-            DebugTAC_AI.Log(KickStart.ModID + ": Doing BaseTeam TrackedVisibles sanity check...");
+            if (DebugTAC_AI.DoLogInfos)
+                DebugTAC_AI.Log(KickStart.ModID + ": Doing BaseTeam TrackedVisibles sanity check...");
+            else
+                DebugTAC_AI.Log(KickStart.ModID + ": Checking for BaseTeam TrackedVisibles errors...");
             try
             {
                 foreach (var item in ManVisible.inst.AllTrackedVisibles)
                 {
-                    if (item != null && ManBaseTeams.IsBaseTeamAny(item.TeamID))
+                    if (item != null)
                     {
-                        if (item.visible != null)
+                        if (ManBaseTeams.IsBaseTeamAny(item.TeamID))
                         {
-                            DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "] exists as active");
-                        }   // The visible is null!!! - now check to see if it exists somewhere
-                        else if (ManSaveGame.inst.LookupSerializedVisible(item.HostID) != null)
-                        {   // It EXISTS, we do not remove 
-                            DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "] exists as serialized");
-                        }
-                        else
-                        {   // It might be in limbo???
-                            WorldTile tile = ManWorld.inst.TileManager.LookupTile(item.GetWorldPosition().TileCoord);
-                            if (tile != null && tile.StoredVisiblesWaitingToLoad != null &&
-                                tile.StoredVisiblesWaitingToLoad.Exists(x => x.m_ID == item.ID))
+                            if (item.wasDestroyed)
                             {
-                                DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "] exists as waiting to load");
+                                DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] DESTROYED, tracked, registered team");
                             }
-                            else if (ManTechs.inst.IterateTechs().Any(x => x.visible.ID == item.HostID))
+                            else if (item.visible != null)
                             {
-                                DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "]!!! exists as active, but not hooked up to the TrackedVisible properly?");
+                                DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] Active, tracked, registered team");
+                            }   // The visible is null!!! - now check to see if it exists somewhere
+                            else if (ManSaveGame.inst.LookupSerializedVisible(item.HostID) != null)
+                            {   // It EXISTS, we do not remove 
+                                DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] Serialized, tracked, registered team");
                             }
                             else
-                                DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.ID + "]!!! exists as registered, but does not actually exist?");
+                            {   // It might be in limbo???
+                                WorldPosition WP = item.GetWorldPosition();
+                                WorldTile tile = ManWorld.inst.TileManager.LookupTile(WP.TileCoord);
+                                if (tile != null && tile.StoredVisiblesWaitingToLoad != null &&
+                                    tile.StoredVisiblesWaitingToLoad.Exists(x => x.m_ID == item.ID))
+                                {
+                                    DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] Loading, tracked, registered team");
+                                }
+                                else if (ManTechs.inst.IterateTechs().Any(x => x.visible.ID == item.HostID))
+                                {
+                                    DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]!!! Active NOT hooked to TV, tracked, registered team");
+                                }
+                                else
+                                {   // UNLOADED!?!
+                                    var ST = FindStoredTech(item.ID, WP.TileCoord, false);
+                                    if (ST != null)
+                                        DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] Stored, tracked, registered team");
+                                    else
+                                    {
+                                        ST = FindStoredTech(item.ID, WP.TileCoord, true);
+                                        if (ST != null)
+                                            DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] JSON Stored, tracked, registered team");
+                                        else
+                                            DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]!!! NOT existing, tracked, registered team");
+                                    }
+                                }
+                            }
+                        }
+                        else if (ManBaseTeams.IsBaseTeamDynamicOrUnregistered(item.TeamID))
+                        {
+                            if (item.wasDestroyed)
+                            {
+                                DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]! DESTROYED, tracked, team NOT registered");
+                            }
+                            else if (item.visible != null)
+                            {
+                                DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]! Active, tracked, team NOT registered");
+                            }   // The visible is null!!! - now check to see if it exists somewhere
+                            else if (ManSaveGame.inst.LookupSerializedVisible(item.HostID) != null)
+                            {   // It EXISTS, we do not remove 
+                                DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]! Serialized, tracked, team NOT registered");
+                            }
+                            else
+                            {   // It might be in limbo???
+                                WorldPosition WP = item.GetWorldPosition();
+                                WorldTile tile = ManWorld.inst.TileManager.LookupTile(WP.TileCoord);
+                                if (tile != null && tile.StoredVisiblesWaitingToLoad != null &&
+                                    tile.StoredVisiblesWaitingToLoad.Exists(x => x.m_ID == item.ID))
+                                {
+                                    DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]! Loading, tracked, team NOT registered");
+                                }
+                                else if (ManTechs.inst.IterateTechs().Any(x => x.visible.ID == item.HostID))
+                                {
+                                    DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]!!!! Active NOT hooked to TV, tracked, team NOT registered");
+                                }
+                                else
+                                {   // UNLOADED!?!
+                                    var ST = FindStoredTech(item.ID, WP.TileCoord, false);
+                                    if (ST != null)
+                                        DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]!!!! Stored, tracked, team NOT registered");
+                                    else
+                                    {
+                                        ST = FindStoredTech(item.ID, WP.TileCoord, true);
+                                        if (ST != null)
+                                            DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]!!!! JSON Stored, tracked, team NOT registered");
+                                        else
+                                            DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.ID + "]!!!! NOT existing, tracked, team NOT registered");
+                                    }
+                                }
+                            }
                         }
                     }
                 }
                 foreach (var item in ManTechs.inst.IterateTechs())
                 {
-                    if (item != null && ManBaseTeams.IsBaseTeamAny(item.Team))
+                    if (item != null)
                     {
-                        TrackedVisible TV = ManVisible.inst.GetTrackedVisible(item.visible.ID);
-                        if (TV == null)
-                            DebugTAC_AI.Log(KickStart.ModID + ": ID [" + item.visible.ID + "]!!! exists as active, but not registered?");
+                        if (ManBaseTeams.IsBaseTeamAny(item.Team))
+                        {
+                            TrackedVisible TV = ManVisible.inst.GetTrackedVisible(item.visible.ID);
+                            if (TV == null)
+                                DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.visible.ID + "]!!!  Active NOT hooked to TV, NOT tracked, registered team");
+                        }
+                        else if (ManBaseTeams.IsBaseTeamDynamicOrUnregistered(item.Team))
+                        {
+                            TrackedVisible TV = ManVisible.inst.GetTrackedVisible(item.visible.ID);
+                            if (TV == null)
+                                DebugTAC_AI.DevPopupLog(KickStart.ModID + ": ID [" + item.visible.ID + "]!!!! Active NOT hooked to TV, NOT tracked, team NOT registered");
+                        }
                     }
                 }
             }
             catch (Exception e)
             {
-                DebugTAC_AI.Log("Failed to RemoveAllGhostEnemyIcons() - " + e);
+                DebugTAC_AI.Log("Failed to LogAllTrackedEnemyBaseVisibles() - " + e);
+            }
+        }
+
+
+        //Actions
+
+        /// <summary>
+        /// Remove a Tech from existance
+        /// </summary>
+        /// <param name="tech"></param>
+        /// <param name="player"></param>
+        internal static void Purge(ManSaveGame.StoredTech tech, bool removeFromJSONToo)
+        {   // 
+            if (ManNetwork.IsNetworked)
+            {
+            }
+            else
+            {
+                RemoveStoredTech(tech.m_ID, GetWorldPos(tech).TileCoord, removeFromJSONToo);
+            }
+        }
+        /// <summary>
+        /// Remove a Tech from existance
+        /// </summary>
+        /// <param name="tech"></param>
+        /// <param name="player"></param>
+        internal static void Purge(Tank tech)
+        {   // 
+            if (ManNetwork.IsNetworked)
+            {
+                PurgeHost(tech.visible.ID, tech.name);
+            }
+            else
+            {
+                if (!PurgeHost(tech.visible.ID, tech.name))
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Trying to Purge by visible " + tech.name);
+                    tech.visible.RemoveFromGame();
+                }
+            }
+        }
+        /// <summary>
+        /// Remove a Tech from existance
+        /// </summary>
+        /// <param name="tech"></param>
+        /// <param name="player"></param>
+        internal static bool PurgeHost(int HostVisibleID, string name)
+        {   // 
+            if (!ManNetwork.IsHost)
+                throw new Exception(KickStart.ModID + ": SpecialAISpawner.PurgeHost called on non-host");
+            DebugTAC_AI.Info(KickStart.ModID + ": PurgeHost - Name " + name + " | " + HostVisibleID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
+            if (ManNetwork.IsNetworked)
+            {
+                try
+                {
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(HostVisibleID);
+                    Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
+                    {
+                        m_HostID = TV.HostID,
+                        m_CheatBypassInventory = true,
+                    }
+                    );
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name + " (MP)");
+                    AIGlobals.SceneTechCount = -1;
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Failed to purge " + name + " (MP)");
+                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
+                    {
+                        if (item == null)
+                            continue;
+                        if (item.ObjectType == ObjectTypes.Vehicle)
+                        {
+                            if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
+                            {
+                                if (item.wasDestroyed || item.visible == null)
+                                {
+                                    if (IsBaseTeamDynamic(item.TeamID))
+                                    {
+                                        DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                        ManVisible.inst.StopTrackingVisible(item.ID);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    /*
+                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
+                    {
+                        if (item != null && item.visible == null && item.ObjectType == ObjectTypes.Vehicle
+                            && ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
+                        {
+                            if (item.wasDestroyed)
+                            {
+                                if (AIGlobals.IsBaseTeam(item.TeamID))
+                                {
+                                    DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                    ManVisible.inst.StopTrackingVisible(item.ID);
+                                }
+                                else
+                                    DebugTAC_AI.Log("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                            }
+                            else
+                                DebugTAC_AI.Log("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                        }
+                        else
+                            DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                    }*/
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Error backtrace - " + e);
+                }
+            }
+            else
+            {
+                try
+                {
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisible(HostVisibleID);
+                    if (TV != null)
+                    {
+                        ManVisible.inst.ObliterateTrackedVisibleFromWorld(TV);
+                        DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name);
+                    }
+                    else
+                    {
+                        DebugTAC_AI.Assert(KickStart.ModID + ": Purge - failed to purge visible!!!!");
+                    }
+                    AIGlobals.SceneTechCount = -1;
+                    return true;
+                }
+                catch (Exception e)
+                {
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Failed to purge " + name + " (SINGLE player)");
+                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
+                    {
+                        if (item == null)
+                            continue;
+                        if (item.ObjectType == ObjectTypes.Vehicle)
+                        {
+                            if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
+                            {
+                                if (item.wasDestroyed || item.visible == null)
+                                {
+                                    if (IsBaseTeamDynamic(item.TeamID))
+                                    {
+                                        DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                        ManVisible.inst.StopTrackingVisible(item.ID);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    /*
+                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
+                    {
+                        if (item != null && item.visible == null && item.ObjectType == ObjectTypes.Vehicle
+                            && ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
+                        {
+                            if (item.wasDestroyed)
+                            {
+                                if (AIGlobals.IsBaseTeam(item.TeamID))
+                                {
+                                    DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                    ManVisible.inst.StopTrackingVisible(item.ID);
+                                }
+                                else
+                                    DebugTAC_AI.Log("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                            }
+                            else
+                                DebugTAC_AI.Log("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                        }
+                        else
+                            DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                    }*/
+                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Error backtrace - " + e);
+                }
+            }
+            return false;
+        }
+        /// <summary>
+        /// Remove a Tech from existance the cool way
+        /// </summary>
+        /// <param name="tech"></param>
+        /// <param name="player"></param>
+        internal static void Eradicate(Tank tech)
+        {   // 
+            if (ManNetwork.IsNetworked)
+            {
+                try
+                {
+                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
+                    Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
+                    {
+                        m_HostID = TV.HostID,
+                        m_CheatBypassInventory = true,
+                    }
+                    );
+                }
+                catch { }
+            }
+            else
+            {
+                if ((Singleton.playerPos - tech.boundsCentreWorld).sqrMagnitude > AIGlobals.EradicateEffectMaxDistanceSqr)
+                {
+                    Purge(tech);
+                    return;
+                }
+                foreach (TankBlock block in tech.blockman.IterateBlocks())
+                {
+                    try
+                    {
+                        if (!block.damage.AboutToDie)
+                            block.damage.SelfDestruct(0.5f);
+                    }
+                    catch { }
+                }
+                tech.blockman.Disintegrate();
             }
         }
     }

@@ -41,7 +41,7 @@ namespace TAC_AI.Templates
                 trackVis.OnDespawnEvent.Unsubscribe(OnRecycle);
             SpecialAISpawner.AirPool.Remove(this);
             if (tank)
-                SpecialAISpawner.Eradicate(tank);
+                AIGlobals.Eradicate(tank);
             else if (trackVis != null)
                 ManVisible.inst.ObliterateTrackedVisibleFromWorld(trackVis);
             else
@@ -834,7 +834,7 @@ namespace TAC_AI.Templates
                     {
                         AirPool.RemoveAt(step);
                         DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as we have bypassed the max tech limit.");
-                        Purge(airborneAI);
+                        AIGlobals.Purge(airborneAI);
                         step--;
                         count--;
                     }
@@ -842,7 +842,7 @@ namespace TAC_AI.Templates
                     {
                         AirPool.RemoveAt(step);
                         DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above player distance.");
-                        Purge(airborneAI);
+                        AIGlobals.Purge(airborneAI);
                         step--;
                         count--;
                     }
@@ -850,7 +850,7 @@ namespace TAC_AI.Templates
                     {
                         AirPool.RemoveAt(step);
                         DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it left AirDespawnDist radius.");
-                        Purge(airborneAI);
+                        AIGlobals.Purge(airborneAI);
                         step--;
                         count--;
                     }
@@ -880,7 +880,7 @@ namespace TAC_AI.Templates
                     {
                         if (AIGlobals.TechIsSafelyRemoveable(airborneAI.tank))
                         {
-                            Purge(airborneAI.tank);
+                            AIGlobals.Purge(airborneAI.tank);
                             AirPool.RemoveAt(step);
                         }
                     }
@@ -893,7 +893,7 @@ namespace TAC_AI.Templates
                 foreach (TrackedAirborneAI airborneAI in AirPool)
                 {
                     if (airborneAI.tank.IsNotNull())
-                        Purge(airborneAI.tank);
+                        AIGlobals.Purge(airborneAI.tank);
                 }
                 AirPool.Clear();
                 DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner - Destroyed all non-mission pooled airborneAI");
@@ -946,7 +946,7 @@ namespace TAC_AI.Templates
                         {
                             DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + tank.name + 
                                 " from world as we have bypassed the max tech limit.");
-                            Purge(tank);
+                            AIGlobals.Purge(tank);
                             removal--;
                             if (removal == 0)
                                 break;
@@ -986,204 +986,6 @@ namespace TAC_AI.Templates
         }
 
 
-        /// <summary>
-        /// Remove a Tech from existance
-        /// </summary>
-        /// <param name="tech"></param>
-        /// <param name="player"></param>
-        internal static void Purge(Tank tech)
-        {   // 
-            if (ManNetwork.IsNetworked)
-            {
-                PurgeHost(tech.visible.ID, tech.name);
-            }
-            else
-            {
-                if (!PurgeHost(tech.visible.ID, tech.name))
-                {
-                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Trying to Purge by visible " + tech.name);
-                    tech.visible.RemoveFromGame();
-                }
-            }
-        }
-        /// <summary>
-        /// Remove a Tech from existance
-        /// </summary>
-        /// <param name="tech"></param>
-        /// <param name="player"></param>
-        internal static bool PurgeHost(int HostVisibleID, string name)
-        {   // 
-            if (!ManNetwork.IsHost)
-                throw new Exception(KickStart.ModID + ": SpecialAISpawner.PurgeHost called on non-host");
-            DebugTAC_AI.Info(KickStart.ModID + ": PurgeHost - Name " + name +  " | " + HostVisibleID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
-            if (ManNetwork.IsNetworked)
-            {
-                try
-                {
-                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(HostVisibleID);
-                    Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
-                    {
-                        m_HostID = TV.HostID,
-                        m_CheatBypassInventory = true,
-                    }
-                    );
-                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name + " (MP)");
-                    AIGlobals.SceneTechCount = -1;
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Failed to purge " + name + " (MP)");
-                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
-                    {
-                        if (item == null)
-                            continue;
-                        if (item.ObjectType == ObjectTypes.Vehicle)
-                        {
-                            if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
-                            {
-                                if (item.wasDestroyed || item.visible == null)
-                                {
-                                    if (AIGlobals.IsBaseTeamDynamic(item.TeamID))
-                                    {
-                                        DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                                        ManVisible.inst.StopTrackingVisible(item.ID);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    /*
-                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
-                    {
-                        if (item != null && item.visible == null && item.ObjectType == ObjectTypes.Vehicle
-                            && ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
-                        {
-                            if (item.wasDestroyed)
-                            {
-                                if (AIGlobals.IsBaseTeam(item.TeamID))
-                                {
-                                    DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                                    ManVisible.inst.StopTrackingVisible(item.ID);
-                                }
-                                else
-                                    DebugTAC_AI.Log("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                            }
-                            else
-                                DebugTAC_AI.Log("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                        }
-                        else
-                            DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                    }*/
-                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Error backtrace - " + e);
-                }
-            }
-            else
-            {
-                try
-                {
-                    TrackedVisible TV = ManVisible.inst.GetTrackedVisible(HostVisibleID);
-                    if (TV != null)
-                    {
-                        ManVisible.inst.ObliterateTrackedVisibleFromWorld(TV);
-                        DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name);
-                    }
-                    else
-                    {
-                        DebugTAC_AI.Assert(KickStart.ModID + ": Purge - failed to purge visible!!!!");
-                    }
-                    AIGlobals.SceneTechCount = -1;
-                    return true;
-                }
-                catch (Exception e)
-                {
-                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Failed to purge " + name + " (SINGLE player)");
-                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
-                    {
-                        if (item == null)
-                            continue;
-                        if (item.ObjectType == ObjectTypes.Vehicle)
-                        {
-                            if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
-                            {
-                                if (item.wasDestroyed || item.visible == null)
-                                {
-                                    if (AIGlobals.IsBaseTeamDynamic(item.TeamID))
-                                    {
-                                        DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                                        ManVisible.inst.StopTrackingVisible(item.ID);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    /*
-                    foreach (var item in new List<TrackedVisible>(ManVisible.inst.AllTrackedVisibles))
-                    {
-                        if (item != null && item.visible == null && item.ObjectType == ObjectTypes.Vehicle
-                            && ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
-                        {
-                            if (item.wasDestroyed)
-                            {
-                                if (AIGlobals.IsBaseTeam(item.TeamID))
-                                {
-                                    DebugTAC_AI.Log("  Invalid Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                                    ManVisible.inst.StopTrackingVisible(item.ID);
-                                }
-                                else
-                                    DebugTAC_AI.Log("  Invalid Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                            }
-                            else
-                                DebugTAC_AI.Log("  Not Destroyed Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                        }
-                        else
-                            DebugTAC_AI.Log("  Other Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
-                    }*/
-                    DebugTAC_AI.Log(KickStart.ModID + ": Purge - Error backtrace - " + e);
-                }
-            }
-            return false;
-        }
-        /// <summary>
-        /// Remove a Tech from existance the cool way
-        /// </summary>
-        /// <param name="tech"></param>
-        /// <param name="player"></param>
-        internal static void Eradicate(Tank tech)
-        {   // 
-           if (ManNetwork.IsNetworked)
-            {
-                try
-                {
-                    TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
-                    Singleton.Manager<ManNetwork>.inst.SendToServer(TTMsgType.UnspawnTech, new UnspawnTechMessage
-                    { 
-                        m_HostID = TV.HostID,
-                        m_CheatBypassInventory = true,
-                    }
-                    );
-                }
-                catch { }
-            }
-            else
-            {
-                if ((Singleton.playerPos - tech.boundsCentreWorld).sqrMagnitude > AIGlobals.EradicateEffectMaxDistanceSqr)
-                {
-                    Purge(tech);
-                    return;
-                }
-                foreach (TankBlock block in tech.blockman.IterateBlocks())
-                {
-                    try
-                    {
-                        if (!block.damage.AboutToDie)
-                            block.damage.SelfDestruct(0.5f);
-                    }
-                    catch { }
-                }
-                tech.blockman.Disintegrate();
-            }
-        }
 
         private static void Resume()
         {   // 

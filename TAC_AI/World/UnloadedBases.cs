@@ -56,9 +56,9 @@ namespace TAC_AI.World
                 NP_BaseUnit EBU = RefreshTeamMainBaseIfAnyPossible(EP);
                 if (EBU == null)
                     return;
-                int tankCost = RawTechTemplate.GetBBCost(tank);
+                int tankCost = RawTechBase.GetBBCost(tank);
                 EBU.AddBuildBucks(tankCost);
-                SpecialAISpawner.Purge(tank);
+                AIGlobals.Purge(tank);
             }
         }
 
@@ -233,7 +233,7 @@ namespace TAC_AI.World
         {
             try
             {
-                ManEnemyWorld.EntirelyRemoveUnitFromTile(ETU);
+                ManEnemyWorld.UnhookUnitFromTile(ETU);
                 ManEnemyWorld.StopManagingUnit(ETU);
             }
             catch (Exception e) { DebugTAC_AI.Log(KickStart.ModID + ": RemoteRemove - Fail for " + ETU.Name + " - " + e); }
@@ -242,7 +242,7 @@ namespace TAC_AI.World
         {
             NP_Presence_Automatic EP = ManEnemyWorld.GetTeam(ETU.tech.m_TeamID);
             if (EP != null)
-                EP.AddBuildBucks(RawTechTemplate.GetBBCost(ETU.tech));
+                EP.AddBuildBucks(RawTechBase.GetBBCost(ETU.tech));
             RemoteRemove(ETU);
         }
         public static void RemoteDestroy(NP_TechUnit ETU)

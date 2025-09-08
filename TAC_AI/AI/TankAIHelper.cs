@@ -4426,7 +4426,8 @@ namespace TAC_AI.AI
                                 BlockedLineOfSight = true;
                             }
                         }
-                        if (targetDistance > MaxCombatRange)
+                        if (targetDistance > MaxCombatRange && 
+                            !(RTSControlled && RTSDestInternal == RTSDisabled)) // RTS Controlled to target something that can move
                             lastEnemy = null;
                     }
                 }

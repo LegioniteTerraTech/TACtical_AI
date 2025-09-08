@@ -115,8 +115,14 @@ namespace TAC_AI.World
             {
                 TargetPos = WP;
                 Subject = null;
-                TypeSwitch = AIType.Null;
+                TypeSwitch = (AIType)AIType.Null;
             }
+            /// <summary>
+            /// Note: setting "type" to null will 
+            /// </summary>
+            /// <param name="helper"></param>
+            /// <param name="subject"></param>
+            /// <param name="type"></param>
             public CommandLink(TankAIHelper helper, Visible subject, AIType type)
             {
                 if (subject == null)
@@ -131,7 +137,7 @@ namespace TAC_AI.World
                 helper.RTSDestination = GetScenePosition(helper);
                 switch (TypeSwitch)
                 {
-                    case AIType.Null:
+                    case AIType.Null:   // Movement command
                         if (Subject?.tank != null)
                         {
                             helper.SetRTSState(false);

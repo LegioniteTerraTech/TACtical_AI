@@ -360,6 +360,7 @@
     <Compile Include="Templates\BaseGamePopSpecials.cs" />
     <Compile Include="Templates\CommunityCluster.cs" />
     <Compile Include="Templates\RawTechPopParams.cs" />
+    <Compile Include="TrackedVisibleExtensions.cs" />
     <Compile Include="World\ManEnemySiege.cs" />
     <Compile Include="World\ManBaseTeams.cs" />
     <Compile Include="World\ManWorldRTS.cs" />

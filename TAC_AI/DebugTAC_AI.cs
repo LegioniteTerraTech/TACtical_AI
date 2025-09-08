@@ -55,6 +55,15 @@ namespace TAC_AI
             return AILoadTimer.ElapsedMilliseconds;
         }
 
+        internal static void DevPopupLog(string message)
+        {
+            if (!ShouldLog)
+                return;
+            UnityEngine.Debug.Log(message);
+#if DEBUG
+            ManUI.inst.ShowErrorPopup(message);
+#endif
+        }
         internal static void Info(string message)
         {
             if (!ShouldLog || !DoLogInfos)
@@ -64,6 +73,12 @@ namespace TAC_AI
         internal static void Log(string message)
         {
             if (!ShouldLog)
+                return;
+            UnityEngine.Debug.Log(message);
+        }
+        internal static void LogSpecific(Tank tech, string message)
+        {
+            if (!ShouldLog || tech != Singleton.playerTank)
                 return;
             UnityEngine.Debug.Log(message);
         }

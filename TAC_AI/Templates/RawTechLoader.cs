@@ -2179,13 +2179,13 @@ namespace TAC_AI.Templates
             if (ManNetwork.IsNetworked)
             {
                 theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, name);
-                TrackTank(theTech, false, false);
+                InsureTrackingTank(theTech, false, false);
                 return theTech;
             }
             else
             {
                 theTech = Singleton.Manager<ManSpawn>.inst.WrapSingleBlock(null, block, Team, name);
-                TrackTank(theTech, false, false);
+                InsureTrackingTank(theTech, false, false);
             }
             if ((bool)theTech)
                 AddToManPopIfLoner(theTech, false);
@@ -2662,12 +2662,6 @@ namespace TAC_AI.Templates
 
 
         private static readonly FieldInfo manPopManaged = typeof(ManPop).GetField("m_SpawnedTechs", BindingFlags.NonPublic | BindingFlags.Instance);
-        private static WorldPosition GetWorldPos(ManSaveGame.StoredTech tank)
-        {
-            if (tank.m_WorldPosition == default)
-                return WorldPosition.FromScenePosition(tank.GetBackwardsCompatiblePosition());
-            return tank.m_WorldPosition;
-        }
         /// <summary>
         /// Adds a Tech to the TrackedVisibles list, AKA the map, Tech Manager, ETC
         /// </summary>
@@ -2676,30 +2670,29 @@ namespace TAC_AI.Templates
         /// <param name="hide"></param>
         /// <param name="anchored"></param>
         /// <returns></returns>
-        internal static TrackedVisible TrackTank(ManSaveGame.StoredTech tank, int ID, bool hide, bool anchored)
+        internal static TrackedVisible InsureTrackingTank(ManSaveGame.StoredTech tank, int ID, bool hide, bool anchored)
         {
             if (ManNetwork.IsNetworked)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader[stored](MP) - No such tracking function is finished yet - " + tank.m_TechData.Name);
             }
             TrackedVisible tracked = AIGlobals.GetTrackedVisible(ID);
+            WorldPosition WP;
             if (tracked != null)
             {   // Already tracked
-                tracked.RadarType = anchored ? RadarTypes.Base : RadarTypes.Vehicle;
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Updating Tracked " + tank.m_TechData.Name);
-                tracked.SetPos(GetWorldPos(tank));
-                if (hide)
-                    ManBaseTeams.inst.HiddenVisibles.Add(ID);
-                return tracked;
+                WP = AIGlobals.GetWorldPos(tank);
+                tracked.RadarType = AIGlobals.DetermineRadarType(ID, WP.ScenePosition, anchored);
             }
-
-            tracked = new TrackedVisible(ID, null, ObjectTypes.Vehicle, anchored ? RadarTypes.Base : RadarTypes.Vehicle);
-            tracked.SetPos(GetWorldPos(tank));
+            else
+            {
+                //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.m_TechData.Name + " ID " + ID);
+                WP = AIGlobals.GetWorldPos(tank);
+                tracked = new TrackedVisible(ID, null, ObjectTypes.Vehicle, AIGlobals.DetermineRadarType(ID, WP.ScenePosition, anchored));
+                ManVisible.inst.TrackVisible(tracked);
+            }
+            tracked.SetPos(WP);
             tracked.TeamID = tank.m_TeamID;
-            ManVisible.inst.TrackVisible(tracked);
-            if (hide)
-                ManBaseTeams.inst.HiddenVisibles.Add(ID);
-            //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.m_TechData.Name + " ID " + ID);
             return tracked;
         }
         /// <summary>
@@ -2709,7 +2702,7 @@ namespace TAC_AI.Templates
         /// <param name="hide"></param>
         /// <param name="anchored"></param>
         /// <returns></returns>
-        internal static TrackedVisible TrackTank(Tank tank, bool hide, bool anchored)
+        internal static TrackedVisible InsureTrackingTank(Tank tank, bool hide, bool anchored)
         {
             if (ManNetwork.IsNetworked)
             {
@@ -2720,18 +2713,16 @@ namespace TAC_AI.Templates
             if (tracked != null)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Updating Tracked " + tank.name);
-                tracked.SetPos(tank.boundsCentreWorldNoCheck);
-                if (hide)
-                    ManBaseTeams.inst.HiddenVisibles.Add(ID);
+                tracked.RadarType = AIGlobals.DetermineRadarType(ID, true, anchored);
                 return tracked;
             }
-
-            tracked = new TrackedVisible(ID, tank.visible, ObjectTypes.Vehicle, anchored ? RadarTypes.Base : RadarTypes.Vehicle);
+            else
+            {
+                tracked = new TrackedVisible(ID, tank.visible, ObjectTypes.Vehicle, AIGlobals.DetermineRadarType(ID, true, anchored));
+                ManVisible.inst.TrackVisible(tracked);
+            }
             tracked.SetPos(tank.boundsCentreWorldNoCheck);
             tracked.TeamID = tank.Team;
-            ManVisible.inst.TrackVisible(tracked);
-            if (hide)
-                ManBaseTeams.inst.HiddenVisibles.Add(ID);
             //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Tracking " + tank.name);
             return tracked;
         }
@@ -2740,7 +2731,7 @@ namespace TAC_AI.Templates
             if (tank.Team == AIGlobals.LonerEnemyTeam) // the wild tech pop number
             {
                 List<TrackedVisible> visT = (List<TrackedVisible>)manPopManaged.GetValue(ManPop.inst);
-                visT.Add(TrackTank(tank, hide, tank.IsAnchored));
+                visT.Add(InsureTrackingTank(tank, hide, tank.IsAnchored));
                 //forceInsert.SetValue(ManPop.inst, visT);
                 //DebugTAC_AI.Log(KickStart.ModID + ": RawTechLoader - Added " + tank.name + " into ManPop");
             }

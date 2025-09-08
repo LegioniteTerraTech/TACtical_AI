@@ -48,20 +48,11 @@ namespace TAC_AI.AI.Movement.AICores
             //Convert turnVal to runnable format
 
             float chillFactorMulti = helper.lastTechExtents;
-            if (turnVal.x > 180)
-                turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / (pilot.FlyingChillFactor.x * chillFactorMulti)), -1, 1);
-            else
-                turnVal.x = Mathf.Clamp(-(turnVal.x / (pilot.FlyingChillFactor.x * chillFactorMulti)), -1, 1);
+            turnVal.x = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.x) / (pilot.FlyingChillFactor.x * chillFactorMulti)), -1, 1);
 
-            if (turnVal.y > 180)
-                turnVal.y = Mathf.Clamp(-((turnVal.y - 360) / pilot.FlyingChillFactor.y), -1, 1);
-            else
-                turnVal.y = Mathf.Clamp(-(turnVal.y / pilot.FlyingChillFactor.y), -1, 1);
+            turnVal.y = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.y) / (pilot.FlyingChillFactor.y * chillFactorMulti)), -1, 1);
 
-            if (turnVal.z > 180)
-                turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / (pilot.FlyingChillFactor.z * chillFactorMulti)), -1, 1);
-            else
-                turnVal.z = Mathf.Clamp(-(turnVal.z / (pilot.FlyingChillFactor.z * chillFactorMulti)), -1, 1);
+            turnVal.z = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.z) / (pilot.FlyingChillFactor.z * chillFactorMulti)), -1, 1);
 
             //Stop Wobble
             if (Mathf.Abs(turnVal.x) < 0.05f)

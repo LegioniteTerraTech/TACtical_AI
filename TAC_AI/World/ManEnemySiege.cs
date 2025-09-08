@@ -58,17 +58,22 @@ namespace TAC_AI.World
         {
             if (ManNetwork.IsNetworked && !ManNetwork.IsHost)
                 return false;
-            enemyTeamInvolved.PresenceDebugDEV("Siege active? " + InProgress.ToString() + ", Siege cooldown (sec) " + RaidCooldown.ToString("0.000") + ", counts [" +
+            enemyTeamInvolved.PresenceDebugDEV("Siege active? " + InProgress.ToString() +
+                 (AIGlobals.TurboAICheat ? ", Siege cooldown (sec) <<AI CHEAT OVERRIDE>>" :
+                (", Siege cooldown (sec) " + RaidCooldown.ToString("0.000"))) + ", counts [" +
                 enemyTeamInvolved.GlobalMobileTechCount() + " vs " + (KickStart.EnemyTeamTechLimit / 2f) + "]");
             if (!InProgress && (RaidCooldown <= 0 || AIGlobals.TurboAICheat))
             {
-                if (enemyTeamInvolved.GlobalMobileTechCount() > (KickStart.EnemyTeamTechLimit / 2f))//(enemyTeamInvolved.GlobalMobileTechCount() + 3 > KickStart.EnemyTeamTechLimit)
+                if (enemyTeamInvolved.GlobalMobileTechCount() > KickStart.EnemyTeamTechLimit)//(enemyTeamInvolved.GlobalMobileTechCount() + 3 > KickStart.EnemyTeamTechLimit)
                 {   // the siege only begins IF the AI's team is at a certain threshold
                     inst.EP = enemyTeamInvolved;
                     WarnPlayers();
                     inProgress = true;
                     return true;
                 }
+                else
+                    enemyTeamInvolved.PresenceDebugDEV("Siege held off - Scene tech threashold: " + KickStart.EnemyTeamTechLimit + 
+                        " vs " + enemyTeamInvolved.GlobalMobileTechCount());
             }
             return false;
         }

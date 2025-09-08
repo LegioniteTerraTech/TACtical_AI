@@ -601,16 +601,11 @@ namespace TAC_AI.AI.Movement.AICores
                     turnVal = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(-forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
                 else
                     turnVal = AIGlobals.LookRot(tank.rootBlockTrans.InverseTransformDirection(forwardFlat.normalized), tank.rootBlockTrans.InverseTransformDirection(Vector3.up)).eulerAngles;
-                
+
                 //Convert turnVal to runnable format
-                if (turnVal.x > 180)
-                    turnVal.x = -((turnVal.x - 360) / 180);
-                else
-                    turnVal.x = -(turnVal.x / 180);
-                if (turnVal.z > 180)
-                    turnVal.z = -((turnVal.z - 360) / 180);
-                else
-                    turnVal.z = -(turnVal.z / 180);
+                turnVal.x = -AIGlobals.AngleUnsignedToSigned(turnVal.x) / 180f;
+
+                turnVal.z = -AIGlobals.AngleUnsignedToSigned(turnVal.z) / 180f;
 
                 turnVal.y = 0;
 
@@ -631,23 +626,14 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         //If overtilt then try get back upright again
                         turnVal.x = turnValUp.x;
-                        if (turnVal.x > 180)
-                            turnVal.x = -((turnVal.x - 360) / 180);
-                        else
-                            turnVal.x = -(turnVal.x / 180);
+                        turnVal.x = -AIGlobals.AngleUnsignedToSigned(turnVal.x) / 180f;
                     }
                     else
                     {
-                        if (turnVal.x > 180)
-                            turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / 60), -1, 1);
-                        else
-                            turnVal.x = Mathf.Clamp(-(turnVal.x / 60), -1, 1);
+                        turnVal.x = Mathf.Clamp(-AIGlobals.AngleUnsignedToSigned(turnVal.x) / 60f, -1, 1);
                     }
                     turnVal.z = turnValUp.z;
-                    if (turnVal.z > 180)
-                        turnVal.z = -((turnVal.z - 360) / 180);
-                    else
-                        turnVal.z = -(turnVal.z / 180);
+                    turnVal.z = -AIGlobals.AngleUnsignedToSigned(turnVal.z) / 180f;
                 }
                 else
                 {   //Using broadside tilting
@@ -655,32 +641,20 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         //If overtilt then try get back upright again
                         turnVal.z = turnValUp.z;
-                        if (turnVal.z > 180)
-                            turnVal.z = -((turnVal.z - 360) / 180);
-                        else
-                            turnVal.z = -(turnVal.z / 180);
+                        turnVal.z = -AIGlobals.AngleUnsignedToSigned(turnVal.z) / 180f;
                         //DebugTAC_AI.Log(KickStart.ModID + ": Broadside overloaded with value " + Vector3.Dot(helper.Navi3DUp, tank.rootBlockTrans.up));
                     }
                     else
                     {
                         //DebugTAC_AI.Log(KickStart.ModID + ": Broadside Z-tilt active");
-                        if (turnVal.z > 180)
-                            turnVal.z = Mathf.Clamp(-((turnVal.z - 360) / 60), -1, 1);
-                        else
-                            turnVal.z = Mathf.Clamp(-(turnVal.z / 60), -1, 1);
+                        turnVal.z = Mathf.Clamp(-AIGlobals.AngleUnsignedToSigned(turnVal.x) / 60f, -1, 1);
                     }
                     turnVal.x = turnValUp.x;
-                    if (turnVal.x > 180)
-                        turnVal.x = Mathf.Clamp(-((turnVal.x - 360) / 60), -1, 1);
-                    else
-                        turnVal.x = Mathf.Clamp(-(turnVal.x / 60), -1, 1);
+                    turnVal.x = Mathf.Clamp(-AIGlobals.AngleUnsignedToSigned(turnVal.x) / 60f, -1, 1);
                 }
 
                 //Convert turnVal to runnable format
-                if (turnVal.y > 180)
-                    turnVal.y = Mathf.Clamp(-((turnVal.y - 360) / 60), -1, 1);
-                else
-                    turnVal.y = Mathf.Clamp(-(turnVal.y / 60), -1, 1);
+                turnVal.y = Mathf.Clamp(-AIGlobals.AngleUnsignedToSigned(turnVal.y) / 60f, -1, 1);
 
                 //DebugTAC_AI.Log(KickStart.ModID + ": TurnVal AIM " + turnVal);
             }

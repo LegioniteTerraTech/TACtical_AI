@@ -469,11 +469,12 @@ namespace TAC_AI.AI.Enemy
         internal static void RandomSetMindAttack(EnemyMind newMind, Tank tank)
         {
             //add Attitude
-            if (IsUnarmed(tank))
+            if (IsUnarmedAndCanRunAway(tank))
             {
                 newMind.CommanderAttack = EAttackMode.Safety;
                 newMind.CommanderMind = EnemyAttitude.Default;
                 newMind.CommanderAlignment = EnemyStanding.SubNeutral;
+                DebugTAC_AI.Log("Tech " + tank.name + " is unarmed, assuming SubNeutral");
             }
             else
             {
@@ -552,8 +553,10 @@ namespace TAC_AI.AI.Enemy
                         }
                         if (weInDanger)
                         {
-                            if (Mode<ModeMain>.inst != null)
+                            /*
+                            if (Mode<ModeMain>.inst != null)    // Was keeping the combat music active
                                 Mode<ModeMain>.inst.SetPlayerInDanger(true, true);
+                            */
                             ManMusic.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, targVis.tank);
                         }
                         else if (target != Singleton.playerTank && target.IsEnemy(tank.Team) && target.netTech != null &&
@@ -884,9 +887,9 @@ namespace TAC_AI.AI.Enemy
             }
             return false;
         }
-        public static bool IsUnarmed(Tank tank)
+        public static bool IsUnarmedAndCanRunAway(Tank tank)
         {
-            return tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= 
+            return !tank.IsAnchored && tank.blockman.IterateBlockComponents<ModuleTechController>().Count() >= 
                 tank.blockman.IterateBlockComponents<ModuleWeapon>().Count() + 
                 tank.blockman.IterateBlockComponents<ModuleMeleeWeapon>().Count();
         }

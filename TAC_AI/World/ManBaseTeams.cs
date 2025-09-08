@@ -892,6 +892,11 @@ namespace TAC_AI
             return team == SpecialAISpawner.trollTeam ||
                 (!AIGlobals.IsPlayerTeam(team) && inst.teams.TryGetValue(team, out var ETD) && !ETD.IsReadonly);
         }
+        public static bool IsBaseTeamDynamicOrUnregistered(int team)
+        {
+            return team == SpecialAISpawner.trollTeam ||
+                (!AIGlobals.IsPlayerTeam(team) && (inst.teams.TryGetValue(team, out var ETD) ? !ETD.IsReadonly : team <= AIGlobals.EnemyTeamsRangeStart));
+        }
         public static bool IsBaseTeamStatic(int team)
         {
             return team == SpecialAISpawner.trollTeam ||

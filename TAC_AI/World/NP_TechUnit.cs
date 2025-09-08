@@ -48,7 +48,7 @@ namespace TAC_AI.World
         {
             get
             {
-                try { return tech.m_WorldPosition; }
+                try { return AIGlobals.GetWorldPos(tech); }
                 catch
                 {
                     DebugTAC_AI.LogError(KickStart.ModID + ": EnemyTechUnit - " + Name + " failed to fetch worldPosition!");
@@ -111,14 +111,13 @@ namespace TAC_AI.World
             }
             return false;
         }*/
-        internal void SetTracker(TrackedVisible TV)
+        internal void SetTracked(TrackedVisible TV)
         {
             trackedVis = TV;
         }
         internal void SetTech(ManSaveGame.StoredTech tech)
         {
             this.tech = tech;
-            //tilePos = tech.m_WorldPosition.TileCoord;
         }
 
 

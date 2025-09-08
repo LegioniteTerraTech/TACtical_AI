@@ -489,6 +489,9 @@ namespace TAC_AI.AI
                 helper.MaxBoost();
 
             this.AICore.DriveMaintainer(helper, tank, ref core);
+            if (!AIEPathing.IsUnderMaxAltPlayer(PathPoint.y))
+                DebugTAC_AI.Log(KickStart.ModID + ":!!! - Tech " + tank.name + " has PathPoint [" + PathPoint.y + "] above max alt player [" + 
+                    (AIGlobals.AirWanderMaxHeight + Singleton.playerPos.y) + "]");
             return;
         }
 

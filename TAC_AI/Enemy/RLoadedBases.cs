@@ -163,7 +163,7 @@ namespace TAC_AI.AI.Enemy
                 AIGlobals.PopupColored(Localisation.inst.GetMoneyStringWithSymbol(smaller) + compressed, tank.Team, worPos);
                 ETD.AddBuildBucks(tankCost);
             }
-            SpecialAISpawner.Eradicate(tank);
+            AIGlobals.Eradicate(tank);
         }
         public static string CompressIfNeeded(int input, out int smaller)
         {
@@ -1109,7 +1109,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     if (!KickStart.AllowEnemiesToStartBases && !mind.Tank.FirstUpdateAfterSpawn)
                     {
-                        SpecialAISpawner.Eradicate(mind.Tank);
+                        AIGlobals.Eradicate(mind.Tank);
                         return;
                     }
                     if (ManNetwork.IsNetworked)

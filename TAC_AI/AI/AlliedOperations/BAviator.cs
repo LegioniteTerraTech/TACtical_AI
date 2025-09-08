@@ -24,6 +24,7 @@ namespace TAC_AI.AI.AlliedOperations
             }
             if (helper.lastPlayer == tank.visible)
             {   // WE ARE FOLLOWING OURSELVES, just hold position!
+                direct.DriveDest = EDriveDest.None;
                 return;
             }
 
