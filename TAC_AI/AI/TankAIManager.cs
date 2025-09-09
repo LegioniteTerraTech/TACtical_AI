@@ -250,15 +250,16 @@ namespace TAC_AI.AI
             }
             //QueueUpdater.Send();
         }
-        private static void OnPlayerTechChange(Tank tonk, bool yes)
+        private static void OnPlayerTechChange(Tank nextTonk, bool yes)
         {
-            if (lastPlayerTech != tonk)
+            if (lastPlayerTech != nextTonk)
             {
                 TankAIHelper helper;
-                if (tonk != null)
+                if (nextTonk != null)
                 {
-                    helper = tonk.GetHelperInsured();
+                    helper = nextTonk.GetHelperInsured();
                     //helper.OnTechTeamChange();
+                    helper.SuppressFiring(false);
                     helper.ForceRebuildAlignment();
                 }
                 else
@@ -273,7 +274,7 @@ namespace TAC_AI.AI
                     }
                     catch { }
                 }
-                lastPlayerTech = tonk;
+                lastPlayerTech = nextTonk;
             }
         }
 

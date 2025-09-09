@@ -203,7 +203,7 @@ namespace TAC_AI.AI.Enemy
             //Try find next target to assault
             try
             {
-                var target = helper.FindEnemy(mind.InvertBullyPriority);
+                var target = helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
                 if (target)
                     direct.SetLastDest(target.tank.boundsCentreWorldNoCheck);
                 else
@@ -240,7 +240,7 @@ namespace TAC_AI.AI.Enemy
             // Determines the weapons actions and aiming of the AI - Sub-Neutral (Coward)
             //if (mind.CommanderAttack == EnemyAttack.Coward)
             //{
-            helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+            helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
             helper.AttackEnemy = helper.Provoked > 0;
             //}
         }
@@ -259,7 +259,7 @@ namespace TAC_AI.AI.Enemy
                 if ((funds.WorldPos.ScenePosition - tank.boundsCentreWorldNoCheck).sqrMagnitude > AIGlobals.MaximumNeutralMonitorSqr)
                     helper.lastEnemy = null;  // Stop following this far from base
                 else
-                    helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+                    helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
             }
             else  // Don't stalk cause that's rude
                 helper.lastEnemy = null;  // Stop following this far from base
@@ -283,7 +283,7 @@ namespace TAC_AI.AI.Enemy
         {
             // Determines the weapons actions and aiming of the AI
             var lastEnemyC = helper.lastEnemy;
-            helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+            helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
             //DebugTAC_AI.Log("Base " + tank.name + " has enemy: " + helper.lastEnemy.IsNotNull() + " prev " + lastEnemyC.IsNotNull());
             
             if (helper.lastEnemyGet != null)
@@ -304,7 +304,7 @@ namespace TAC_AI.AI.Enemy
         {
             // Determines the weapons actions and aiming of the AI
             var lastEnemyC = helper.lastEnemy;
-            helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+            helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
             //DebugTAC_AI.Log("Tech " + tank.name + " has enemy: " + helper.lastEnemy.IsNotNull() + " prev " + lastEnemyC.IsNotNull()
             //    + " | Range " + helper.MaxCombatRange);
             helper.AttackEnemy = false;
@@ -330,7 +330,7 @@ namespace TAC_AI.AI.Enemy
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             var lastEnemyC = helper.lastEnemy;
-            helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+            helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
             //DebugTAC_AI.Log("Sniper " + tank.name + " has enemy: " + helper.lastEnemy.IsNotNull() + " prev " + lastEnemyC.IsNotNull());
             if (helper.lastEnemyGet != null)
             {
@@ -414,12 +414,12 @@ namespace TAC_AI.AI.Enemy
             {   // focus fire like Grudge
                 helper.AttackEnemy = true;
                 if (!helper.lastEnemyGet.isActive)
-                    helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+                    helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
             }
             else
             {
                 helper.AttackEnemy = false;
-                helper.lastEnemy = helper.FindEnemy(mind.InvertBullyPriority);
+                helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
             }
         }
 

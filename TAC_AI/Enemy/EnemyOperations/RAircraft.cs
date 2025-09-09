@@ -342,7 +342,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
         {   // Only accounts for forward weapons
 
             helper.AttackEnemy = false;
-            helper.lastEnemy = helper.FindEnemyAir(mind.InvertBullyPriority);
+            helper.TryRefreshEnemyEnemy(mind.InvertBullyPriority);
 
             if (helper.lastEnemyGet != null)
             {

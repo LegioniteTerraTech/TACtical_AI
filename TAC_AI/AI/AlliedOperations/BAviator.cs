@@ -99,7 +99,7 @@ namespace TAC_AI.AI.AlliedOperations
         {   // Will have to account for the different types of flight methods available
 
             helper.AttackEnemy = false;
-            helper.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+            helper.TryRefreshEnemyAllied();
             if (helper.lastEnemyGet != null)
             {
                 Vector3 aimTo = (helper.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;

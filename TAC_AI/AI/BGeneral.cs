@@ -32,7 +32,7 @@ namespace TAC_AI.AI
             // Determines the weapons actions and aiming of the AI
             if (helper.lastEnemyGet != null)
             {
-                helper.lastEnemy = helper.GetEnemyAllied();
+                helper.TryRefreshEnemyAllied();
                 //Fire even when retreating - the AI's life depends on this!
                 helper.AttackEnemy = true;
                 return false;
@@ -40,7 +40,7 @@ namespace TAC_AI.AI
             else
             {
                 helper.AttackEnemy = false;
-                helper.lastEnemy = helper.GetEnemyAllied();
+                helper.TryRefreshEnemyAllied();
                 return helper.lastEnemyGet;
             }
         }
@@ -54,7 +54,7 @@ namespace TAC_AI.AI
         {
             // Determines the weapons actions and aiming of the AI, this one is more fire-precise and used for turrets
             helper.AttackEnemy = false;
-            helper.lastEnemy = helper.GetEnemyAllied();
+            helper.TryRefreshEnemyAllied();
             if (helper.lastEnemyGet != null)
             {
                 Vector3 aimTo = (helper.lastEnemyGet.tank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).normalized;
@@ -135,12 +135,12 @@ namespace TAC_AI.AI
             {   // focus fire like Grudge
                 helper.AttackEnemy = true;
                 if (!helper.lastEnemyGet.isActive)
-                    helper.lastEnemy = helper.GetEnemyAllied();
+                    helper.TryRefreshEnemyAllied();
             }
             else
             {
                 helper.AttackEnemy = false;
-                helper.lastEnemy = helper.GetEnemyAllied();
+                helper.TryRefreshEnemyAllied();
             }
         }
 

@@ -12,6 +12,7 @@ using TAC_AI.Templates;
 using TAC_AI.World;
 using TerraTechETCUtil;
 using UnityEngine;
+using static CompoundExpression.EEInstance;
 
 namespace TAC_AI.AI
 {
@@ -339,6 +340,7 @@ namespace TAC_AI.AI
         public Visible lastPlayer;
         public Visible lastEnemyGet { get => lastEnemy; }
         internal Visible lastEnemy { get; set; } = null;
+        public bool PreserveEnemyTarget => RTSControlled && RTSDestInternal == RTSDisabled;
         public Visible lastLockOnTarget;
         public Transform Obst;
         internal Tank lastCloseAlly;
@@ -4426,31 +4428,21 @@ namespace TAC_AI.AI
                                 BlockedLineOfSight = true;
                             }
                         }
-                        if (targetDistance > MaxCombatRange && 
-                            !(RTSControlled && RTSDestInternal == RTSDisabled)) // RTS Controlled to target something that can move
+                        if (targetDistance > MaxCombatRange && !PreserveEnemyTarget) // RTS Controlled to target something that can move
                             lastEnemy = null;
                     }
                 }
             }
         }
-        internal Visible GetEnemyAllied()
+        public Visible TryRefreshEnemyAllied()
         {
+            //tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
             Visible target = lastEnemyGet;
             if (Provoked == 0)
                 target = null;
             else
             {
-                float TargetRangeSqr = MaxCombatRange * MaxCombatRange;
-                Vector3 scanCenter = tank.boundsCentreWorldNoCheck;
-                if (target != null && (!target.isActive ||
-                    !ManBaseTeams.IsEnemy(tank.Team, target.tank.Team)
-                    //tank.Team == target.tank.Team
-                    || (target.tank.boundsCentreWorldNoCheck - scanCenter).sqrMagnitude > TargetRangeSqr))
-                {
-                    //DebugTAC_AI.Log("Target lost");
-                    target = null;
-                }
-                else if (NextFindTargetTime >= Time.time)
+                if (NextFindTargetTime >= Time.time)
                 {
                     if ((bool)lastPlayer)
                     {
@@ -4472,7 +4464,7 @@ namespace TAC_AI.AI
             if ((bool)lastPlayer)
             {
                 Visible playerTarget = lastPlayer.tank.Weapons.GetManualTarget();
-                if (playerTarget && playerTarget.tank != null && playerTarget.isActive && 
+                if (playerTarget && playerTarget.tank != null && playerTarget.isActive &&
                     playerTarget.tank.CentralBlock)
                 {
                     // If the player fires while locked-on to a neutral/SubNeutral, the AI will assume this
@@ -4490,13 +4482,25 @@ namespace TAC_AI.AI
                 }
                 else
                     target = FindEnemy(false);
+                /*
                 if (target)
                 {
                     if (ManBaseTeams.IsNonAggressiveTeam(target.tank.Team))
                         return null; // Don't want to accidently fire at a neutral close nearby
                 }
+                */
             }
             return target;
+        }
+        public Visible TryRefreshEnemyEnemy(bool InvertBullyPriority, int pos = 1)
+        {
+            if (MovementController is AIControllerAir air && air.FlyStyle == AIControllerAir.FlightType.Aircraft)
+            {
+                lastEnemy = FindEnemyAir(InvertBullyPriority, pos);
+            }
+            else
+                lastEnemy = FindEnemy(InvertBullyPriority, pos);
+            return lastEnemy;
         }
         private void UpdateTargetCombatFocus()
         {
@@ -4630,6 +4634,7 @@ namespace TAC_AI.AI
             {
                 if (cTank != tank && cTank.visible.isActive)
                 {
+                    /*
                     if (cTank.Team == tank.Team && ManBaseTeams.TryGetBaseTeamDynamicOnly(tank.Team, out var teamI) &&
                         !teamI.IsInfighting)
                     {
@@ -4642,6 +4647,7 @@ namespace TAC_AI.AI
                             throw new InvalidOperationException("Infighting in team " + teamI.teamName + " when they were not set to be!  " +
                                 "FORCE reloading TankAIManager fixed it?");
                     }
+                    */
 
                     float dist = (cTank.boundsCentreWorldNoCheck - tank.boundsCentreWorldNoCheck).sqrMagnitude;
                     if (dist < gatherRangeSqr)
@@ -4658,7 +4664,7 @@ namespace TAC_AI.AI
         /// <param name="inRange">value > 0</param>
         /// <param name="pos">MAX 3</param>
         /// <returns></returns>
-        public Visible FindEnemy(bool InvertBullyPriority, int pos = 1)
+        private Visible FindEnemy(bool InvertBullyPriority, int pos = 1)
         {
             //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
             //    return null; // We NO ATTACK
@@ -4675,7 +4681,7 @@ namespace TAC_AI.AI
                     //DebugTAC_AI.Log("Target lost");
                     target = null;
                 }
-                else if (KeepEnemyFocus || NextFindTargetTime <= Time.time) // Carry on chasing the target
+                else if (PreserveEnemyTarget || KeepEnemyFocus || NextFindTargetTime <= Time.time) // Carry on chasing the target
                 {
                     return target;
                 }
@@ -4867,7 +4873,7 @@ namespace TAC_AI.AI
             */
             return target;
         }
-        public Visible FindEnemyAir(bool InvertBullyPriority, int pos = 1)
+        private Visible FindEnemyAir(bool InvertBullyPriority, int pos = 1)
         {
             //if (CommanderMind == EnemyAttitude.SubNeutral && EvilCommander != EnemyHandling.SuicideMissile)
             //    return null; // We NO ATTACK
@@ -4884,7 +4890,7 @@ namespace TAC_AI.AI
                     //DebugTAC_AI.Log("Target lost");
                     target = null;
                 }
-                else if (KeepEnemyFocus || NextFindTargetTime <= Time.time) // Carry on chasing the target
+                else if (PreserveEnemyTarget || KeepEnemyFocus || NextFindTargetTime <= Time.time) // Carry on chasing the target
                 {
                     return target;
                 }
@@ -4894,7 +4900,7 @@ namespace TAC_AI.AI
                     target = null;
                 }
             }
-            float altitudeHigh = -256;
+            float altitudeHigh = float.MinValue;
 
             if (AttackMode == EAttackMode.Random)
             {
@@ -4931,7 +4937,7 @@ namespace TAC_AI.AI
                 int launchCount = techs.Count();
                 if (InvertBullyPriority)
                 {
-                    altitudeHigh = 2199;
+                    altitudeHigh = float.MaxValue;
                     int BlockCount = 0;
                     for (int step = 0; step < launchCount; step++)
                     {

@@ -204,10 +204,10 @@ namespace TAC_AI.AI.AlliedOperations
             {   //Get the tech the player is aiming at
                 helper.lastEnemy = helper.theResource.tank.Weapons.GetManualTarget();
                 if (helper.lastEnemyGet.IsNull())
-                    helper.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                    helper.TryRefreshEnemyAllied();
             }
             else
-                helper.lastEnemy = tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
+                helper.TryRefreshEnemyAllied();
             if (helper.lastEnemyGet != null)
             {
                 Vector3 aimTo = (helper.lastEnemyGet.transform.position - tank.transform.position).normalized;
