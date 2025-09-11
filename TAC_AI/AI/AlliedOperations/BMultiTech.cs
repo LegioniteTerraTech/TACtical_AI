@@ -202,8 +202,10 @@ namespace TAC_AI.AI.AlliedOperations
             helper.AttackEnemy = false;
             if (helper.theResource?.tank)
             {   //Get the tech the player is aiming at
-                helper.lastEnemy = helper.theResource.tank.Weapons.GetManualTarget();
-                if (helper.lastEnemyGet.IsNull())
+                Visible playerTarget = helper.theResource.tank.Weapons.GetManualTarget();
+                if (playerTarget != null)
+                    helper.lastEnemy = playerTarget;
+                else
                     helper.TryRefreshEnemyAllied();
             }
             else

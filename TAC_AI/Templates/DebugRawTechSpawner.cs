@@ -169,6 +169,21 @@ namespace TAC_AI.Templates
                 HoriPosOff = 0;
                 VertPosOff += 30;
                 MaxExtensionX = true;
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
+                if (VertPosOff >= MaxWindowHeight)
+                    MaxExtensionY = true;
+            }
+        }
+        private static void StepMenuPlacerPartial()
+        {
+            if (HoriPosOff >= MaxWindowWidth)
+            {
+                HoriPosOff = 0;
+                VertPosOff += 30;
+                MaxExtensionX = true;
+                GUILayout.EndHorizontal();
+                GUILayout.BeginHorizontal();
                 if (VertPosOff >= MaxWindowHeight)
                     MaxExtensionY = true;
             }
@@ -224,15 +239,15 @@ namespace TAC_AI.Templates
             else
                 listTemp = ModTechsDatabase.ExtPopTechsMods;
 
-            scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width -20, HotWindow.height - 64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
-            {
-                RemoveAllEnemies();
-            }
+            //scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height - 64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            scrolll = GUILayout.BeginScrollView(scrolll);
+
+            GUILayout.BeginHorizontal();
+            RemoveAllEnemiesImmedeatelyButton();
 
             HoriPosOff += ButtonWidth;
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Sort Entire List</b></color>"))
+            if (GUILayout.Button(redStart + "Sort Entire List</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 try
                 {
@@ -253,23 +268,21 @@ namespace TAC_AI.Templates
 
             HoriPosOff += ButtonWidth;
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), InstantLoad ? redStart + "Instant ON</b></color>" : redStart + "Instant Off</b></color>"))
+            if (GUILayout.Button(InstantLoad ? redStart + "Instant ON</b></color>" : redStart + "Instant Off</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 InstantLoad = !InstantLoad;
             }
 
             HoriPosOff += ButtonWidth;
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>"))
+            if (GUILayout.Button(ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 ShowDebugFeedBack = !ShowDebugFeedBack;
             }
 
-            HoriPosOff = 0;
-            VertPosOff += 30;
-            MaxExtensionX = true;
+            StepMenuPlacer();
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowLocal ? redStart + "Showing Local</b></color>" : redStart + "Showing Mods</b></color>"))
+            if (GUILayout.Button(ShowLocal ? redStart + "Showing Local</b></color>" : redStart + "Showing Mods</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 ShowLocal = !ShowLocal;
                 return;
@@ -277,7 +290,7 @@ namespace TAC_AI.Templates
 
             HoriPosOff += ButtonWidth;
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Correct Forwards</b></color>"))
+            if (GUILayout.Button(redStart + "Correct Forwards</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 if (Singleton.playerTank)
                     AIERepair.DesignMemory.RebuildTechForwards(Singleton.playerTank);
@@ -288,7 +301,7 @@ namespace TAC_AI.Templates
 
             if (ShowLocal)
             {
-                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle ALL for Mod</b></color>"))
+                if (GUILayout.Button(redStart + "Bundle ALL for Mod</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
                 {
                     try
                     {
@@ -305,14 +318,10 @@ namespace TAC_AI.Templates
                     }
                     catch { }
                 }
-                if (Event.current.type == EventType.Repaint)
-                {
-                    var lastWindow = GUILayoutUtility.GetLastRect();
-                    if (lastWindow.Contains(Event.current.mousePosition))
-                        AltUI.TooltipWorld("Exports it as a RawTechs.RTList file to attach to your mod as a batch of spawnable Techs.", false);
-                }
+                AltUI.Tooltip.GUITooltip("Exports it as a RawTechs.RTList file to attach to your mod as a batch of spawnable Techs.");
+                
                 StepMenuPlacer();
-                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle Player Techs</b></color>"))
+                if (GUILayout.Button(redStart + "Bundle Player Techs</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
                 {
                     try
                     {
@@ -340,17 +349,11 @@ namespace TAC_AI.Templates
                     }
                     catch { }
                 }
-                if (Event.current.type == EventType.Repaint)
-                {
-                    var lastWindow = GUILayoutUtility.GetLastRect();
-                    if (lastWindow.Contains(Event.current.mousePosition))
-                    {
-                       AltUI.TooltipWorld("ALL active player Techs in the world for your Mod.  This might be laggy!" +
-                           "  Exports it as a RawTechs.RTList file to attach to your mod as a batch of spawnable Techs.", false);
-                    }
-                }
+                AltUI.Tooltip.GUITooltip("ALL active player Techs in the world for your Mod.  This might be laggy!" +
+                           "  Exports it as a RawTechs.RTList file to attach to your mod as a batch of spawnable Techs.");
+
                 StepMenuPlacer();
-                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Bundle Folder</b></color>"))
+                if (GUILayout.Button(redStart + "Bundle Folder</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
                 {
                     InvokeHelper.Invoke(() =>
                     {
@@ -374,14 +377,14 @@ namespace TAC_AI.Templates
                     MaxExtensionY = true;
             }
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "CLEAR TRACKED</b></color>"))
+            if (GUILayout.Button(redStart + "CLEAR TRACKED</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 CheckAndDestroyAllInvalidVisibles(true);
             }
             StepMenuPlacer();
 
 #if DEBUG
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Remove Present</b></color>"))
+            if (GUILayout.Button(redStart + "Remove Present</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 foreach (var item in CommunityStorage.CommunityStored)
                     listTemp.Remove(item.Value);
@@ -393,7 +396,7 @@ namespace TAC_AI.Templates
             }
             StepMenuPlacer();
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "LOCAL TO COM</b></color>"))
+            if (GUILayout.Button(redStart + "LOCAL TO COM</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 try
                 {
@@ -462,24 +465,12 @@ namespace TAC_AI.Templates
                 }
                 catch { }
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("1-Setup: Exports your LOCAL RawTechs as a batchNew.json", false);
-            }
+            AltUI.Tooltip.GUITooltip("1-Setup: Exports your LOCAL RawTechs as a batchNew.json");
 
-            HoriPosOff += ButtonWidth;
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
-            
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "REPLACE EDIT</b></color>"))
+
+            StepMenuPlacer();
+
+            if (GUILayout.Button(redStart + "REPLACE EDIT</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 string import = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
                 if (Directory.Exists(import))
@@ -494,15 +485,11 @@ namespace TAC_AI.Templates
                         ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - Please press LOCAL TO COM first.");
                 }
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("2-Prepare: Copies batchNew.json onto batchEdit.json.", false);
-            }
+            AltUI.Tooltip.GUITooltip("2-Prepare: Copies batchNew.json onto batchEdit.json.");
+            
             StepMenuPlacer();
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM PULL EXISTING</b></color>"))
+            if (GUILayout.Button(redStart + "COM PULL EXISTING</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 try
                 {
@@ -520,24 +507,11 @@ namespace TAC_AI.Templates
                     ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!");
                 }
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("2-Unpack: Takes currently loaded population and pushes it to batchEdit.json", false);
-            }
+            AltUI.Tooltip.GUITooltip("2-Unpack: Takes currently loaded population and pushes it to batchEdit.json");
 
-            HoriPosOff += ButtonWidth;
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
+            StepMenuPlacer();
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM TEST FORMAT</b></color>"))
+            if (GUILayout.Button(redStart + "COM TEST FORMAT</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 try
                 {
@@ -560,25 +534,13 @@ namespace TAC_AI.Templates
                     ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!");
                 }
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("3-Test: Imports batchEdit.json to replace the currently loaded population", false);
-            }
-
-            HoriPosOff += ButtonWidth;
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
+            AltUI.Tooltip.GUITooltip("3-Test: Imports batchEdit.json to replace the currently loaded population");
 
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "COM PUSH PUBLIC</b></color>"))
+            StepMenuPlacer();
+
+
+            if (GUILayout.Button(redStart + "COM PUSH PUBLIC</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 try
                 {
@@ -611,27 +573,14 @@ namespace TAC_AI.Templates
                     ManUI.inst.ShowErrorPopup(KickStart.ModID + ": ERROR - See log!"); 
                 }
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("4-Finalize: Exports batchEdit.json to the commBatch.RTList file, maing it public." +
-                        "  You still have to drag it into UnityEditor though", false);
-            }
+            AltUI.Tooltip.GUITooltip("4-Finalize: Exports batchEdit.json to the commBatch.RTList file, maing it public." +
+                        "  You still have to drag it into UnityEditor though");
 
 
-            HoriPosOff += ButtonWidth;
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
+            StepMenuPlacer();
 
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE DUPLICATES</b></color>"))
+            if (GUILayout.Button(redStart + "PURGE DUPLICATES</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 try
                 {
@@ -659,19 +608,9 @@ namespace TAC_AI.Templates
                 catch { }
             }
 
-            HoriPosOff += ButtonWidth;
-            
-
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
+            StepMenuPlacer();
             /*
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE MISSING</b></color>"))
+            if (GUILayout.Button(redStart + "PURGE MISSING</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 try
                 {
@@ -691,35 +630,15 @@ namespace TAC_AI.Templates
                     DebugTAC_AI.Log("-----------------------------------------------------------");
                 }
                 catch { }
-            }*/
-
-            HoriPosOff += ButtonWidth;
-            
-
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
             }
+            StepMenuPlacer();*/
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AINoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+
+            if (GUILayout.Button(AINoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 AINoAttackPlayer = !AINoAttackPlayer;
             }
-            HoriPosOff += ButtonWidth;
-            
-
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
-            }
+            StepMenuPlacer();
 
 #endif
 
@@ -727,19 +646,19 @@ namespace TAC_AI.Templates
             {
                 if (ShowLocal)
                 {
-                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "There's Nothing In"))
+                    if (GUILayout.Button("There's Nothing In"))
                     {
                         SpawnTech(SpawnBaseTypes.NotAvail);
                     }
                     StepMenuPlacer();
-                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "The Enemies Folder!"))
+                    if (GUILayout.Button("The Enemies Folder!"))
                     {
                         SpawnTech(SpawnBaseTypes.NotAvail);
                     }
                 }
                 else
                 {
-                    if (GUI.Button(new Rect(20 + HoriPosOff, 30 + VertPosOff, ButtonWidth, 30), "None in Mods."))
+                    if (GUILayout.Button("None in Mods."))
                     {
                         SpawnTech(SpawnBaseTypes.NotAvail);
                     }
@@ -753,14 +672,7 @@ namespace TAC_AI.Templates
                 try
                 {
                     RawTech temp = listTemp[step];
-                    if (HoriPosOff >= MaxWindowWidth)
-                    {
-                        HoriPosOff = 0;
-                        VertPosOff += 30;
-                        MaxExtensionX = true;
-                        if (VertPosOff >= MaxWindowHeight)
-                            MaxExtensionY = true;
-                    }
+                    StepMenuPlacerPartial();
                     string disp;
                     if (temp.purposes.Contains(BasePurpose.NotStationary))
                     {
@@ -789,7 +701,7 @@ namespace TAC_AI.Templates
                     {
                         disp = "[E] " + disp;
                     }
-                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), disp))
+                    if (GUILayout.Button(disp, GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
                     {
                         index = step;
                         clicked = true;
@@ -798,8 +710,9 @@ namespace TAC_AI.Templates
                 }
                 catch { }// error on handling something
             }
+            GUILayout.EndHorizontal();
 
-            GUI.EndScrollView();
+            GUILayout.EndScrollView();
             scrolllSize = VertPosOff + 80;
 
             if (MaxExtensionY)
@@ -863,34 +776,33 @@ namespace TAC_AI.Templates
         private static void GUIHandlerPreset(int ID)
         {
             ResetMenuPlacer();
+            
+           // scrolll = GUILayout.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height -64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            scrolll = GUILayout.BeginScrollView(scrolll);
 
-            scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height -64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "PURGE ENEMIES</b></color>"))
-            {
-                DebugTAC_AI.Log(KickStart.ModID + ": RemoveAllEnemies - CALLED");
-                RemoveAllEnemies();
-            }
+            GUILayout.BeginHorizontal();
+            RemoveAllEnemiesImmedeatelyButton();
             HoriPosOff += ButtonWidth;
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), InstantLoad ? redStart + "Instant ON</b></color>" : redStart + "Instant Off</b></color>"))
+            if (GUILayout.Button(InstantLoad ? redStart + "Instant ON</b></color>" : redStart + "Instant Off</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 InstantLoad = !InstantLoad;
             }
             HoriPosOff += ButtonWidth;
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>"))
+            if (GUILayout.Button(ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 ShowDebugFeedBack = !ShowDebugFeedBack;
             }
-            HoriPosOff += ButtonWidth; 
+            HoriPosOff += ButtonWidth;
 
 #if !DEBUG
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AIEPathMapper.ShowPathingGIZMO ? redStart + "Hide Pathing</b></color>" : redStart + "Show Pathing</b></color>"))
+            if (GUILayout.Button(AIEPathMapper.ShowPathingGIZMO ? redStart + "Hide Pathing</b></color>" : redStart + "Show Pathing</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 AIEPathMapper.ShowPathingGIZMO = !AIEPathMapper.ShowPathingGIZMO;
             }
             StepMenuPlacer();
 #endif
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Priced</b></color>"))
+            if (GUILayout.Button(redStart + "SPAWN Priced</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 RawTechPopParams RTF = RawTechPopParams.Default;
                 RTF.Terrain = BaseTerrain.Any;
@@ -902,7 +814,7 @@ namespace TAC_AI.Templates
             }
             StepMenuPlacer();
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "SPAWN Founder</b></color>"))
+            if (GUILayout.Button(redStart + "SPAWN Founder</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 RawTechPopParams RTF = RawTechPopParams.Default;
                 RTF.Terrain = BaseTerrain.Any;
@@ -917,44 +829,29 @@ namespace TAC_AI.Templates
             }
             StepMenuPlacer();
 #if DEBUG
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30),  redStart + "Pop to Snaps</b></color>"))
+            if (GUILayout.Button(redStart + "Pop to Snaps</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 CommunityCluster.SaveCommunityPoolBackToDisk();
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("POP CONTROL: Exports the current community pool to the snaps.", false);
-            }
+            AltUI.Tooltip.GUITooltip("POP CONTROL: Exports the current community pool to the snaps.");
             StepMenuPlacer();
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Local to Snaps</b></color>"))
+            if (GUILayout.Button(redStart + "Local to Snaps</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 SaveLocalPoolBackToDisk();
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("POP CONTROL: Exports the current local pool to the snaps.", false);
-            }
+            AltUI.Tooltip.GUITooltip("POP CONTROL: Exports the current local pool to the snaps.");
             StepMenuPlacer();
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Snaps to Pop</b></color>"))
+            if (GUILayout.Button(redStart + "Snaps to Pop</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 string export = Path.Combine(new DirectoryInfo(Application.dataPath).Parent.ToString(), "MassExport");
                 File.WriteAllText(Path.Combine(export, "commBatch.RTList"), CommunityCluster.ExportSnapsToCommunityPool());
                 OpenInExplorer(Path.Combine(export, "commBatch.RTList"));
             }
-            if (Event.current.type == EventType.Repaint)
-            {
-                var lastWindow = GUILayoutUtility.GetLastRect();
-                if (lastWindow.Contains(Event.current.mousePosition))
-                    AltUI.TooltipWorld("POP CONTROL: Exports ALL snaps to the community pool.  " +
-                        "You still have to move it to UnityEditor", false);
-            }
+            AltUI.Tooltip.GUITooltip("POP CONTROL: Exports ALL snaps to the community pool.  " +
+                        "You still have to move it to UnityEditor");
             StepMenuPlacer();
             /*
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), redStart + "Purge RawTechs</b></color>"))
+            if (GUILayout.Button(redStart + "Purge RawTechs</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 RawTechExporter.PurgeAllRawTechs();
             }
@@ -962,18 +859,18 @@ namespace TAC_AI.Templates
             */
 
 #endif
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AINoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>"))
+            if (GUILayout.Button(AINoAttackPlayer ? redStart + "Attack Player Off</b></color>" : redStart + "Attack Player ON</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 AINoAttackPlayer = !AINoAttackPlayer;
             }
             StepMenuPlacer();
 
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AllowPlayerBuildEnemies ? redStart + "ALL Team</b></color>" : redStart + "Player Team</b></color>"))
+            if (GUILayout.Button(AllowPlayerBuildEnemies ? redStart + "ALL Team</b></color>" : redStart + "Player Team</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 AllowPlayerBuildEnemies = !AllowPlayerBuildEnemies;
             }
             StepMenuPlacer();
-            if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), AllowPlayerCommandEnemies ? redStart + "ALL Command</b></color>" : redStart + "Player Command</b></color>"))
+            if (GUILayout.Button(AllowPlayerCommandEnemies ? redStart + "ALL Command</b></color>" : redStart + "Player Command</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 AllowPlayerCommandEnemies = !AllowPlayerCommandEnemies;
             }
@@ -982,14 +879,7 @@ namespace TAC_AI.Templates
             string disp;
             foreach (KeyValuePair<SpawnBaseTypes, RawTech> temp in ModTechsDatabase.InternalPopTechs)
             {
-                if (HoriPosOff >= MaxWindowWidth)
-                {
-                    HoriPosOff = 0;
-                    VertPosOff += 30;
-                    MaxExtensionX = true;
-                    if (VertPosOff >= MaxWindowHeight)
-                        MaxExtensionY = true;
-                }
+                StepMenuPlacerPartial();
                 FactionSubTypes FST = RawTechUtil.CorpExtToCorp(temp.Value.faction);
                 if (currentFaction != FST)
                 {
@@ -999,6 +889,8 @@ namespace TAC_AI.Templates
                     {
                         VertPosOff += 30;
                         HoriPosOff = 0;
+                        GUILayout.EndHorizontal();
+                        GUILayout.BeginHorizontal();
                     }
                     if (FST == FactionSubTypes.EXP)
                         disp = "RR";
@@ -1008,7 +900,7 @@ namespace TAC_AI.Templates
                         disp = ManMods.inst.FindCorpShortName(FST);
                     else
                         disp = temp.Value.faction.ToString();
-                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * MaxCountWidth, 30), "<b>" + disp + "</b>"))
+                    if (GUILayout.Button("<b>" + disp + "</b>"))
                     {
                         if (openedFactions.Contains(currentFaction))
                             openedFactions.Remove(currentFaction);
@@ -1017,6 +909,8 @@ namespace TAC_AI.Templates
                     }
                     MaxExtensionX = true;
                     VertPosOff += 30;
+                    GUILayout.EndHorizontal();
+                    GUILayout.BeginHorizontal();
                     if (VertPosOff >= MaxWindowHeight)
                         MaxExtensionY = true;
                 }
@@ -1050,7 +944,7 @@ namespace TAC_AI.Templates
                     {
                         disp = "[E] " + disp;
                     }
-                    if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30), disp))
+                    if (GUILayout.Button(disp, GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
                     {
                         type = temp.Key;
                         clicked = true;
@@ -1058,7 +952,8 @@ namespace TAC_AI.Templates
                     HoriPosOff += ButtonWidth;
                 }
             }
-            GUI.EndScrollView();
+            GUILayout.EndHorizontal();
+            GUILayout.EndScrollView();
             scrolllSize = VertPosOff + 80;
 
             if (MaxExtensionY)
@@ -1092,7 +987,8 @@ namespace TAC_AI.Templates
         }
         private static void GUIHandlerFolderSelect(int ID)
         {
-            scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height - 64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            //scrolll = GUI.BeginScrollView(new Rect(0, 64, HotWindow.width - 20, HotWindow.height - 64), scrolll, new Rect(0, 0, HotWindow.width - 50, scrolllSize));
+            scrolll = GUILayout.BeginScrollView(scrolll);
 
             if (!GUILayout.Button("Exit", AltUI.ButtonRed))
             {
@@ -1142,7 +1038,7 @@ namespace TAC_AI.Templates
             {
                 InvokeHelper.Invoke(() => { menu = DebugMenus.DebugLog; }, 0);
             }
-            GUI.EndScrollView();
+            GUILayout.EndScrollView();
             GUI.DragWindow();
         }
         private static void ExportAllWithin(string path)
@@ -1371,20 +1267,20 @@ namespace TAC_AI.Templates
             //Singleton.Manager<ManSFX>.inst.PlayUISFX(ManSFX.UISfxType.AIFollow);
         }
 
-        public static void RemoveAllEnemies()
+        public static void RemoveAllEnemiesImmedeatelyButton()
         {
             try
             {
                 bool TrackedMode = Input.GetKey(KeyCode.LeftShift);
                 bool ALLMode = Input.GetKey(KeyCode.LeftControl);
-                if (GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth, 30),
-                    ALLMode ? (redStart + "PURGE ALL ENEMIES</b></color>") : 
+                if (GUILayout.Button(ALLMode ? (redStart + "PURGE ALL ENEMIES</b></color>") : 
                     (TrackedMode ? (redStart + "PURGE TRACKED ENEMIES</b></color>") : 
-                    (redStart + "PURGE ENEMIES</b></color>"))))
+                    (redStart + "PURGE ENEMIES</b></color>")), GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
                 {
                     bool defaultMode = true;
                     if (TrackedMode)
                     { // REMOVE ALL TRACKED
+                        DebugTAC_AI.Log(KickStart.ModID + ": RemoveAllEnemiesImmedeately - CALLED TrackedMode");
                         defaultMode = false;
                         try
                         {
@@ -1423,6 +1319,7 @@ namespace TAC_AI.Templates
                     }
                     if (ALLMode)
                     { // REMOVE ALL STORED
+                        DebugTAC_AI.Log(KickStart.ModID + ": RemoveAllEnemiesImmedeately - CALLED ALLMode");
                         defaultMode = false;
                         var STs = ManSaveGame.inst.CurrentState?.m_StoredTiles;
                         List<ManSaveGame.StoredTech> storTechs = new List<ManSaveGame.StoredTech>();
@@ -1446,15 +1343,21 @@ namespace TAC_AI.Templates
                     }
                     if (defaultMode)
                     {
+                        DebugTAC_AI.Log(KickStart.ModID + ": RemoveAllEnemiesImmedeately - CALLED defaultMode");
                         try
                         {
-                            foreach (var item in Singleton.Manager<ManTechs>.inst.IterateTechsWhere(x => x.visible.isActive &&
-                            AIGlobals.TechIsSafelyRemoveable(x)))
+                            foreach (var item in ManTechs.inst.CurrentTechs)
                             {
-                                techCache.Add(item);
+                                if (item != null && item.visible.isActive &&
+                                    AIGlobals.TechIsSafelyRemoveable(item))
+                                {
+                                    DebugTAC_AI.Log("Chain Purge add: " + item.name);
+                                    techCache.Add(item);
+                                }
                             }
                             foreach (var tech in techCache)
                             {
+                                DebugTAC_AI.Log("Chain Purging: " + tech.name);
                                 AIGlobals.Purge(tech);
                             }
                         }
@@ -1466,7 +1369,9 @@ namespace TAC_AI.Templates
                 }
             }
             catch (ExitGUIException e) { throw e; }
-            catch { }
+            catch (Exception e){
+                DebugTAC_AI.Log("Crash in DebugRawTechSpawner.RemoveAllEnemiesImmedeately(): " + e);
+            }
         }
 
         private static List<TrackedVisible> toDestroy = new List<TrackedVisible>();

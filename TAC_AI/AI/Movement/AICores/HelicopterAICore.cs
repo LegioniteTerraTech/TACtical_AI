@@ -25,7 +25,15 @@ namespace TAC_AI.AI.Movement.AICores
             this.tank = tank;
             pilot = (AIControllerAir) pilotSet;
             pilot.FlyStyle = AIControllerAir.FlightType.Helicopter;
-            pilot.FlyingChillFactor = Vector3.one * 30;
+
+            //pilot.FlyingChillFactor = Vector3.one * 30;
+            pilot.FlyingChillFactor.x = AIGlobals.ChopperXZChillFactorMulti * pilot.PropLerpValue;
+            pilot.FlyingChillFactor.z = AIGlobals.ChopperXZChillFactorMulti * pilot.PropLerpValue;
+            if (pilot.LargeAircraft)
+                pilot.FlyingChillFactor.y = 2.5f;    // need accuraccy for large chopper bombing runs
+            else
+                pilot.FlyingChillFactor.y = AIGlobals.ChopperYChillFactorMulti * pilot.PropLerpValue;
+
             if (tank.rbody && pilot.UpTtWRatio < 1f)
             {
                 float GravityForce = tank.rbody.mass * tank.GetGravityScale() * TankAIManager.GravMagnitude;
@@ -441,7 +449,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.PathPointSet = MultiTechUtils.HandleMultiTech(pilot.Helper, tank, ref core);
                 return true;
             }
-            if (Helper.RTSDestination == TankAIHelper.RTSDisabled)
+            if (!Helper.IsGoingToPositionalRTSDest)
             {
                 if (!TryAdjustForCombat(false, ref pilot.PathPointSet, ref core)) // When set to chase then chase
                 {
@@ -449,6 +457,15 @@ namespace TAC_AI.AI.Movement.AICores
                     core.DriveDir = EDriveFacing.Forwards;
                     pilot.PathPointSet = Helper.RTSDestination;
                     Helper.AutoSpacing = Mathf.Max(Helper.lastTechExtents - 2, 0.5f);
+                    /*// Our target is too far.  We will just fly there without any correction
+                    if (Helper.lastEnemyGet?.tank != null)
+                    {
+                        Helper.UpdateEnemyDistance(Helper.lastEnemyGet.tank.boundsCentreWorld);
+                        core.DriveDest = EDriveDest.ToLastDestination;
+                        core.DriveDir = EDriveFacing.Forwards;
+                        pilot.PathPointSet = Helper.lastEnemyGet.tank.boundsCentreWorld;
+                        Helper.AutoSpacing = Mathf.Max(Helper.lastTechExtents - 2, 0.5f);
+                    }*/
                 }
             }
             else
@@ -476,7 +493,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.PathPointSet = MultiTechUtils.HandleMultiTech(pilot.Helper, tank, ref core);
                 return true;
             }
-            if (Helper.RTSDestination == TankAIHelper.RTSDisabled)
+            if (!Helper.IsGoingToPositionalRTSDest)
             {
                 if (!TryAdjustForCombatEnemy(mind, ref pilot.PathPointSet, ref core)) // When set to chase then chase
                 {
@@ -484,6 +501,15 @@ namespace TAC_AI.AI.Movement.AICores
                     core.DriveDir = EDriveFacing.Forwards;
                     pilot.PathPointSet = Helper.RTSDestination;
                     Helper.AutoSpacing = Mathf.Max(Helper.lastTechExtents - 2, 0.5f);
+                    /*// Our target is too far.  We will just fly there without any correction
+                    if (Helper.lastEnemyGet?.tank != null)
+                    {
+                        Helper.UpdateEnemyDistance(Helper.lastEnemyGet.tank.boundsCentreWorld);
+                        core.DriveDest = EDriveDest.ToLastDestination;
+                        core.DriveDir = EDriveFacing.Forwards;
+                        pilot.PathPointSet = Helper.lastEnemyGet.tank.boundsCentreWorld;
+                        Helper.AutoSpacing = Mathf.Max(Helper.lastTechExtents - 2, 0.5f);
+                    }*/
                 }
             }
             else

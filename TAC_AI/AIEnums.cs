@@ -11,6 +11,7 @@ namespace TAC_AI.AI
     {
         public EDriveDest DriveDest;
         public EDriveFacing DriveDir;
+        private Vector3 lastDest;
         public Vector3 lastDestination => lastDest;
         public void SetLastDest(Vector3 posScene)
         {
@@ -18,7 +19,6 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Exception("EControlOperatorSet - lastDestination was NaN!");
             lastDest = posScene;
         }
-        private Vector3 lastDest;
 
         public static EControlOperatorSet Default => new EControlOperatorSet(EDriveDest.None, EDriveFacing.Stop);
 

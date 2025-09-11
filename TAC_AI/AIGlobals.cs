@@ -341,7 +341,8 @@ namespace TAC_AI
         public const float AirMaxYaw = 0.45f;//0.2f; // 0 - 1 (float)
         public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
 
-        public const float ChopperChillFactorMulti = 30f;
+        public const float ChopperYChillFactorMulti = 0.2f;//30f;
+        public const float ChopperXZChillFactorMulti = 1.5f;//30f;
         public const float ChopperMaxDeltaAnglePercent = 0.25f;// 0.25f
         public const float ChopperAngleNudgePercent = 0.15f;// 0.15f
         public const float ChopperAngleDoPitchPercent = 0.2f;
@@ -353,8 +354,8 @@ namespace TAC_AI
         public const float HovershipDownDriveMulti = 0.6f;
 
 
-        /// <summary> IN m/s !!!</summary>
         public const int LargeAircraftSize = 15;            // The size of which we count an aircraft as large
+        /// <summary> IN m/s !!!</summary>
         public const float AirStallSpeed = 42;//25          // The speed of which most wings begin to stall at
         public const float GroundAttackStagingDistMain = 275;
         public static float GroundAttackStagingDist => AIAttract ? 120 : GroundAttackStagingDistMain;   // Distance to fly (in meters!) before turning back
@@ -634,16 +635,25 @@ namespace TAC_AI
             if (tech == null)
                 return false;
             int team = tech.Team;
-            return (IsBaseTeamDynamic(team) || tech.IsPopulation || team == DefaultEnemyTeam || team == LonerEnemyTeam) &&
-                !IsPlayerTeam(team) && team != ManSpawn.NeutralTeam && !TankAIManager.MissionTechs.Contains(tech.visible.ID) &&
-                tech.name != "DPS Target";
+            /*
+            DebugTAC_AI.Log("TechIsSafelyRemoveable check: " + tech.name + " - baseteam " + IsBaseTeamDynamicOrUnregistered(team) + ", pop " + tech.IsPopulation +
+                ", defaultETeam " + (team == DefaultEnemyTeam) + ", lonerETeam " + (team == LonerEnemyTeam) + ", playerTeam " + IsPlayerTeam(team) + ", neutralTeam " +
+                (team == ManSpawn.NeutralTeam) + ", missionTech " + TankAIManager.MissionTechs.Contains(tech.visible.ID) + ", dpsTarget " + (tech.name == "DPS Target"));
+
+            DebugTAC_AI.Log("TechIsSafelyRemoveable check pass: " + ((IsBaseTeamDynamicOrUnregistered(team) || tech.IsPopulation || team == DefaultEnemyTeam || team == LonerEnemyTeam) &&
+                !IsPlayerTeam(team) && (team != ManSpawn.NeutralTeam) && !TankAIManager.MissionTechs.Contains(tech.visible.ID) &&
+                (tech.name != "DPS Target")));
+            */
+            return (IsBaseTeamDynamicOrUnregistered(team) || tech.IsPopulation || team == DefaultEnemyTeam || team == LonerEnemyTeam) &&
+                !IsPlayerTeam(team) && (team != ManSpawn.NeutralTeam) && !TankAIManager.MissionTechs.Contains(tech.visible.ID) &&
+                (tech.name != "DPS Target");
         }
         public static bool TechIsSafelyRemoveable(ManSaveGame.StoredTech tech, bool excludeDefaultEnemyTeam = false)
         {
             if (tech == null)
                 return false;
             int team = tech.m_TeamID;
-            return (IsBaseTeamDynamic(team) || tech.m_IsPopulation || (excludeDefaultEnemyTeam ? false : team == DefaultEnemyTeam) || team == LonerEnemyTeam) &&
+            return (IsBaseTeamDynamicOrUnregistered(team) || tech.m_IsPopulation || (excludeDefaultEnemyTeam ? false : team == DefaultEnemyTeam) || team == LonerEnemyTeam) &&
                 !IsPlayerTeam(team) && team != ManSpawn.NeutralTeam;
         }
 
@@ -1172,6 +1182,8 @@ namespace TAC_AI
                     tech.visible.RemoveFromGame();
                 }
             }
+            if (tech != null)
+                throw new InvalidOperationException("Stupid Purge didn't do shit");
         }
         /// <summary>
         /// Remove a Tech from existance
@@ -1182,7 +1194,7 @@ namespace TAC_AI
         {   // 
             if (!ManNetwork.IsHost)
                 throw new Exception(KickStart.ModID + ": SpecialAISpawner.PurgeHost called on non-host");
-            DebugTAC_AI.Info(KickStart.ModID + ": PurgeHost - Name " + name + " | " + HostVisibleID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
+            DebugTAC_AI.Log(KickStart.ModID + ": PurgeHost - Name " + name + " | " + HostVisibleID + "  Callstack: " + StackTraceUtility.ExtractStackTrace());
             if (ManNetwork.IsNetworked)
             {
                 try

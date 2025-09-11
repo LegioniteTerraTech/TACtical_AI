@@ -235,7 +235,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     core.DriveDir = EDriveFacing.Forwards;
                     bool Combat = false;
-                    if (!helper.IsGoingToRTSDest)
+                    if (!helper.IsGoingToPositionalRTSDest)
                         Combat = controller.AICore.TryAdjustForCombat(true, ref pos, ref core); //If we are set to chase then chase with proper AI
                     if (Combat)
                         core.DrivePathing = EDrivePathing.OnlyImmedeate;
@@ -250,7 +250,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 core.DrivePathing = EDrivePathing.PrecisePath;
                                 core.TurningStrictness = ESteeringStrength.Strict;
 
-                                if (!helper.IsGoingToRTSDest)
+                                if (!helper.IsGoingToPositionalRTSDest)
                                     pos = tank.boundsCentreWorldNoCheck;
                                 else
                                     pos = helper.RTSDestination;
@@ -269,7 +269,7 @@ namespace TAC_AI.AI.Movement.AICores
                                     core.DrivePathing = EDrivePathing.PrecisePath;
                                     core.TurningStrictness = ESteeringStrength.Strict;
 
-                                    if (!helper.IsGoingToRTSDest)
+                                    if (!helper.IsGoingToPositionalRTSDest)
                                         pos = tank.boundsCentreWorldNoCheck;
                                     else
                                         pos = helper.RTSDestination;
@@ -280,7 +280,7 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             core.DrivePathing = EDrivePathing.PrecisePath;
                             core.TurningStrictness = ESteeringStrength.Strict;
-                            if (!helper.IsGoingToRTSDest)
+                            if (!helper.IsGoingToPositionalRTSDest)
                             {
                                 pos = tank.boundsCentreWorldNoCheck;
                                 core.Stop();
@@ -336,7 +336,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     core.DriveDir = EDriveFacing.Forwards;
                     bool Combat = false;
-                    if (!helper.IsGoingToRTSDest)
+                    if (!helper.IsGoingToPositionalRTSDest)
                         Combat = controller.AICore.TryAdjustForCombatEnemy(mind, ref pos, ref core); //If we are set to chase then chase with proper AI
                     if (Combat)
                         core.DrivePathing = EDrivePathing.OnlyImmedeate;
@@ -351,7 +351,7 @@ namespace TAC_AI.AI.Movement.AICores
                                 core.DrivePathing = EDrivePathing.PrecisePath;
                                 core.TurningStrictness = ESteeringStrength.Strict;
 
-                                if (!helper.IsGoingToRTSDest)
+                                if (!helper.IsGoingToPositionalRTSDest)
                                     pos = tank.boundsCentreWorldNoCheck;
                                 else
                                     pos = helper.RTSDestination;
@@ -370,7 +370,7 @@ namespace TAC_AI.AI.Movement.AICores
                                     core.DrivePathing = EDrivePathing.PrecisePath;
                                     core.TurningStrictness = ESteeringStrength.Strict;
 
-                                    if (!helper.IsGoingToRTSDest)
+                                    if (!helper.IsGoingToPositionalRTSDest)
                                         return GetPathingTargetEnemy(controller, out pos, ref core);
                                     else
                                         pos = helper.RTSDestination;
@@ -381,7 +381,7 @@ namespace TAC_AI.AI.Movement.AICores
                         {
                             core.DrivePathing = EDrivePathing.PrecisePath;
                             core.TurningStrictness = ESteeringStrength.Strict;
-                            if (!helper.IsGoingToRTSDest)
+                            if (!helper.IsGoingToPositionalRTSDest)
                                 return GetPathingTargetEnemy(controller, out pos, ref core);
                             else
                                 pos = helper.RTSDestination;

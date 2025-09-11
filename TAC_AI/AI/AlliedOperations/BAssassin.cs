@@ -206,6 +206,8 @@ namespace TAC_AI.AI.AlliedOperations
             {
                 helper.lastEnemy = helper.theResource;
             }
+            else
+                helper.TryRefreshEnemyAllied();
 
             if (helper.lastEnemyGet != null)
             {

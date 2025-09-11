@@ -526,7 +526,10 @@ namespace TAC_AI.AI
                 }
             }
         } // force the tech to be controlled by RTS
-        public bool IsGoingToRTSDest => RTSDestInternal != RTSDisabled;
+        /// <summary>
+        /// FALSE when RTS mode is following an enemy or obsticle
+        /// </summary>
+        public bool IsGoingToPositionalRTSDest => RTSDestInternal != RTSDisabled;
         public static IntVector3 RTSDisabled => AIGlobals.RTSDisabled;
         public ManWorldRTS.CommandLink RTSCommand = default;
         public IntVector3 RTSDestination
@@ -573,11 +576,14 @@ namespace TAC_AI.AI
 
         private IntVector3 RTSDestInternal = RTSDisabled;
 
+        /// <summary>
+        /// The position we use when drawing the lines for the RTS UI
+        /// </summary>
         public Vector3 DriveTargetLocation
         {
             get
             {
-                if (RTSControlled && IsGoingToRTSDest)
+                if (RTSControlled && IsGoingToPositionalRTSDest)
                     return RTSDestination;
                 else
                     return MovementController.GetDestination();
@@ -1064,6 +1070,7 @@ namespace TAC_AI.AI
             lastBasePos = null;
             lastPlayer = null;
             lastEnemy = null;
+            //DebugTAC_AI.LogSpecific(tank, "Target released ResetOnSwitchAlignments()1");
             lastLockOnTarget = null;
             lastCloseAlly = null;
             theBase = null;
@@ -2636,16 +2643,17 @@ namespace TAC_AI.AI
             var aI = tank.AI;
 
             CheckTryRepairAllied();
+
             BoltsFired = false;
+            Attempt3DNavi = false;
+            if (ActionPause > 0)
+                ActionPause -= KickStart.AIClockPeriod;
 
             if (tank.PlayerFocused)
             {
                 //updateCA = true;
-                if (ActionPause > 0)
-                    ActionPause -= KickStart.AIClockPeriod;
                 if (KickStart.AllowPlayerRTSHUD)
                 {
-                    Attempt3DNavi = false;
 #if DEBUG
                         if (ManWorldRTS.PlayerIsInRTS && ManWorldRTS.DevCamLock == DebugCameraLock.LockTechToCam)
                         {
@@ -2680,11 +2688,8 @@ namespace TAC_AI.AI
             if (SetToActive)
             {
                 //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Fired DelayedUpdate!");
-                Attempt3DNavi = false;
 
                 //updateCA = true;
-                if (ActionPause > 0)
-                    ActionPause -= KickStart.AIClockPeriod;
                 //DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  current mode " + DediAI.ToString());
 
                 DetermineCombat();
@@ -2715,6 +2720,10 @@ namespace TAC_AI.AI
             }
         }
 
+        /// <summary>
+        /// Note to self: fix this mess that interferes with everything, but correctly blocks the call of OpsController.Execute() (it doesn't support the RTS AI)
+        /// </summary>
+        /// <param name="isPlayerTech"></param>
         private void RunRTSNavi(bool isPlayerTech = false)
         {   // Alternative Operator for RTS
 
@@ -2722,7 +2731,8 @@ namespace TAC_AI.AI
             EControlOperatorSet direct = GetDirectedControl();
             if (DriverType == AIDriverType.Pilot)
             {
-                if (DediAI == AIType.Escort && !IsGoingToRTSDest)
+                if (DediAI == AIType.Escort && !IsGoingToPositionalRTSDest && 
+                    (lastEnemyGet == null || !lastEnemyGet.isActive))
                     RTSDestination = tank.boundsCentreWorldNoCheck;
 
                 GetDistanceFromTask2D(lastDestinationCore, 0);
@@ -2737,6 +2747,10 @@ namespace TAC_AI.AI
                 if (AIEPathing.ObstructionAwarenessAny(DodgeSphereCenter, this, DodgeSphereRadius) ||
                     AIEPathing.ObstructionAwarenessTerrain(DodgeSphereCenter, this, DodgeSphereRadius))
                     ThrottleState = AIThrottleState.Yield;
+                if (lastEnemyGet != null && lastEnemyGet.isActive)
+                {
+                    direct.SetLastDest(lastEnemyGet.tank.boundsCentreWorldNoCheck);
+                }
 
 
                 if (tank.wheelGrounded)
@@ -2771,7 +2785,8 @@ namespace TAC_AI.AI
                 if (needsToSlowDown || AIEPathing.ObstructionAwarenessAny(DodgeSphereCenter, this, DodgeSphereRadius)
                     || AIEPathing.ObstructionAwarenessSetPieceAny(DodgeSphereCenter, this, DodgeSphereRadius))
                     ThrottleState = AIThrottleState.Yield;
-                if (DediAI == AIType.Escort && !IsGoingToRTSDest)
+                if (DediAI == AIType.Escort && !IsGoingToPositionalRTSDest &&
+                    (lastEnemyGet == null || !lastEnemyGet.isActive))
                 {
                     direct.STOP(this);
                     BGeneral.RTSCombat(this, tank);
@@ -4413,6 +4428,7 @@ namespace TAC_AI.AI
                         !Tank.IsEnemy(tank.Team, lastEnemyGet.tank.Team))
                     {
                         lastEnemy = null;
+                        //DebugTAC_AI.LogSpecific(tank, "Target released CheckEnemyAndAiming()1");
                         //Debug.Assert(true, KickStart.ModID + ": Tech " + tank.name + " has valid, live target but it has no blocks.  How is this possible?!"); 
                     }
                     else
@@ -4429,7 +4445,10 @@ namespace TAC_AI.AI
                             }
                         }
                         if (targetDistance > MaxCombatRange && !PreserveEnemyTarget) // RTS Controlled to target something that can move
+                        {
                             lastEnemy = null;
+                            //DebugTAC_AI.LogSpecific(tank, "Target released CheckEnemyAndAiming()2");
+                        }
                     }
                 }
             }
@@ -4437,30 +4456,6 @@ namespace TAC_AI.AI
         public Visible TryRefreshEnemyAllied()
         {
             //tank.Vision.GetFirstVisibleTechIsEnemy(tank.Team);
-            Visible target = lastEnemyGet;
-            if (Provoked == 0)
-                target = null;
-            else
-            {
-                if (NextFindTargetTime >= Time.time)
-                {
-                    if ((bool)lastPlayer)
-                    {
-                        Visible playerTarget = lastPlayer.tank.Weapons.GetManualTarget();
-                        if (playerTarget)
-                        {
-                            // If the player fires while locked-on to a neutral/SubNeutral, the AI will assume this
-                            //   is an attack request
-                            Provoked = 0;
-                            EndPursuit();
-                            target = playerTarget;
-                            return target;
-                        }
-                    }
-                    return target;
-                }
-            }
-
             if ((bool)lastPlayer)
             {
                 Visible playerTarget = lastPlayer.tank.Weapons.GetManualTarget();
@@ -4471,26 +4466,17 @@ namespace TAC_AI.AI
                     //   is an attack request
                     Provoked = 0;
                     EndPursuit();
-                    target = playerTarget;
+                    lastEnemy = playerTarget;
+                    return lastEnemy;
                 }
             }
-            if (!target)
+            if (MovementController is AIControllerAir air && air.FlyStyle == AIControllerAir.FlightType.Aircraft)
             {
-                if (MovementController is AIControllerAir air && air.FlyStyle == AIControllerAir.FlightType.Aircraft)
-                {
-                    target = FindEnemyAir(false);
-                }
-                else
-                    target = FindEnemy(false);
-                /*
-                if (target)
-                {
-                    if (ManBaseTeams.IsNonAggressiveTeam(target.tank.Team))
-                        return null; // Don't want to accidently fire at a neutral close nearby
-                }
-                */
+                lastEnemy = FindEnemyAir(false);
             }
-            return target;
+            else
+                lastEnemy = FindEnemy(false);
+            return lastEnemy;
         }
         public Visible TryRefreshEnemyEnemy(bool InvertBullyPriority, int pos = 1)
         {

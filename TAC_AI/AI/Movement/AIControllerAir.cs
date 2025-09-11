@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Reflection;
-using UnityEngine;
+using System.Text;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Movement.AICores;
 using TerraTechETCUtil;
-using UnityEngine.Events;
+using UnityEngine;
 
 namespace TAC_AI.AI
 {
@@ -332,6 +331,9 @@ namespace TAC_AI.AI
             SlowestPropLerpSpeed = lowestDelta;
             PropLerpValue = AIGlobals.PropLerpStrictness / SlowestPropLerpSpeed;
         }
+        /// <summary>
+        /// MUST come AFTER CheckEngines()!
+        /// </summary>
         private void CheckWings()
         {
             float aerofoilSpeed = 100;
@@ -363,9 +365,7 @@ namespace TAC_AI.AI
             AerofoilSluggishness = AIGlobals.AerofoilSluggishnessBaseValue / aerofoilSpeed;
             if (FlyStyle == FlightType.Helicopter)
             {
-                FlyingChillFactor = Vector3.one * AIGlobals.ChopperChillFactorMulti;
-                if (LargeAircraft)
-                    FlyingChillFactor.y = 5;    // need accuraccy for large aircraft bombing runs
+                //FlyingChillFactor is calculated and set in HelicopterAICore.Initiate()
             }
             else
             {
@@ -377,7 +377,7 @@ namespace TAC_AI.AI
                 else
                 {
                     FlyingChillFactor = Vector3.one * AerofoilSluggishness * AIGlobals.AircraftChillFactorMulti;
-                    FlyingChillFactor.y = 10;  // Yaw isn't normally too strong on aircraft so we give it a boost.
+                    FlyingChillFactor.y = 0.75f;  // Yaw isn't normally too strong on aircraft so we give it a boost.
                 }
             }
 

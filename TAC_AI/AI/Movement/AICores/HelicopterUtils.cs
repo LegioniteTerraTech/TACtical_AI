@@ -47,12 +47,11 @@ namespace TAC_AI.AI.Movement.AICores
 
             //Convert turnVal to runnable format
 
-            float chillFactorMulti = helper.lastTechExtents;
-            turnVal.x = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.x) / (pilot.FlyingChillFactor.x * chillFactorMulti)), -1, 1);
+            turnVal.x = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.x) / pilot.FlyingChillFactor.x), -1, 1);
 
-            turnVal.y = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.y) / (pilot.FlyingChillFactor.y * chillFactorMulti)), -1, 1);
+            turnVal.y = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.y) / pilot.FlyingChillFactor.y), -1, 1);
 
-            turnVal.z = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.z) / (pilot.FlyingChillFactor.z * chillFactorMulti)), -1, 1);
+            turnVal.z = Mathf.Clamp(-(AIGlobals.AngleUnsignedToSigned(turnVal.z) / pilot.FlyingChillFactor.z), -1, 1);
 
             //Stop Wobble
             if (Mathf.Abs(turnVal.x) < 0.05f)
@@ -152,8 +151,8 @@ namespace TAC_AI.AI.Movement.AICores
                             break;
                     }
                 }
-            }
-            */
+            }//*/
+            
 
             if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
             {
@@ -179,7 +178,7 @@ namespace TAC_AI.AI.Movement.AICores
         private static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestPosWorld, Vector3 LookPosWorld, 
             TankAIHelper helper, bool avoidCrash, bool PointAtTarget, ref EControlCoreSet core)
         {
-            float pitchDampening = 64 * helper.lastTechExtents;
+            float pitchDampening = Mathf.Lerp(16, 64, Mathf.InverseLerp(1, 64, helper.lastTechExtents));
             Vector3 Heading;
             if (PointAtTarget)
             {

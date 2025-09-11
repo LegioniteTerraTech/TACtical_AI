@@ -277,12 +277,12 @@ namespace TAC_AI
                 KickStart.AllowPlayerRTSHUD = playerStrategic.SavedValue;
                 if (KickStart.AllowPlayerRTSHUD)
                 {
-                    ManWorldRTS.Initiate();
+                    PlayerRTSUI.Initiate();
                     //ModStatusChecker.EncapsulateSafeInit("Advanced AI", ManWorldRTS.DelayedInitiate, KickStart.DeInitALL); // tf is this here for?
                 }
                 else
                 {
-                    ManWorldRTS.DeInit();
+                    PlayerRTSUI.DeInit();
                     // ManUI.inst.ShowErrorPopup("A game restart is required to let the changes take effect"); // causes settings fail
                 }
             });

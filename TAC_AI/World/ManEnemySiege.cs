@@ -133,7 +133,10 @@ namespace TAC_AI.World
                             if (mind)
                             {
                                 if (mind.CommanderAttack == EAttackMode.Safety)
+                                {
                                     mind.CommanderAttack = EAttackMode.Strong;
+                                    mind.InvertBullyPriority = true;
+                                }
                                 mind.CommanderMind = EnemyAttitude.Homing;
                             }
                         }

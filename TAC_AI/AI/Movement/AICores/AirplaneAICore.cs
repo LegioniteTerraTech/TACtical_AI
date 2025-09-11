@@ -638,8 +638,8 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             pilot.LowerEngines = true;
-            if (Helper.RTSDestination == TankAIHelper.RTSDisabled)
-            {
+            if (!Helper.IsGoingToPositionalRTSDest)
+            {   // We are pursuing
                 if (!TryAdjustForCombat(false, ref pilot.PathPointSet, ref core)) // When set to chase then chase
                 {
                     if ((Helper.lastDestinationOp - pilot.Tank.boundsCentreWorldNoCheck).magnitude < pilot.DestSuccessRad)
@@ -650,6 +650,14 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         pilot.PathPointSet = Helper.lastDestinationOp;
                     }
+                    /*// Our target is too far.  We will just fly there without any correction
+                    if (Helper.lastEnemyGet?.tank != null)
+                    {
+                        Helper.UpdateEnemyDistance(Helper.lastEnemyGet.tank.boundsCentreWorld);
+                        pilot.PathPointSet = Helper.lastEnemyGet.tank.boundsCentreWorld;
+                        core.lastDestination = pilot.PathPointSet;
+                        core.DriveToFacingTowards();
+                    }*/
                 }
             }
             else
@@ -711,7 +719,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
 
             pilot.LowerEngines = true;
-            if (Helper.RTSDestination == TankAIHelper.RTSDisabled)
+            if (!Helper.IsGoingToPositionalRTSDest)
             {
                 if (!TryAdjustForCombatEnemy(mind, ref pilot.PathPointSet, ref core)) // When set to chase then chase
                 {
@@ -723,7 +731,16 @@ namespace TAC_AI.AI.Movement.AICores
                     {
                         pilot.PathPointSet = Helper.lastDestinationOp;
                     }
+                    /*// Our target is too far.  We will just fly there without any correction
+                    if (Helper.lastEnemyGet?.tank != null)
+                    {
+                        Helper.UpdateEnemyDistance(Helper.lastEnemyGet.tank.boundsCentreWorld);
+                        pilot.PathPointSet = Helper.lastEnemyGet.tank.boundsCentreWorld;
+                        core.lastDestination = pilot.PathPointSet;
+                        core.DriveToFacingTowards();
+                    }*/
                 }
+
             }
             else
             {
