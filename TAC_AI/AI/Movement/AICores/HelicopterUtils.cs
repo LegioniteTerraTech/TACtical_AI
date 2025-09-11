@@ -177,7 +177,9 @@ namespace TAC_AI.AI.Movement.AICores
         private static void DeterminePitchRoll(Tank tank, AIControllerAir pilot, Vector3 DestPosWorld, Vector3 LookPosWorld, 
             TankAIHelper helper, bool avoidCrash, bool PointAtTarget, ref EControlCoreSet core)
         {
+            // The bigger this value is, the less the craft will slow pitching down when going fast
             float pitchDampening = Mathf.Lerp(16, 64, Mathf.InverseLerp(1, 64, helper.lastTechExtents));
+            float rotateDividend = pitchDampening / pilot.SlowestPropLerpSpeed;
             Vector3 Heading;
             if (PointAtTarget)
             {
@@ -186,6 +188,7 @@ namespace TAC_AI.AI.Movement.AICores
             else
                 Heading = (DestPosWorld - tank.boundsCentreWorldNoCheck).normalized;
             Vector3 fFlat = Heading;
+            Vector3 HeadingLocal = tank.rootBlockTrans.InverseTransformVector(Heading);
 
             Vector3 tankForward = tank.rootBlockTrans.forward;
             float tankUp = tank.rootBlockTrans.up.y;
@@ -227,14 +230,22 @@ namespace TAC_AI.AI.Movement.AICores
                 }
                 else
                 {   // Pitch to speed up advance
+                    /*
                     if (helper.IsDirectedMovingFromDest)
-                        fFlat.y = Mathf.Clamp((veloLocal.z / (pitchDampening / pilot.SlowestPropLerpSpeed))
-                            + AIGlobals.ChopperAngleNudgePercent, -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+                        fFlat.y = Mathf.Clamp((veloLocal.z / rotateDividend) + AIGlobals.ChopperAngleNudgePercent,
+                            -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
                     else if (helper.IsDirectedMovingToDest)
-                        fFlat.y = Mathf.Clamp((veloLocal.z / (pitchDampening / pilot.SlowestPropLerpSpeed))
-                            - AIGlobals.ChopperAngleNudgePercent, -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+                        fFlat.y = Mathf.Clamp((veloLocal.z / rotateDividend) - AIGlobals.ChopperAngleNudgePercent, 
+                            -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+                    */
+                    if (helper.IsDirectedMovingFromDest)
+                        fFlat.y = Mathf.Clamp((veloLocal.z / (rotateDividend * Mathf.Abs(HeadingLocal.z))) + AIGlobals.ChopperAngleNudgePercent,
+                            -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+                    else if (helper.IsDirectedMovingToDest)
+                        fFlat.y = Mathf.Clamp((veloLocal.z / (rotateDividend * Mathf.Abs(HeadingLocal.z))) - AIGlobals.ChopperAngleNudgePercent,
+                            -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
                     else
-                        fFlat.y = Mathf.Clamp(veloLocal.z / (pitchDampening / pilot.SlowestPropLerpSpeed),
+                        fFlat.y = Mathf.Clamp(veloLocal.z / (rotateDividend * Mathf.Abs(HeadingLocal.z)),
                             -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
                 }
 
@@ -242,13 +253,13 @@ namespace TAC_AI.AI.Movement.AICores
             if (inertiaDampen)
             {
                 if (veloLocal.z > AIGlobals.ChopperSpeedCounterPitch)
-                    fFlat.y = Mathf.Clamp((veloLocal.z / (pitchDampening / pilot.SlowestPropLerpSpeed))
+                    fFlat.y = Mathf.Clamp((veloLocal.z / rotateDividend)
                         + AIGlobals.ChopperAngleNudgePercent, -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
                 else if (veloLocal.z < -AIGlobals.ChopperSpeedCounterPitch)
-                    fFlat.y = Mathf.Clamp((veloLocal.z / (pitchDampening / pilot.SlowestPropLerpSpeed))
+                    fFlat.y = Mathf.Clamp((veloLocal.z / rotateDividend)
                         - AIGlobals.ChopperAngleNudgePercent, -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
                 else
-                    fFlat.y = Mathf.Clamp(veloLocal.z / (pitchDampening / pilot.SlowestPropLerpSpeed),
+                    fFlat.y = Mathf.Clamp(veloLocal.z / rotateDividend,
                         -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
             }
             // Because tilting forwards too hard causes the chopper to stall on some builds
@@ -261,22 +272,40 @@ namespace TAC_AI.AI.Movement.AICores
                 rFlat = tank.rootBlockTrans.right;
             else
                 rFlat = -tank.rootBlockTrans.right.SetY(0).normalized;
-            if (core.DriveDir == EDriveFacing.Perpendicular)
-            {   // orbit while firing
-                if (veloLocal.x >= 0)
-                    rFlat.y = Mathf.Clamp((veloLocal.x / (pitchDampening / pilot.SlowestPropLerpSpeed)) - AIGlobals.ChopperAngleNudgePercent, 
-                        -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+            if (!avoidCrash)
+            {
+                if (core.DriveDir == EDriveFacing.Perpendicular)
+                {   // orbit while firing
+                    if (veloLocal.x >= 0)
+                        rFlat.y = Mathf.Clamp((veloLocal.x / rotateDividend) - AIGlobals.ChopperAngleNudgePercent,
+                            -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+                    else
+                        rFlat.y = Mathf.Clamp((veloLocal.x / rotateDividend) + AIGlobals.ChopperAngleNudgePercent,
+                            -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+                }
                 else
-                    rFlat.y = Mathf.Clamp((veloLocal.x / (pitchDampening / pilot.SlowestPropLerpSpeed)) + AIGlobals.ChopperAngleNudgePercent,
+                    rFlat.y = Mathf.Clamp(veloLocal.x / (rotateDividend * Mathf.Abs(HeadingLocal.x)),
                         -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
             }
-            else
-                rFlat.y = Mathf.Clamp(veloLocal.x / (pitchDampening / pilot.SlowestPropLerpSpeed), 
-                    -AIGlobals.ChopperMaxDeltaAnglePercent, AIGlobals.ChopperMaxDeltaAnglePercent);
+
+            // Prevent ourselves from FLIPPING OVER
+            if (fFlat.y > AIGlobals.ChopperMaxDeltaAnglePercent)
+            {
+                fFlat.y = AIGlobals.ChopperMaxDeltaAnglePercent;
+                fFlat.Normalize();
+                fFlat.y = AIGlobals.ChopperMaxDeltaAnglePercent;
+            }
+            else if (fFlat.y < -AIGlobals.ChopperMaxDeltaAnglePercent)
+            {
+                fFlat.y = -AIGlobals.ChopperMaxDeltaAnglePercent;
+                fFlat.Normalize();
+                fFlat.y = -AIGlobals.ChopperMaxDeltaAnglePercent;
+            }
 
             directUp = Vector3.Cross(tankForward, rFlat.normalized);
-            if (directUp.y < AIGlobals.ChopperMaxDeltaAnglePercent)
-                directUp = Vector3.up;
+            float angleRestrict = 1f - AIGlobals.ChopperMaxDeltaAnglePercent;
+            if (directUp.y < angleRestrict)
+                directUp = directUp.SetY(angleRestrict).normalized.SetY(angleRestrict).normalized;
             else
                 directUp.Normalize();
 

@@ -938,7 +938,7 @@ namespace TAC_AI
             AuxButton("Protect", AIType.Aegis, isAegisAvail, LOC_Protect_req, LOC_Protect_desc,
                  LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GSO AI"
 
-            GUIMTButton("Mimic", AIType.MTTurret, LOC_Mimic_desc, CantPerformActions, GLO, GLH, ref clicked);
+            GUIMTButton("Mimic", AIType.MTMimic, LOC_Mimic_desc, CantPerformActions, GLO, GLH, ref clicked);
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(GLH);

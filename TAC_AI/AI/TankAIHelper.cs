@@ -3515,9 +3515,9 @@ namespace TAC_AI.AI
             }
         }
         public Vector3 DodgeSphereCenter { get; private set; } = Vector3.zero;
-        /// <summary> World Rotation </summary>
+        /// <summary> Velocity in World Space </summary>
         public Vector3 SafeVelocity { get; private set; } = Vector3.zero;
-        /// <summary> Local Rotation </summary>
+        /// <summary> Velocity in Local Space </summary>
         public Vector3 LocalSafeVelocity { get; private set; } = Vector3.zero;
         public float DodgeSphereRadius { get; private set; } = 1;
         private float CurHeight = 0;

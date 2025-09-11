@@ -340,7 +340,7 @@ namespace TAC_AI
 
         public const float ChopperYChillFactorMulti = 0.2f;//30f;
         public const float ChopperXZChillFactorMulti = 1.5f;//30f;
-        public const float ChopperMaxDeltaAnglePercent = 0.25f;// 0.25f
+        public const float ChopperMaxDeltaAnglePercent = 0.325f;// 0.25f
         public const float ChopperAngleNudgePercent = 0.15f;// 0.15f
         public const float ChopperAngleDoPitchPercent = 0.2f;
         public const float ChopperMaxAnglePercent = 0.35f;

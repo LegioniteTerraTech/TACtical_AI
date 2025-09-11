@@ -83,6 +83,9 @@ namespace TAC_AI.AI
         /// </summary>
         public float UpTtWRatio = 0;
 
+        /// <summary>
+        /// The lower this is, the slower it is
+        /// </summary>
         public float SlowestPropLerpSpeed = 1;  // Slow action demand based on propeller responsiveness
         public float PropLerpValue = 10;        // aux value used for some engine calculations
         public float AerofoilSluggishness = 1;  // Slow action demand based on aerofoil responsiveness
