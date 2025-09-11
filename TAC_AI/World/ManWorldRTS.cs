@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using HarmonyLib;
 using SafeSaves;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
 using UnityEngine;
-using static WaterMod.SurfacePool;
 
 namespace TAC_AI.World
 {
@@ -1659,7 +1656,7 @@ namespace TAC_AI.World
 
         private void UpdateLines()
         {
-            if (DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {   // Show ALL current targets of ALL AI
                 foreach (TankAIHelper helper in AIECore.IterateAllHelpers(x => x.MovingAndOrHasTarget))
                 {

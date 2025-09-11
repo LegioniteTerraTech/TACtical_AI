@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Text;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using UnityEngine;
-using TAC_AI.AI;
 using TerraTechETCUtil;
 
 namespace TAC_AI.Templates

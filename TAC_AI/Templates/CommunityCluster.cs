@@ -7,10 +7,7 @@ using System.IO;
 using UnityEngine;
 using Newtonsoft.Json;
 using TerraTechETCUtil;
-using Ionic.Zlib;
 using Snapshots;
-using HarmonyLib;
-using System.ComponentModel.Composition.Primitives;
 
 namespace TAC_AI.Templates
 {

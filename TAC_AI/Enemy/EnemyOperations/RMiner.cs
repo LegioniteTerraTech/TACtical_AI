@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
-using TAC_AI.AI.AlliedOperations;
+using TerraTechETCUtil;
+using TAC_AI.AI;
+using TAC_AI.AI.Enemy;
+using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI.Enemy.EnemyOperations
 {
@@ -46,7 +47,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         }
                     }
                     if (!helper.CollectedTarget)
-                        helper.actionPause = BProspector.reverseFromResourceTime;
+                        helper.actionPause = AIGlobals.ReverseFromResourceDelay;
                 }
                 else
                 {
@@ -62,7 +63,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         }
                     }
                     if (helper.CollectedTarget)
-                        helper.actionPause = BProspector.reverseFromBaseTime;
+                        helper.actionPause = AIGlobals.ReverseDelay;
                 }
                 errorCode = 4;
 

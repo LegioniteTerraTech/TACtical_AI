@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using TAC_AI.AI;
 using SafeSaves;
 using TerraTechETCUtil;
-using System.Runtime.Remoting.Messaging;
-using static TankPreset;
-using static CompoundExpression;
 
 public class ModuleAIExtension : TAC_AI.ModuleAIExtension { }
 namespace TAC_AI

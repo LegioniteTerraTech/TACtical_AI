@@ -11,8 +11,6 @@ using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
-using SafeSaves;
-using UnityEditor;
 
 namespace TAC_AI
 {

@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Reflection;
-using TAC_AI.AI.Enemy;
-using TAC_AI.Templates;
-using TAC_AI.World;
-using TerraTechETCUtil;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using TAC_AI.AI.Enemy;
+using TerraTechETCUtil;
 
 namespace TAC_AI.AI.Movement.AICores
 {
@@ -479,7 +478,7 @@ namespace TAC_AI.AI.Movement.AICores
 
 
             // DEBUG FOR DRIVE ERRORS
-            if (DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {
                 if (!tank.IsAnchored)
                 {

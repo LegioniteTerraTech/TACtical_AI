@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
+using TAC_AI.AI.Enemy;
 using TerraTechETCUtil;
-using System.Runtime.Remoting.Messaging;
 
 namespace TAC_AI.AI.Movement.AICores
 {
@@ -47,7 +46,7 @@ namespace TAC_AI.AI.Movement.AICores
                             help.ThrottleState = AIThrottleState.FullSpeed;
                             //help.ThrottleState = AIThrottleState.ForceSpeed;
                             //help.DriveVar = 1;
-                            if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                            if (AIGlobals.ShowDebugFeedBack)
                                 DebugExtUtilities.DrawDirIndicator(tank.gameObject, 5, targPos - tank.boundsCentreWorldNoCheck, new Color(1, 1, 0, 1));
                         }
                         else
@@ -56,7 +55,7 @@ namespace TAC_AI.AI.Movement.AICores
                             help.ThrottleState = AIThrottleState.FullSpeed;
                             //help.ThrottleState = AIThrottleState.ForceSpeed;
                             //help.DriveVar = -1;
-                            if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                            if (AIGlobals.ShowDebugFeedBack)
                                 DebugExtUtilities.DrawDirIndicator(tank.gameObject, 5, targPos - tank.boundsCentreWorldNoCheck, new Color(1, 0, 1, 1));
                         }
                     }

@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
 using UnityEngine;
-using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TerraTechETCUtil;
 
@@ -91,7 +87,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, helper, pilot, targetHeight, true);
                 HelicopterUtils.UpdateThrottleCopter(pilot);
                 HelicopterUtils.AngleTowardsUp(pilot, pilot.PathPointSet, helper.lastDestinationCore, ref core, true);
-                if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                 {   // DEBUG FOR DRIVE ERRORS
                     DebugExtUtilities.DrawDirIndicator(pos.SetY(height), pos.SetY(targetHeight), new Color(1, 0, 1));
                 }
@@ -108,7 +104,7 @@ namespace TAC_AI.AI.Movement.AICores
                 pilot.MainThrottle = HelicopterUtils.ModerateUpwardsThrust(tank, helper, pilot, targetHeight);
                 HelicopterUtils.UpdateThrottleCopter(pilot);
                 HelicopterUtils.AngleTowardsUp(pilot, pilot.PathPointSet, helper.lastDestinationCore, ref core);
-                if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                 {   // DEBUG FOR DRIVE ERRORS
                     DebugExtUtilities.DrawDirIndicator(pos.SetY(height), pos.SetY(targetHeight), new Color(1, 0, 1));
                 }
@@ -165,7 +161,7 @@ namespace TAC_AI.AI.Movement.AICores
             VehicleUtils.controlGet.SetValue(tank.control, control3D);
             Vector3 destDirect = helper.lastDestinationOp - tank.boundsCentreWorldNoCheck;
             // DEBUG FOR DRIVE ERRORS
-            if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
                 DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, destDirect, new Color(0, 1, 1));
 
             helper.DriveControl = 0f;

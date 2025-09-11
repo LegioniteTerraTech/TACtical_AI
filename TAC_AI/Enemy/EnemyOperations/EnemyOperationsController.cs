@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
-using TAC_AI.AI.Enemy;
-
-namespace TAC_AI.AI.Enemy.EnemyOperations
+﻿namespace TAC_AI.AI.Enemy.EnemyOperations
 {
     internal class EnemyOperationsController
     {

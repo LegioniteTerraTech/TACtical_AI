@@ -1,16 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition.Primitives;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
 using DevCommands;
 using Newtonsoft.Json;
 using TAC_AI.AI;
-using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
 using TAC_AI.World;
 using TerraTechETCUtil;
@@ -275,9 +271,9 @@ namespace TAC_AI.Templates
 
             HoriPosOff += ButtonWidth;
 
-            if (GUILayout.Button(ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
+            if (GUILayout.Button(AIGlobals.ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
-                ShowDebugFeedBack = !ShowDebugFeedBack;
+                AIGlobals.ShowDebugFeedBack = !AIGlobals.ShowDebugFeedBack;
             }
 
             StepMenuPlacer();
@@ -788,9 +784,9 @@ namespace TAC_AI.Templates
                 InstantLoad = !InstantLoad;
             }
             HoriPosOff += ButtonWidth;
-            if (GUILayout.Button(ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
+            if (GUILayout.Button(AIGlobals.ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
-                ShowDebugFeedBack = !ShowDebugFeedBack;
+                AIGlobals.ShowDebugFeedBack = !AIGlobals.ShowDebugFeedBack;
             }
             HoriPosOff += ButtonWidth;
 
@@ -1644,13 +1640,6 @@ namespace TAC_AI.Templates
 
 
         // Utilities
-#if DEBUG
-        /*
-        internal static bool ShowDebugFeedBack = true;
-        //*/ internal static bool ShowDebugFeedBack = false;
-#else
-        internal static bool ShowDebugFeedBack = false;
-#endif
         internal static bool CheckValidMode()
         {
 #if DEBUG

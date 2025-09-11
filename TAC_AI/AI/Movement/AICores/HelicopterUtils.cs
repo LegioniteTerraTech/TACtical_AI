@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Reflection;
 using UnityEngine;
+using TAC_AI.AI.Enemy;
 using TerraTechETCUtil;
 
 namespace TAC_AI.AI.Movement.AICores
@@ -154,7 +153,7 @@ namespace TAC_AI.AI.Movement.AICores
             }//*/
             
 
-            if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {
                 // DEBUG FOR DRIVE ERRORS
                 // Teal is target vector

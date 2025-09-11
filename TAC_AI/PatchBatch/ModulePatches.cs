@@ -2,14 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.Networking;
 using System.Reflection;
 using TerraTechETCUtil;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
-using TAC_AI.World;
 using HarmonyLib;
 
 namespace TAC_AI

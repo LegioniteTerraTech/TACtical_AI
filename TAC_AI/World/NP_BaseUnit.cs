@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
-using TerraTechETCUtil;
-using TAC_AI.AI.Enemy;
-using TAC_AI.Templates;
 
 namespace TAC_AI.World
 {

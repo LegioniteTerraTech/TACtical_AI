@@ -1,15 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
+﻿using UnityEngine;
+using TAC_AI.AI.Movement;
 using TAC_AI.AI.Movement.AICores;
 
 namespace TAC_AI.AI.AlliedOperations
 {
     internal static class BProspector
     {
-        internal const int reverseFromResourceTime = 35;
-        internal const int reverseFromBaseTime = AIGlobals.ReverseDelay;
         public static void MotivateMine(TankAIHelper helper, Tank tank, ref EControlOperatorSet direct)
         {
             helper.IsMultiTech = false;
@@ -72,7 +68,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                 }
                 if (!helper.CollectedTarget)
-                    helper.actionPause = reverseFromResourceTime;
+                    helper.actionPause = AIGlobals.ReverseFromResourceDelay;
             }
             else
             {
@@ -87,7 +83,7 @@ namespace TAC_AI.AI.AlliedOperations
                     }
                 }
                 if (helper.CollectedTarget)
-                    helper.actionPause = reverseFromBaseTime;
+                    helper.actionPause = AIGlobals.ReverseDelay;
             }
 
             // To Base

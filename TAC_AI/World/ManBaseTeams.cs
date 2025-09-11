@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using SafeSaves;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -11,8 +10,6 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using Newtonsoft.Json;
-using UnityEngine.Experimental.UIElements;
-using static WaterMod.SurfacePool;
 
 namespace TAC_AI
 {
@@ -322,7 +319,7 @@ namespace TAC_AI
             if (TRP >= TeamRelations.AITeammate)
                 return;
             TeamRelations TRN = (TeamRelations)Mathf.Clamp((int)TRP + 1, 0, Enum.GetValues(typeof(TeamRelations)).Length);
-            if (DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {
                 switch (TRN)
                 {
@@ -366,7 +363,7 @@ namespace TAC_AI
             TeamRelations TRN = (TeamRelations)Mathf.Clamp((int)TRP - 1, 0, Enum.GetValues(typeof(TeamRelations)).Length);
             DebugTAC_AI.Log("Degrade in relations between " + TeamNamer.GetTeamName(team) + " and " +
                 TeamNamer.GetTeamName(teamID) + ", " + TRP + " -> " + TRN);
-            if (DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {
                 switch (TRN)
                 {

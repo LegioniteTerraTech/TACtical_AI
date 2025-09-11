@@ -5,7 +5,6 @@ using System.Text;
 using UnityEngine;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
-using static WobblyLaser;
 
 namespace TAC_AI
 {

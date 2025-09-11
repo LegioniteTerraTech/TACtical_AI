@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TAC_AI.Templates
+﻿namespace TAC_AI.Templates
 {
     /// <summary>
     /// LEGACY - Most spawns are now merged!

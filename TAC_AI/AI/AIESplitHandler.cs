@@ -3,12 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
-using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy;
-using TAC_AI.AI.AlliedOperations;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
-using static WaterMod.SurfacePool;
 
 
 namespace TAC_AI.AI

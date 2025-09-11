@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using UnityEngine;
-using TAC_AI.Templates;
+﻿using UnityEngine;
 
 namespace TAC_AI.AI
 {

@@ -4,13 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.Networking;
 using TAC_AI.AI;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Enemy;
 using TAC_AI.World;
 using TerraTechETCUtil;
-using System.Runtime.Remoting.Messaging;
 
 namespace TAC_AI.Templates
 {

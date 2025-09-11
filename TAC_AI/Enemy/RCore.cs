@@ -1132,7 +1132,7 @@ namespace TAC_AI.AI.Enemy
                         break;
                 }
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " is ready to roll!  Default enemy with Default everything");
-                if (DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                 {
                     AIGlobals.PopupColored(newMind.EvilCommander.ToString(), tank.Team, 
                         WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up *
@@ -1204,7 +1204,7 @@ namespace TAC_AI.AI.Enemy
                 if (!KickStart.AllowEnemiesToMine && newMind.CommanderMind == EnemyAttitude.Miner)
                     newMind.CommanderMind = EnemyAttitude.Default;
             }
-            if (DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
                 AIGlobals.PopupColored(newMind.EvilCommander.ToString(), tank.Team, WorldPosition.FromScenePosition(tank.boundsCentreWorld + (Vector3.up * helper.lastTechExtents)));
 
             helper.SecondAvoidence = newMind.CommanderSmarts >= EnemySmarts.Smrt;

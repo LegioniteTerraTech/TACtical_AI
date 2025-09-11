@@ -3,14 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using UnityEngine.Serialization;
 using UnityEngine.Networking;
 using UnityEngine;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
 using System.Diagnostics;
-using static TAC_AI.ManBaseTeams;
-using UnityEngine.Experimental.PlayerLoop;
 
 namespace TAC_AI.AI
 {

@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using TerraTechETCUtil;
 using TAC_AI.AI;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using System.Diagnostics;
-using RandomAdditions;
 using System.IO;
 
 namespace TAC_AI

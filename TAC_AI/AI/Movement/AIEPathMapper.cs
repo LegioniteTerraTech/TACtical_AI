@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Reflection;
 using UnityEngine;
 using TerraTechETCUtil;
-using TAC_AI.Templates;
 
 namespace TAC_AI.AI.Movement
 {
@@ -62,7 +60,7 @@ namespace TAC_AI.AI.Movement
         {
             try
             {
-                if (DebugRawTechSpawner.ShowDebugFeedBack && ShowPathingGIZMO)
+                if (AIGlobals.ShowDebugFeedBack && ShowPathingGIZMO)
                 {
                     bool showUnpathable = Input.GetKey(KeyCode.Space);
                     bool drawFrame = false;

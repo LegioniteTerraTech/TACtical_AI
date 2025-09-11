@@ -7,7 +7,6 @@ using UnityEngine.UI;
 using TAC_AI.AI;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
-using Snapshots;
 
 namespace TAC_AI.World
 {

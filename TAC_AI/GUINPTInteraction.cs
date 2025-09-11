@@ -5,7 +5,6 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using TAC_AI.AI.Enemy;
-using TAC_AI.Templates;
 using TAC_AI.World;
 using TerraTechETCUtil;
 

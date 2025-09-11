@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TAC_AI.AI;
 using UnityEngine;
+using TAC_AI.AI.Enemy;
+using TerraTechETCUtil;
 
 namespace TAC_AI.AI.Movement.AICores
 {

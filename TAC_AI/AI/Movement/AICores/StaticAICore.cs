@@ -1,10 +1,9 @@
 ﻿using System;
-using System.Reflection;
-using TAC_AI.AI.Enemy;
-using TAC_AI.World;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using TAC_AI.AI.Enemy;
 using TerraTechETCUtil;
-using static HarmonyLib.Code;
 
 namespace TAC_AI.AI.Movement.AICores
 {
@@ -129,7 +128,7 @@ namespace TAC_AI.AI.Movement.AICores
                 {
                     VehicleUtils.Turner(helper, destDirect, 0, ref core);
                 }
-                if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 1, destDirect * helper.lastTechExtents, new Color(1, 0, 1));
 
                 Vector3 InputLineVal = Vector3.zero;
@@ -153,12 +152,12 @@ namespace TAC_AI.AI.Movement.AICores
                     {   // X
                         InputLineVal.z = throttleZ;
                     }
-                    if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                    if (AIGlobals.ShowDebugFeedBack)
                         DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, InputLineVal * helper.lastTechExtents, new Color(0, 1, 1));
                 }
                 else
                 {
-                    if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                    if (AIGlobals.ShowDebugFeedBack)
                         DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, InputLineVal, new Color(0, 1, 1));
                 }
 
@@ -316,7 +315,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 DriveVal = (tank.rootBlockTrans.InverseTransformVector(Vector3.up) * 2).Clamp01Box();
 
-                if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                 {
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, driveVal * helper.lastTechExtents, new Color(0, 0, 1));
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 1, DriveVal * helper.lastTechExtents, new Color(1, 0, 0));
@@ -355,7 +354,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             DriveVal = final.Clamp01Box();
 
-            if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {
                 // DEBUG FOR DRIVE ERRORS
                 if (tank.IsAnchored)

@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
 using UnityEngine;
-using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
-using TAC_AI.Templates;
 using TerraTechETCUtil;
 
 
@@ -273,7 +268,7 @@ namespace TAC_AI.AI.Movement.AICores
             VehicleUtils.controlGet.SetValue(tank.control, control3D);
             Vector3 destDirect = helper.lastDestinationOp - tank.boundsCentreWorldNoCheck;
             // DEBUG FOR DRIVE ERRORS
-            if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
                 DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, destDirect, new Color(0, 1, 1));
 
             helper.DriveControl = 0f;
@@ -1458,7 +1453,7 @@ namespace TAC_AI.AI.Movement.AICores
 
             // DEBUG FOR DRIVE ERRORS
 
-            if (DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {
                 DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, destPos - tank.boundsCentreWorldNoCheck, new Color(0, 1, 1)); //TEAL
                 DebugExtUtilities.DrawDirIndicator(tank.gameObject, 1, helper.Navi3DDirect * pilot.Helper.lastTechExtents * 3, new Color(0, 0, 1));//BLUE
@@ -1602,7 +1597,7 @@ namespace TAC_AI.AI.Movement.AICores
             if (tank.rootBlockTrans.forward.y >= -0.8f && tank.rootBlockTrans.forward.y <= 0.8f)
             {
                 right = Vector3.Cross(Vector3.up, tank.rootBlockTrans.forward.SetY(0).normalized).SetY(0).normalized;
-                if (DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 7, right * 24, new Color(1, 1, 0, 1));
                 return right;
             }
@@ -1613,14 +1608,14 @@ namespace TAC_AI.AI.Movement.AICores
                 if (tank.rootBlockTrans.up.y > 0)
                 {
                     right = -Vector3.Cross(Vector3.up, tank.rootBlockTrans.forward.SetY(0).normalized).SetY(0).normalized;
-                    if (DebugRawTechSpawner.ShowDebugFeedBack)
+                    if (AIGlobals.ShowDebugFeedBack)
                         DebugExtUtilities.DrawDirIndicator(tank.gameObject, 7, right * 24, new Color(1, 1, 0, 1));
                     return right;
                 }
                 else
                 {
                     right = Vector3.Cross(Vector3.up, tank.rootBlockTrans.forward.SetY(0).normalized).SetY(0).normalized;
-                    if (DebugRawTechSpawner.ShowDebugFeedBack)
+                    if (AIGlobals.ShowDebugFeedBack)
                         DebugExtUtilities.DrawDirIndicator(tank.gameObject, 7, right * 24, new Color(1, 1, 0, 1));
                     return right;
                 }*/
@@ -1637,7 +1632,7 @@ namespace TAC_AI.AI.Movement.AICores
                 rFlat = -tank.rootBlockTrans.right;
             rFlat.y = 0;
             rFlat.Normalize();
-            if (DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
                 DebugExtUtilities.DrawDirIndicator(tank.gameObject, 7, rFlat * 24, new Color(1, 1, 0, 1));
             return rFlat;
         }

@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Reflection;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
 using TAC_AI.AI.Movement.AICores;
 using UnityEngine;
 using TerraTechETCUtil;
+#if DEBUG
+using System.Text;
+#endif
 
 namespace TAC_AI.AI
 {
@@ -91,7 +93,9 @@ namespace TAC_AI.AI
         {
             return PathPlanned.Count < 3;
         }
+#if DEBUG
         private static StringBuilder SB = new StringBuilder();
+#endif
         public void OnPartialPathfinding(List<WorldPosition> pos)
         {
             if (DebugTAC_AI.NoLogPathing)
@@ -110,6 +114,7 @@ namespace TAC_AI.AI
                     DebugTAC_AI.Log(Tank.name + ": OnPartialPathfinding - Path - NONE");
                     return;
                 }
+#if DEBUG
                 int num = 0;
                 SB.Clear();
                 foreach (var item in pos)
@@ -121,6 +126,7 @@ namespace TAC_AI.AI
                 }
                 DebugTAC_AI.Log(Tank.name + ": OnPartialPathfinding - Path -" + SB.ToString());
                 SB.Clear();
+#endif
             }
         }
         public void OnFinishedPathfinding(List<WorldPosition> pos)
@@ -148,6 +154,7 @@ namespace TAC_AI.AI
                     //throw new Exception("OnFinishedPathfinding expects at least one pathing WorldPosition in pos, but received none!");
                     return;
                 }
+#if DEBUG
                 int num = 0;
                 SB.Clear();
                 foreach (var item in pos)
@@ -160,6 +167,7 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Log(Tank.name + ": OnFinishedPathfinding - Finished AutoPathing with " + PathPlanned.Count + " waypoints to follow.");
                 DebugTAC_AI.Log(Tank.name + ": OnFinishedPathfinding - Path -" + SB.ToString());
                 SB.Clear();
+#endif
             }
         }
 

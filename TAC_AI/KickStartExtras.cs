@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 //using Harmony;
 using HarmonyLib;
 using UnityEngine;
@@ -10,7 +9,6 @@ using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
 using TAC_AI.AI.Movement;
-using SafeSaves;
 using TerraTechETCUtil;
 
 #if !STEAM

@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Reflection;
-using TAC_AI.AI.Enemy;
-using TAC_AI.World;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using TAC_AI.AI.Enemy;
 using TerraTechETCUtil;
 
 namespace TAC_AI.AI.Movement.AICores
@@ -561,7 +562,7 @@ namespace TAC_AI.AI.Movement.AICores
                     helper.MaxProps();
                 helper.DriveControl = DriveControl;
 
-                if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                 {
                     // DEBUG FOR DRIVE ERRORS
                     if (!tank.IsAnchored)
@@ -926,7 +927,7 @@ namespace TAC_AI.AI.Movement.AICores
             {
                 control3D.m_State.m_InputMovement = (tank.rootBlockTrans.InverseTransformVector(Vector3.up) * 2).Clamp01Box();
 
-                if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                 {
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 0, driveVal * helper.lastTechExtents, new Color(0, 0, 1));
                     DebugExtUtilities.DrawDirIndicator(tank.gameObject, 1, control3D.m_State.m_InputMovement * helper.lastTechExtents, new Color(1, 0, 0));
@@ -955,7 +956,7 @@ namespace TAC_AI.AI.Movement.AICores
             }
             control3D.m_State.m_InputMovement = final.Clamp01Box();
 
-            if (Templates.DebugRawTechSpawner.ShowDebugFeedBack)
+            if (AIGlobals.ShowDebugFeedBack)
             {
                 // DEBUG FOR DRIVE ERRORS
                 if (!tank.IsAnchored)

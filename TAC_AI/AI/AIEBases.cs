@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using TerraTechETCUtil;
 using TAC_AI.Templates;
-using TAC_AI.World;
-using TAC_AI.AI.Movement;
 
 namespace TAC_AI.AI
 {

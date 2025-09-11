@@ -1,15 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using TerraTechETCUtil;
-using TAC_AI.AI.Movement;
-using TAC_AI.AI.Movement.AICores;
 using TAC_AI.AI.Enemy.EnemyOperations;
-using TAC_AI.World;
 using TAC_AI.Templates;
-using Rewired.UI.ControlMapper;
 
 
 namespace TAC_AI.AI.Enemy

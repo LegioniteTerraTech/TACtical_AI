@@ -2,14 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using Rewired.Demos;
 using TAC_AI.AI;
 using TAC_AI.Templates;
-using TAC_AI.World;
 using TerraTechETCUtil;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace TAC_AI
 {
@@ -311,6 +307,7 @@ namespace TAC_AI
         public const float FindItemScanRangeExtension = 50;
         public const float FindBaseScanRangeExtension = 500;
         public const int ReverseDelay = 60;
+        public const int ReverseFromResourceDelay = 35;
         public const float PlayerAISpeedPanicDividend = 8;//6;
         public const float EnemyAISpeedPanicDividend = 9;
         /// <summary>Depth that land Techs are able to drive into</summary>
@@ -474,6 +471,13 @@ namespace TAC_AI
             get { return SpecialAISpawner.CreativeMode && Input.GetKey(KeyCode.LeftShift) && Input.GetKey(KeyCode.KeypadPlus); }
         }
 
+#if DEBUG
+        /*
+        internal static bool ShowDebugFeedBack = true;
+        //*/ internal static bool ShowDebugFeedBack = false;
+#else
+        internal static bool ShowDebugFeedBack = false;
+#endif
 
         public static float AngleUnsignedToSigned(float angle)
         {

@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Remoting.Messaging;
-using Rewired.UI.ControlMapper;
 using TAC_AI.AI.AlliedOperations;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
@@ -12,7 +10,6 @@ using TAC_AI.Templates;
 using TAC_AI.World;
 using TerraTechETCUtil;
 using UnityEngine;
-using static CompoundExpression.EEInstance;
 
 namespace TAC_AI.AI
 {
@@ -323,11 +320,16 @@ namespace TAC_AI.AI
 
         //AutoCollection
         internal bool hasAI = false;    // Has an active AI module
+        /// <summary>
+        /// Set to dirty when we make any changes to the AI
+        /// </summary>
         internal AIDirtyState dirtyAI = AIDirtyState.Not;  // Update Player AI state if needed
         public enum AIDirtyState
         {
             Not,
+            /// <summary>Reboots the AI if it just changed alignment</summary>
             Dirty,
+            /// <summary>Forces the AI to reboot as if it was just loaded into the world, very costly.</summary>
             DirtyAndReboot,
         }
         internal bool dirtyExtents = false;    // The Tech has new blocks attached recently
@@ -1470,7 +1472,7 @@ namespace TAC_AI.AI
                         GetActionOperatorsAllied(ref output, ref cantDo);
                     }
                 }
-                if (DebugRawTechSpawner.ShowDebugFeedBack)
+                if (AIGlobals.ShowDebugFeedBack)
                 {
                     output =  "[" + DriverType + "]\n" + output + "\nDirect [" + ControlCore.DriveDir + "], Dest [" + ControlCore.DriveDest +
                         "]\nWeaponState [" + WeaponState +
@@ -5780,7 +5782,7 @@ namespace TAC_AI.AI
         // ----------------------------  Debug Collector  ---------------------------- 
         private void ShowCollisionAvoidenceDebugThisFrame()
         {
-            if (DebugRawTechSpawner.ShowDebugFeedBack && Input.GetKey(KeyCode.LeftShift))// && AIECore.debugVisuals)
+            if (AIGlobals.ShowDebugFeedBack && Input.GetKey(KeyCode.LeftShift))// && AIECore.debugVisuals)
             {
                 try
                 {

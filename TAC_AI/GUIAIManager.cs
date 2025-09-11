@@ -2,15 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.UI;
 using TAC_AI.AI;
 using TAC_AI.World;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
-using System.Security.Cryptography;
-using System.Security.Policy;
 
 namespace TAC_AI
 {

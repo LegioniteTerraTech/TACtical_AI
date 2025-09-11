@@ -2,12 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using TAC_AI.AI.AlliedOperations;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
-using TAC_AI.Templates;
-using TAC_AI.World;
-using TerraTech.Network;
 using TerraTechETCUtil;
 using UnityEngine;
 

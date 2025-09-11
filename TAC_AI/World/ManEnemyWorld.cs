@@ -1,18 +1,14 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using FMOD;
-using SafeSaves;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TerraTechETCUtil;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace TAC_AI.World
 {

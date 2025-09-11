@@ -2,17 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Remoting.Messaging;
-using TAC_AI.AI.AlliedOperations;
 using TAC_AI.AI.Enemy;
 using TAC_AI.AI.Movement;
-using TAC_AI.Templates;
 using TAC_AI.World;
 using TerraTech.Network;
 using TerraTechETCUtil;
 using UnityEngine;
-using static TAC_AI.AI.TankAIHelper;
-using static WobblyLaser;
 
 namespace TAC_AI.AI
 {
@@ -175,7 +170,7 @@ namespace TAC_AI.AI
             //helper.ResetAll(tonk);
             //helper.OnTechTeamChange();
             helper.dirtyExtents = true;
-            helper.dirtyAI = AIDirtyState.Dirty;
+            helper.dirtyAI =  TankAIHelper.AIDirtyState.Dirty;
             helper.RunState = AIRunState.Advanced;
             helper.enabled = true;
             DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  OnTankAddition - Spawned!");
@@ -196,7 +191,7 @@ namespace TAC_AI.AI
             if (tonk.FirstUpdateAfterSpawn)
             {
                 helper.dirtyExtents = true;
-                helper.dirtyAI = AIDirtyState.Dirty;
+                helper.dirtyAI = TankAIHelper.AIDirtyState.Dirty;
                 helper.RunState = AIRunState.Advanced;
                 helper.enabled = true;
                 DebugTAC_AI.LogAISetup(KickStart.ModID + ": AI Helper " + tonk.name + ":  Spawned!");
