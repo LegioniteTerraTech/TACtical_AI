@@ -87,7 +87,7 @@ namespace TAC_AI.AI.Movement.AICores
             Vector3 DriveVar = -helper.LocalSafeVelocity / pilot.PropLerpValue;
             float xFactor = fwdDelta.z - 0.65f;
             if (needsTurnControl)
-                DriveVar.x = 0;
+                DriveVar.x = 0; // Stop strafing to focus on turning!
             else
                 DriveVar.x = Mathf.Clamp(DriveVar.x + xOffset, -1, 1) * xFactor;
             DriveVar.z = Mathf.Clamp(DriveVar.z , -1, 1);

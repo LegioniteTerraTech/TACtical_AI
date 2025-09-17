@@ -2789,46 +2789,15 @@ namespace TAC_AI.Templates
 
         internal static bool CanBeMiner(EnemyMind mind)
         {
-            if (mind.StartedAnchored)
+            if (mind.StartedAnchored && mind?.Tank == null)
                 return false;
-            bool can = true;
-            if (mind?.Tank && !mind.Tank.name.NullOrEmpty())
-            {
-                SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
-                if (type != SpawnBaseTypes.NotAvail)
-                {
-                    if (ModTechsDatabase.InternalPopTechs.TryGetValue(type, out RawTech val))
-                        can = !val.environ;
-                }
-                else
-                {
-                    RawTech cand = ModTechsDatabase.ExtPopTechsAllFindByName(mind.Tank.name);
-                    if (cand != null)
-                        can = cand.environ;
-                }
-            }
-            return can;
+            return TryGetRawTechFromName(mind.Tank.name, out RawTech val) && val.environ;
         }
         internal static bool ShouldDetonateBoltsNow(EnemyMind mind)
         {
-            bool can = false;
-            try
-            {
-                SpawnBaseTypes type = GetEnemyBaseTypeFromName(mind.Tank.name);
-                if (type != SpawnBaseTypes.NotAvail)
-                {
-                    if (ModTechsDatabase.InternalPopTechs.TryGetValue(type, out RawTech val))
-                        can = val.deployBoltsASAP;
-                }
-                else
-                {
-                    RawTech cand = ModTechsDatabase.ExtPopTechsAllFindByName(mind.Tank.name);
-                    if (cand != null)
-                        can = cand.deployBoltsASAP;
-                }
-            }
-            catch { }
-            return can;
+            if (mind.StartedAnchored && mind?.Tank == null)
+                return false;
+            return TryGetRawTechFromName(mind.Tank.name, out RawTech val) && val.deployBoltsASAP;
         }
         internal static bool IsBaseTemplateAvailable(SpawnBaseTypes toSpawn)
         {
@@ -3211,11 +3180,27 @@ namespace TAC_AI.Templates
             }
         }
 
-        internal static RawTech GetEnemyBaseTypeFromNameFull(string Name)
+        public static bool TryGetRawTechFromName(string name, out RawTech RT)
         {
-            SpawnBaseTypes type = GetEnemyBaseTypeFromName(Name);
+            if (!name.NullOrEmpty())
+            {
+                SpawnBaseTypes type = GetEnemyBaseTypeFromName(name);
+                if (type != SpawnBaseTypes.NotAvail)
+                    return ModTechsDatabase.InternalPopTechs.TryGetValue(type, out RT);
+                else
+                {
+                    RT = ModTechsDatabase.ExtPopTechsAllFindByName(name);
+                    return RT != null;
+                }
+            }
+            RT = null;
+            return false;
+        }
+        internal static RawTech GetRawTechFromName(string name)
+        {
+            SpawnBaseTypes type = GetEnemyBaseTypeFromName(name);
             if (type == SpawnBaseTypes.NotAvail)
-                return GetExtEnemyBaseFromName(Name);
+                return GetExtEnemyBaseFromName(name);
             else
                 return GetBaseTemplate(type);
         }

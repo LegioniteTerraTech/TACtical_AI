@@ -30,7 +30,7 @@ namespace TAC_AI
     public class AIGlobals
     {
         // Note improve AI navigation around water - they keep driving into the water and get stuck
-        public static bool AIAttract => ManGameMode.inst.GetCurrentGameType() != ManGameMode.GameType.Attract;
+        public static bool IsNotAttract => ManGameMode.inst.GetCurrentGameType() != ManGameMode.GameType.Attract;
 
         private static FieldInfo getCamTank = typeof(TankCamera).GetField("m_hideHud", BindingFlags.NonPublic | BindingFlags.Instance);
         public static bool GetHideHud => (bool)getCamTank.GetValue(TankCamera.inst);
@@ -134,6 +134,9 @@ namespace TAC_AI
             }
             return false;
         }
+
+
+        public static bool PlayerIsOnLowQualitySettings => ManProfile.inst.GetCurrentUser().m_GraphicsSettings.m_QualityLevel <= 1;
 
 
         // AIERepair contains the self-repair stats
@@ -331,15 +334,16 @@ namespace TAC_AI
         public const float AircraftChillFactorMulti = 4.5f;         // More accuraccy, less responsiveness
         public const float LargeAircraftChillFactorMulti = 1.25f;   // More responsiveness, less accuraccy
 
-        public const float AirNPTMaxHeightOffset = 125;     // How far the AI is allowed to go while in combat above the player
-        public const float AirWanderMaxHeightIngame = 75;         // How far the AI is allowed to go while wandering randomly above the player
-        public static float AirWanderMaxHeight => AIAttract ? 500 : AirWanderMaxHeightIngame;         // How far the AI is allowed to go while wandering randomly above the player
+        public const float AirNPTDespawnHeightOffset = 250f; // Beyond this height from the player the AI will be despawned
+        public const float AirNPTMaxHeightOffset = 150f;     // How high the AI is allowed to go while in the Attract mode
+        public const float AirWanderMaxHeightIngame = 100f;//75;// How high the AI is allowed to go while wandering randomly above the player
+        public static float AirWanderMaxHeight => IsNotAttract ? AirWanderMaxHeightIngame : AirNPTMaxHeightOffset;         // How far the AI is allowed to go while wandering randomly above the player
         public const float AirPromoteSpaceHeight = 150;     // The height the player, beyond passing, will encounter more spacecraft
         public const float AirMaxYaw = 0.45f;//0.2f; // 0 - 1 (float)
         public const float AirMaxYawBankOnly = 0.75f; // 0 - 1 (float)
 
         public const float ChopperYChillFactorMulti = 0.2f;//30f;
-        public const float ChopperXZChillFactorMulti = 1.5f;//30f;
+        public const float ChopperXZChillFactorMulti = 2.5f;//30f;
         public const float ChopperMaxDeltaAnglePercent = 0.325f;// 0.25f
         public const float ChopperAngleNudgePercent = 0.15f;// 0.15f
         public const float ChopperAngleDoPitchPercent = 0.2f;
@@ -355,7 +359,7 @@ namespace TAC_AI
         /// <summary> IN m/s !!!</summary>
         public const float AirStallSpeed = 42;//25          // The speed of which most wings begin to stall at
         public const float GroundAttackStagingDistMain = 275;
-        public static float GroundAttackStagingDist => AIAttract ? 120 : GroundAttackStagingDistMain;   // Distance to fly (in meters!) before turning back
+        public static float GroundAttackStagingDist => IsNotAttract ? 120 : GroundAttackStagingDistMain;   // Distance to fly (in meters!) before turning back
         public const float TechSplitDelay = 0.5f;
 
 
@@ -633,6 +637,11 @@ namespace TAC_AI
             if (forward.ApproxZero())
                 return Quaternion.identity;
             return Quaternion.LookRotation(forward, up);
+        }
+        public static bool VisibleIsSafelyRemoveable(int visibleID, int team)
+        {
+            return (IsBaseTeamDynamicOrUnregistered(team) || team == DefaultEnemyTeam || team == LonerEnemyTeam) &&
+                !IsPlayerTeam(team) && (team != ManSpawn.NeutralTeam) && !TankAIManager.MissionTechs.Contains(visibleID);
         }
         public static bool TechIsSafelyRemoveable(Tank tech)
         {
@@ -1335,7 +1344,7 @@ namespace TAC_AI
         internal static void Eradicate(Tank tech)
         {   // 
             if (ManNetwork.IsNetworked)
-            {
+            {   // Too laggy to use distintegrate and explode - we just remove it normally instead.
                 try
                 {
                     TrackedVisible TV = ManVisible.inst.GetTrackedVisibleByHostID(tech.netTech.HostID);
@@ -1350,7 +1359,8 @@ namespace TAC_AI
             }
             else
             {
-                if ((Singleton.playerPos - tech.boundsCentreWorld).sqrMagnitude > AIGlobals.EradicateEffectMaxDistanceSqr)
+                if (PlayerIsOnLowQualitySettings ||
+                    ((Singleton.playerPos - tech.boundsCentreWorld).sqrMagnitude > EradicateEffectMaxDistanceSqr))
                 {
                     Purge(tech);
                     return;

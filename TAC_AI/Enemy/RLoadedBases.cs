@@ -921,7 +921,7 @@ namespace TAC_AI.AI.Enemy
                 if (builder.instant)
                 {
                     AIERepair.Turboconstruct(tank, mind.TechMemor, true);
-                    RCore.BlockSetEnemyHandling(tank, mind, true);
+                    RCore.GetOrCalculateEnemyHandling(tank, mind, true);
                     RCore.RandomSetMindAttack(mind, tank);
                     mind.TechMemor.MakeMinersMineUnlimited();
                 }
@@ -1239,7 +1239,7 @@ namespace TAC_AI.AI.Enemy
                     return worked;
                 }
 
-                if (AIEBases.FindNewExpansionBase(tech, lastEnemySet.tank.boundsCentreWorld, 
+                if (AIEBases.TryFindOpenBuildLocation(tech, lastEnemySet.tank.boundsCentreWorld, 
                     AIGlobals.defaultExpandRad, AIGlobals.defaultExpandRadRange, 3, out Vector3 pos))
                 {   // Try spawning defense
                     IEnumerable<EnemyBaseFunder> funders = IterateTeamBaseFunders(tech.Team);
@@ -1332,7 +1332,7 @@ namespace TAC_AI.AI.Enemy
                 {
                     DebugTAC_AI.Log(KickStart.ModID + ": ImTakingThatExpansion - Building harvester");
                 }
-                if (AIEBases.TryFindExpansionLocationGrid(tech.boundsCentreWorldNoCheck, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
+                if (AIEBases.TryFindOpenLocationGrid(tech.boundsCentreWorldNoCheck, tech.boundsCentreWorldNoCheck, out Vector3 pos2))
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
                     reason = PickBuildBasedOnPriorities(mind, lvl, funds, funders);
@@ -1390,7 +1390,7 @@ namespace TAC_AI.AI.Enemy
         {   // Expand the base!
             try
             {
-                if (AIEBases.FindNewExpansionBase(tech, mind.AIControl.lastDestinationCore,
+                if (AIEBases.TryFindOpenBuildLocation(tech, mind.AIControl.lastDestinationCore,
                     AIGlobals.defaultExpandRad, AIGlobals.defaultExpandRadRange, 3, out Vector3 pos))
                 {
                     BaseTerrain terra;
@@ -1439,11 +1439,11 @@ namespace TAC_AI.AI.Enemy
                     return;
                 }
                 Tank toUpgrade = null;
-                bool shouldChangeHarvesters = GetCountOfPurpose(BasePurpose.HasReceivers, funders) == 0;
+                bool canReplaceCollectors = GetCountOfPurpose(BasePurpose.HasReceivers, funders) == 0;
                 foreach (var item in TankAIManager.TeamActiveMobileTechs(tech.Team))
                 {
                     var helper = item.GetComponent<TankAIHelper>();
-                    if (!helper.PendingDamageCheck && !helper.lastEnemyGet && (shouldChangeHarvesters || !RCore.IsHarvester(item.blockman)))
+                    if (!helper.PendingDamageCheck && !helper.lastEnemyGet && (canReplaceCollectors || !RCore.IsCollector(item.blockman, out _)))
                     {
                         toUpgrade = item;
                         break;
@@ -1451,7 +1451,7 @@ namespace TAC_AI.AI.Enemy
                 }
                 if (toUpgrade != null)
                 {
-                    if (AIEBases.FindNewExpansionBase(tech, mind.AIControl.lastDestinationCore,
+                    if (AIEBases.TryFindOpenBuildLocation(tech, mind.AIControl.lastDestinationCore,
                     AIGlobals.defaultExpandRad, AIGlobals.defaultExpandRadRange, 3, out Vector3 pos))
                     {
                         BaseTerrain terra;
@@ -1501,7 +1501,7 @@ namespace TAC_AI.AI.Enemy
 
                 IEnumerable<EnemyBaseFunder> funders = IterateTeamBaseFunders(tech.Team);
 
-                if (AIEBases.TryFindExpansionLocationCorner(tech, tech.boundsCentreWorldNoCheck,
+                if (AIEBases.TryFindOpenLocationCorner(tech, tech.boundsCentreWorldNoCheck,
                     AIGlobals.defaultExpandRad, out Vector3 pos))
                 {   // Try spawning defense
                     Terra = RawTechLoader.GetTerrain(pos);
@@ -1532,7 +1532,7 @@ namespace TAC_AI.AI.Enemy
                     else
                         DebugTAC_AI.Log(KickStart.ModID + ": SpawnBaseExpansion - Team " + tech.Team + ": Failiure on expansion");
                 }
-                else if (AIEBases.TryFindExpansionLocationDirect(tech, tech.boundsCentreWorldNoCheck,
+                else if (AIEBases.TryFindOpenLocationDirect(tech, tech.boundsCentreWorldNoCheck,
                     AIGlobals.defaultExpandRad, out Vector3 pos2))
                 {   // Try spawning base extensions
                     Terra = RawTechLoader.GetTerrain(pos2);
@@ -1596,7 +1596,7 @@ namespace TAC_AI.AI.Enemy
                             }
                         }
                     }
-                    if (AIEBases.TryFindExpansionLocationGrid(mind.Tank.boundsCentreWorld, mind.Tank.trans.forward * 128, out Vector3 pos))
+                    if (AIEBases.TryFindOpenLocationGrid(mind.Tank.boundsCentreWorld, mind.Tank.trans.forward * 128, out Vector3 pos))
                     {
                         SpawnBaseTypes SBT = RawTechLoader.GetEnemyBaseType(mind.MainFaction, lvl, new HashSet<BasePurpose> { BasePurpose.Harvesting, BasePurpose.NotStationary }, BaseTerrain.AnyNonSea, maxPrice: funds.BuildBucks);
                         if (RawTechLoader.IsFallback(SBT))

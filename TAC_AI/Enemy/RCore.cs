@@ -58,7 +58,7 @@ namespace TAC_AI.AI.Enemy
             AutoSetIntelligence(newMind);
 
             //Determine driving method
-            BlockSetEnemyHandling(tank, newMind);
+            GetOrCalculateEnemyHandling(tank, newMind);
             bool setEnemy = SetSmartAIStats(tank, newMind);
             if (!setEnemy)
             {
@@ -137,17 +137,17 @@ namespace TAC_AI.AI.Enemy
                 newMind.CommanderAttack = EAttackMode.Ranged;
                 fired = true;
             }
-            else if (IsHarvester(BM) || newMind.MainFaction == FactionSubTypes.GC)
-            {   // Miner
+            else if (IsCollector(BM, out bool chunkHarvester) || newMind.MainFaction == FactionSubTypes.GC)
+            {
                 if (tank.IsPopulation && AIGlobals.EnemyBaseMakerChance >= UnityEngine.Random.Range(0, 100))
-                {
+                {   // Base-Building Rival
                     newMind.CommanderMind = EnemyAttitude.NPCBaseHost;
                     newMind.CommanderAttack = RWeapSetup.GetAttackStrat(tank, newMind);
                     newMind.InvertBullyPriority = true;
                 }
                 else
-                {
-                    if (IsHarvester(BM))
+                {   // Miner
+                    if (chunkHarvester)
                         newMind.CommanderMind = EnemyAttitude.Miner;
                     else
                         newMind.CommanderMind = EnemyAttitude.Junker;
@@ -193,13 +193,12 @@ namespace TAC_AI.AI.Enemy
         //private static List<ModuleBooster> engineGetCache = new List<ModuleBooster>();
         private static List<FanJet> jetGetCache = new List<FanJet>();
         private static List<BoosterJet> boosterGetCache = new List<BoosterJet>();
-        private static FieldInfo spinDat = typeof(FanJet).GetField("spinDelta", BindingFlags.Instance | BindingFlags.NonPublic);
-        internal static void BlockSetEnemyHandling(Tank tank, EnemyMind newMind, bool ForceAllBubblesUp = false)
+        //private static FieldInfo spinDat = typeof(FanJet).GetField("spinDelta", BindingFlags.Instance | BindingFlags.NonPublic);
+        internal static void GetOrCalculateEnemyHandling(Tank tank, EnemyMind newMind, bool ForceAllBubblesUp = false)
         {
-            RawTech RTT = RawTechLoader.GetEnemyBaseTypeFromNameFull(tank.name);
-            var BM = tank.blockman;
-            if (RTT != null)
+            if (RawTechLoader.TryGetRawTechFromName(tank.name, out RawTech RTT))
             {
+                var BM = tank.blockman;
                 if (RTT.purposes.Contains(BasePurpose.NotStationary))
                 {
                     switch (RTT.terrain)
@@ -227,8 +226,8 @@ namespace TAC_AI.AI.Enemy
                     newMind.EvilCommander = EnemyHandling.Stationary;
                     newMind.CommanderBolts = EnemyBolts.AtFull;
                 }
-                if (BM.IterateBlockComponents<ModuleMeleeWeapon>().Count() + (BM.IterateBlockComponents<ModuleWeaponTeslaCoil>().Count()
-                    * 25) > BM.IterateBlockComponents<ModuleWeaponGun>().Count() || newMind.MainFaction == FactionSubTypes.GC)
+                if (newMind.MainFaction == FactionSubTypes.GC || (BM.IterateBlockComponents<ModuleMeleeWeapon>().Count() +
+                    (BM.IterateBlockComponents<ModuleWeaponTeslaCoil>().Count() * 25) > BM.IterateBlockComponents<ModuleWeaponGun>().Count()))
                     newMind.LikelyMelee = true;
                 if (RTT.purposes.Contains(BasePurpose.NANI) || RTT.blockCount >= RawTechUtil.FrameImpactingTechBlockCount)
                 {   // DEATH TO ALL
@@ -237,7 +236,13 @@ namespace TAC_AI.AI.Enemy
                 }
                 return;
             }
+            BlockSetEnemyHandling(tank, newMind, ForceAllBubblesUp);
+        }
+        private static void BlockSetEnemyHandling(Tank tank, EnemyMind newMind, bool ForceAllBubblesUp)
+        {
             // We have to do it this way since modded blocks don't work well with the defaults
+            var BM = tank.blockman;
+
             bool canFloat = false;
             bool isFlying = false;
             bool isFlyingDirectionForwards = true;
@@ -517,12 +522,12 @@ namespace TAC_AI.AI.Enemy
             {
                 if (ManBaseTeams.IsEnemy(ManPlayer.inst.PlayerTeam, tank.Team))
                 {
-                    var targVis = helper.lastEnemyGet;
-                    if (targVis?.tank)
+                    Tank target = helper.lastEnemyGet?.tank;
+                    if (target != null)
                     {
-                        Tank target = targVis.tank;
-                        bool player = targVis.tank.PlayerFocused;
-                        if (targVis.tank.Team == ManPlayer.inst.PlayerTeam)
+                        bool targetIsPlayer = target.PlayerFocused;
+                        bool weInDanger = false;
+                        if (targetIsPlayer && Singleton.playerTank)
                         {
                             if (KickStart.WarnOnEnemyLock && Mode<ModeMain>.inst != null)
                             {
@@ -542,32 +547,29 @@ namespace TAC_AI.AI.Enemy
                                         break;
                                 }
                             }
-                        }
-                        bool weInDanger = false;
-                        if (player && Singleton.playerTank)
                             weInDanger = true;
+                        }
                         else if (ManWorldRTS.PlayerIsInRTS)
                         {
-                            if (targVis.tank.Team == ManPlayer.inst.PlayerTeam)
-                                weInDanger = true;
+                            if (target.Team == ManPlayer.inst.PlayerTeam)
+                                weInDanger = true;  // Player unit under attack
                         }
+
                         if (weInDanger)
                         {
-                            /*
-                            if (Mode<ModeMain>.inst != null)    // Was keeping the combat music active
+                            if (targetIsPlayer && Mode<ModeMain>.inst != null) // Updates the campaign emergency snapshot handler
                                 Mode<ModeMain>.inst.SetPlayerInDanger(true, true);
-                            */
-                            ManMusic.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, targVis.tank);
+                            
+                            ManMusic.inst.SetDanger(ManMusic.DangerContext.Circumstance.Enemy, tank, target);
                         }
-                        else if (target != Singleton.playerTank && target.IsEnemy(tank.Team) && target.netTech != null &&
-                            target.netTech.NetPlayer != null)
-                        {
+                        else if (target != Singleton.playerTank && target.IsEnemy(tank.Team) && target.netTech?.NetPlayer != null)
+                        {   // Send it to the non-host client that they are under attack
                             ManMusic.inst.SetDangerClient(ManMusic.DangerContext.Circumstance.Enemy, tank, target);
                         }
                     }
                 }
             }
-            catch (Exception e) { DebugTAC_AI.Log("error " + e); }
+            catch (Exception e) { DebugTAC_AI.Log("ScarePlayer(): error - " + e); }
         }
 
         internal static void BeEvil(TankAIHelper helper, Tank tank)
@@ -877,15 +879,21 @@ namespace TAC_AI.AI.Enemy
 
 
         // ----------------------------  Checks  ---------------------------- 
-        public static bool IsHarvester(BlockManager BM)
+        public static bool IsCollector(BlockManager BM, out bool chunkHarvester)
         {
             ModuleItemHolder.AcceptFlags flag = ModuleItemHolder.AcceptFlags.Chunks;
+            chunkHarvester = false;
+            bool found = false;
             foreach (var item in BM.IterateBlockComponents<ModuleItemHolder>())
             {
-                if (item.IsFlag(ModuleItemHolder.Flags.Collector) && item.Acceptance == flag)
-                    return true;
+                if (item.IsFlag(ModuleItemHolder.Flags.Collector))
+                {
+                    if ((item.Acceptance & flag) > 0)
+                        chunkHarvester = true;
+                    found = true;
+                }
             }
-            return false;
+            return found;
         }
         public static bool IsUnarmedAndCanRunAway(Tank tank)
         {

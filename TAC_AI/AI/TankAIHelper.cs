@@ -4594,7 +4594,7 @@ namespace TAC_AI.AI
         private void DetermineCombatEnemy()
         {
             //bool DoNotEngage = false;
-            Retreat = AIGlobals.AIAttract && AIECore.RetreatingTeams.Contains(tank.Team);
+            Retreat = AIGlobals.IsNotAttract && AIECore.RetreatingTeams.Contains(tank.Team);
 
 #if !STEAM
                 if (KickStart.isAnimeAIPresent)

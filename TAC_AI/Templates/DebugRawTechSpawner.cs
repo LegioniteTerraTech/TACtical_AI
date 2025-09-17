@@ -241,7 +241,7 @@ namespace TAC_AI.Templates
             GUILayout.BeginHorizontal();
             RemoveAllEnemiesImmedeatelyButton();
 
-            HoriPosOff += ButtonWidth;
+            StepMenuPlacer();
 
             if (GUILayout.Button(redStart + "Sort Entire List</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
@@ -262,14 +262,14 @@ namespace TAC_AI.Templates
             }
 
 
-            HoriPosOff += ButtonWidth;
+            StepMenuPlacer();
 
             if (GUILayout.Button(InstantLoad ? redStart + "Instant ON</b></color>" : redStart + "Instant Off</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 InstantLoad = !InstantLoad;
             }
 
-            HoriPosOff += ButtonWidth;
+            StepMenuPlacer();
 
             if (GUILayout.Button(AIGlobals.ShowDebugFeedBack ? redStart + "Hide AI Debug</b></color>" : redStart + "Show AI Debug</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
@@ -281,19 +281,17 @@ namespace TAC_AI.Templates
             if (GUILayout.Button(ShowLocal ? redStart + "Showing Local</b></color>" : redStart + "Showing Mods</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 ShowLocal = !ShowLocal;
-                return;
             }
 
-            HoriPosOff += ButtonWidth;
+            StepMenuPlacer();
 
             if (GUILayout.Button(redStart + "Correct Forwards</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
             {
                 if (Singleton.playerTank)
                     AIERepair.DesignMemory.RebuildTechForwards(Singleton.playerTank);
-                return;
             }
 
-            HoriPosOff += ButtonWidth;
+            StepMenuPlacer();
 
             if (ShowLocal)
             {
@@ -358,19 +356,15 @@ namespace TAC_AI.Templates
                     }, 0);
                 }
                 StepMenuPlacer();
-                if (ActiveGameInterop.inst && ActiveGameInterop.IsReady && 
-                    GUI.Button(new Rect(20 + HoriPosOff, VertPosOff, ButtonWidth * 2, 30), redStart + "Push To Editor</b></color>"))
-                    ActiveGameInterop.TryTransmit("RetreiveTechPop", Path.Combine(RawTechExporter.RawTechsDirectory,
-                        "Bundled", "RawTechs.RTList"));
-                StepMenuPlacer();
-            }
-            if (HoriPosOff >= MaxWindowWidth)
-            {
-                HoriPosOff = 0;
-                VertPosOff += 30;
-                MaxExtensionX = true;
-                if (VertPosOff >= MaxWindowHeight)
-                    MaxExtensionY = true;
+                if (ActiveGameInterop.inst && ActiveGameInterop.IsReady)
+                {
+                    if (GUILayout.Button(redStart + "Push To Editor</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
+                    {
+                        ActiveGameInterop.TryTransmit("RetreiveTechPop", Path.Combine(RawTechExporter.RawTechsDirectory,
+                            "Bundled", "RawTechs.RTList"));
+                    }
+                    StepMenuPlacer();
+                }
             }
 
             if (GUILayout.Button(redStart + "CLEAR TRACKED</b></color>", GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
@@ -659,52 +653,53 @@ namespace TAC_AI.Templates
                         SpawnTech(SpawnBaseTypes.NotAvail);
                     }
                 }
-                return;
             }
-
-            int Entries = listTemp.Count();
-            for (int step = 0; step < Entries; step++)
+            else
             {
-                try
+                int Entries = listTemp.Count();
+                for (int step = 0; step < Entries; step++)
                 {
-                    RawTech temp = listTemp[step];
-                    StepMenuPlacerPartial();
-                    string disp;
-                    if (temp.purposes.Contains(BasePurpose.NotStationary))
+                    try
                     {
-                        switch (temp.terrain)
+                        RawTech temp = listTemp[step];
+                        StepMenuPlacerPartial();
+                        string disp;
+                        if (temp.purposes.Contains(BasePurpose.NotStationary))
                         {
-                            case BaseTerrain.Land:
-                                disp = "<color=#90ee90ff>" + temp.techName.ToString() + "</color>";
-                                break;
-                            case BaseTerrain.Air:
-                                disp = "<color=#ffa500ff>" + temp.techName.ToString() + "</color>";
-                                break;
-                            case BaseTerrain.Sea:
-                                disp = "<color=#add8e6ff>" + temp.techName.ToString() + "</color>";
-                                break;
-                            case BaseTerrain.Space:
-                                disp = "<color=#ffff00ff>" + temp.techName.ToString() + "</color>";
-                                break;
-                            default:
-                                disp = temp.techName.ToString();
-                                break;
+                            switch (temp.terrain)
+                            {
+                                case BaseTerrain.Land:
+                                    disp = "<color=#90ee90ff>" + temp.techName.ToString() + "</color>";
+                                    break;
+                                case BaseTerrain.Air:
+                                    disp = "<color=#ffa500ff>" + temp.techName.ToString() + "</color>";
+                                    break;
+                                case BaseTerrain.Sea:
+                                    disp = "<color=#add8e6ff>" + temp.techName.ToString() + "</color>";
+                                    break;
+                                case BaseTerrain.Space:
+                                    disp = "<color=#ffff00ff>" + temp.techName.ToString() + "</color>";
+                                    break;
+                                default:
+                                    disp = temp.techName.ToString();
+                                    break;
+                            }
                         }
+                        else
+                            disp = temp.techName.ToString();
+                        if (temp.purposes.Contains(BasePurpose.NANI))
+                        {
+                            disp = "[E] " + disp;
+                        }
+                        if (GUILayout.Button(disp, GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
+                        {
+                            index = step;
+                            clicked = true;
+                        }
+                        HoriPosOff += ButtonWidth;
                     }
-                    else
-                        disp = temp.techName.ToString();
-                    if (temp.purposes.Contains(BasePurpose.NANI))
-                    {
-                        disp = "[E] " + disp;
-                    }
-                    if (GUILayout.Button(disp, GUILayout.Width(ButtonWidth), GUILayout.Height(30)))
-                    {
-                        index = step;
-                        clicked = true;
-                    }
-                    HoriPosOff += ButtonWidth;
+                    catch { }// error on handling something
                 }
-                catch { }// error on handling something
             }
             GUILayout.EndHorizontal();
 
@@ -1396,7 +1391,7 @@ namespace TAC_AI.Templates
                             continue; // TECHS ARE LOADING AND IF WE REMOVE IT NOW IT WILL IGNORE TEAMS
                         }
 
-                        if (AIGlobals.IsBaseTeamDynamic(remove.TeamID) && (remove.visible == null || (remove.visible != null && !remove.visible.isActive)))
+                        if (AIGlobals.VisibleIsSafelyRemoveable(remove.ID, remove.TeamID) && (remove.visible == null || !remove.visible.isActive))
                         {
                             DebugTAC_AI.Log(KickStart.ModID + ": RemoveOrphanTrackedVisibles - iterating " + remove.TeamID + " | "
                                 + remove.RadarTeamID + " | " + remove.RawRadarTeamID + " | " + remove.RadarMarkerConfig + " | "

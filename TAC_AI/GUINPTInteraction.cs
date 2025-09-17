@@ -88,7 +88,7 @@ namespace TAC_AI.AI
             if (inst)
                 return;
             inst = Instantiate(new GameObject()).AddComponent<GUINPTInteraction>();
-            Singleton.Manager<ManPointer>.inst.MouseEvent.Subscribe(Click);
+            Singleton.Manager<ManPointer>.inst.MouseEvent.Subscribe(ClickConverseNPT);
             if (GUIWindow == null)
             {
                 GUIWindow = new GameObject();
@@ -103,14 +103,14 @@ namespace TAC_AI.AI
         {
             if (!inst)
                 return;
-            Singleton.Manager<ManPointer>.inst.MouseEvent.Unsubscribe(Click);
+            Singleton.Manager<ManPointer>.inst.MouseEvent.Unsubscribe(ClickConverseNPT);
             GUIWindow.SetActive(false);
             inst.enabled = false;
             Destroy(inst.gameObject);
             inst = null;
         }
 
-        public static void Click(ManPointer.Event button, bool down, bool yes)
+        public static void ClickConverseNPT(ManPointer.Event button, bool down, bool yes)
         {
             if (button == ManPointer.Event.RMB && down && KickStart.IsIngame && Input.GetKey(KeyCode.T) && ManPointer.inst.targetTank)
             {

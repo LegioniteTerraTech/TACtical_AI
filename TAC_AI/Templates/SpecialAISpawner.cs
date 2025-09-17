@@ -87,7 +87,9 @@ namespace TAC_AI.Templates
         const int MaxAirborneAIAllowed = 4;
         public const int AirborneAISpawnOdds = 30;   // Out of 300 (dynamically changed based on difficulty)
         public const float SpaceshipChance = 0.02f;     // Out of 100
+        /// <summary> Vertical Cylinder </summary>
         public const float AirSpawnDist = 400;
+        /// <summary> Vertical Cylinder </summary>
         public const float AirDespawnDist = 475;
         public const float SpaceBeginAltitude = 500;
         internal static float AirSpawnInterval = 30;
@@ -408,6 +410,8 @@ namespace TAC_AI.Templates
                 DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnAirborneAIInAir - It's campaign mode but no licences were found?!?");
                 return;
             }
+            if (AirPool.Count >= MaxAirborneAIAllowed || AIGlobals.AtSceneTechMaxSpawnLimit())
+                return;
 
             // Get the air spawn origin
             Tank SpawnOrigin = playerTank;
@@ -418,9 +422,7 @@ namespace TAC_AI.Templates
                 SpawnOrigin = NP.CurTech.tech;
             }
 
-            if (SpawnOrigin.IsNull() || AIGlobals.AtSceneTechMaxSpawnLimit())
-                return;
-            if (AirPool.Count >= MaxAirborneAIAllowed)
+            if (SpawnOrigin.IsNull())
                 return;
 
             Vector3 pos;
@@ -431,14 +433,14 @@ namespace TAC_AI.Templates
 
             Vector3 forwards = GetRandAirAngle();
 
-            pos = GetAirOffsetFromPosition(pos, forwards);
+            pos = GetAirSpawnOffsetFromPosition(pos, forwards);
             if (!ManWorld.inst.TileManager.IsTileAtPositionLoaded(pos))
                 return; //DO NOT SPAWN OUT OF BOUNDS.  Since this spawn is not mandatory, we can hold off.
 
 
             Tank newAirborneAI;
             bool spawnSpace;
-            if (SpawnOrigin.boundsCentreWorld.y > SpaceBeginAltitude)
+            if (SpawnOrigin.boundsCentreWorldNoCheck.y > SpaceBeginAltitude)
             {
                 spawnSpace = true;
             }
@@ -671,7 +673,7 @@ namespace TAC_AI.Templates
             if (UnityEngine.Random.Range(-50, 150) > KickStart.Difficulty)
                 return;
 
-            if (!AIEBases.IsLocationGridEmpty(pos, AIGlobals.defaultExpandRad))
+            if (!AIEBases.IsLocationGridOpen(pos, AIGlobals.defaultExpandRad))
                 return;
 
             RawTechPopParams RTF;
@@ -684,7 +686,7 @@ namespace TAC_AI.Templates
 
                 //pos = GetOffsetPosAngle(pos); 
 
-                if (!AIEBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos3))
+                if (!AIEBases.TryFindOpenLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos3))
                     return;
                 bool spawned = false;
                 int licence = Licences.GetLicense(factionSelect).CurrentLevel;
@@ -693,7 +695,7 @@ namespace TAC_AI.Templates
                     int team = AIGlobals.GetRandomEnemyBaseTeam();
                     RawTechLoader.TrySpawnBaseAtPositionNoFounder(factionSelect, pos3, team,
                         BasePurpose.AnyNonHQ, licence);
-                    if (AIEBases.TryFindExpansionLocationGrid(pos3, pos3 + new Vector3(0, 0, 64), out Vector3 pos4))
+                    if (AIEBases.TryFindOpenLocationGrid(pos3, pos3 + new Vector3(0, 0, 64), out Vector3 pos4))
                     {
                         RawTechLoader.TrySpawnBaseAtPositionNoFounder(factionSelect, pos3, team,
                             BasePurpose.NotStationary, licence);
@@ -744,7 +746,7 @@ namespace TAC_AI.Templates
             catch { }
             DebugTAC_AI.Log(KickStart.ModID + ": TrySpawnTraderTroll - Could not fetch corps, resorting to random spawns");
 
-            if (!AIEBases.TryFindExpansionLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos2))
+            if (!AIEBases.TryFindOpenLocationGrid(pos, pos + (UnityEngine.Random.insideUnitCircle.ToVector3XZ() * 128), out Vector3 pos2))
                 return;
             RTF = RawTechPopParams.Default;
             RTF.Faction = FactionSubTypes.NULL;
@@ -828,7 +830,7 @@ namespace TAC_AI.Templates
                         airborneAI.SetSleeping(false);
                         DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Awakened " + airborneAI.name + " in AirPool as it froze.");
                     }
-                    else if (AIGlobals.IsBaseTeamDynamic(airborneAI.Team) && AIGlobals.SceneTechMaxNeedsRemoval(out int remove))
+                    else if (AIGlobals.TechIsSafelyRemoveable(airborneAI) && AIGlobals.SceneTechMaxNeedsRemoval(out int remove))
                     {
                         AirPool.RemoveAt(step);
                         DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as we have bypassed the max tech limit.");
@@ -836,21 +838,27 @@ namespace TAC_AI.Templates
                         step--;
                         count--;
                     }
-                    else if (airborneAI.trans.position.y > AIGlobals.AirNPTMaxHeightOffset + Singleton.playerPos.y)
+                    else
                     {
-                        AirPool.RemoveAt(step);
-                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above player distance.");
-                        AIGlobals.Purge(airborneAI);
-                        step--;
-                        count--;
-                    }
-                    else if ((airborneAI.boundsCentreWorldNoCheck - playerTank.boundsCentreWorldNoCheck).sqrMagnitude > AirDespawnDist * AirDespawnDist)
-                    {
-                        AirPool.RemoveAt(step);
-                        DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it left AirDespawnDist radius.");
-                        AIGlobals.Purge(airborneAI);
-                        step--;
-                        count--;
+                        Vector3 AIPos = airborneAI.boundsCentreWorldNoCheck;
+                        if (Mathf.Abs(AIPos.y - Singleton.playerPos.y) > AIGlobals.AirNPTDespawnHeightOffset)
+                        {
+                            AirPool.RemoveAt(step);
+                            DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it flew above/below player height difference of "
+                                + AIGlobals.AirNPTDespawnHeightOffset + ".");
+                            AIGlobals.Purge(airborneAI);
+                            step--;
+                            count--;
+                        }
+                        else if ((AIPos.ToVector2XZ() - playerTank.boundsCentreWorldNoCheck.ToVector2XZ()).sqrMagnitude > AirDespawnDist * AirDespawnDist)
+                        {
+                            AirPool.RemoveAt(step);
+                            DebugTAC_AI.Info(KickStart.ModID + ": SpecialAISpawner - Removed and recycled " + airborneAI.name + " from AirPool as it left AirDespawnDist radius of " 
+                                + AirDespawnDist + ".");
+                            AIGlobals.Purge(airborneAI);
+                            step--;
+                            count--;
+                        }
                     }
                 }
                 catch (Exception e)
@@ -1073,7 +1081,7 @@ namespace TAC_AI.Templates
             Vector3 angleHeading = Quaternion.AngleAxis(randAngle, Vector3.up) * Vector3.forward;
             return angleHeading;
         }
-        private static Vector3 GetAirOffsetFromPosition(Vector3 pos, Vector3 angleHeading)
+        private static Vector3 GetAirSpawnOffsetFromPosition(Vector3 pos, Vector3 angleHeading)
         {   // 
             return AI.Movement.AIEPathing.OffsetFromGroundAAlt(pos + -(angleHeading * AirSpawnDist), 75);
         }

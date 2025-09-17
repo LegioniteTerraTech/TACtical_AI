@@ -2372,7 +2372,7 @@ namespace TAC_AI.World
                         baseUnit.RechargeRate = WheelsOrGenRechargeCount;
                         baseUnit.RechargeRateDay = ControlSurfOrGenDayRechargeCount;
                         baseUnit.AddBuildBucks(RLoadedBases.GetBuildBucksFromNameExt(sTech.m_TechData.Name));
-                        RawTech RT = RawTechLoader.GetEnemyBaseTypeFromNameFull(RLoadedBases.EnemyBaseFunder.GetActualName(sTech.m_TechData.Name));
+                        RawTech RT = RawTechLoader.GetRawTechFromName(RLoadedBases.EnemyBaseFunder.GetActualName(sTech.m_TechData.Name));
                         if (RT != null)
                         {
                             var purps = RT.purposes;

@@ -87,10 +87,16 @@ namespace TAC_AI.AI
         /// The lower this is, the slower it is
         /// </summary>
         public float SlowestPropLerpSpeed = 1;  // Slow action demand based on propeller responsiveness
+        /// <summary>
+        /// Increases as SlowestPropLerpSpeed decreases
+        /// </summary>
         public float PropLerpValue = 10;        // aux value used for some engine calculations
         public float AerofoilSluggishness = 1;  // Slow action demand based on aerofoil responsiveness
         public float RollStrength = 1;          // How far to roll 90 degrees
-        public Vector3 FlyingChillFactor = Vector3.one * 30; //The higher the values, the less stiff the controls will be
+        /// <summary>
+        /// The higher the values, the less stiff the controls will be
+        /// </summary>
+        public Vector3 FlyingChillFactor = Vector3.one * 30;
 
         //Error-Checking
         public int ErrorsInTakeoff = 0;         // If this gets too high, then this tech isn't meant to fly
@@ -491,9 +497,11 @@ namespace TAC_AI.AI
                 helper.MaxBoost();
 
             this.AICore.DriveMaintainer(helper, tank, ref core);
+            /*
             if (!AIEPathing.IsUnderMaxAltPlayer(PathPoint.y))
                 DebugTAC_AI.Log(KickStart.ModID + ":!!! - Tech " + tank.name + " has PathPoint [" + PathPoint.y + "] above max alt player [" + 
                     (AIGlobals.AirWanderMaxHeight + Singleton.playerPos.y) + "]");
+            */
             return;
         }
 

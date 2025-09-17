@@ -207,7 +207,7 @@ namespace TAC_AI.AI.Enemy
                         {   // setup for Invaders
                             //   Who needs a timer anyways?  Let's just attack when the player gets close.
                             mind.AllowRepairsOnFly = false;
-                            RCore.BlockSetEnemyHandling(tank, mind);
+                            RCore.GetOrCalculateEnemyHandling(tank, mind);
                             if (KickStart.Difficulty > 100)// in Soviet GSO, Invader come to you
                             {
                                 mind.CommanderAttack = EAttackMode.Ranged;

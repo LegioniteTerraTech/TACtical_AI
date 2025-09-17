@@ -21,7 +21,7 @@ namespace TAC_AI.AI
                 if (!Singleton.Manager<ManWorld>.inst.CheckIsTileAtPositionLoaded(tech.boundsCentreWorld))
                     DebugTAC_AI.Assert(KickStart.ModID + ": BaseConstructTech - Spawning Tech is out of world playable bounds at " +
                         tech.boundsCentreWorld.ToString() + " this should not be possible");
-                if (FindNewExpansionBase(tech, tech.boundsCentreWorld + (tech.rootBlockTrans.forward * 
+                if (TryFindOpenBuildLocation(tech, tech.boundsCentreWorld + (tech.rootBlockTrans.forward * 
                     (techToMake.techData.Radius + 8 + tech.GetCheapBounds())),
                     techToMake.techData.Radius + 0.5f, AIGlobals.defaultExpandRadRange, 5, out Vector3 pos, true))
                 {
@@ -115,7 +115,7 @@ namespace TAC_AI.AI
 
 
         private static Vector3[] location = new Vector3[9];
-        internal static bool FindNewExpansionBase(Tank tank, Vector3 targetWorld, float placeSize, float searchRadius, int radiusDivisions, out Vector3 pos, bool IgnoreCurrentlyBuilding = false)
+        internal static bool TryFindOpenBuildLocation(Tank tank, Vector3 targetWorld, float placeSize, float searchRadius, int radiusDivisions, out Vector3 pos, bool IgnoreCurrentlyBuilding = false)
         {
             float offsetRadApprox = 80;
             bool buildingCancel = false;
@@ -125,7 +125,7 @@ namespace TAC_AI.AI
                 Vector3 checkVec = tank.transform.TransformPoint(IterateVec) + coreOffset;
                 if (IgnoreCurrentlyBuilding)
                     buildingCancel = false;
-                if (IsLocationValid(checkVec, placeSize, ref buildingCancel))
+                if (IsLocationOpen(checkVec, placeSize, ref buildingCancel))
                 {
                     pos = checkVec;
                     return true;
@@ -157,7 +157,7 @@ namespace TAC_AI.AI
             pos = tank.boundsCentreWorldNoCheck;
             return false;
         }
-        private static bool IsLocationValid(Vector3 pos, float placeRadius, ref bool ChainCancel, bool resourcesToo = true, bool IgnoreNeutral = false)
+        private static bool IsLocationOpen(Vector3 pos, float placeRadius, ref bool ChainCancel, bool resourcesToo = true, bool IgnoreNeutral = false)
         {
             if (ChainCancel)
                 return false;
@@ -190,29 +190,29 @@ namespace TAC_AI.AI
             return validLocation;
         }
 
-        internal static bool IsLocationGridEmpty(Vector3 expansionCenter, float placeRadius, bool ignoreNeutrals = true)
+        internal static bool IsLocationGridOpen(Vector3 expansionCenter, float placeRadius, bool ignoreNeutrals = true)
         {
             bool chained = false;
-            if (!IsLocationValid(expansionCenter + (Vector3.forward * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter + (Vector3.forward * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
-            if (!IsLocationValid(expansionCenter - (Vector3.forward * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter - (Vector3.forward * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
-            if (!IsLocationValid(expansionCenter - (Vector3.right * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter - (Vector3.right * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
-            if (!IsLocationValid(expansionCenter + (Vector3.right * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter + (Vector3.right * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
-            if (!IsLocationValid(expansionCenter + ((Vector3.right + Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter + ((Vector3.right + Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
-            if (!IsLocationValid(expansionCenter - ((Vector3.right + Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter - ((Vector3.right + Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
-            if (!IsLocationValid(expansionCenter + ((Vector3.right - Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter + ((Vector3.right - Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
-            if (!IsLocationValid(expansionCenter - ((Vector3.right - Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
+            if (!IsLocationOpen(expansionCenter - ((Vector3.right - Vector3.forward) * 64), placeRadius, ref chained, false, ignoreNeutrals))
                 return false;
             return true;
         }
 
-        internal static bool TryFindExpansionLocationGrid(Vector3 expansionCenter, Vector3 targetWorld, out Vector3 pos)
+        internal static bool TryFindOpenLocationGrid(Vector3 expansionCenter, Vector3 targetWorld, out Vector3 pos)
         {
             location[0] = expansionCenter + new Vector3(64, 0, 0);
             location[1] = expansionCenter + new Vector3(-64, 0, 0);
@@ -227,7 +227,7 @@ namespace TAC_AI.AI
             bool constant = false;
             foreach (var item in location.OrderBy(x => (x - targetWorld).sqrMagnitude))
             {
-                if (IsLocationValid(item, AIGlobals.defaultExpandRad, ref constant, true, false))
+                if (IsLocationOpen(item, AIGlobals.defaultExpandRad, ref constant, true, false))
                 {
                     pos = item;
                     return true;
@@ -238,25 +238,25 @@ namespace TAC_AI.AI
         }
 
 
-        internal static bool TryFindExpansionLocationDirect(Tank tank, Vector3 expansionCenter, float placeRadius, out Vector3 pos)
+        internal static bool TryFindOpenLocationDirect(Tank tank, Vector3 expansionCenter, float placeRadius, out Vector3 pos)
         {
             bool chained = false;
-            if (IsLocationValid(expansionCenter - (tank.rootBlockTrans.forward * 64), placeRadius, ref chained))
+            if (IsLocationOpen(expansionCenter - (tank.rootBlockTrans.forward * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter - (tank.rootBlockTrans.forward * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter + (tank.rootBlockTrans.forward * 64), placeRadius, ref chained))
+            else if (IsLocationOpen(expansionCenter + (tank.rootBlockTrans.forward * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter + (tank.rootBlockTrans.forward * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter - (tank.rootBlockTrans.right * 64), placeRadius, ref chained))
+            else if (IsLocationOpen(expansionCenter - (tank.rootBlockTrans.right * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter - (tank.rootBlockTrans.right * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter + (tank.rootBlockTrans.right * 64), placeRadius, ref chained))
+            else if (IsLocationOpen(expansionCenter + (tank.rootBlockTrans.right * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter + (tank.rootBlockTrans.right * 64);
                 return true;
@@ -267,25 +267,25 @@ namespace TAC_AI.AI
                 return false;
             }
         }
-        internal static bool TryFindExpansionLocationCorner(Tank tank, Vector3 expansionCenter, float placeRadius, out Vector3 pos)
+        internal static bool TryFindOpenLocationCorner(Tank tank, Vector3 expansionCenter, float placeRadius, out Vector3 pos)
         {
             bool chained = false;
-            if (IsLocationValid(expansionCenter + ((tank.rootBlockTrans.right + tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
+            if (IsLocationOpen(expansionCenter + ((tank.rootBlockTrans.right + tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter + ((tank.rootBlockTrans.right + tank.rootBlockTrans.forward) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter - ((tank.rootBlockTrans.right + tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
+            else if (IsLocationOpen(expansionCenter - ((tank.rootBlockTrans.right + tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter - ((tank.rootBlockTrans.right + tank.rootBlockTrans.forward) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter + ((tank.rootBlockTrans.right - tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
+            else if (IsLocationOpen(expansionCenter + ((tank.rootBlockTrans.right - tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter + ((tank.rootBlockTrans.right - tank.rootBlockTrans.forward) * 64);
                 return true;
             }
-            else if (IsLocationValid(expansionCenter - ((tank.rootBlockTrans.right - tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
+            else if (IsLocationOpen(expansionCenter - ((tank.rootBlockTrans.right - tank.rootBlockTrans.forward) * 64), placeRadius, ref chained))
             {
                 pos = expansionCenter - ((tank.rootBlockTrans.right - tank.rootBlockTrans.forward) * 64);
                 return true;
