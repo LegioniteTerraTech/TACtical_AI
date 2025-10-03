@@ -261,6 +261,7 @@
   <ItemGroup>
     <Compile Include="AIFollowable.cs" />
     <Compile Include="AISettingsSet.cs" />
+    <Compile Include="AILOC.cs" />
     <Compile Include="AIStates.cs" />
     <Compile Include="AIGlobals.cs" />
     <Compile Include="AIWiki.cs" />

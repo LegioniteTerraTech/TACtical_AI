@@ -593,21 +593,21 @@ namespace TAC_AI
             { LocalisationEnums.Languages.Japanese,
                 "<color=#ffffffff>タンク</color>"},
         }); 
-        private static LocExtStringMod LOC_Tank_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Tank_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
                "Drive on Wheels or Treads" },
             { LocalisationEnums.Languages.Japanese,
                 "車輪または履帯で走行する"},
         });
-        private static LocExtStringMod LOC_Air_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Air_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
                "Fly Planes or Helicopters" },
             { LocalisationEnums.Languages.Japanese,
                 "車輪または履帯で走行する"},
         });
-        private static LocExtStringMod LOC_Water_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Water_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
                "Stay within the water" },
@@ -621,7 +621,7 @@ namespace TAC_AI
             { LocalisationEnums.Languages.Japanese,
                 "500メートル以内の資源を採掘する"},
         });
-        private static LocExtStringMod LOC_Space_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Space_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Fly with Antigravity or Hoverbug" },
@@ -760,14 +760,14 @@ namespace TAC_AI
             }
         }
 
-        private static LocExtStringMod LOC_MTPlayer_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_MTPlayer_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Player not in range" },
             { LocalisationEnums.Languages.Japanese,
                 "プレイヤーが範囲内にいません"},
         });
-        private static LocExtStringMod LOC_MTAlly_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_MTAlly_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Ally not in range" },
@@ -801,91 +801,91 @@ namespace TAC_AI
             }
         }
 
-        private static LocExtStringMod LOC_Escort_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Escort_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Escort allied players" },
             { LocalisationEnums.Languages.Japanese,
                 "味方プレイヤーを護衛する"},
         });
-        private static LocExtStringMod LOC_Miner_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Miner_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
-              "Mine resources within 500 meters" },
+              "Mine resources within # meters" },
             { LocalisationEnums.Languages.Japanese,
-                "500メートル以内の資源を採掘する"},
+                "#メートル以内の資源を採掘する"},
         });
-        private static LocExtStringMod LOC_Miner_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Miner_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Needs a Tech with resource receivers" },
             { LocalisationEnums.Languages.Japanese,
                 "リソースレシーバーを備えたベースが必要です"},
         });
-        private static LocExtStringMod LOC_Static_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Static_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Mobile Tech Hardpoint"},
             { LocalisationEnums.Languages.Japanese,
                 "モバイルハードポイント"},
         });
-        private static LocExtStringMod LOC_Turret_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Turret_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Mobile Tech Turret" },
             { LocalisationEnums.Languages.Japanese,
                 "移動式砲塔"},
         });
-        private static LocExtStringMod LOC_Mimic_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Mimic_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Mobile Tech Copycat" },
             { LocalisationEnums.Languages.Japanese,
                 "リレー制御"},
         });
-        private static LocExtStringMod LOC_Scout_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Scout_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Attack distant enemies"},
             { LocalisationEnums.Languages.Japanese,
                 "遠方の敵を巡回して攻撃する"},
         });
-        private static LocExtStringMod LOC_Battery_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Battery_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Needs other Tech with wireless chargers" },
             { LocalisationEnums.Languages.Japanese,
                 "ワイヤレス充電器付きの別のベースが必要"},
         });
-        private static LocExtStringMod LOC_Protect_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Protect_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Follow closest mobile ally"},
             { LocalisationEnums.Languages.Japanese,
                 "最も近いモバイル仲間をフォロー"},
         });
-        private static LocExtStringMod LOC_Protect_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Protect_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
-              "No Allies in range of 500 meters" },
+              "No Allies in range of # meters" },
             { LocalisationEnums.Languages.Japanese,
-                "500メートル以内に味方がいない"},
+                "#メートル以内に味方がいない"},
         });
-        private static LocExtStringMod LOC_Charger_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Charger_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Recharges the closest allies"},
             { LocalisationEnums.Languages.Japanese,
                 "最も近い味方を再充電する"},
         });
-        private static LocExtStringMod LOC_Collect_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Collect_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
-              "Collect loose blocks within 500 meters"},
+              "Collect loose blocks within # meters"},
             { LocalisationEnums.Languages.Japanese,
-                "500メートル以内の緩いブロックを集める"},
+                "#メートル以内の緩いブロックを集める"},
         });
-        private static LocExtStringMod LOC_Collect_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        internal static LocExtStringMod LOC_Collect_req = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
               "Need other Tech with SCU or Scrappers" },
@@ -922,7 +922,8 @@ namespace TAC_AI
             // upper right - MT
             GUILayout.BeginHorizontal(GLH);
             // upper left, bottom - Aux modes
-            AuxButton("Miner", AIType.Prospector, isProspectorAvail, LOC_Miner_req, LOC_Miner_desc,
+            AuxButton("Miner", AIType.Prospector, isProspectorAvail, LOC_Miner_req, 
+                LOC_Miner_desc.ToString().Replace("#", (lastTank.JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString()),
                 LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GSO or GC AI"
             GUIMTButton("Static", AIType.MTStatic, LOC_Static_desc, CantPerformActions, GLO, GLH, ref clicked);
             GUILayout.EndHorizontal();
@@ -935,7 +936,9 @@ namespace TAC_AI
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal(GLH);
-            AuxButton("Protect", AIType.Aegis, isAegisAvail, LOC_Protect_req, LOC_Protect_desc,
+            AuxButton("Protect", AIType.Aegis, isAegisAvail,
+                LOC_Protect_req.ToString().Replace("#", (lastTank.JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString())
+                , LOC_Protect_desc,
                  LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GSO AI"
 
             GUIMTButton("Mimic", AIType.MTMimic, LOC_Mimic_desc, CantPerformActions, GLO, GLH, ref clicked);
@@ -945,7 +948,8 @@ namespace TAC_AI
             AuxButton("Charger", AIType.Energizer, isEnergizerAvail, LOC_Battery_req,  LOC_Charger_desc,
                  LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GC AI"
 
-            AuxButton("Fetch", AIType.Scrapper, isScrapperAvail, LOC_Collect_req, LOC_Collect_desc,
+            AuxButton("Fetch", AIType.Scrapper, isScrapperAvail, LOC_Collect_req, 
+                LOC_Collect_desc.ToString().Replace("#", (lastTank.JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString()),
                  LOC_FindTheAI, ref CantPerformActions, ref clicked);//"Need GC AI"
             GUILayout.EndHorizontal();
 
@@ -958,6 +962,9 @@ namespace TAC_AI
                 SetAIType(changeAI);
             }
         }
+
+
+
         internal static LocExtStringMod LOC_AnchorNone = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
         {
             { LocalisationEnums.Languages.US_English,
@@ -1046,7 +1053,7 @@ namespace TAC_AI
                         if (ManNetwork.IsHost)
                         {
                             lastTank.PlayerAllowAutoAnchoring = false;
-                            lastTank.TryInsureAnchor();
+                            lastTank.TryInsureManualAnchor();
                         }
                         AIDriver = AIDriverType.Stationary;
                         changeAI = AIType.Escort;
@@ -1086,7 +1093,7 @@ namespace TAC_AI
                         if (ManNetwork.IsHost)
                         {
                             lastTank.PlayerAllowAutoAnchoring = false;
-                            lastTank.TryInsureAnchor();
+                            lastTank.TryInsureManualAnchor();
                         }
                         AIDriver = AIDriverType.Stationary;
                         changeAI = AIType.Escort;

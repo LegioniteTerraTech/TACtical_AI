@@ -82,7 +82,7 @@ namespace TAC_AI.Enemy.EnemyOperations
                         if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                         {
                             AIECore.AIMessage(tank, ref hasMessaged, tank.name + ": Setting camp!");
-                            helper.TryInsureAnchor();
+                            helper.TryInsureAutoAnchor();
                         }
                     }
                 }
@@ -194,7 +194,7 @@ namespace TAC_AI.Enemy.EnemyOperations
                     if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Setting camp!");
-                        helper.TryInsureAnchor();
+                        helper.TryInsureAutoAnchor();
                     }
                 }
             }
@@ -214,7 +214,7 @@ namespace TAC_AI.Enemy.EnemyOperations
                     if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                     {
                         DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Setting camp!");
-                        helper.TryInsureAnchor();
+                        helper.TryInsureAutoAnchor();
                     }
                 }
             }

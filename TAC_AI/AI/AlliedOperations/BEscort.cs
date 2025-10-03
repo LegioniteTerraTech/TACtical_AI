@@ -61,7 +61,7 @@ namespace TAC_AI.AI.AlliedOperations
                 direct.DriveAwayFacingTowards();
                 if (helper.unanchorCountdown > 0)
                     helper.unanchorCountdown--;
-                if (helper.CanAutoUnanchor)
+                if (helper.IsAutoAnchored)
                 {
                     helper.unanchorCountdown = 15;
                     helper.Unanchor();
@@ -75,7 +75,7 @@ namespace TAC_AI.AI.AlliedOperations
                 helper.DelayedAnchorClock = 0;
                 if (helper.unanchorCountdown > 0)
                     helper.unanchorCountdown--;
-                if (helper.CanAutoUnanchor)
+                if (helper.IsAutoAnchored)
                 {
                     DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ": Time to pack up and move out!");
                     helper.unanchorCountdown = 15;
@@ -176,7 +176,7 @@ namespace TAC_AI.AI.AlliedOperations
                 if (helper.CanAutoAnchor)
                 {
                     AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                    helper.TryInsureAnchor();
+                    helper.TryInsureAutoAnchor();
                 }
             }
             else
@@ -201,7 +201,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (helper.CanAutoAnchor)
             {
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                helper.TryInsureAnchor();
+                helper.TryInsureAutoAnchor();
             }
         }
     }

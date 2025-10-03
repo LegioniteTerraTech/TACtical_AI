@@ -910,7 +910,7 @@ namespace TAC_AI.World
                     {
                         var item = lastTanks[step];
                         item.PlayerAllowAutoAnchoring = false;
-                        item.TryInsureAnchor();
+                        item.TryInsureManualAnchor();
                     }
                 }
                 for (int step = lastTanks.Count - 1; step > -1; step--)

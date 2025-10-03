@@ -588,11 +588,11 @@ namespace TAC_AI.AI.Movement
                 if (tankToCopy.IsAnchored)
                 {
                     if (AIHelp.CanAutoAnchor)
-                        AIHelp.TryInsureAnchor();
+                        AIHelp.TryInsureAutoAnchor();
                 }
                 else
                 {
-                    if (AIHelp.CanAutoUnanchor)
+                    if (AIHelp.IsAutoAnchored)
                         AIHelp.Unanchor();
                 }
             }
@@ -657,11 +657,11 @@ namespace TAC_AI.AI.Movement
                 if (tankToCopy.IsAnchored)
                 {
                     if (AIHelp.CanAutoAnchor)
-                        AIHelp.TryInsureAnchor();
+                        AIHelp.TryInsureAutoAnchor();
                 }
                 else
                 {
-                    if (AIHelp.CanAutoUnanchor)
+                    if (AIHelp.IsAutoAnchored)
                         AIHelp.Unanchor();
                 }
             }

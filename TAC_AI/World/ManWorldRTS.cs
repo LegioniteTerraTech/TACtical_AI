@@ -2320,13 +2320,15 @@ namespace TAC_AI.World
 
         private static void GUIHandlerPlayerAutopilot(int ID)
         {
-            if (GUI.Button(new Rect(10, 10, 140, 30), KickStart.AutopilotPlayerMain ? "<b>Self-Driving ON</b>" : "Self-Driving Off", 
+            if (GUI.Button(new Rect(10, 10, 140, 30), KickStart.AutopilotPlayerMain ? 
+                "<b>" + AILOC.AutoEnabled + "</b>" : AILOC.AutoDisabled, 
                 KickStart.AutopilotPlayerMain ? AltUI.ButtonGreen : AltUI.ButtonBlue))
             {
                 KickStart.AutopilotPlayerMain = !KickStart.AutopilotPlayerMain;
                 TankAIManager.toggleAuto.SetToggleState(KickStart.AutopilotPlayerMain);
             }
-            if (GUI.Button(new Rect(10, 40, 140, 30), DevCamLock == DebugCameraLock.LockCamToTech ? "<b>Follow Cam ON</b>" : "Follow Cam Off"))
+            if (GUI.Button(new Rect(10, 40, 140, 30), DevCamLock == DebugCameraLock.LockCamToTech ? 
+                "<b>" + AILOC.CamFollowEnabled + "</b>" : AILOC.CamFollowDisabled))
             {
                 if (DevCamLock == DebugCameraLock.LockCamToTech)
                 {
@@ -2339,7 +2341,7 @@ namespace TAC_AI.World
                 }
                 lastCameraPos = WorldPosition.FromScenePosition(Singleton.cameraTrans.position);
             }
-#if DEBUG
+#if DEBUG   // dev side ONLY
             if (GUI.Button(new Rect(10, 70, 140, 30), DevCamLock == DebugCameraLock.LockTechToCam ? "<b>LOCKED TO CAM</b>" : "Lock to Cam"))
             {
                 if (DevCamLock == DebugCameraLock.LockTechToCam)

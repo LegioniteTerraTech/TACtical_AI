@@ -41,6 +41,7 @@ namespace TAC_AI
         None,
         Anchored,
         Anchor,
+        AnchorAuto,
         AnchorStaticAI,
         ForceAnchor,
         Unanchor,

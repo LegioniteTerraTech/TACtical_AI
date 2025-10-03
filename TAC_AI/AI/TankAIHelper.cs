@@ -109,7 +109,7 @@ namespace TAC_AI.AI
         public bool CanUseBuildBeam => !(tank.IsAnchored && !PlayerAllowAutoAnchoring);
         public bool CanAutoAnchor => AutoAnchor && PlayerAllowAutoAnchoring && !AttackEnemy && tank.Anchors.NumPossibleAnchors > 0 
             && tank.Anchors.NumIsAnchored == 0 && DelayedAnchorClock >= AIGlobals.BaseAnchorMinimumTimeDelay && CanAnchorNow;
-        public bool CanAutoUnanchor => AutoAnchor && PlayerAllowAutoAnchoring && tank.Anchors.NumIsAnchored > 0;
+        public bool IsAutoAnchored => AutoAnchor && PlayerAllowAutoAnchoring && tank.Anchors.NumIsAnchored > 0;
         public bool CanAnchorNow => CanAttemptAnchor && CanAnchorSafely;
         public bool CanAnchorSafely => !lastEnemyGet || (lastEnemyGet && lastCombatRange > AIGlobals.SafeAnchorDist);
         public bool CanAttemptAnchor => anchorAttempts <= AIGlobals.MaxAnchorAttempts;
@@ -822,7 +822,7 @@ namespace TAC_AI.AI
                         }
                         else
                         {
-                            TryInsureAnchor();
+                            TryInsureManualAnchor();
                             PlayerAllowAutoAnchoring = false;
                         }
                         DriverType = driver;
@@ -1436,25 +1436,25 @@ namespace TAC_AI.AI
             if (tank.IsPlayer)
             {
                 if (!KickStart.AutopilotPlayer)
-                    return "(Autopilot Disabled)";
+                    return AILOC.AutoDisabled;
             }
             else if (AIAlign != AIAlignment.NonPlayer)
             {
                 if (!ActuallyWorks)
-                    return "No AI Modules";
+                    return AILOC.NoAI;
                 else if (!SetToActive)
                 {
                     if (AIAlign != AIAlignment.NonPlayer)
-                        return "Idle (Off)";
+                        return AILOC.AutoDisabled;
                 }
             }
             if (Retreat && !IsMultiTech)
             {
                 if (tank.IsAnchored)
-                    return "Holding the line!";
-                return "Retreat!";
+                    return AILOC.AIAnchoredDefRetreat;
+                return AILOC.AIRetreat;
             }
-            string output = "At Destination";
+            string output = AILOC.AIArrived;
             try
             {
                 if (RTSControlled)
@@ -1485,7 +1485,7 @@ namespace TAC_AI.AI
             }
             catch
             {
-                output = "Loading...";
+                output = AILOC.AIProcessing;
             }
             return output;
         }
@@ -1493,39 +1493,45 @@ namespace TAC_AI.AI
         {
             if (tank.IsAnchored)
             {
-                if (lastEnemyGet)
-                    output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                if (IsAutoAnchored)
+                {   // Show auto-anchor debug
+                }
                 else
-                    output = "Stationary";
+                {
+                    if (lastEnemyGet)
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
+                    else
+                        output = AILOC.AIStationary;
+                }
                 return;
             }
             switch (DriverType)
             {
                 case AIDriverType.Astronaut:
                     if (lastEnemyGet)
-                        output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
                     {
                         if (WeaponState == AIWeaponState.Obsticle)
-                            output = "Removing Obstruction";
+                            output = AILOC.Remove + AILOC.Obst;
                         else
                         {
                             switch (ControlOperator.DriveDest)
                             {
                                 case EDriveDest.FromLastDestination:
-                                    output = "Moving from destination";
+                                    output = AILOC.Gen_MoveFrom + AILOC.Destination;
                                     break;
                                 case EDriveDest.ToLastDestination:
-                                    output = "Moving to destination";
+                                    output = AILOC.Gen_MoveTo + AILOC.Destination;
                                     break;
                                 case EDriveDest.ToBase:
-                                    output = "Moving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                    output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                     break;
                                 case EDriveDest.ToMine:
-                                    output = "Moving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                    output = AILOC.Gen_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                     break;
                                 default:
-                                    output = "Arrived at destination";
+                                    output = AILOC.AIArrived;
                                     break;
                             }
                         }
@@ -1534,7 +1540,7 @@ namespace TAC_AI.AI
                 case AIDriverType.Pilot:
                     if (lastEnemyGet)
                     {
-                        output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     }
                     else
                     {
@@ -1543,30 +1549,30 @@ namespace TAC_AI.AI
                             if (air.Grounded)
                             {
                                 cantDo = true;
-                                output = "Unable to takeoff";
+                                output = AILOC.Fly_Grounded;
                             }
                             else
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Crashed";
+                                    output = AILOC.Fly_Crashed;
                                 else
                                 {
                                     switch (ControlOperator.DriveDest)
                                     {
                                         case EDriveDest.FromLastDestination:
-                                            output = "Flying from destination";
+                                            output = AILOC.Fly_MoveFrom + AILOC.Destination;
                                             break;
                                         case EDriveDest.ToLastDestination:
-                                            output = "Flying to destination";
+                                            output = AILOC.Fly_MoveTo + AILOC.Destination;
                                             break;
                                         case EDriveDest.ToBase:
-                                            output = "Flying to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                            output = AILOC.Fly_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                             break;
                                         case EDriveDest.ToMine:
-                                            output = "Flying to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                            output = AILOC.Fly_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                             break;
                                         default:
-                                            output = "Arrived at destination";
+                                            output = AILOC.AIArrived;
                                             break;
                                     }
                                 }
@@ -1583,13 +1589,13 @@ namespace TAC_AI.AI
                             switch (plane.PerformDiveAttack)
                             {
                                 case 1:
-                                    output += "\nDive - turn to face target";
+                                    output += "\n" + AILOC.Fly_Dive + AILOC.FaceTowards + AILOC.Target;
                                     break;
                                 case 2:
-                                    output += "\nDive - diving!";
+                                    output += "\n" + AILOC.Fly_Dive + AILOC.Fly_Dive2;
                                     break;
                                 default:
-                                    output += "\nDive - Code [" + plane.PerformDiveAttack + "]";
+                                    output += "\n" + AILOC.Fly_Dive + AILOC.Code + plane.PerformDiveAttack + "]";
                                     break;
                             }
                         }
@@ -1598,16 +1604,16 @@ namespace TAC_AI.AI
                             switch (plane.PerformUTurn)
                             {
                                 case 1:
-                                    output += "\nU-Turn - facing from target";
+                                    output += "\n" + AILOC.Fly_UTurn + AILOC.FaceAwayFrom + AILOC.Target;
                                     break;
                                 case 2:
-                                    output += "\nU-Turn - point upwards";
+                                    output += "\n" + AILOC.Fly_UTurn + AILOC.Fly_UTurn2;
                                     break;
                                 case 3:
-                                    output += "\nU-Turn - turn to face target";
+                                    output += "\n" + AILOC.Fly_UTurn + AILOC.FaceTowards + AILOC.Target;
                                     break;
                                 default:
-                                    output += "\nU-Turn - Code [" + plane.PerformUTurn + "]";
+                                    output += "\n" + AILOC.Fly_UTurn + AILOC.Code + plane.PerformUTurn + "]";
                                     break;
                             }
                         }
@@ -1615,29 +1621,29 @@ namespace TAC_AI.AI
                     break;
                 case AIDriverType.Sailor:
                     if (lastEnemyGet)
-                        output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
                     {
                         if (WeaponState == AIWeaponState.Obsticle)
-                            output = "Stuck & Beached";
+                            output = AILOC.Remove + AILOC.Obst;
                         else
                         {
                             switch (ControlOperator.DriveDest)
                             {
                                 case EDriveDest.FromLastDestination:
-                                    output = "Sailing from destination";
+                                    output = AILOC.Sea_MoveFrom + AILOC.Destination;
                                     break;
                                 case EDriveDest.ToLastDestination:
-                                    output = "Sailing to destination";
+                                    output = AILOC.Sea_MoveTo + AILOC.Destination;
                                     break;
                                 case EDriveDest.ToBase:
-                                    output = "Sailing to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                    output = AILOC.Sea_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                     break;
                                 case EDriveDest.ToMine:
-                                    output = "Sailing to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                    output = AILOC.Sea_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                     break;
                                 default:
-                                    output = "Arrived at destination";
+                                    output = AILOC.AIArrived;
                                     break;
                             }
                         }
@@ -1645,37 +1651,37 @@ namespace TAC_AI.AI
                     break;
                 case AIDriverType.Stationary:
                     if (lastEnemyGet)
-                        output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
                     {
-                        output = "Stationary Base";
+                        output = AILOC.AIStationaryBase;
                     }
                     break;
                 default:
                     if (lastEnemyGet)
-                        output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
                     {
                         if (WeaponState == AIWeaponState.Obsticle)
-                            output = "Stuck on an obsticle";
+                            output = AILOC.Remove + AILOC.Obst;
                         else
                         {
                             switch (ControlOperator.DriveDest)
                             {
                                 case EDriveDest.FromLastDestination:
-                                    output = "Driving from destination";
+                                    output = AILOC.Gnd_MoveFrom + AILOC.Destination;
                                     break;
                                 case EDriveDest.ToLastDestination:
-                                    output = "Driving to destination";
+                                    output = AILOC.Gnd_MoveTo + AILOC.Destination;
                                     break;
                                 case EDriveDest.ToBase:
-                                    output = "Driving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                    output = AILOC.Gnd_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                     break;
                                 case EDriveDest.ToMine:
-                                    output = "Driving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                    output = AILOC.Gnd_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                     break;
                                 default:
-                                    output = "Arrived at destination";
+                                    output = AILOC.AIArrived;
                                     break;
                             }
                         }
@@ -1689,11 +1695,11 @@ namespace TAC_AI.AI
             {
                 case AIType.Aegis:
                     if (lastEnemyGet)
-                        output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else if (theResource)
-                        output = "Protecting " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                        output = AILOC.Protect + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                     else
-                        output = "Looking for Ally";
+                        output = GUIAIManager.LOC_Protect_req.ToString().Replace("#", (JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString());
                     break;
                 case AIType.Assault:
                     if (DriveDestDirected == EDriveDest.ToBase)
@@ -1701,16 +1707,16 @@ namespace TAC_AI.AI
                         if (theBase)
                         {
                             if (WeaponState == AIWeaponState.Obsticle)
-                                output = "Removing Obstruction";
+                                output = AILOC.Remove + AILOC.Obst;
                             else if (recentSpeed > 8)
-                                output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                             else if (GetEnergyPercent() <= 0.95f)
-                                output = "Recharging batteries...";
+                                output = AILOC.Collect + AILOC.Energy;
                             else
-                                output = "Scouting for Enemies";
+                                output = AILOC.SearchFor + AILOC.Enemy;
                         }
                         else
-                            output = "Cannot find base!";
+                            output = GUIAIManager.LOC_Battery_req;
                     }
                     else
                     {
@@ -1718,13 +1724,13 @@ namespace TAC_AI.AI
                         {
                             if (lastEnemyGet)
                             {
-                                output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                                output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                             }
                             else
-                                output = "Moving out to enemy";
+                                output = AILOC.Gen_MoveTo + AILOC.Enemy;
                         }
                         else
-                            output = "Scouting for Enemies";
+                            output = GUIAIManager.LOC_Scout_desc + "\n" + AILOC.SearchFor + AILOC.Enemy;
                     }
                     break;
                 case AIType.Energizer:
@@ -1733,18 +1739,18 @@ namespace TAC_AI.AI
                         if (theBase)
                         {
                             if (WeaponState == AIWeaponState.Obsticle)
-                                output = "Removing Obstruction";
+                                output = AILOC.Remove + AILOC.Obst;
                             else if (recentSpeed > 8)
-                                output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                             else if (GetEnergyPercent() <= 0.95f)
-                                output = "Recharging batteries...";
+                                output = AILOC.Collect + AILOC.Energy;
                             else
-                                output = "Waiting for charge request...";
+                                output = GUIAIManager.LOC_Charger_desc + "\n" + AILOC.SearchFor + AILOC.Ally + AILOC.Energy + AILOC.Request;
                         }
                         else
                         {
                             cantDo = true;
-                            output = "No Charging Base!";
+                            output = GUIAIManager.LOC_Battery_req;
                         }
                     }
                     else
@@ -1752,14 +1758,14 @@ namespace TAC_AI.AI
                         if (theResource)
                         {
                             if (WeaponState == AIWeaponState.Obsticle)
-                                output = "Removing Obstruction";
+                                output = AILOC.Remove + AILOC.Obst;
                             else if (recentSpeed > 8)
-                                output = "Requester " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                output = AILOC.Gen_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                             else
-                                output = "Charging Ally";
+                                output = AILOC.Giving + AILOC.Energy;
                         }
                         else
-                            output = "Waiting for charge request...";
+                            output = GUIAIManager.LOC_Charger_desc + "\n" + AILOC.SearchFor + AILOC.Ally;
                     }
                     break;
                 case AIType.Escort:
@@ -1767,29 +1773,29 @@ namespace TAC_AI.AI
                     {
                         case AIDriverType.Astronaut:
                             if (lastEnemyGet)
-                                output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                                output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                             else
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Removing Obstruction";
+                                    output = AILOC.Remove + AILOC.Obst;
                                 else
                                 {
                                     switch (ControlOperator.DriveDest)
                                     {
                                         case EDriveDest.FromLastDestination:
-                                            output = "Moving from Player";
+                                            output = AILOC.Gen_MoveFrom + AILOC.Player;
                                             break;
                                         case EDriveDest.ToLastDestination:
-                                            output = "Moving to Player";
+                                            output = AILOC.Gen_MoveTo + AILOC.Player;
                                             break;
                                         case EDriveDest.ToBase:
-                                            output = "Moving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                            output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                             break;
                                         case EDriveDest.ToMine:
-                                            output = "Moving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                            output = AILOC.Gen_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                             break;
                                         default:
-                                            output = "Floating Escort";
+                                            output = GUIAIManager.LOC_Space_desc + "\n" + GUIAIManager.LOC_Escort_desc;
                                             break;
                                     }
                                 }
@@ -1797,7 +1803,7 @@ namespace TAC_AI.AI
                             break;
                         case AIDriverType.Pilot:
                             if (lastEnemyGet)
-                                output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                                output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                             else
                             {
                                 if (MovementController is AIControllerAir air)
@@ -1805,30 +1811,30 @@ namespace TAC_AI.AI
                                     if (air.Grounded)
                                     {
                                         cantDo = true;
-                                        output = "Can't takeoff, Too damaged / parts missing";
+                                        output = AILOC.Fly_Grounded;
                                     }
                                     else
                                     {
                                         if (WeaponState == AIWeaponState.Obsticle)
-                                            output = "Crashed";
+                                            output = AILOC.Fly_Crashed;
                                         else
                                         {
                                             switch (ControlOperator.DriveDest)
                                             {
                                                 case EDriveDest.FromLastDestination:
-                                                    output = "Flying from Player";
+                                                    output = AILOC.Fly_MoveFrom + AILOC.Player;
                                                     break;
                                                 case EDriveDest.ToLastDestination:
-                                                    output = "Flying to Player";
+                                                    output = AILOC.Fly_MoveTo + AILOC.Player;
                                                     break;
                                                 case EDriveDest.ToBase:
-                                                    output = "Flying to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                                    output = AILOC.Fly_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                                     break;
                                                 case EDriveDest.ToMine:
-                                                    output = "Flying to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                                    output = AILOC.Fly_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                                     break;
                                                 default:
-                                                    output = "Flying Escort";
+                                                    output = GUIAIManager.LOC_Air_desc + "\n" + GUIAIManager.LOC_Escort_desc;
                                                     break;
                                             }
                                         }
@@ -1840,29 +1846,29 @@ namespace TAC_AI.AI
                             break;
                         case AIDriverType.Sailor:
                             if (lastEnemyGet)
-                                output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                                output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                             else
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Stuck & Beached";
+                                    output = AILOC.Remove + AILOC.Obst;
                                 else
                                 {
                                     switch (ControlOperator.DriveDest)
                                     {
                                         case EDriveDest.FromLastDestination:
-                                            output = "Sailing from Player";
+                                            output = AILOC.Sea_MoveFrom + AILOC.Player;
                                             break;
                                         case EDriveDest.ToLastDestination:
-                                            output = "Sailing to Player";
+                                            output = AILOC.Sea_MoveTo + AILOC.Player;
                                             break;
                                         case EDriveDest.ToBase:
-                                            output = "Sailing to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                            output = AILOC.Sea_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                             break;
                                         case EDriveDest.ToMine:
-                                            output = "Sailing to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                            output = AILOC.Sea_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                             break;
                                         default:
-                                            output = "Sailing Escort";
+                                            output = GUIAIManager.LOC_Water_desc + "\n" + GUIAIManager.LOC_Escort_desc;
                                             break;
                                     }
                                 }
@@ -1870,29 +1876,29 @@ namespace TAC_AI.AI
                             break;
                         default:
                             if (lastEnemyGet)
-                                output = "Fighting " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                                output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                             else
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Stuck on an obsticle";
+                                    output = AILOC.Remove + AILOC.Obst;
                                 else
                                 {
                                     switch (ControlOperator.DriveDest)
                                     {
                                         case EDriveDest.FromLastDestination:
-                                            output = "Driving from Player";
+                                            output = AILOC.Gnd_MoveFrom + AILOC.Player;
                                             break;
                                         case EDriveDest.ToLastDestination:
-                                            output = "Driving to Player";
+                                            output = AILOC.Gnd_MoveTo + AILOC.Player;
                                             break;
                                         case EDriveDest.ToBase:
-                                            output = "Driving to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                            output = AILOC.Gnd_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                             break;
                                         case EDriveDest.ToMine:
-                                            output = "Driving to " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                                            output = AILOC.Gnd_MoveTo + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                                             break;
                                         default:
-                                            output = "Land Escort";
+                                            output = GUIAIManager.LOC_Tank_desc + "\n" + GUIAIManager.LOC_Escort_desc;
                                             break;
                                     }
                                 }
@@ -1904,27 +1910,29 @@ namespace TAC_AI.AI
                     if (!AllMT)
                     {
                         if ((bool)theResource?.tank)
-                            output = "Copying Player";
+                            output = AILOC.Mimic + AILOC.Player;
                         else
                         {
                             cantDo = true;
-                            output = "Searching for Player";
+                            output = AILOC.SearchFor + AILOC.Player;
                         }
                     }
                     else
                     {
                         if ((bool)theResource?.tank)
-                            output = "Copying " + (theResource.name.NullOrEmpty() ? "unknown" : theResource.name);
+                            output = AILOC.Mimic + (theResource.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theResource.name);
                         else
                         {
                             cantDo = true;
-                            output = "Searching for Ally";
+                            output = AILOC.SearchFor + AILOC.Ally;
                         }
                     }
                     break;
                 case AIType.MTStatic:
                     if (AttackEnemy)
+                    {
                         output = "Weapons Active";
+                    }
                     else
                         output = "Weapons Primed";
                     break;
@@ -1932,12 +1940,12 @@ namespace TAC_AI.AI
                     if ((bool)lastEnemyGet)
                     {
                         if (AttackEnemy)
-                            output = "Shooting at " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                            output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                         else
-                            output = "Aiming at " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                            output = AILOC.FaceTowards + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     }
                     else
-                        output = "Face the Danger";
+                        output = GUIAIManager.LOC_Turret_desc;
                     break;
                 case AIType.Prospector:
                     if (DriveDestDirected == EDriveDest.ToBase)
@@ -1945,16 +1953,16 @@ namespace TAC_AI.AI
                         if ((bool)theBase)
                         {
                             if (WeaponState == AIWeaponState.Obsticle)
-                                output = "Removing Obstruction";
+                                output = AILOC.Remove + AILOC.Obst;
                             else if (recentSpeed > 8)
-                                output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                             else
-                                output = "Unloading resources...";
+                                output = AILOC.Giving + AILOC.Cargo;
                         }
                         else
                         {
                             cantDo = true;
-                            output = "No Receiver Base!";
+                            output = GUIAIManager.LOC_Miner_req;
                         }
                     }
                     else
@@ -1965,17 +1973,17 @@ namespace TAC_AI.AI
                             if (recentSpeed > 8)
                             {
                                 if (!CT.Any())
-                                    output = "Going to remove rocks";
+                                    output = AILOC.Gen_MoveTo + "rock";
                                 else
-                                    output = "Going to dig " + StringLookup.GetItemName(theResource.m_ItemType); //theResource.name;
+                                    output = AILOC.Gen_MoveTo + StringLookup.GetItemName(theResource.m_ItemType); //theResource.name;
                                                                                                                  //StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                             }
                             else
                             {
                                 if (!CT.Any())
-                                    output = "Clearing rocks";
+                                    output = AILOC.Collect + "rock";
                                 else
-                                    output = "Mining " + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
+                                    output = AILOC.Collect + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
                                                                                                           //output = "Mining " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                             }
                         }
@@ -1983,10 +1991,11 @@ namespace TAC_AI.AI
                         {
                             if (ActionPause > 0)
                             {
-                                output = "Reversing for " + ActionPause + "...";
+                                output = "Reversing [" + ActionPause + "]...";
                             }
                             else
-                                output = "No resources in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
+                                output = GUIAIManager.LOC_Miner_desc.ToString().Replace("#", (JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString())
+                                    + "\nNo resources in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + "m";
                         }
                     }
                     break;
@@ -1996,16 +2005,16 @@ namespace TAC_AI.AI
                         if ((bool)theBase)
                         {
                             if (WeaponState == AIWeaponState.Obsticle)
-                                output = "Removing Obstruction";
+                                output = AILOC.Remove + AILOC.Obst;
                             else if (recentSpeed > 8)
-                                output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                             else
-                                output = "Unloading blocks...";
+                                output = AILOC.Giving + AILOC.Cargo;
                         }
                         else
                         {
                             cantDo = true;
-                            output = "No Collection Base!";
+                            output = GUIAIManager.LOC_Collect_req;
                         }
                     }
                     else
@@ -2014,24 +2023,25 @@ namespace TAC_AI.AI
                         {
                             BlockTypes BT = theResource.block.BlockType;
                             if (WeaponState == AIWeaponState.Obsticle)
-                                output = "Removing Obstruction";
+                                output = AILOC.Remove + AILOC.Obst;
                             else if (recentSpeed > 8)
                             {
                                 if (BT == BlockTypes.GSOAIController_111)
-                                    output = "Fetching unknown block";
+                                    output = AILOC.Gen_MoveTo + "block";
                                 else
-                                    output = "Fetching " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Block, (int)BT));
+                                    output = AILOC.Gen_MoveTo + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Block, (int)BT));
                             }
                             else
                             {
                                 if (BT == BlockTypes.GSOAIController_111)
-                                    output = "Grabbing unknown block";
+                                    output = AILOC.Collect + "block";
                                 else
-                                    output = "Grabbing " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Block, (int)BT));
+                                    output = AILOC.Collect + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Block, (int)BT));
                             }
                         }
                         else
-                            output = "No blocks in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
+                            output = GUIAIManager.LOC_Miner_desc.ToString().Replace("#", (JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString()) 
+                                +"\nNo blocks in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + "m";
                     }
                     break;
             }
@@ -2065,16 +2075,16 @@ namespace TAC_AI.AI
                             if ((bool)theBase)
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Removing Obstruction";
+                                    output = AILOC.Remove + AILOC.Obst;
                                 else if (recentSpeed > 8)
-                                    output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                    output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                 else
-                                    output = "Unloading resources...";
+                                    output = AILOC.Giving + AILOC.Cargo;
                             }
                             else
                             {
                                 cantDo = true;
-                                output = "No Receiver Base!";
+                                output = GUIAIManager.LOC_Miner_req;
                             }
                         }
                         else
@@ -2085,22 +2095,23 @@ namespace TAC_AI.AI
                                 if (recentSpeed > 8)
                                 {
                                     if (CT.Any())
-                                        output = "Going to remove rocks";
+                                        output = AILOC.Gen_MoveTo + "rock";
                                     else
-                                        output = "Going to dig " + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
+                                        output = AILOC.Gen_MoveTo + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
                                                                                                                     //StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                                 }
                                 else
                                 {
                                     if (CT.Any())
-                                        output = "Clearing rocks";
+                                        output = AILOC.Collect + "rock";
                                     else
-                                        output = "Mining " + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
+                                        output = AILOC.Collect + StringLookup.GetItemName(theResource.m_ItemType);//theResource.name;
                                                                                                               //output = "Mining " + StringLookup.GetItemName(new ItemTypeInfo(ObjectTypes.Chunk, (int)CT));
                                 }
                             }
                             else
-                                output = "No resources in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
+                                output = GUIAIManager.LOC_Miner_desc.ToString().Replace("#", (JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString())
+                                    + "\nNo resources in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + "m";
                         }
                     }
                     break;
@@ -2114,16 +2125,16 @@ namespace TAC_AI.AI
                             if ((bool)theBase)
                             {
                                 if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Removing Obstruction";
+                                    output = AILOC.Remove + AILOC.Obst;
                                 else if (recentSpeed > 8)
-                                    output = "Returning to " + (theBase.name.NullOrEmpty() ? "unknown" : theBase.name);
+                                    output = AILOC.Gen_MoveTo + (theBase.name.NullOrEmpty() ? AILOC.UnknownUnnamed : theBase.name);
                                 else
-                                    output = "Unloading blocks...";
+                                    output = AILOC.Giving + AILOC.Cargo;
                             }
                             else
                             {
                                 cantDo = true;
-                                output = "No Collection Base!";
+                                output = GUIAIManager.LOC_Collect_req;
                             }
                         }
                         else
@@ -2132,33 +2143,34 @@ namespace TAC_AI.AI
                             {
                                 BlockTypes BT = theResource.block.BlockType;
                                 if (WeaponState == AIWeaponState.Obsticle)
-                                    output = "Removing Obstruction";
+                                    output = AILOC.Remove + AILOC.Obst;
                                 else if (recentSpeed > 8)
                                 {
                                     if (BT == BlockTypes.GSOAIController_111)
-                                        output = "Fetching unknown block";
+                                        output = AILOC.Gen_MoveTo + "block";
                                     else
-                                        output = "Fetching " + StringLookup.GetItemName(theResource.m_ItemType);
+                                        output = AILOC.Gen_MoveTo + StringLookup.GetItemName(theResource.m_ItemType);
                                 }
                                 else
                                 {
                                     if (BT == BlockTypes.GSOAIController_111)
-                                        output = "Grabbing unknown block";
+                                        output = AILOC.Collect + "block";
                                     else
-                                        output = "Grabbing " + StringLookup.GetItemName(theResource.m_ItemType);
+                                        output = AILOC.Collect + StringLookup.GetItemName(theResource.m_ItemType);
                                 }
                             }
                             else
-                                output = "No blocks in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + " meters";
+                                output = GUIAIManager.LOC_Miner_desc.ToString().Replace("#", (JobSearchRange + AIGlobals.FindItemScanRangeExtension).ToString())
+                                    + "\nNo blocks in " + (JobSearchRange + AIGlobals.FindItemScanRangeExtension) + "m";
                         }
                     }
                     break;
                 case EnemyAttitude.OnRails:
                     if (lastEnemyGet)
-                        output = "Enemy in range = " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.Fighting + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
                     {
-                        output = "Script Commanded";
+                        output = ">SCRIPT<";
                     }
                     break;
                 case EnemyAttitude.NPCBaseHost:
@@ -2201,27 +2213,27 @@ namespace TAC_AI.AI
             {
                 case EAttackMode.Safety:
                     if (BlockedLineOfSight)
-                        output = "Hiding from Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.HideFrom + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else if (ControlCore.DriveDest == EDriveDest.ToLastDestination)
-                        output = "Moving to " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.Gen_MoveTo + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
-                        output = "Running from " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.Gen_MoveFrom + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     break;
                 case EAttackMode.Ranged:
                     if (BlockedLineOfSight)
-                        output = "Lining up on Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.FaceTowards + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else if (ControlCore.DriveDest == EDriveDest.ToLastDestination)
-                        output = "Closing in on Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.Gen_MoveTo + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
-                        output = "Spacing from Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.Gen_MoveFrom + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     break;
                 default:
                     if (BlockedLineOfSight)
-                        output = "Finding Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.SearchFor + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else if (ControlCore.DriveDest == EDriveDest.ToLastDestination)
-                        output = "Moving to Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.Gen_MoveTo + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     else
-                        output = "Moving from Target " + (lastEnemyGet.name.NullOrEmpty() ? "unknown" : lastEnemyGet.name);
+                        output = AILOC.CombatOperator + AILOC.Gen_MoveFrom + (lastEnemyGet.name.NullOrEmpty() ? AILOC.UnknownUnnamed : lastEnemyGet.name);
                     break;
             }
         }
@@ -2812,7 +2824,7 @@ namespace TAC_AI.AI
                         if (!tank.IsAnchored)
                         {
                             DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Setting camp!");
-                            TryInsureAnchor();
+                            TryInsureAutoAnchor();
                         }
                     }
                 }
@@ -2952,7 +2964,7 @@ namespace TAC_AI.AI
                         if (!tank.IsAnchored && anchorAttempts <= AIGlobals.MaxAnchorAttempts)
                         {
                             DebugTAC_AI.Log(KickStart.ModID + ": AI " + tank.name + ":  Setting camp!");
-                            TryInsureAnchor();
+                            TryInsureAutoAnchor();
                             anchorAttempts++;
                         }
                     }
@@ -5231,7 +5243,20 @@ namespace TAC_AI.AI
         // ----------------------------  Anchor Management  ---------------------------- 
 
         private static MethodInfo MI = typeof(TechAnchors).GetMethod("ConfigureJoint", BindingFlags.NonPublic | BindingFlags.Instance);
-        public void TryInsureAnchor()
+        /// <summary>
+        /// Anchor done by automatic reasoning
+        /// </summary>
+        public void TryInsureAutoAnchor()
+        {
+            if (!tank.IsAnchored && CanAnchorNow)
+            {
+                AnchorState = AIAnchorState.AnchorAuto;
+            }
+        }
+        /// <summary>
+        /// Anchor done by manual reasoning - should not unanchor automatically afterwards
+        /// </summary>
+        public void TryInsureManualAnchor()
         {
             if (!tank.IsAnchored && CanAnchorNow)
             {

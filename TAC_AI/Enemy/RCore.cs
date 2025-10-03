@@ -1119,7 +1119,7 @@ namespace TAC_AI.AI.Enemy
             {
                 newMind.StartedAnchored = true;
                 newMind.EvilCommander = EnemyHandling.Stationary;
-                helper.TryInsureAnchor();
+                helper.TryInsureManualAnchor();
                 helper.AnchorIgnoreChecks();
             }
             if (newMind.CommanderSmarts > EnemySmarts.Meh)

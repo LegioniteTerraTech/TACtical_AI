@@ -177,7 +177,7 @@ namespace TAC_AI.AI.AlliedOperations
                     if (tank.Anchors.NumIsAnchored == 0 && helper.CanAttemptAnchor)
                     {
                         AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                        helper.TryInsureAnchor();
+                        helper.TryInsureAutoAnchor();
                     }
                 }
             }
@@ -199,7 +199,7 @@ namespace TAC_AI.AI.AlliedOperations
             if (helper.CanAutoAnchor && tank.Anchors.NumIsAnchored == 0)
             {
                 AIECore.AIMessage(tank, ref hasMessaged, tank.name + ":  Setting camp!");
-                helper.TryInsureAnchor();
+                helper.TryInsureAutoAnchor();
             }
         }
     }

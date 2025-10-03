@@ -49,7 +49,7 @@ namespace TAC_AI.AI.Enemy
                         {
                             if (helper.CanAttemptAnchor)
                             {
-                                helper.TryInsureAnchor();
+                                helper.TryInsureAutoAnchor();
                             }
                             else
                             {   //Try to find new spot

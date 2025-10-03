@@ -82,7 +82,7 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirector WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
-            Helper.TryInsureAnchor();
+            Helper.TryInsureAutoAnchor();
 
             if (Helper.AIAlign == AIAlignment.Player)// Allied
             {
@@ -108,7 +108,7 @@ namespace TAC_AI.AI
                 DebugTAC_AI.Assert(true, KickStart.ModID + ": AI " + tankName + ":  FIRED DriveDirectorRTS WITHOUT THE REQUIRED TankAIHelper MODULE!!!");
                 return;
             }
-            Helper.TryInsureAnchor();
+            Helper.TryInsureAutoAnchor();
 
             if (Helper.AIAlign == AIAlignment.Player)// Allied
             {

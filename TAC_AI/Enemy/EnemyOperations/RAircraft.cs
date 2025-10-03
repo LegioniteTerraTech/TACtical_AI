@@ -205,7 +205,7 @@ namespace TAC_AI.AI.Enemy.EnemyOperations
                         {
                             if (helper.CanAttemptAnchor)
                             {
-                                helper.TryInsureAnchor();
+                                helper.TryInsureAutoAnchor();
                             }
                             else
                             {   //Try to find new spot
