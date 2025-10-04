@@ -1035,6 +1035,13 @@ namespace TAC_AI
             { LocalisationEnums.Languages.Japanese,
                 "アンカーを外して移動する"},
         });
+        internal static LocExtStringMod LOC_UnAnchorAuto_desc = new LocExtStringMod(new Dictionary<LocalisationEnums.Languages, string>()
+        {
+            { LocalisationEnums.Languages.US_English,
+                "Is Auto-Anchored!" },
+            { LocalisationEnums.Languages.Japanese,
+                "自動的にアンカーされます!"},
+        });
         private static void GUIAnchorButton()
         {
             if (!lastTank.tank.IsAnchored)//(lastTank.PlayerAllowAutoAnchoring)
@@ -1062,7 +1069,9 @@ namespace TAC_AI
                     }
                 }
             }
-            else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_UnAnchor, LOC_UnAnchor_desc), AltUI.ButtonGreen))
+            else if (GUI.Button(new Rect(20, 265, 160, 30), new GUIContent(LOC_UnAnchor, 
+                lastTank.IsAutoAnchored ? LOC_UnAnchorAuto_desc : LOC_UnAnchor_desc),
+                lastTank.IsAutoAnchored ? AltUI.ButtonGreenActive : AltUI.ButtonGreen))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
                 if (ManNetwork.IsHost)
@@ -1102,7 +1111,10 @@ namespace TAC_AI
                     }
                 }
             }
-            else if (GUILayout.Button(new GUIContent(LOC_UnAnchor, LOC_UnAnchor_desc), AltUI.ButtonGreen, GLH))
+            else if (GUILayout.Button(new GUIContent(LOC_UnAnchor, 
+                lastTank.IsAutoAnchored ? LOC_UnAnchorAuto_desc : LOC_UnAnchor_desc),
+                lastTank.IsAutoAnchored ? AltUI.ButtonGreenActive : AltUI.ButtonGreen, 
+                GLH))
             {
                 ManSFX.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimCrateUnlock);
                 if (ManNetwork.IsHost)

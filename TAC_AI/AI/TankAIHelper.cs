@@ -1934,7 +1934,7 @@ namespace TAC_AI.AI
                         output = "Weapons Active";
                     }
                     else
-                        output = "Weapons Primed";
+                        output = GUIAIManager.LOC_Static_desc;
                     break;
                 case AIType.MTTurret:
                     if ((bool)lastEnemyGet)
