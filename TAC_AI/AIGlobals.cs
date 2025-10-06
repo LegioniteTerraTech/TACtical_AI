@@ -784,22 +784,51 @@ namespace TAC_AI
                 return NP_Types.NonNPT;
         }
 
-
-        public static int GetRandomBaseTeam(bool forceValidTeam = false)
+        public enum EDebugSpawnOverride
         {
-            if (DebugRawTechSpawner.CanOpenDebugSpawnMenu && !forceValidTeam)
+            Randomized,
+            Ally,
+            SubNeutral,
+            DefaultEnemy,
+            Player,
+        }
+        public static EDebugSpawnOverride SpawnDebugOverride
+        {
+            get
             {
-                bool shift = Input.GetKey(KeyCode.LeftShift);
-                bool ctrl = Input.GetKey(KeyCode.LeftControl);
-                if (ctrl)
+                if (Input.GetKey(KeyCode.LeftAlt))
+                    return EDebugSpawnOverride.Player;
+                else if (Input.GetKey(KeyCode.LeftControl))
                 {
-                    if (shift)
-                        return AIGlobals.DefaultEnemyTeam;
+                    if (Input.GetKey(KeyCode.LeftShift))
+                        return EDebugSpawnOverride.DefaultEnemy;
                     else
-                        return GetRandomAllyBaseTeam();
+                        return EDebugSpawnOverride.Ally;
                 }
-                else if (shift)
-                    return GetRandomSubNeutralBaseTeam();
+                else if (Input.GetKey(KeyCode.LeftShift))
+                    return EDebugSpawnOverride.SubNeutral;
+                else
+                    return EDebugSpawnOverride.Randomized;
+            }
+        }
+        public static int GetRandomBaseTeam(bool debugSpawned, bool forceValidTeam)
+        {
+            if (debugSpawned && !forceValidTeam)
+            {
+                switch (SpawnDebugOverride)
+                {
+                    case EDebugSpawnOverride.Ally:
+                        return GetRandomAllyBaseTeam();
+                    case EDebugSpawnOverride.SubNeutral:
+                        return GetRandomSubNeutralBaseTeam();
+                    case EDebugSpawnOverride.DefaultEnemy:
+                        return DefaultEnemyTeam;
+                    case EDebugSpawnOverride.Player:
+                        return ManPlayer.inst.PlayerTeam;
+                    case EDebugSpawnOverride.Randomized:
+                    default:
+                        break;
+                }
             }
 
             if (UnityEngine.Random.Range(0f, 1f) <= NonHostileBaseChance)
@@ -1079,7 +1108,6 @@ namespace TAC_AI
                                         DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] Stored, tracked, registered team");
                                     else
                                     {
-                                        ST = FindStoredTech(item.ID, WP.TileCoord, true);
                                         if (ST != null)
                                             DebugTAC_AI.Info(KickStart.ModID + ": ID [" + item.ID + "] JSON Stored, tracked, registered team");
                                         else
@@ -1195,8 +1223,6 @@ namespace TAC_AI
                     tech.visible.RemoveFromGame();
                 }
             }
-            if (tech != null)
-                throw new InvalidOperationException("Stupid Purge didn't do shit");
         }
         /// <summary>
         /// Remove a Tech from existance
@@ -1278,7 +1304,10 @@ namespace TAC_AI
                     if (TV != null)
                     {
                         ManVisible.inst.ObliterateTrackedVisibleFromWorld(TV);
-                        DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name);
+                        if (ManTechs.inst.IterateTechs().Any(x => x != null &&x.visible.ID == HostVisibleID))
+                            throw new InvalidOperationException("Purge didn't work");
+                        else
+                            DebugTAC_AI.Log(KickStart.ModID + ": Purge - PURGED " + name);
                     }
                     else
                     {

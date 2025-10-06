@@ -3475,6 +3475,7 @@ namespace TAC_AI.AI
                     case AIAnchorState.Anchored:
                         break;
                     case AIAnchorState.Anchor:
+                    case AIAnchorState.AnchorAuto:
                     case AIAnchorState.AnchorStaticAI:
                         DoAnchor(false);
                         break;

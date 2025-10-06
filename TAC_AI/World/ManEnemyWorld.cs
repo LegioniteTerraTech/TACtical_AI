@@ -1195,9 +1195,10 @@ namespace TAC_AI.World
                         EP.teamFounder = null;
                     EP.EMUs.Remove(EMU);
                 }
+                ManVisible.inst.StopTrackingVisible(tech.ID);
             }
             else
-                throw new NullReferenceException("Unit " + tech.Name + " exists yet has no team.");
+                throw new NullReferenceException("Unit " + tech.Name + " exists yet has NO TEAM when called in ManEnemyWorld.StopManagingUnit().");
         }
         public static bool UnhookUnitFromTile(NP_TechUnit tech)
         {

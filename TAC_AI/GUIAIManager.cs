@@ -1147,6 +1147,7 @@ namespace TAC_AI
             string labelSet = "<color=#ffffffff>" + Label + (LabelVal == 5000f ? "Max" : LabelVal.ToString()) + "</color>";
             if (SelectedFieldControlName == Label)
             {
+                windowTimer = InteractTimeSet;
                 setValInt = Mathf.RoundToInt(GUI.HorizontalSlider(new Rect(25, heightPos, 150, 30), defaultState,
                     defaultState, limit, AltUI.ScrollHorizontalTransparent, AltUI.ScrollThumbTransparent));
                 GUI.SetNextControlName(SelectedFieldControlName);
@@ -1192,6 +1193,7 @@ namespace TAC_AI
                     ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Open);
                     handoffControl = true;
                     GUI.FocusControl(SelectedFieldControlName);
+                    windowTimer = InteractTimeSet;
                 }
             }
             else
@@ -1207,6 +1209,7 @@ namespace TAC_AI
                     selectedOncePos = Input.mousePosition;
                     //ManSFX.inst.PlayUISFX(ManSFX.UISfxType.Select);
                     //DebugTAC_AI.Log("SL - FocusedControlName: " + GUI.GetNameOfFocusedControl());
+                    windowTimer = InteractTimeSet;
                 }
                 else
                 {
@@ -1914,6 +1917,7 @@ namespace TAC_AI
             windowTimer = 0.25f;
             GUIWindow.SetActive(true);
         }
+        private const float InteractTimeSet = 2.25f;
         internal static void LaunchSubMenuClickable(bool centerOnMouse = false)
         {
             if (!KickStart.EnableBetterAI)
@@ -1937,7 +1941,7 @@ namespace TAC_AI
             if (centerOnMouse)
                 windowTimer = 0.25f;
             else
-                windowTimer = 2.25f;
+                windowTimer = InteractTimeSet;
             GUIWindow.SetActive(true);
         }
         internal static void CloseSubMenuClickable()

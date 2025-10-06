@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
-using UnityEngine.UI;
 using System.Reflection;
-using TerraTechETCUtil;
+using HarmonyLib;
 using TAC_AI.AI;
 using TAC_AI.AI.Enemy;
 using TAC_AI.Templates;
 using TAC_AI.World;
-using HarmonyLib;
+using TerraTechETCUtil;
+using UnityEngine;
+using UnityEngine.UI;
+using static WobblyLaser;
 
 namespace TAC_AI
 {
@@ -345,6 +346,9 @@ namespace TAC_AI
                 {
                     case RadarTypes.Base:
                     case RadarTypes.Vehicle:
+                        if (trackedVisible.RadarTeamID == ManSpawn.NeutralTeam)
+                        {
+                        }
                         if (ManBaseTeams.IsFriendlyBaseTeam(trackedVisible.RadarTeamID))
                         {
                             iconColour = AIGlobals.FriendlyColor;

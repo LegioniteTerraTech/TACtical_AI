@@ -642,7 +642,7 @@ namespace TAC_AI.Templates
                 RTF.Offset = RawTechOffset.OffGround60Meters;
                 RTF.Terrain = BaseTerrain.Space;
                 RTF.Disarmed = unProvoked;
-                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), out Tank tech, RTF);
+                worked = RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(false, false), out Tank tech, RTF);
                 if (worked)
                 {
                     AIWiki.hintSpace.Show();
@@ -660,7 +660,7 @@ namespace TAC_AI.Templates
             RTF.Terrain = BaseTerrain.Space;
             RTF.Offset = RawTechOffset.OffGround60Meters;
             RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
-            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(), RTF, true);
+            return RawTechLoader.SpawnRandomTechAtPosHead(pos, forwards, AIGlobals.GetRandomBaseTeam(false, false), RTF, true);
         }
 
         public static void TrySpawnTraderTroll(Vector3 pos)

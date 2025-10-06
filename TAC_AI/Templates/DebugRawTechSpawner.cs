@@ -799,7 +799,7 @@ namespace TAC_AI.Templates
                 RTF.Terrain = BaseTerrain.Any;
                 RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                 var temp = RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), 
-                    AIGlobals.GetRandomBaseTeam(), RTF, true);
+                    AIGlobals.GetRandomBaseTeam(true, false), RTF, true);
                 if (temp == null)
                     AIGlobals.PopupEnemyInfo("Fallback Error", WorldPosition.FromScenePosition(GetPlayerPos()));
             }
@@ -812,7 +812,7 @@ namespace TAC_AI.Templates
                 RTF.Purpose = BasePurpose.Harvesting;
                 RTF.MaxPrice = KickStart.EnemySpawnPriceMatching;
                 var temp = RawTechLoader.SpawnRandomTechAtPosHead(GetPlayerPos(), GetPlayerForward(), 
-                    AIGlobals.GetRandomBaseTeam(), RTF, true);
+                    AIGlobals.GetRandomBaseTeam(true, false), RTF, true);
                 if (temp == null)
                     AIGlobals.PopupEnemyInfo("Fallback Error", WorldPosition.FromScenePosition(GetPlayerPos()));
 
@@ -939,6 +939,24 @@ namespace TAC_AI.Templates
                     {
                         type = temp.Key;
                         clicked = true;
+                    }
+                    switch (AIGlobals.SpawnDebugOverride)
+                    {
+                        case AIGlobals.EDebugSpawnOverride.Ally:
+                            AltUI.Tooltip.GUITooltip(AIGlobals.FriendlyColor.ToRGBA255().ColorString("SPAWNING AS ALLY"));
+                            break;
+                        case AIGlobals.EDebugSpawnOverride.SubNeutral:
+                            AltUI.Tooltip.GUITooltip(AIGlobals.SubNeutralColor.ToRGBA255().ColorString("SPAWNING AS SUB-NEUTRAL"));
+                            break;
+                        case AIGlobals.EDebugSpawnOverride.DefaultEnemy:
+                            AltUI.Tooltip.GUITooltip(AIGlobals.EnemyColor.ToRGBA255().ColorString("SPAWNING AS DEFAULT ENEMY TEAM"));
+                            break;
+                        case AIGlobals.EDebugSpawnOverride.Player:
+                            AltUI.Tooltip.GUITooltip(AIGlobals.PlayerColor.ToRGBA255().ColorString("SPAWNING AS PLAYER"));
+                            break;
+                        case AIGlobals.EDebugSpawnOverride.Randomized:
+                        default:
+                            break;
                     }
                     HoriPosOff += ButtonWidth;
                 }
@@ -1080,7 +1098,7 @@ namespace TAC_AI.Templates
                 RTF = RawTechPopParams.Default;
                 RTF.IsPopulation = true;
                 RawTechLoader.BypassSpawnCheckOnce = true;
-                tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, RTF);
+                tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(true, false), val, RTF);
             }
             else
             {
@@ -1088,10 +1106,10 @@ namespace TAC_AI.Templates
                 {
                     RawTechLoader.BypassSpawnCheckOnce = true;
                     if (val.purposes.Contains(BasePurpose.Defense))
-                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, false);
+                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(true, false), val, false);
                     else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
-                        int team = AIGlobals.GetRandomBaseTeam();
+                        int team = AIGlobals.GetRandomBaseTeam(true, false);
                         /*
                         int index2;
                         BaseTemplate val2;
@@ -1115,17 +1133,17 @@ namespace TAC_AI.Templates
                         Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                     else
-                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(),GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, true);
+                        tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(),GetPlayerForward(), AIGlobals.GetRandomBaseTeam(true, false), val, true);
                 }
                 else
                 {
 
                     if (val.purposes.Contains(BasePurpose.Defense))
-                        RawTechLoader.SpawnBase(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, false);
+                        RawTechLoader.SpawnBase(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(true, false), val, false);
                     else if (val.purposes.Contains(BasePurpose.Headquarters))
                     {
                         int extraBB = 0;
-                        int team = AIGlobals.GetRandomBaseTeam();
+                        int team = AIGlobals.GetRandomBaseTeam(true, false);
                         /*
                         int index2;
                         BaseTemplate val2;
@@ -1150,7 +1168,7 @@ namespace TAC_AI.Templates
                         Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                     }
                     else
-                        tank = RawTechLoader.GetSpawnBase(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), val, true);
+                        tank = RawTechLoader.GetSpawnBase(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(true, false), val, true);
                 }
             }
             if (tank)
@@ -1171,7 +1189,7 @@ namespace TAC_AI.Templates
                     RTF.SpawnCharged = true;
                     RawTechLoader.BypassSpawnCheckOnce = true;
                     tank = RawTechLoader.SpawnMobileTechPrefab(GetPlayerPos(), GetPlayerForward(), 
-                        AIGlobals.GetRandomBaseTeam(), RawTechLoader.GetBaseTemplate(type), RTF);
+                        AIGlobals.GetRandomBaseTeam(true, false), RawTechLoader.GetBaseTemplate(type), RTF);
                 }
                 else
                 {
@@ -1179,10 +1197,10 @@ namespace TAC_AI.Templates
                     {
                         RawTechLoader.BypassSpawnCheckOnce = true;
                         if (val.purposes.Contains(BasePurpose.Defense))
-                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, false);
+                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(true, false), type, false);
                         else if (val.purposes.Contains(BasePurpose.Headquarters))
                         {
-                            int team = AIGlobals.GetRandomBaseTeam();
+                            int team = AIGlobals.GetRandomBaseTeam(true, false);
                             /*
                             SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
                             if (TempManager.techBases.TryGetValue(type2, out _))
@@ -1208,15 +1226,15 @@ namespace TAC_AI.Templates
                             Singleton.Manager<ManSFX>.inst.PlayMiscSFX(ManSFX.MiscSfxType.AnimHEPayTerminal);
                         }
                         else
-                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(), type, true);
+                            tank = RawTechLoader.SpawnBaseInstant(GetPlayerPos(), GetPlayerForward(), AIGlobals.GetRandomBaseTeam(true, false), type, true);
                     }
                     else
                     {
                         if (val.purposes.Contains(BasePurpose.Defense))
-                            RawTechLoader.SpawnBase(GetPlayerPos(), AIGlobals.GetRandomBaseTeam(), type, false);
+                            RawTechLoader.SpawnBase(GetPlayerPos(), AIGlobals.GetRandomBaseTeam(true, false), type, false);
                         else if (val.purposes.Contains(BasePurpose.Headquarters))
                         {
-                            int team = AIGlobals.GetRandomBaseTeam();
+                            int team = AIGlobals.GetRandomBaseTeam(true, false);
                             int extraBB = 0;
                             /*
                             SpawnBaseTypes type2 = RawTechLoader.GetEnemyBaseType(val.faction, BasePurpose.Defense, val.terrain);
@@ -1245,7 +1263,7 @@ namespace TAC_AI.Templates
                         }
                         else
                         {
-                            int team = AIGlobals.GetRandomBaseTeam();
+                            int team = AIGlobals.GetRandomBaseTeam(true, false);
                             int BB = RawTechLoader.SpawnBase(GetPlayerPos(), team, type, true);
                             ManBaseTeams.InsureBaseTeam(team).AddBuildBucks(BB);
                         }
@@ -1540,14 +1558,15 @@ namespace TAC_AI.Templates
                     {
                         if (ManWorld.inst.TileManager.IsTileAtPositionLoaded(item.Position))
                         {
-                            WorldTile WT = ManWorld.inst.TileManager.LookupTile(item.GetWorldPosition().TileCoord);
+                            WorldPosition WP = item.GetWorldPosition();
+                            WorldTile WT = ManWorld.inst.TileManager.LookupTile(WP.TileCoord);
                             if (WT.StoredVisiblesWaitingToLoad != null && WT.StoredVisiblesWaitingToLoad.Exists(x => x.m_ID == item.HostID))
                             {
                                 DebugTAC_AI.Info("  Waiting to load visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
                             }
                             else if (item.wasDestroyed || item.visible == null)
                             {
-                                ManSaveGame.StoredTech ST = AIGlobals.FindStoredTech(item.ID, item.GetWorldPosition().TileCoord, checkALLJSONTilesToo);
+                                ManSaveGame.StoredTech ST = AIGlobals.FindStoredTech(item.ID, WP.TileCoord, checkALLJSONTilesToo);
                                 if (ST != null)
                                 {
                                     if (ManBaseTeams.IsBaseTeamAny(item.TeamID))
@@ -1580,7 +1599,31 @@ namespace TAC_AI.Templates
                                 }
                             }
                             else
-                                DebugTAC_AI.Info("  Active Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                            {   // It might be in limbo???
+                                if (ManBaseTeams.IsBaseTeamAny(item.TeamID))
+                                {
+                                    if (ManTechs.inst.IterateTechs().Any(x => x.visible.ID == item.HostID))
+                                    {
+                                        DebugTAC_AI.Info("  Active Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed false");
+                                    }
+                                    else
+                                    {   // UNLOADED!?!
+                                        var ST = AIGlobals.FindStoredTech(item.ID, WP.TileCoord, false);
+                                        if (ST != null)
+                                            DebugTAC_AI.Info("  Unloaded Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed false");
+                                        else
+                                        {
+                                            if (ST != null)
+                                                DebugTAC_AI.Info("  JSON Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed false");
+                                            else
+                                            {
+                                                DebugTAC_AI.Info("  NULL Base Team Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);
+                                                ManVisible.inst.StopTrackingVisible(item.ID);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                         else
                             DebugTAC_AI.Info("  Unloaded Tech visible " + item.ID + ",  Team " + item.TeamID + ",  Destroyed " + item.wasDestroyed);

@@ -3312,7 +3312,7 @@ namespace TAC_AI.Templates
         {
             if (tank.IsPopulation || !tank.IsFriendly(tank.Team) || tank.Team == AIGlobals.LonerEnemyTeam || tank.Team == AIGlobals.DefaultEnemyTeam)
             {
-                int set = AIGlobals.GetRandomBaseTeam(true);
+                int set = AIGlobals.GetRandomBaseTeam(false, true);
                 DebugTAC_AI.Log(KickStart.ModID + ": Tech " + tank.name + " spawned team " + tank.Team + " that fights against themselves, setting to team " + set + " instead");
                 tank.SetTeam(set, false);
                 RemoveFromManPopIfNotLoner(tank);

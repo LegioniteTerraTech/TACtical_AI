@@ -219,11 +219,11 @@ namespace TAC_AI.World
                     case AIType.Escort:
                     case AIType.Aegis:
                     case AIType.Energizer:
-                        return (helper.tank.boundsCentreWorldNoCheck - GetScenePosition(helper)).WithinSquareXZ(helper.lastTechExtents * (1 + (helper.recentSpeed / 12)));
+                        return (helper.tank.boundsCentreWorldNoCheck.SetY(0) - GetScenePosition(helper).SetY(0)).WithinSquareXZ(helper.lastTechExtents * (1 + (helper.recentSpeed / 12)));
                     case AIType.Assault:
-                        return (helper.tank.boundsCentreWorldNoCheck - TargetPos.ScenePosition).WithinSquareXZ(helper.lastTechExtents * (1 + (helper.recentSpeed / 12)));
+                        return (helper.tank.boundsCentreWorldNoCheck.SetY(0) - TargetPos.ScenePosition.SetY(0)).WithinSquareXZ(helper.lastTechExtents * (1 + (helper.recentSpeed / 12)));
                     case AIType.Prospector:
-                        return Subject == null && (helper.tank.boundsCentreWorldNoCheck - GetScenePosition(helper)).WithinSquareXZ(helper.lastTechExtents * (1 + (helper.recentSpeed / 12)));
+                        return Subject == null && (helper.tank.boundsCentreWorldNoCheck.SetY(0) - GetScenePosition(helper).SetY(0)).WithinSquareXZ(helper.lastTechExtents * (1 + (helper.recentSpeed / 12)));
                     case AIType.Scrapper:
                         return Subject == null || helper.HeldBlock == Subject?.block;
                     case AIType.MTTurret:

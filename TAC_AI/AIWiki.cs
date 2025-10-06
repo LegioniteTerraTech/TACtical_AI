@@ -962,11 +962,13 @@ namespace TAC_AI
             new LocExtStringMod(AltUI.EnemyString("Rival Prospectors") + " have a " + AltUI.EnemyString("Red") + " eye icon above themselves.  " +
             "They will attack YOUR turf for resources if they need to!  " + AltUI.HintString("Send them packing!")), 12);
         internal static ExtUsageHint.UsageHint hintRival = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintSubNeutral",
-            new LocExtStringMod("<color=purple>Neutral Prospectors</color> have <color=purple>Purple</color> icons above them.  " +
+            new LocExtStringMod( AIGlobals.SubNeutralColor.ToRGBA255().ColorString("Neutral Prospectors") + " have " +
+                AIGlobals.SubNeutralColor.ToRGBA255().ColorString("Purple") + " icons above them.  " +
             "They will neither attack you or your enemies.  They will watch over passerby, but " +
             AltUI.HintString("feel free to guard your lands from them.")), 10);
         internal static ExtUsageHint.UsageHint hintAllied = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintAllied",
-            new LocExtStringMod("<color=green>Allied Prospectors</color> have <color=green>Green</color> icons above them.  " +
+            new LocExtStringMod(AIGlobals.FriendlyColor.ToRGBA255().ColorString("Allied Prospectors") + " have " +
+                AIGlobals.FriendlyColor.ToRGBA255().ColorString("Green") + " icons above them.  " +
             "They will help you " + AltUI.HighlightString("defend your turf") + " and will make no fuss."), 10);
         internal static ExtUsageHint.UsageHint hintSameTeam = new ExtUsageHint.UsageHint(KickStart.ModID, "AIGlobals.hintSameTeam",
             new LocExtStringMod(AltUI.HighlightString("Automated AI") + " on your team will automatically harvest and manage their resources.  " +
