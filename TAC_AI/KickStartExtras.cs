@@ -53,6 +53,7 @@ namespace TAC_AI
                     " adds multiple layers of depth and " + AltUI.EnemyString("difficulty") + " to TerraTech.  " +
                 AltUI.HintString("Best suited for prospecting veterans looking for a new challenge.")));
             }
+            KickStart.EnemyBlockDetachChance = Mathf.CeilToInt(Globals.inst.moduleDamageParams.detachMeterFillFactor * 25.0f);
             thisModConfig.BindConfig<KickStart>(null, "EnableBetterAI");
             thisModConfig.BindConfig<KickStart>(null, "RetreatHotkeySav");
             thisModConfig.BindConfig<KickStart>(null, "AIDodgeCheapness");
@@ -67,6 +68,7 @@ namespace TAC_AI
             thisModConfig.BindConfig<KickStart>(null, "AllowAISelfRepairInMP");
             thisModConfig.BindConfig<AIGlobals>(null, "AllowWeaponsDisarm2");
             thisModConfig.BindConfig<KickStart>(null, "LandEnemyOverrideChanceSav");
+            thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDetachChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyBlockDropChance");
             thisModConfig.BindConfig<KickStart>(null, "EnemyEradicators");
             thisModConfig.BindConfig<KickStart>(null, "EnemiesHaveCreativeInventory");
@@ -115,6 +117,7 @@ namespace TAC_AI
         }
         internal static void PushExtModConfigHandling()
         {
+            KickStart.SavedDefaultEnemyRecoveryRate = Globals.inst.moduleDamageParams.detachMeterFillFactor;
             KickStart.SavedDefaultEnemyFragility = Globals.inst.moduleDamageParams.detachMeterFillFactor;
 
             var thisModConfig = PushExtModConfigSetup();
@@ -155,6 +158,7 @@ namespace TAC_AI
         public static Nuterra.NativeOptions.OptionToggle painfulEnemies;
         public static Nuterra.NativeOptions.OptionRange diff;
         public static Nuterra.NativeOptions.OptionRange landEnemyChangeChance;
+        public static Nuterra.NativeOptions.OptionRange blockDetachChance;
         public static Nuterra.NativeOptions.OptionRange blockRecoveryChance;
         public static Nuterra.NativeOptions.OptionToggle permitEradication;
         public static Nuterra.NativeOptions.OptionToggle infEnemySupplies;
@@ -390,7 +394,21 @@ namespace TAC_AI
             displayEvents.onValueSaved.AddListener(() => { KickStart.DisplayEnemyEvents = displayEvents.SavedValue; });
             enemyMiners = new Nuterra.NativeOptions.OptionToggle("NPTs Can Mine", TACAIEnemies, KickStart.AllowEnemiesToMine);
             enemyMiners.onValueSaved.AddListener(() => { KickStart.AllowEnemiesToMine = enemyMiners.SavedValue; });
-            blockRecoveryChance = SuperNativeOptions.OptionRangeAutoDisplay("NPT Block Drop Chance", 
+
+            blockDetachChance = SuperNativeOptions.OptionRangeAutoDisplay("NPT Block Detach Chance",
+                TACAIEnemies, KickStart.EnemyBlockDetachChance, 0, 100, 10, (float value) => {
+                    if (value == 0)
+                        return "Never";
+                    if (value == 100)
+                        return "Highest";
+                    return Mathf.RoundToInt(value) + "%";
+                });
+            blockDetachChance.onValueSaved.AddListener(() => {
+                KickStart.EnemyBlockDetachChance = (int)blockDetachChance.SavedValue;
+                Globals.inst.moduleDamageParams.detachMeterFillFactor = (float)((float)KickStart.EnemyBlockDetachChance / 25.0f);
+            }); 
+            Globals.inst.moduleDamageParams.detachMeterFillFactor = (float)((float)KickStart.EnemyBlockDetachChance / 25.0f);
+            blockRecoveryChance = SuperNativeOptions.OptionRangeAutoDisplay("NPT Block Scavenge Chance", 
                 TACAIEnemies, KickStart.EnemyBlockDropChance, 0, 100, 10, (float value) => {
                     if (value == 0)
                         return "Never";
@@ -401,14 +419,9 @@ namespace TAC_AI
             blockRecoveryChance.onValueSaved.AddListener(() => {
                 KickStart.EnemyBlockDropChance = (int)blockRecoveryChance.SavedValue;
                 Globals.inst.m_BlockSurvivalChance = (float)((float)KickStart.EnemyBlockDropChance / 100.0f);
-
-                if (KickStart.EnemyBlockDropChance == 0)
-                {
-                    Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
-                }
-                else
-                    Globals.inst.moduleDamageParams.detachMeterFillFactor = KickStart.SavedDefaultEnemyFragility;
             });
+            Globals.inst.m_BlockSurvivalChance = (float)((float)KickStart.EnemyBlockDropChance / 100.0f);
+
             infEnemySupplies = new Nuterra.NativeOptions.OptionToggle("All NPTechs Cheat Blocks", TACAIEnemies, KickStart.EnemiesHaveCreativeInventory);
             infEnemySupplies.onValueSaved.AddListener(() => { KickStart.EnemiesHaveCreativeInventory = infEnemySupplies.SavedValue; });
 
@@ -603,10 +616,6 @@ namespace TAC_AI
                     KickStart.CatMode = copycat.SavedValue;
                 });*/
                 EnoughLocalTechsSanityCheck();
-            }
-            if (KickStart.EnemyBlockDropChance == 0)
-            {
-                Globals.inst.moduleDamageParams.detachMeterFillFactor = 0;// Make enemies drop no blocks!
             }
 
             if (KickStart.AirEnemiesSpawnRate == 0)

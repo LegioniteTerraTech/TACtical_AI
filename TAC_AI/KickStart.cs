@@ -77,6 +77,7 @@ namespace TAC_AI
         internal static int EnemyTeamTechLimit = 6;// Allow the bases plus 6 additional capacity of the AIs' choosing
 
         public static float SavedDefaultEnemyFragility;
+        public static float SavedDefaultEnemyRecoveryRate;
 
         public static int MaxEnemyWorldCapacity
         {
@@ -296,6 +297,7 @@ namespace TAC_AI
         // -50 means only the simpleton AI spawns
 
 
+        public static int EnemyBlockDetachChance = 40;
         public static int EnemyBlockDropChance = 40;
 
         public static bool WarnOnEnemyLock = true;

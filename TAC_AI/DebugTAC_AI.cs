@@ -131,6 +131,13 @@ namespace TAC_AI
                 return;
             UnityEngine.Debug.Log(e);
         }
+        internal static void Log(string message, Exception e)
+        {
+            if (!ShouldLog)
+                return;
+            UnityEngine.Debug.Log(message + " " + e);
+        }
+
 
         internal static void LogNet(string message)
         {

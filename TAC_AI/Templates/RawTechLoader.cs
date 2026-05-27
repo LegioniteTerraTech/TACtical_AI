@@ -1160,8 +1160,7 @@ namespace TAC_AI.Templates
             Tank theTech = null;
             try
             {
-               toSpawn.SpawnRawTech(pos, Team, forwards, filter.SnapTerrain,
-                    filter.SpawnCharged, filter.RandSkins, filter.ForceCompleted);
+                theTech = toSpawn.SpawnRawTech(pos, Team, forwards, filter.SnapTerrain, filter.SpawnCharged, filter.RandSkins, filter.ForceCompleted);
             }
             catch (Exception e)
             {
@@ -1205,12 +1204,28 @@ namespace TAC_AI.Templates
                 namesav.unprovoked = subNeutral;
             }
             */
-            if (theTech && filter.IsPopulation)
-                AddToManPopIfLoner(theTech, false);
+            if (theTech != null && theTech.blockman.blockCount > 0)
+            {
+                if (filter.IsPopulation)
+                    AddToManPopIfLoner(theTech, false);
 
-            theTech?.FixupAnchors(true);
+                theTech?.FixupAnchors(true);
 
-            return theTech;
+                return theTech;
+            }
+            else
+            {
+                if (theTech == null)
+                    DebugTAC_AI.Assert("TAC_AI: SpawnMobileTechPrefab() failed to spawn! - NULL tech");
+                else if (theTech.blockman.blockCount == 0)
+                {
+                    DebugTAC_AI.Assert("TAC_AI: SpawnMobileTechPrefab() failed to spawn! - No blocks");
+                    theTech.blockman.Disintegrate(false, false);
+                }
+                else
+                    DebugTAC_AI.Assert("TAC_AI: SpawnMobileTechPrefab() failed to spawn! - unknown " + StackTraceUtility.ExtractStackTrace());
+                return null;
+            }
         }
         
         internal static bool SpawnAttractTech(Vector3 pos, Vector3 forwards, int Team, BaseTerrain terrainType = BaseTerrain.Land,

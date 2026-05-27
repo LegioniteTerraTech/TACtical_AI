@@ -1039,14 +1039,26 @@ namespace TAC_AI.Templates
                     if (KickStart.EnableBetterAI && KickStart.enablePainMode && !AIGlobals.AtSceneTechMaxSpawnLimit())
                     {
                         if (KickStart.AllowAirEnemiesToSpawn && UnityEngine.Random.Range(0, AirborneSpawnChance) < AirborneAISpawnOdds)
-                            TrySpawnAirborneAIInAir();
+                        {
+                            try
+                            {
+                                TrySpawnAirborneAIInAir();
+                            }
+                            catch (Exception e)
+                            {
+                                DebugTAC_AI.Log(KickStart.ModID + ": SpecialAISpawner.TrySpawnAirborneAIInAir() - failed", e);
+                            }
+                        }
                         if (KickStart.CommitDeathMode)
                         { // endless enemy havoc
                             try
                             {
                                 Singleton.Manager<ManPop>.inst.DebugForceSpawn();
                             }
-                            catch { }
+                            catch (Exception e)
+                            {
+                                DebugTAC_AI.Log(KickStart.ModID + ": Force-spawning - failed", e);
+                            }
                         }
                     }
                     counter = 0;
